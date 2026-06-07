@@ -1,0 +1,53 @@
+{
+  "name": "@prime/unified-app",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.0.1",
+    "@prime/api-client": "workspace:*",
+    "@prime/types": "workspace:*",
+    "@prime/ui": "workspace:*",
+    "@react-navigation/bottom-tabs": "^7.3.13",
+    "@react-navigation/drawer": "^7.3.12",
+    "@react-navigation/native": "^7.1.10",
+    "@react-navigation/native-stack": "^7.3.13",
+    "async-mutex": "^0.5.0",
+    "@reduxjs/toolkit": "^2.8.2",
+    "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-native-community/netinfo": "11.4.1",
+    "@sentry/react-native": "^6.14.0",
+    "@supabase/supabase-js": "^2.49.8",
+    "expo": "~53.0.9",
+    "expo-constants": "~17.1.6",
+    "expo-device": "~7.1.4",
+    "expo-local-authentication": "~16.0.4",
+    "expo-notifications": "~0.31.2",
+    "expo-secure-store": "~14.2.3",
+    "expo-status-bar": "~2.2.3",
+    "react": "19.0.0",
+    "react-hook-form": "^7.56.4",
+    "react-native": "0.79.2",
+    "react-native-gesture-handler": "~2.24.0",
+    "react-native-paper": "^5.14.5",
+    "react-native-reanimated": "~3.17.5",
+    "react-native-safe-area-context": "5.4.0",
+    "react-native-screens": "~4.10.0",
+    "react-redux": "^9.2.0",
+    "zod": "^3.25.51"
+  },
+  "devDependencies": {
+    "@prime/config": "workspace:*",
+    "@types/react": "~19.0.14",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "eslint": "^9.28.0",
+    "typescript": "^5.8.3"
+  }
+}

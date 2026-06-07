@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Prime Fibernet Officer",
+    "slug": "prime-fibernet-officer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "primefiber-officer",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.primefibernet.officer"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1B4D8E"
+      },
+      "package": "com.primefibernet.officer"
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "appRole": "officer"
+    }
+  }
+}

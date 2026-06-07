@@ -1,0 +1,7 @@
+{
+  "extends": "@prime/config/typescript/react-native",
+  "compilerOptions": {
+    "rootDir": "src"
+  },
+  "include": ["src/**/*"]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@prime/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./eslint": "./eslint.config.js",
+    "./typescript/base": "./tsconfig.base.json",
+    "./typescript/react-native": "./tsconfig.react-native.json"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "eslint": "^9.28.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.2.0",
+    "typescript-eslint": "^8.33.1"
+  }
+}

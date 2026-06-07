@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Prime Fibernet",
+    "slug": "prime-fibernet-customer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "primefiber-customer",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.primefibernet.customer"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1B4D8E"
+      },
+      "package": "com.primefibernet.customer"
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "appRole": "customer"
+    }
+  }
+}
