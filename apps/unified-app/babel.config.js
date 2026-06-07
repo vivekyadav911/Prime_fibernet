@@ -1,3 +1,7 @@
+const path = require('path');
+
+const appRoot = __dirname;
+
 module.exports = function (api) {
   api.cache(true);
   return {
@@ -7,8 +11,10 @@ module.exports = function (api) {
       [
         'module-resolver',
         {
-          root: ['./'],
-          alias: { '@': './src' },
+          root: [appRoot],
+          alias: {
+            '@': path.join(appRoot, 'src'),
+          },
         },
       ],
     ],

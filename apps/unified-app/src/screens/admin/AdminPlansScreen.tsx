@@ -1,21 +1,63 @@
-import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { Screen, colors } from '@prime/ui';
+import { useState } from 'react';
+import { FlatList, Modal, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Button, Screen, colors } from '@prime/ui';
+import type { Plan } from '@prime/types';
 
-import { useGetPlansQuery } from '@/store/api/endpoints';
+import {
+  useCreatePlanMutation,
+  useDeletePlanMutation,
+  useGetPlansQuery,
+  useUpdatePlanMutation,
+} from '@/store/api/endpoints';
 
 export function AdminPlansScreen() {
-  const { data } = useGetPlansQuery();
+  const { data, refetch } = useGetPlansQuery();
+  const [createPlan] = useCreatePlanMutation();
+  const [updatePlan] = useUpdatePlanMutation();
+  const [deletePlan] = useDeletePlanMutation();
+  const [editing, setEditing] = useState<Plan | null>(null);
+  const [form, setForm] = useState({ name: '', speedMbps: '50', price: '499', validityDays: '30' });
+
+  const onSave = async () => {
+    const payload = {
+      name: form.name,
+      speedMbps: Number(form.speedMbps),
+      price: Number(form.price),
+      validityDays: Number(form.validityDays),
+      features: [] as string[],
+      isActive: true,
+    };
+    if (editing) {
+      await updatePlan({ id: editing.id, ...payload });
+    } else {
+      await createPlan(payload);
+    }
+    setEditing(null);
+    setForm({ name: '', speedMbps: '50', price: '499', validityDays: '30' });
+    refetch();
+  };
 
   return (
     <Screen padded={false}>
+      <View style={styles.form}>
+        <Text style={styles.formTitle}>{editing ? 'Edit plan' : 'Create plan'}</Text>
+        <TextInput style={styles.input} placeholder="Name" value={form.name} onChangeText={(v) => setForm({ ...form, name: v })} />
+        <TextInput style={styles.input} placeholder="Speed Mbps" value={form.speedMbps} onChangeText={(v) => setForm({ ...form, speedMbps: v })} keyboardType="numeric" />
+        <TextInput style={styles.input} placeholder="Price" value={form.price} onChangeText={(v) => setForm({ ...form, price: v })} keyboardType="numeric" />
+        <TextInput style={styles.input} placeholder="Validity days" value={form.validityDays} onChangeText={(v) => setForm({ ...form, validityDays: v })} keyboardType="numeric" />
+        <Button label={editing ? 'Update' : 'Create'} onPress={onSave} />
+      </View>
       <FlatList
         data={data ?? []}
         keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text style={styles.empty}>No plans — run seed migration</Text>}
         renderItem={({ item }) => (
           <View style={styles.row}>
-            <Text style={styles.name}>{item.name}</Text>
-            <Text>₹{item.price}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.name}>{item.name}</Text>
+              <Text style={styles.meta}>{item.speedMbps} Mbps · ₹{item.price}</Text>
+            </View>
+            <Button label="Edit" variant="ghost" onPress={() => { setEditing(item); setForm({ name: item.name, speedMbps: String(item.speedMbps), price: String(item.price), validityDays: String(item.validityDays) }); }} />
+            <Button label="Delete" variant="ghost" onPress={() => { deletePlan(item.id); refetch(); }} />
           </View>
         )}
       />
@@ -24,13 +66,10 @@ export function AdminPlansScreen() {
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderColor: colors.borderDefault,
-  },
+  form: { padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: 8 },
+  formTitle: { fontWeight: '600' },
+  input: { borderWidth: 1, borderColor: colors.borderDefault, borderRadius: 8, padding: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: 8 },
   name: { fontWeight: '600' },
-  empty: { padding: 16, color: colors.textSecondary },
+  meta: { color: colors.textSecondary, fontSize: 12 },
 });

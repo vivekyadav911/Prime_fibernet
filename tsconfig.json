@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./apps/unified-app",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
+  },
+  "include": [],
+  "extends": "expo/tsconfig.base"
+}

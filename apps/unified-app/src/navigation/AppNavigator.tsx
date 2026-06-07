@@ -2,6 +2,8 @@ import { ActivityIndicator, View } from 'react-native';
 
 import { useAppSelector } from '@/store/hooks';
 
+import { TotpScreen } from '@/screens/auth/TotpScreen';
+
 import { AdminNavigator } from './AdminNavigator';
 import { AuthNavigator } from './AuthNavigator';
 import { CustomerNavigator } from './CustomerNavigator';
@@ -23,7 +25,7 @@ export function AppNavigator() {
   }
 
   if (requires2FA) {
-    return <AuthNavigator />;
+    return <TotpScreen />;
   }
 
   switch (user.role) {

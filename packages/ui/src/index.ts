@@ -3,3 +3,5 @@ export { Button } from './Button';
 export { Screen } from './Screen';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
+export { StatusChip } from './StatusChip';
+export { KpiCard } from './KpiCard';

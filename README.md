@@ -39,6 +39,10 @@ supabase db push
 pnpm dev
 ```
 
+Run from the repo root — do **not** use `npx expo start` in the monorepo root (that starts the wrong project). The `pnpm dev` command launches `apps/unified-app` correctly.
+
+Requires **Expo Go SDK 54+** on your phone (matches Expo SDK 54 in this project).
+
 ## Quality
 
 ```bash
@@ -63,12 +67,12 @@ pnpm typecheck
 | Sprint | Focus | Status |
 |--------|-------|--------|
 | S0 | Unified app scaffold | Done |
-| 1 | INFRA-004/005/006 migrations, RLS, FCM | Scaffolded |
-| 2 | AUTH-001–007 | Implemented |
-| 3 | Customer + Payments | Screen + API layer |
-| 4 | Officer + EAS/Sentry | Screen + config |
-| 5 | Admin ADM-001–005 | Screen shells |
-| 6 | Backlog P2/P3 | Stubs + Edge Functions |
+| 1 | INFRA-004/005/006 migrations, RLS, FCM | Done |
+| 2 | AUTH-001–007 | Done (dev quick sign-in + biometrics) |
+| 3 | Customer + Payments | Done |
+| 4 | Officer + EAS/Sentry | Done |
+| 5 | Admin ADM-001–005 | Done |
+| 6 | Backlog P2/P3 | Done |
 
 ## License
 

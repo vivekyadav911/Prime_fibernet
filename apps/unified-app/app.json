@@ -4,6 +4,12 @@
     "slug": "prime-fibernet-unified",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1B3A6B"
+    },
     "scheme": "primefiber",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -13,11 +19,15 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1B3A6B"
       },
       "package": "com.primefibernet.app"
     },
-    "plugins": ["expo-secure-store", "expo-notifications"],
+    "plugins": [
+      "expo-secure-store",
+      "expo-notifications"
+    ],
     "extra": {
       "eas": {
         "projectId": "your-eas-project-id"

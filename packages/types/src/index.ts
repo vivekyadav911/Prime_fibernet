@@ -84,8 +84,9 @@ export const PaymentSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
   amount: z.number(),
-  paymentStatus: z.enum(['success', 'failed', 'refunded']),
+  paymentStatus: z.enum(['pending', 'success', 'failed', 'refunded']),
   transactionId: z.string().nullable(),
+  invoiceUrl: z.string().nullable().optional(),
   createdAt: z.string(),
 });
 
@@ -101,3 +102,146 @@ export const UserProfileSchema = z.object({
 });
 
 export type UserProfile = z.infer<typeof UserProfileSchema>;
+
+export const PaymentGatewaySchema = z.enum(['razorpay', 'easybuzz']);
+export type PaymentGateway = z.infer<typeof PaymentGatewaySchema>;
+
+export const PaymentStatusSchema = z.enum(['pending', 'success', 'failed', 'refunded']);
+export type PaymentStatus = z.infer<typeof PaymentStatusSchema>;
+
+export const SubscriptionSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  planId: z.string().uuid(),
+  planName: z.string().optional(),
+  startAt: z.string(),
+  endAt: z.string(),
+  status: z.enum(['active', 'expired', 'cancelled']),
+  daysUntilExpiry: z.number().optional(),
+});
+
+export type Subscription = z.infer<typeof SubscriptionSchema>;
+
+export const ShiftSchema = z.object({
+  id: z.string().uuid(),
+  officerId: z.string().uuid(),
+  shiftDate: z.string(),
+  status: z.string(),
+  checkInTime: z.string().nullable(),
+  checkOutTime: z.string().nullable(),
+});
+
+export type Shift = z.infer<typeof ShiftSchema>;
+
+export const LeaveRequestSchema = z.object({
+  id: z.string().uuid(),
+  officerId: z.string().uuid(),
+  leaveType: z.string(),
+  startDate: z.string(),
+  endDate: z.string(),
+  reason: z.string(),
+  status: z.string(),
+});
+
+export type LeaveRequest = z.infer<typeof LeaveRequestSchema>;
+
+export const PayslipSchema = z.object({
+  id: z.string().uuid(),
+  officerId: z.string().uuid(),
+  month: z.string(),
+  base: z.number(),
+  bonuses: z.number(),
+  deductions: z.number(),
+  netPay: z.number(),
+  pdfUrl: z.string().nullable(),
+});
+
+export type Payslip = z.infer<typeof PayslipSchema>;
+
+export const InventoryItemSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  sku: z.string().nullable(),
+  category: z.string().nullable(),
+  quantity: z.number(),
+  status: z.string(),
+});
+
+export type InventoryItem = z.infer<typeof InventoryItemSchema>;
+
+export const OfficerSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid().nullable(),
+  name: z.string(),
+  email: z.string(),
+  region: z.string().nullable(),
+  availabilityStatus: z.string(),
+});
+
+export type Officer = z.infer<typeof OfficerSchema>;
+
+export const AuditLogSchema = z.object({
+  id: z.string().uuid(),
+  timestamp: z.string(),
+  actorId: z.string().uuid().nullable(),
+  action: z.string(),
+  targetEntity: z.string().nullable(),
+  status: z.string().nullable(),
+});
+
+export type AuditLog = z.infer<typeof AuditLogSchema>;
+
+export const RequestActivitySchema = z.object({
+  id: z.string().uuid(),
+  requestId: z.string().uuid(),
+  note: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+export type RequestActivity = z.infer<typeof RequestActivitySchema>;
+
+export const PaymentOrderResponseSchema = z.object({
+  paymentId: z.string(),
+  orderId: z.string(),
+  checkoutUrl: z.string().nullable(),
+  gateway: PaymentGatewaySchema,
+  amount: z.number(),
+});
+
+export type PaymentOrderResponse = z.infer<typeof PaymentOrderResponseSchema>;
+
+export const CompanySettingsSchema = z.object({
+  companyName: z.string().nullable(),
+  companyEmail: z.string().nullable(),
+  paymentGateway: PaymentGatewaySchema.optional(),
+});
+
+export type CompanySettings = z.infer<typeof CompanySettingsSchema>;
+
+export const DEV_AUTH_CREDENTIALS = {
+  customer: { email: 'dev-customer@prime.local', password: 'DevPassword123!' },
+  officer: { email: 'dev-officer@prime.local', password: 'DevPassword123!' },
+  admin: { email: 'dev-admin@prime.local', password: 'DevPassword123!' },
+} as const;
+
+/** Stable IDs aligned with scripts/seed-dev-users.mjs for when Supabase is wired up. */
+export const DEV_MOCK_USERS: Record<AppRole, { id: string; email: string; name: string; role: AppRole }> = {
+  customer: {
+    id: '11111111-1111-1111-1111-111111111101',
+    email: 'dev-customer@prime.local',
+    name: 'Dev Customer',
+    role: 'customer',
+  },
+  officer: {
+    id: '11111111-1111-1111-1111-111111111102',
+    email: 'dev-officer@prime.local',
+    name: 'Dev Officer',
+    role: 'officer',
+  },
+  admin: {
+    id: '11111111-1111-1111-1111-111111111103',
+    email: 'dev-admin@prime.local',
+    name: 'Dev Admin',
+    role: 'admin',
+  },
+};

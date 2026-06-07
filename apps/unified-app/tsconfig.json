@@ -1,6 +1,7 @@
 {
-  "extends": "@prime/config/typescript/react-native",
+  "extends": "../../packages/config/tsconfig.react-native.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }

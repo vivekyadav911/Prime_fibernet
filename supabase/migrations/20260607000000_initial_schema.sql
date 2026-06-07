@@ -1,6 +1,7 @@
 -- INFRA-005: Initial schema (Prime Fibernet v2.0)
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "postgis";
 
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

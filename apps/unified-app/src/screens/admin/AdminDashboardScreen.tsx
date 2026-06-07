@@ -1,32 +1,45 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { Screen, colors } from '@prime/ui';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ErrorState, KpiCard, Screen, colors } from '@prime/ui';
 
-import { useGetDashboardKpisQuery } from '@/store/api/endpoints';
+import { useGetAnalyticsReportQuery, useGetDashboardKpisQuery } from '@/store/api/endpoints';
 
 export function AdminDashboardScreen() {
-  const { data } = useGetDashboardKpisQuery();
+  const { data, isLoading, error, refetch } = useGetDashboardKpisQuery();
+  const { data: report } = useGetAnalyticsReportQuery();
+
+  if (isLoading) {
+    return (
+      <Screen>
+        <ActivityIndicator size="large" color={colors.primaryNavy} />
+      </Screen>
+    );
+  }
+
+  if (error) {
+    return (
+      <Screen>
+        <ErrorState message="Failed to load dashboard" onRetry={refetch} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
       <Text style={styles.title}>Admin dashboard</Text>
       <View style={styles.grid}>
-        <View style={styles.card}>
-          <Text style={styles.label}>Active subscribers</Text>
-          <Text style={styles.value}>{data?.activeSubscribers ?? 0}</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={styles.label}>MRR (₹)</Text>
-          <Text style={styles.value}>{data?.mrr ?? 0}</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={styles.label}>Open requests</Text>
-          <Text style={styles.value}>{data?.openRequests ?? 0}</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={styles.label}>Officers online</Text>
-          <Text style={styles.value}>{data?.officersOnline ?? 0}</Text>
-        </View>
+        <KpiCard label="Active subscribers" value={data?.activeSubscribers ?? 0} />
+        <KpiCard label="MRR (₹)" value={data?.mrr ?? 0} />
+        <KpiCard label="Open requests" value={data?.openRequests ?? 0} />
+        <KpiCard label="Officers online" value={data?.officersOnline ?? 0} />
       </View>
+      {report ? (
+        <View style={styles.report}>
+          <Text style={styles.reportTitle}>Quick stats</Text>
+          <Text style={styles.reportRow}>Total revenue: ₹{report.totalRevenue.toFixed(0)}</Text>
+          <Text style={styles.reportRow}>Avg resolution: {report.avgResolutionHours}h</Text>
+          <Text style={styles.reportRow}>Attendance rate: {report.attendanceRate}%</Text>
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -34,14 +47,7 @@ export function AdminDashboardScreen() {
 const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '700', marginBottom: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  card: {
-    width: '47%',
-    backgroundColor: colors.surfaceWhite,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-  },
-  label: { color: colors.textSecondary, fontSize: 12 },
-  value: { fontSize: 24, fontWeight: '700', color: colors.primaryNavy, marginTop: 4 },
+  report: { marginTop: 24, padding: 16, backgroundColor: colors.background, borderRadius: 12 },
+  reportTitle: { fontWeight: '600', marginBottom: 8 },
+  reportRow: { color: colors.textSecondary, marginTop: 4 },
 });

@@ -1,15 +1,16 @@
-const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
+const { getDefaultConfig } = require('expo/metro-config');
 
-const projectRoot = __dirname;
-const workspaceRoot = path.resolve(projectRoot, '../..');
+const appRoot = __dirname;
+const monorepoRoot = path.resolve(appRoot, '../..');
 
-const config = getDefaultConfig(projectRoot);
+/** @type {import('expo/metro-config').MetroConfig} */
+const config = getDefaultConfig(appRoot);
 
-config.watchFolders = [workspaceRoot];
+config.watchFolders = [monorepoRoot];
 config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, 'node_modules'),
-  path.resolve(workspaceRoot, 'node_modules'),
+  path.join(appRoot, 'node_modules'),
+  path.join(monorepoRoot, 'node_modules'),
 ];
 config.resolver.disableHierarchicalLookup = true;
 

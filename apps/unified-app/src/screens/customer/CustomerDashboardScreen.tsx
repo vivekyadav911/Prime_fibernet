@@ -1,15 +1,23 @@
+import { useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
-import { Button, EmptyState, ErrorState, Screen, colors } from '@prime/ui';
+import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { Button, EmptyState, ErrorState, Screen, StatusChip, colors } from '@prime/ui';
 
+import type { CustomerTabParamList } from '@/navigation/CustomerNavigator';
 import { useAppSelector } from '@/store/hooks';
-import { useGetMyRequestsQuery, useGetPlansQuery } from '@/store/api/endpoints';
+import { useGetActiveSubscriptionQuery, useGetMyRequestsQuery } from '@/store/api/endpoints';
 
 export function CustomerDashboardScreen() {
+  const navigation = useNavigation<BottomTabNavigationProp<CustomerTabParamList>>();
   const user = useAppSelector((s) => s.auth.user);
-  const { data: plans, isLoading: plansLoading, error: plansError, refetch } = useGetPlansQuery();
+  const { data: subscription, isLoading, error, refetch } = useGetActiveSubscriptionQuery(user?.id ?? '', {
+    skip: !user?.id,
+  });
   const { data: requests } = useGetMyRequestsQuery(user?.id ?? '', { skip: !user?.id });
+  const [payLoading] = useState(false);
 
-  if (plansLoading) {
+  if (isLoading) {
     return (
       <Screen>
         <ActivityIndicator size="large" color={colors.primaryNavy} />
@@ -17,7 +25,7 @@ export function CustomerDashboardScreen() {
     );
   }
 
-  if (plansError) {
+  if (error) {
     return (
       <Screen>
         <ErrorState message="Could not load dashboard" onRetry={refetch} />
@@ -25,19 +33,35 @@ export function CustomerDashboardScreen() {
     );
   }
 
-  const activePlan = plans?.[0];
   const recentRequests = requests?.slice(0, 3) ?? [];
+  const showExpiryBanner =
+    subscription?.daysUntilExpiry != null && subscription.daysUntilExpiry <= 7 && subscription.daysUntilExpiry >= 0;
 
   return (
     <Screen padded={false}>
+      {showExpiryBanner ? (
+        <View style={styles.warningBanner}>
+          <Text style={styles.warningText}>
+            Plan expires in {subscription?.daysUntilExpiry} day(s). Renew to stay connected.
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.banner}>
-        {activePlan ? (
+        {subscription ? (
           <>
-            <Text style={styles.planName}>{activePlan.name}</Text>
-            <Text style={styles.planMeta}>{activePlan.speedMbps} Mbps · ₹{activePlan.price}</Text>
+            <Text style={styles.planName}>{subscription.planName ?? 'Active plan'}</Text>
+            <Text style={styles.planMeta}>
+              Valid until {new Date(subscription.endAt).toLocaleDateString()}
+            </Text>
+            <StatusChip status={subscription.status} />
           </>
         ) : (
-          <EmptyState title="No active plan" description="Browse plans to subscribe" actionLabel="View plans" />
+          <EmptyState
+            title="No active plan"
+            description="Browse plans to subscribe"
+            actionLabel="View plans"
+            onAction={() => navigation.navigate('Plans')}
+          />
         )}
       </View>
       <View style={styles.section}>
@@ -50,28 +74,33 @@ export function CustomerDashboardScreen() {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={styles.row}>
-                <Text>{item.requestType}</Text>
-                <Text style={styles.chip}>{item.status}</Text>
+                <Text style={styles.capitalize}>{item.requestType}</Text>
+                <StatusChip status={item.status} />
               </View>
             )}
           />
         )}
       </View>
       <View style={styles.actions}>
-        <Button label="Pay bill" onPress={() => undefined} />
+        <Button
+          label={payLoading ? 'Loading…' : 'Pay bill / Renew'}
+          onPress={() => navigation.navigate('Plans')}
+        />
       </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: { backgroundColor: colors.primaryNavy, padding: 24 },
+  warningBanner: { backgroundColor: colors.warningAmber, padding: 12 },
+  warningText: { color: colors.white, fontWeight: '600', textAlign: 'center' },
+  banner: { backgroundColor: colors.primaryNavy, padding: 24, gap: 8 },
   planName: { color: colors.white, fontSize: 22, fontWeight: '700' },
-  planMeta: { color: colors.white, opacity: 0.9, marginTop: 4 },
+  planMeta: { color: colors.white, opacity: 0.9 },
   section: { padding: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
   muted: { color: colors.textSecondary },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
-  chip: { color: colors.accentTeal, textTransform: 'capitalize' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  capitalize: { textTransform: 'capitalize' },
   actions: { padding: 16 },
 });

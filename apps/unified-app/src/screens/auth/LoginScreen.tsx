@@ -3,22 +3,32 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { StyleSheet, Text, TextInput } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Screen, colors } from '@prime/ui';
 import { LoginSchema } from '@prime/types';
+import type { AppRole } from '@prime/types';
 import { z } from 'zod';
 
 import type { AuthStackParamList } from '@/navigation/AuthNavigator';
-import { signInWithPassword } from '@/hooks/useAuth';
-import { useAppDispatch } from '@/store/hooks';
+import { devQuickSignIn, signInWithPassword } from '@/hooks/useAuth';
+import { authenticateWithBiometrics } from '@/services/biometric';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setError } from '@/store/slices/authSlice';
+
+const DEV_ROLES: { role: AppRole; label: string; description: string }[] = [
+  { role: 'customer', label: 'Customer', description: 'Plans, payments & support' },
+  { role: 'officer', label: 'Officer', description: 'Field jobs, shifts & inventory' },
+  { role: 'admin', label: 'Admin', description: 'Users, analytics & settings' },
+];
 
 type FormData = z.infer<typeof LoginSchema>;
 
 export function LoginScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const dispatch = useAppDispatch();
+  const authError = useAppSelector((s) => s.auth.error);
   const [loading, setLoading] = useState(false);
+  const [devLoading, setDevLoading] = useState<AppRole | null>(null);
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(LoginSchema),
     defaultValues: { email: '', password: '' },
@@ -33,6 +43,18 @@ export function LoginScreen() {
       dispatch(setError('Invalid email or password'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onDevSignIn = async (role: AppRole) => {
+    setDevLoading(role);
+    dispatch(setError(null));
+    try {
+      await devQuickSignIn(dispatch, role);
+    } catch {
+      dispatch(setError(`Could not sign in as ${role}. Try again.`));
+    } finally {
+      setDevLoading(null);
     }
   };
 
@@ -68,9 +90,36 @@ export function LoginScreen() {
         )}
       />
       {errors.password ? <Text style={styles.error}>{errors.password.message}</Text> : null}
+      {authError ? <Text style={styles.error}>{authError}</Text> : null}
       <Button label={loading ? 'Signing in…' : 'Sign in'} onPress={handleSubmit(onSubmit)} style={styles.btn} />
+      <Button
+        label="Sign in with biometrics"
+        variant="ghost"
+        onPress={async () => {
+          const ok = await authenticateWithBiometrics();
+          if (ok) await onDevSignIn('customer');
+        }}
+      />
       <Button label="Create account" variant="ghost" onPress={() => navigation.navigate('SignUp')} />
       <Button label="Forgot password" variant="ghost" onPress={() => navigation.navigate('ForgotPassword')} />
+      {__DEV__ ? (
+        <View style={styles.devSection}>
+          <Text style={styles.devLabel}>Quick sign in by role</Text>
+          <Text style={styles.devHint}>Preview each app experience — no account setup needed yet.</Text>
+          <View style={styles.devButtons}>
+            {DEV_ROLES.map(({ role, label, description }) => (
+              <Button
+                key={role}
+                label={devLoading === role ? 'Opening…' : `${label} — ${description}`}
+                variant="secondary"
+                onPress={() => onDevSignIn(role)}
+                style={styles.devBtn}
+                disabled={!!devLoading}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -87,4 +136,25 @@ const styles = StyleSheet.create({
   },
   error: { color: colors.errorRed, marginBottom: 8 },
   btn: { marginVertical: 12 },
+  devSection: {
+    marginTop: 32,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderDefault,
+  },
+  devLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primaryNavy,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  devHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  devButtons: { gap: 8 },
+  devBtn: { marginBottom: 0 },
 });

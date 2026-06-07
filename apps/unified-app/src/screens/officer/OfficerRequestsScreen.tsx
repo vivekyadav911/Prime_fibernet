@@ -1,52 +1,77 @@
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { EmptyState, Screen, colors } from '@prime/ui';
+import { Button, EmptyState, Screen, StatusChip, colors } from '@prime/ui';
 
+import { SyncManager } from '@/services/offline/syncManager';
 import { useAppSelector } from '@/store/hooks';
 import { useGetAssignedRequestsQuery, useUpdateRequestStatusMutation } from '@/store/api/endpoints';
 
+const STATUS_FLOW: Record<string, string | null> = {
+  pending: 'working',
+  assigned: 'working',
+  working: 'resolved',
+  in_transit: 'on_site',
+  on_site: 'working',
+};
+
 export function OfficerRequestsScreen() {
   const user = useAppSelector((s) => s.auth.user);
-  const { data } = useGetAssignedRequestsQuery(user?.id ?? '', { skip: !user?.id });
+  const { data: requests, refetch } = useGetAssignedRequestsQuery(user?.id, { skip: !user?.id });
   const [updateStatus] = useUpdateRequestStatusMutation();
 
-  if (!data?.length) {
-    return (
-      <Screen>
-        <EmptyState title="No requests" description="Assigned jobs will show here" />
-      </Screen>
-    );
-  }
+  const sorted = [...(requests ?? [])].sort((a, b) => a.priority.localeCompare(b.priority));
+
+  const onAdvance = async (id: string, currentStatus: string) => {
+    const next = STATUS_FLOW[currentStatus];
+    if (!next) return;
+    const execute = () => updateStatus({ id, status: next, note: `Status changed to ${next}` }).unwrap();
+    try {
+      await execute();
+    } catch {
+      await SyncManager.enqueue({
+        id: `${id}-${next}-${Date.now()}`,
+        type: 'updateRequestStatus',
+        payload: { id, status: next },
+        execute,
+      });
+    }
+    refetch();
+  };
 
   return (
     <Screen padded={false}>
-      <FlatList
-        data={data}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.type}>{item.requestType}</Text>
+      {!sorted.length ? (
+        <EmptyState title="No requests" description="Assigned requests will appear here" />
+      ) : (
+        <FlatList
+          data={sorted}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <View style={styles.header}>
+                <Text style={styles.type}>{item.requestType}</Text>
+                <StatusChip status={item.priority} />
+              </View>
               <Text style={styles.address}>{item.address}</Text>
+              <StatusChip status={item.status} />
+              {STATUS_FLOW[item.status] ? (
+                <Button
+                  label={item.status === 'working' ? 'Mark resolved' : 'Start work'}
+                  onPress={() => onAdvance(item.id, item.status)}
+                  style={styles.btn}
+                />
+              ) : null}
             </View>
-            <Text style={styles.action} onPress={() => updateStatus({ id: item.id, status: 'working' })}>
-              Start
-            </Text>
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderColor: colors.borderDefault,
-  },
-  type: { textTransform: 'capitalize', fontWeight: '600' },
-  address: { color: colors.textSecondary, fontSize: 12 },
-  action: { color: colors.accentTeal, fontWeight: '600' },
+  card: { padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: 8 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  type: { textTransform: 'capitalize', fontWeight: '600', fontSize: 16 },
+  address: { color: colors.textSecondary },
+  btn: { marginTop: 8 },
 });

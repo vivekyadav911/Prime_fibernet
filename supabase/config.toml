@@ -1,7 +1,6 @@
-# Supabase — link with `supabase link --project-ref YOUR_REF`
+# Supabase — link with `supabase link --project-ref afsaadjdhqnvsgkmmupq`
 
-[project]
-id = "prime-fibernet"
+project_id = "afsaadjdhqnvsgkmmupq"
 
 [db]
 major_version = 15

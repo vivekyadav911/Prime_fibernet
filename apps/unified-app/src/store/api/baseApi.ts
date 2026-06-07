@@ -12,6 +12,12 @@ export const baseApi = createApi({
     'Analytics',
     'Subscriptions',
     'Settings',
+    'Shifts',
+    'Inventory',
+    'Payslips',
+    'Leave',
+    'Audit',
+    'Notifications',
   ],
   endpoints: () => ({}),
 });
