@@ -10,7 +10,7 @@ import { getSpeedTier } from '@/utils/planTier';
 type PlanCardProps = {
   plan: Plan;
   isCurrentPlan?: boolean;
-  onPress: () => void;
+  onPress: (plan: Plan) => void;
 };
 
 export const PlanCard = React.memo(function PlanCard({ plan, isCurrentPlan, onPress }: PlanCardProps) {
@@ -18,7 +18,7 @@ export const PlanCard = React.memo(function PlanCard({ plan, isCurrentPlan, onPr
   const gradient = speedTierGradients[tier];
 
   return (
-    <Pressable style={styles.wrapper} onPress={onPress}>
+    <Pressable style={styles.wrapper} onPress={() => onPress(plan)}>
       <LinearGradient colors={[...gradient]} style={styles.card}>
         {isCurrentPlan ? (
           <View style={styles.badge}>

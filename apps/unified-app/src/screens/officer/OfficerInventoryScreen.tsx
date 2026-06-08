@@ -1,14 +1,25 @@
-import { FlatList, StyleSheet, Text } from 'react-native';
-import { Screen, colors } from '@prime/ui';
+import { useCallback } from 'react';
+import { FlatList, StyleSheet } from 'react-native';
+import type { InventoryItem } from '@prime/types';
+import { Screen } from '@prime/ui';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import { useGetInventoryQuery } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
 
+import { InventoryItemRow } from './components/InventoryItemRow';
+
 export function OfficerInventoryScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const { data, isLoading, isError, error, refetch } = useGetInventoryQuery(user?.id ?? '', { skip: !user?.id });
+
+  const keyExtractor = useCallback((item: InventoryItem) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: InventoryItem }) => <InventoryItemRow item={item} />,
+    [],
+  );
 
   if (isLoading) {
     return (
@@ -38,13 +49,9 @@ export function OfficerInventoryScreen() {
     <Screen padded={false}>
       <FlatList
         data={data}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <Text style={styles.row}>
-            {item.name} · SKU {item.sku ?? '—'} · Qty {item.quantity}
-          </Text>
-        )}
+        renderItem={renderItem}
       />
     </Screen>
   );
@@ -52,5 +59,4 @@ export function OfficerInventoryScreen() {
 
 const styles = StyleSheet.create({
   list: { padding: 16 },
-  row: { paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.borderDefault },
 });

@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, Screen, StatusChip, colors } from '@prime/ui';
+import { Button, Screen, colors } from '@prime/ui';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetNotificationHistoryQuery, useSendBulkNotificationMutation } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
+
+import { NotificationRow } from './components/NotificationRow';
 
 const AUDIENCES = ['all', 'customers', 'officers', 'admins'];
 
@@ -22,6 +24,15 @@ export function AdminNotificationsScreen() {
     setBody('');
     refetch();
   };
+
+  const keyExtractor = useCallback((item: { id: string }) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: NonNullable<typeof history>[number] }) => (
+      <NotificationRow notification={item} />
+    ),
+    [],
+  );
 
   if (isLoading) {
     return (
@@ -62,19 +73,7 @@ export function AdminNotificationsScreen() {
       {!history?.length ? (
         <EmptyState title="No notifications sent" subtitle="Queued notifications will appear here" icon="🔔" />
       ) : (
-        <FlatList
-          data={history}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.notifTitle}>{item.title}</Text>
-                <Text style={styles.meta}>{item.audience} · Sent: {item.sentCount}</Text>
-              </View>
-              <StatusChip status={item.status} />
-            </View>
-          )}
-        />
+        <FlatList data={history} keyExtractor={keyExtractor} renderItem={renderItem} />
       )}
     </Screen>
   );
@@ -88,7 +87,4 @@ const styles = StyleSheet.create({
   audienceChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: colors.borderDefault, textTransform: 'capitalize' },
   audienceActive: { backgroundColor: colors.primaryNavy, color: colors.white, borderColor: colors.primaryNavy },
   historyTitle: { fontWeight: '600', padding: 16, paddingBottom: 8 },
-  row: { flexDirection: 'row', padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, alignItems: 'center' },
-  notifTitle: { fontWeight: '600' },
-  meta: { color: colors.textSecondary, fontSize: 12 },
 });

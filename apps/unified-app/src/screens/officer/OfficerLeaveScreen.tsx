@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput } from 'react-native';
-import { Button, Screen, StatusChip, colors } from '@prime/ui';
+import type { LeaveRequest } from '@prime/types';
+import { Button, Screen, colors } from '@prime/ui';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import { useCreateLeaveRequestMutation, useGetLeaveRequestsQuery } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
+
+import { LeaveRequestRow } from './components/LeaveRequestRow';
 
 export function OfficerLeaveScreen() {
   const user = useAppSelector((s) => s.auth.user);
@@ -22,6 +25,13 @@ export function OfficerLeaveScreen() {
     setReason('');
     refetch();
   };
+
+  const keyExtractor = useCallback((item: LeaveRequest) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: LeaveRequest }) => <LeaveRequestRow leave={item} />,
+    [],
+  );
 
   if (isLoading) {
     return (
@@ -51,15 +61,7 @@ export function OfficerLeaveScreen() {
       {!data?.length ? (
         <EmptyState title="No leave requests" subtitle="Submitted requests will appear here" icon="🏖️" />
       ) : (
-        <FlatList
-          data={data}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Text style={styles.row}>
-              {item.leaveType} · {item.startDate} to {item.endDate} · <StatusChip status={item.status} />
-            </Text>
-          )}
-        />
+        <FlatList data={data} keyExtractor={keyExtractor} renderItem={renderItem} />
       )}
     </Screen>
   );
@@ -77,5 +79,4 @@ const styles = StyleSheet.create({
   },
   btn: { marginBottom: 24 },
   historyTitle: { fontWeight: '600', marginBottom: 8 },
-  row: { paddingVertical: 8, color: colors.textSecondary },
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ServiceRequest } from '@prime/types';
 
@@ -17,10 +17,10 @@ const RequestRow = React.memo(function RequestRow({
   onPress,
 }: {
   item: ServiceRequest;
-  onPress?: () => void;
+  onPress?: (id: string) => void;
 }) {
   return (
-    <Pressable style={styles.row} onPress={onPress}>
+    <Pressable style={styles.row} onPress={() => onPress?.(item.id)}>
       <View style={styles.rowText}>
         <Text style={styles.type}>{item.requestType}</Text>
         <Text style={styles.address} numberOfLines={1}>
@@ -33,6 +33,15 @@ const RequestRow = React.memo(function RequestRow({
 });
 
 export function RecentRequestsList({ requests, onViewAll, onPressRequest }: RecentRequestsListProps) {
+  const keyExtractor = useCallback((item: ServiceRequest) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: ServiceRequest }) => (
+      <RequestRow item={item} onPress={onPressRequest} />
+    ),
+    [onPressRequest],
+  );
+
   if (!requests.length) {
     return (
       <EmptyState
@@ -55,11 +64,9 @@ export function RecentRequestsList({ requests, onViewAll, onPressRequest }: Rece
       </View>
       <FlatList
         data={requests}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         scrollEnabled={false}
-        renderItem={({ item }) => (
-          <RequestRow item={item} onPress={() => onPressRequest?.(item.id)} />
-        )}
+        renderItem={renderItem}
       />
     </View>
   );

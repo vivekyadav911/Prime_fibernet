@@ -72,11 +72,13 @@ export function PlansScreen() {
       <PlanCard
         plan={item}
         isCurrentPlan={item.id === currentPlanId}
-        onPress={() => openDetail(item)}
+        onPress={openDetail}
       />
     ),
     [currentPlanId, openDetail],
   );
+
+  const keyExtractor = useCallback((item: Plan) => item.id, []);
 
   if (error) {
     return (
@@ -118,7 +120,7 @@ export function PlansScreen() {
       </Pressable>
       <FlatList
         data={plans}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         numColumns={2}
         columnWrapperStyle={styles.column}
         contentContainerStyle={styles.list}

@@ -1,11 +1,15 @@
+import { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
-import { Button, Screen, StatusChip, colors } from '@prime/ui';
+import type { ServiceRequest } from '@prime/types';
+import { Button, Screen, colors } from '@prime/ui';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import { useGetAssignedRequestsQuery, useClockInMutation } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
+
+import { AssignmentRow } from './components/AssignmentRow';
 
 export function OfficerDashboardScreen() {
   const user = useAppSelector((s) => s.auth.user);
@@ -14,6 +18,7 @@ export function OfficerDashboardScreen() {
   });
   const [clockIn] = useClockInMutation();
 
+  const previewRequests = useMemo(() => (requests ?? []).slice(0, 3), [requests]);
   const newCount = requests?.filter((r) => r.status === 'pending').length ?? 0;
   const inProgress = requests?.filter((r) => r.status === 'working').length ?? 0;
 
@@ -26,6 +31,13 @@ export function OfficerDashboardScreen() {
         : { coords: { latitude: 0, longitude: 0 } };
     await clockIn({ userId: user.id, latitude: coords.coords.latitude, longitude: coords.coords.longitude });
   };
+
+  const keyExtractor = useCallback((item: ServiceRequest) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: ServiceRequest }) => <AssignmentRow request={item} />,
+    [],
+  );
 
   if (isLoading) {
     return (
@@ -56,16 +68,7 @@ export function OfficerDashboardScreen() {
       {!requests?.length ? (
         <EmptyState title="No assignments" subtitle="New requests will appear here" icon="📋" />
       ) : (
-        <FlatList
-          data={requests.slice(0, 3)}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <Text style={styles.capitalize}>{item.requestType}</Text>
-              <StatusChip status={item.priority} />
-            </View>
-          )}
-        />
+        <FlatList data={previewRequests} keyExtractor={keyExtractor} renderItem={renderItem} />
       )}
     </Screen>
   );
@@ -76,6 +79,4 @@ const styles = StyleSheet.create({
   shiftTitle: { color: colors.white, fontSize: 18, marginBottom: 12 },
   chips: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   chip: { backgroundColor: colors.background, padding: 8, borderRadius: 8 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
-  capitalize: { textTransform: 'capitalize' },
 });

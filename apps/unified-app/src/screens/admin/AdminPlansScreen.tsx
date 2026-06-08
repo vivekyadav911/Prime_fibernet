@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { FlatList, Modal, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, Screen, colors } from '@prime/ui';
+import { useCallback, useState } from 'react';
+import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Plan } from '@prime/types';
+import { Button, Screen, colors } from '@prime/ui';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import {
@@ -11,6 +11,8 @@ import {
   useUpdatePlanMutation,
 } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
+
+import { PlanRow } from './components/PlanRow';
 
 export function AdminPlansScreen() {
   const { data, isLoading, isError, error, refetch } = useGetPlansQuery();
@@ -38,6 +40,33 @@ export function AdminPlansScreen() {
     setForm({ name: '', speedMbps: '50', price: '499', validityDays: '30' });
     refetch();
   };
+
+  const handleEdit = useCallback((plan: Plan) => {
+    setEditing(plan);
+    setForm({
+      name: plan.name,
+      speedMbps: String(plan.speedMbps),
+      price: String(plan.price),
+      validityDays: String(plan.validityDays),
+    });
+  }, []);
+
+  const handleDelete = useCallback(
+    (planId: string) => {
+      deletePlan(planId);
+      refetch();
+    },
+    [deletePlan, refetch],
+  );
+
+  const keyExtractor = useCallback((item: Plan) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Plan }) => (
+      <PlanRow plan={item} onEdit={handleEdit} onDelete={handleDelete} />
+    ),
+    [handleDelete, handleEdit],
+  );
 
   if (isLoading) {
     return (
@@ -68,20 +97,7 @@ export function AdminPlansScreen() {
       {!data?.length ? (
         <EmptyState title="No plans yet" subtitle="Create your first internet plan" icon="📶" />
       ) : (
-        <FlatList
-          data={data}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.meta}>{item.speedMbps} Mbps · ₹{item.price}</Text>
-              </View>
-              <Button label="Edit" variant="ghost" onPress={() => { setEditing(item); setForm({ name: item.name, speedMbps: String(item.speedMbps), price: String(item.price), validityDays: String(item.validityDays) }); }} />
-              <Button label="Delete" variant="ghost" onPress={() => { deletePlan(item.id); refetch(); }} />
-            </View>
-          )}
-        />
+        <FlatList data={data} keyExtractor={keyExtractor} renderItem={renderItem} />
       )}
     </Screen>
   );
@@ -91,7 +107,4 @@ const styles = StyleSheet.create({
   form: { padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: 8 },
   formTitle: { fontWeight: '600' },
   input: { borderWidth: 1, borderColor: colors.borderDefault, borderRadius: 8, padding: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: 8 },
-  name: { fontWeight: '600' },
-  meta: { color: colors.textSecondary, fontSize: 12 },
 });

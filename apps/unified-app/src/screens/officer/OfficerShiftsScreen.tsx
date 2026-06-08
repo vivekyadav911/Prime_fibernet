@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import * as Location from 'expo-location';
-import { FlatList, StyleSheet, Text } from 'react-native';
-import { Button, Screen, StatusChip, colors } from '@prime/ui';
+import { FlatList } from 'react-native';
+import type { Shift } from '@prime/types';
+import { Button, Screen, colors } from '@prime/ui';
+import { StyleSheet, Text } from 'react-native';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
@@ -12,6 +14,8 @@ import {
   useGetShiftHistoryQuery,
 } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
+
+import { ShiftRow } from './components/ShiftRow';
 
 export function OfficerShiftsScreen() {
   const user = useAppSelector((s) => s.auth.user);
@@ -37,10 +41,10 @@ export function OfficerShiftsScreen() {
   const isError = activeError || historyError;
   const error = activeErr ?? historyErr;
 
-  const refetch = () => {
+  const refetch = useCallback(() => {
     refetchActive();
     refetchHistory();
-  };
+  }, [refetchActive, refetchHistory]);
 
   useEffect(() => {
     void Location.requestForegroundPermissionsAsync();
@@ -68,6 +72,13 @@ export function OfficerShiftsScreen() {
     await clockOut({ userId: user.id, shiftId: activeShift?.id });
     refetch();
   };
+
+  const keyExtractor = useCallback((item: Shift) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Shift }) => <ShiftRow shift={item} />,
+    [],
+  );
 
   if (isLoading) {
     return (
@@ -104,15 +115,7 @@ export function OfficerShiftsScreen() {
       {!history?.length ? (
         <EmptyState title="No shifts scheduled" subtitle="Check back with your admin" icon="📅" />
       ) : (
-        <FlatList
-          data={history}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Text style={styles.historyRow}>
-              {item.shiftDate} — <StatusChip status={item.status} />
-            </Text>
-          )}
-        />
+        <FlatList data={history} keyExtractor={keyExtractor} renderItem={renderItem} />
       )}
     </Screen>
   );
@@ -126,5 +129,4 @@ const styles = StyleSheet.create({
   error: { color: colors.errorRed, marginBottom: 8 },
   btn: { marginBottom: 12 },
   historyTitle: { fontWeight: '600', marginTop: 24, marginBottom: 8 },
-  historyRow: { paddingVertical: 6, color: colors.textSecondary },
 });

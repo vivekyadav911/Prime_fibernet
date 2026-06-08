@@ -1,16 +1,13 @@
-import { useMemo } from 'react';
-import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import { useCustomerRequestBadge } from '@/hooks/useCustomerRequestBadge';
 import { DashboardScreen } from '@/screens/customer/dashboard/DashboardScreen';
 import { ChatbotScreen } from '@/screens/customer/ChatbotScreen';
 import { PaymentsScreen } from '@/screens/customer/payments/PaymentsScreen';
 import { PlansScreen } from '@/screens/customer/plans/PlansScreen';
 import { ProfileScreen } from '@/screens/customer/profile/ProfileScreen';
 import { RequestsScreen } from '@/screens/customer/requests/RequestsScreen';
-import { useGetMyRequestsQuery } from '@/store/api/endpoints';
-import { useAppSelector } from '@/store/hooks';
 import type { CustomerStackParamList, CustomerTabParamList } from '@/types/navigation';
 import { colors } from '@prime/ui';
 
@@ -30,28 +27,13 @@ import {
   RequestDetailsScreen,
   TermsScreen,
 } from './customerStackScreens';
+import { TabIcon } from './TabIcon';
 
 const Tab = createBottomTabNavigator<CustomerTabParamList>();
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
 
-const UNRESOLVED_STATUSES = new Set(['pending', 'assigned', 'in_progress', 'awaiting_customer']);
-
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  return (
-    <Text style={{ fontSize: 18, opacity: focused ? 1 : 0.5, color: focused ? colors.accentTeal : colors.textSecondary }}>
-      {label}
-    </Text>
-  );
-}
-
 function CustomerTabs() {
-  const userId = useAppSelector((s) => s.auth.user?.id ?? '');
-  const { data: requests } = useGetMyRequestsQuery(userId, { skip: !userId });
-
-  const unresolvedCount = useMemo(
-    () => (requests ?? []).filter((r) => UNRESOLVED_STATUSES.has(r.status)).length,
-    [requests],
-  );
+  const unresolvedCount = useCustomerRequestBadge();
 
   return (
     <Tab.Navigator

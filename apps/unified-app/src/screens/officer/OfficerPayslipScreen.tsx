@@ -1,14 +1,29 @@
-import { FlatList, Linking, StyleSheet, Text } from 'react-native';
-import { Screen, colors } from '@prime/ui';
+import { useCallback } from 'react';
+import { FlatList, Linking, StyleSheet } from 'react-native';
+import type { Payslip } from '@prime/types';
+import { Screen } from '@prime/ui';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import { useGetPayslipsQuery } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
 
+import { EarningsRow } from './components/EarningsRow';
+
 export function OfficerPayslipScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const { data, isLoading, isError, error, refetch } = useGetPayslipsQuery(user?.id ?? '', { skip: !user?.id });
+
+  const handleOpenPdf = useCallback((url: string) => {
+    void Linking.openURL(url);
+  }, []);
+
+  const keyExtractor = useCallback((item: Payslip) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Payslip }) => <EarningsRow payslip={item} onOpenPdf={handleOpenPdf} />,
+    [handleOpenPdf],
+  );
 
   if (isLoading) {
     return (
@@ -38,18 +53,9 @@ export function OfficerPayslipScreen() {
     <Screen padded={false}>
       <FlatList
         data={data}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <Text
-            style={styles.row}
-            onPress={() => item.pdfUrl && Linking.openURL(item.pdfUrl)}
-          >
-            {new Date(item.month).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })} — ₹
-            {item.netPay.toFixed(2)}
-            {item.pdfUrl ? ' · Download PDF' : ''}
-          </Text>
-        )}
+        renderItem={renderItem}
       />
     </Screen>
   );
@@ -57,5 +63,4 @@ export function OfficerPayslipScreen() {
 
 const styles = StyleSheet.create({
   list: { padding: 16 },
-  row: { paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.borderDefault, color: colors.primaryNavy },
 });

@@ -1,11 +1,15 @@
-import { FlatList, Linking, Platform, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo } from 'react';
+import { FlatList, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Screen, StatusChip, colors } from '@prime/ui';
+import type { ServiceRequest } from '@prime/types';
+import { Screen, colors } from '@prime/ui';
 
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import { useGetAssignedRequestsQuery } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
+
+import { MapRequestPin, openMapsNavigation } from './components/MapRequestPin';
 
 const PRIORITY_COLORS: Record<string, string> = {
   P0: colors.errorRed,
@@ -20,7 +24,20 @@ export function OfficerMapScreen() {
     skip: !user?.id,
   });
 
-  const withCoords = requests?.filter((r) => r.address) ?? [];
+  const withCoords = useMemo(() => (requests ?? []).filter((r) => r.address), [requests]);
+
+  const handleNavigate = useCallback((address: string) => {
+    openMapsNavigation(address);
+  }, []);
+
+  const keyExtractor = useCallback((item: ServiceRequest) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: ServiceRequest }) => (
+      <MapRequestPin request={item} onNavigate={handleNavigate} />
+    ),
+    [handleNavigate],
+  );
 
   if (isLoading) {
     return (
@@ -61,31 +78,9 @@ export function OfficerMapScreen() {
       </MapView>
       <FlatList
         data={withCoords}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         style={styles.list}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.capitalize}>{item.requestType}</Text>
-              <Text style={styles.address}>{item.address}</Text>
-            </View>
-            <StatusChip status={item.priority} />
-            <Text
-              style={styles.navigate}
-              onPress={() => {
-                const q = encodeURIComponent(item.address);
-                const url = Platform.select({
-                  ios: `maps:0,0?q=${q}`,
-                  android: `geo:0,0?q=${q}`,
-                  default: `https://maps.google.com/?q=${q}`,
-                });
-                if (url) void Linking.openURL(url);
-              }}
-            >
-              Navigate
-            </Text>
-          </View>
-        )}
+        renderItem={renderItem}
       />
     </Screen>
   );
@@ -94,8 +89,4 @@ export function OfficerMapScreen() {
 const styles = StyleSheet.create({
   map: { height: 280 },
   list: { flex: 1 },
-  row: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: 8 },
-  capitalize: { textTransform: 'capitalize', fontWeight: '600' },
-  address: { color: colors.textSecondary, fontSize: 12 },
-  navigate: { color: colors.accentTeal, fontWeight: '600' },
 });

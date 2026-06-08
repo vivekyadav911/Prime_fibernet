@@ -44,22 +44,27 @@ export function RequestsScreen() {
     }
   };
 
-  const onCancel = (id: string) => {
-    Alert.alert('Cancel request?', 'This cannot be undone.', [
-      { text: 'Keep', style: 'cancel' },
-      {
-        text: 'Cancel request',
-        style: 'destructive',
-        onPress: () => cancelRequest(id),
-      },
-    ]);
-  };
+  const onCancel = useCallback(
+    (id: string) => {
+      Alert.alert('Cancel request?', 'This cannot be undone.', [
+        { text: 'Keep', style: 'cancel' },
+        {
+          text: 'Cancel request',
+          style: 'destructive',
+          onPress: () => cancelRequest(id),
+        },
+      ]);
+    },
+    [cancelRequest],
+  );
+
+  const keyExtractor = useCallback((item: (typeof requests)[number]) => item.id, []);
 
   const renderItem = useCallback(
     ({ item }: { item: (typeof requests)[number] }) => (
       <RequestListItem request={item} onCancel={() => onCancel(item.id)} />
     ),
-    [requests],
+    [onCancel],
   );
 
   if (error) {
@@ -103,7 +108,7 @@ export function RequestsScreen() {
       ) : (
         <FlatList
           data={requests}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           ListHeaderComponent={

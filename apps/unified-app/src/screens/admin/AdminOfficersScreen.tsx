@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { Officer } from '@prime/types';
 import { Button, Screen, colors } from '@prime/ui';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetOfficersQuery, useInviteOfficerMutation, useUpdateOfficerMutation } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
+
+import { OfficerRow } from './components/OfficerRow';
 
 export function AdminOfficersScreen() {
   const { data, isLoading, isError, error, refetch } = useGetOfficersQuery();
@@ -22,6 +25,22 @@ export function AdminOfficersScreen() {
     setName('');
     refetch();
   };
+
+  const handleSetAvailable = useCallback(
+    (officerId: string) => {
+      updateOfficer({ id: officerId, availabilityStatus: 'available' });
+    },
+    [updateOfficer],
+  );
+
+  const keyExtractor = useCallback((item: Officer) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Officer }) => (
+      <OfficerRow officer={item} onSetAvailable={handleSetAvailable} />
+    ),
+    [handleSetAvailable],
+  );
 
   if (isLoading) {
     return (
@@ -52,24 +71,7 @@ export function AdminOfficersScreen() {
       {!data?.length ? (
         <EmptyState title="No officers yet" subtitle="Invite your first officer" icon="🛡️" />
       ) : (
-        <FlatList
-          data={data}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.meta}>{item.email} · {item.region ?? 'No region'}</Text>
-                <Text style={styles.meta}>Status: {item.availabilityStatus}</Text>
-              </View>
-              <Button
-                label="Set available"
-                variant="secondary"
-                onPress={() => updateOfficer({ id: item.id, availabilityStatus: 'available' })}
-              />
-            </View>
-          )}
-        />
+        <FlatList data={data} keyExtractor={keyExtractor} renderItem={renderItem} />
       )}
     </Screen>
   );
@@ -79,7 +81,4 @@ const styles = StyleSheet.create({
   form: { padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: 8 },
   formTitle: { fontWeight: '600', marginBottom: 4 },
   input: { borderWidth: 1, borderColor: colors.borderDefault, borderRadius: 8, padding: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault },
-  name: { fontWeight: '600' },
-  meta: { color: colors.textSecondary, fontSize: 12 },
 });

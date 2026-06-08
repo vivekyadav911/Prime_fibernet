@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, Screen, colors } from '@prime/ui';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, StyleSheet, Text, TextInput } from 'react-native';
+import type { UserProfile } from '@prime/types';
+import { Screen, colors } from '@prime/ui';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useBlockUserMutation, useGetAllUsersQuery, useUnblockUserMutation } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
+
+import { UserRow } from './components/UserRow';
 
 export function AdminUsersScreen() {
   const { data, isLoading, isError, error, refetch } = useGetAllUsersQuery();
@@ -20,6 +23,34 @@ export function AdminUsersScreen() {
       (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
     );
   }, [data, search]);
+
+  const canBlock = blockReason.length >= 3;
+
+  const handleBlock = useCallback(
+    (userId: string) => {
+      if (!canBlock) return;
+      blockUser({ userId, reason: blockReason });
+      refetch();
+    },
+    [blockReason, blockUser, canBlock, refetch],
+  );
+
+  const handleUnblock = useCallback(
+    (userId: string) => {
+      unblockUser(userId);
+      refetch();
+    },
+    [refetch, unblockUser],
+  );
+
+  const keyExtractor = useCallback((item: UserProfile) => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: UserProfile }) => (
+      <UserRow user={item} canBlock={canBlock} onBlock={handleBlock} onUnblock={handleUnblock} />
+    ),
+    [canBlock, handleBlock, handleUnblock],
+  );
 
   if (isLoading) {
     return (
@@ -52,32 +83,7 @@ export function AdminUsersScreen() {
       {!filtered.length ? (
         <EmptyState title="No users found" subtitle="Try adjusting your filters" icon="🔍" />
       ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.meta}>{item.email} · {item.role}</Text>
-                {item.isBlocked ? <Text style={styles.blocked}>Blocked</Text> : null}
-              </View>
-              {item.isBlocked ? (
-                <Button label="Unblock" variant="secondary" onPress={() => { unblockUser(item.id); refetch(); }} />
-              ) : (
-                <Button
-                  label="Block"
-                  variant="ghost"
-                  onPress={() => {
-                    if (blockReason.length < 3) return;
-                    blockUser({ userId: item.id, reason: blockReason });
-                    refetch();
-                  }}
-                />
-              )}
-            </View>
-          )}
-        />
+        <FlatList data={filtered} keyExtractor={keyExtractor} renderItem={renderItem} />
       )}
     </Screen>
   );
@@ -85,8 +91,4 @@ export function AdminUsersScreen() {
 
 const styles = StyleSheet.create({
   search: { margin: 12, borderWidth: 1, borderColor: colors.borderDefault, borderRadius: 8, padding: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault },
-  name: { fontWeight: '600' },
-  meta: { color: colors.textSecondary, fontSize: 12 },
-  blocked: { color: colors.errorRed, fontSize: 12 },
 });
