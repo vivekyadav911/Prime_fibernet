@@ -3,15 +3,17 @@ import { FlatList, Modal, StyleSheet, Text, TextInput, View } from 'react-native
 import { Button, Screen, colors } from '@prime/ui';
 import type { Plan } from '@prime/types';
 
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useCreatePlanMutation,
   useDeletePlanMutation,
   useGetPlansQuery,
   useUpdatePlanMutation,
 } from '@/store/api/endpoints';
+import { queryErrorMessage } from '@/utils/queryError';
 
 export function AdminPlansScreen() {
-  const { data, refetch } = useGetPlansQuery();
+  const { data, isLoading, isError, error, refetch } = useGetPlansQuery();
   const [createPlan] = useCreatePlanMutation();
   const [updatePlan] = useUpdatePlanMutation();
   const [deletePlan] = useDeletePlanMutation();
@@ -37,6 +39,22 @@ export function AdminPlansScreen() {
     refetch();
   };
 
+  if (isLoading) {
+    return (
+      <Screen>
+        <SkeletonLoader rows={6} showAvatar />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
+  }
+
   return (
     <Screen padded={false}>
       <View style={styles.form}>
@@ -47,20 +65,24 @@ export function AdminPlansScreen() {
         <TextInput style={styles.input} placeholder="Validity days" value={form.validityDays} onChangeText={(v) => setForm({ ...form, validityDays: v })} keyboardType="numeric" />
         <Button label={editing ? 'Update' : 'Create'} onPress={onSave} />
       </View>
-      <FlatList
-        data={data ?? []}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.meta}>{item.speedMbps} Mbps · ₹{item.price}</Text>
+      {!data?.length ? (
+        <EmptyState title="No plans yet" subtitle="Create your first internet plan" icon="📶" />
+      ) : (
+        <FlatList
+          data={data}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.name}>{item.name}</Text>
+                <Text style={styles.meta}>{item.speedMbps} Mbps · ₹{item.price}</Text>
+              </View>
+              <Button label="Edit" variant="ghost" onPress={() => { setEditing(item); setForm({ name: item.name, speedMbps: String(item.speedMbps), price: String(item.price), validityDays: String(item.validityDays) }); }} />
+              <Button label="Delete" variant="ghost" onPress={() => { deletePlan(item.id); refetch(); }} />
             </View>
-            <Button label="Edit" variant="ghost" onPress={() => { setEditing(item); setForm({ name: item.name, speedMbps: String(item.speedMbps), price: String(item.price), validityDays: String(item.validityDays) }); }} />
-            <Button label="Delete" variant="ghost" onPress={() => { deletePlan(item.id); refetch(); }} />
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
     </Screen>
   );
 }

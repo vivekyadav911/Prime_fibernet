@@ -11,6 +11,7 @@ import { z } from 'zod';
 
 import type { AuthStackParamList } from '@/types/navigation';
 import { devQuickSignIn, signInWithPassword } from '@/hooks/useAuth';
+import { LoadingOverlay } from '@/components/common';
 import { authenticateWithBiometrics } from '@/services/biometric';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setError } from '@/store/slices/authSlice';
@@ -60,6 +61,7 @@ export function LoginScreen() {
 
   return (
     <Screen>
+      <LoadingOverlay visible={loading || !!devLoading} message="Signing in…" />
       <Text style={styles.title}>Prime Fibernet</Text>
       <Controller
         control={control}

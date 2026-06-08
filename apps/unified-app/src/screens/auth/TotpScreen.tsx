@@ -1,26 +1,29 @@
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Screen, colors } from '@prime/ui';
 
-import { verifyAdminTotp } from '@/hooks/useAuth';
+import { ErrorState } from '@/components/common';
+import { useVerifyAdminTotpMutation } from '@/store/api/endpoints';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setRequires2FA } from '@/store/slices/authSlice';
-import type { RootStackParamList } from '@/types/navigation';
+import { queryErrorMessage } from '@/utils/queryError';
 
 export function TotpScreen() {
-  const _navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  void _navigation;
   const [code, setCode] = useState('');
   const user = useAppSelector((s) => s.auth.user);
   const dispatch = useAppDispatch();
+  const [verifyTotp, { isLoading, isError, error, reset }] = useVerifyAdminTotpMutation();
 
   const onVerify = async () => {
     if (!user) return;
-    const valid = await verifyAdminTotp(code, user.id);
-    if (valid) {
-      dispatch(setRequires2FA(false));
+    reset();
+    try {
+      const result = await verifyTotp({ code, userId: user.id }).unwrap();
+      if (result.valid) {
+        dispatch(setRequires2FA(false));
+      }
+    } catch {
+      // isError handled below
     }
   };
 
@@ -35,8 +38,17 @@ export function TotpScreen() {
         maxLength={6}
         value={code}
         onChangeText={setCode}
+        editable={!isLoading}
       />
-      <Button label="Verify" onPress={onVerify} />
+      {isError ? (
+        <View style={styles.errorWrap}>
+          <ErrorState
+            message={queryErrorMessage(error, 'Invalid verification code. Please try again.')}
+            onRetry={reset}
+          />
+        </View>
+      ) : null}
+      <Button label={isLoading ? 'Verifying…' : 'Verify'} onPress={onVerify} disabled={isLoading || code.length < 6} />
     </Screen>
   );
 }
@@ -53,4 +65,5 @@ const styles = StyleSheet.create({
     letterSpacing: 8,
     textAlign: 'center',
   },
+  errorWrap: { marginBottom: 16, minHeight: 100 },
 });

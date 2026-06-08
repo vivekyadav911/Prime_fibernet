@@ -1,17 +1,35 @@
 import { FlatList, StyleSheet, Text } from 'react-native';
-import { EmptyState, Screen, colors } from '@prime/ui';
+import { Screen, colors } from '@prime/ui';
 
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import { useGetInventoryQuery } from '@/store/api/endpoints';
+import { queryErrorMessage } from '@/utils/queryError';
 
 export function OfficerInventoryScreen() {
   const user = useAppSelector((s) => s.auth.user);
-  const { data } = useGetInventoryQuery(user?.id ?? '', { skip: !user?.id });
+  const { data, isLoading, isError, error, refetch } = useGetInventoryQuery(user?.id ?? '', { skip: !user?.id });
+
+  if (isLoading) {
+    return (
+      <Screen>
+        <SkeletonLoader rows={6} showAvatar />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
+  }
 
   if (!data?.length) {
     return (
       <Screen>
-        <EmptyState title="No equipment assigned" description="Assigned inventory will appear here" />
+        <EmptyState title="No items assigned" subtitle="Contact admin for equipment" icon="📦" />
       </Screen>
     );
   }

@@ -1,17 +1,35 @@
 import { FlatList, Linking, StyleSheet, Text } from 'react-native';
-import { EmptyState, Screen, colors } from '@prime/ui';
+import { Screen, colors } from '@prime/ui';
 
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import { useGetPayslipsQuery } from '@/store/api/endpoints';
+import { queryErrorMessage } from '@/utils/queryError';
 
 export function OfficerPayslipScreen() {
   const user = useAppSelector((s) => s.auth.user);
-  const { data } = useGetPayslipsQuery(user?.id ?? '', { skip: !user?.id });
+  const { data, isLoading, isError, error, refetch } = useGetPayslipsQuery(user?.id ?? '', { skip: !user?.id });
+
+  if (isLoading) {
+    return (
+      <Screen>
+        <SkeletonLoader rows={6} showAvatar />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
+  }
 
   if (!data?.length) {
     return (
       <Screen>
-        <EmptyState title="No payslips" description="Monthly payslips will appear here" />
+        <EmptyState title="No payslips" subtitle="Monthly payslips will appear here" icon="💰" />
       </Screen>
     );
   }

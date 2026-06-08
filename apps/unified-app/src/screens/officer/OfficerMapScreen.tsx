@@ -1,9 +1,11 @@
 import { FlatList, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { EmptyState, Screen, StatusChip, colors } from '@prime/ui';
+import { Screen, StatusChip, colors } from '@prime/ui';
 
+import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import { useGetAssignedRequestsQuery } from '@/store/api/endpoints';
+import { queryErrorMessage } from '@/utils/queryError';
 
 const PRIORITY_COLORS: Record<string, string> = {
   P0: colors.errorRed,
@@ -14,14 +16,24 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 export function OfficerMapScreen() {
   const user = useAppSelector((s) => s.auth.user);
-  const { data: requests } = useGetAssignedRequestsQuery(user?.id, { skip: !user?.id });
+  const { data: requests, isLoading, isError, error, refetch } = useGetAssignedRequestsQuery(user?.id, {
+    skip: !user?.id,
+  });
 
   const withCoords = requests?.filter((r) => r.address) ?? [];
 
-  if (!withCoords.length) {
+  if (isLoading) {
     return (
       <Screen>
-        <EmptyState title="No map pins" description="Assigned requests with addresses will appear here" />
+        <SkeletonLoader rows={3} tall />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </Screen>
     );
   }

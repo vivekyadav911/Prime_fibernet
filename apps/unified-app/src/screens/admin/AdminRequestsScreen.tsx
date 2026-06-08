@@ -1,25 +1,43 @@
 import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Button, EmptyState, Screen, StatusChip, colors } from '@prime/ui';
+import { Button, Screen, StatusChip, colors } from '@prime/ui';
 
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useAssignRequestMutation,
   useEscalateRequestMutation,
   useGetAllRequestsQuery,
   useGetOfficersQuery,
 } from '@/store/api/endpoints';
+import { queryErrorMessage } from '@/utils/queryError';
 
 export function AdminRequestsScreen() {
-  const { data, refetch } = useGetAllRequestsQuery();
+  const { data, isLoading, isError, error, refetch } = useGetAllRequestsQuery();
   const { data: officers } = useGetOfficersQuery();
   const [assignRequest] = useAssignRequestMutation();
   const [escalateRequest] = useEscalateRequestMutation();
   const [selectedOfficer, setSelectedOfficer] = useState<string | null>(null);
 
+  if (isLoading) {
+    return (
+      <Screen>
+        <SkeletonLoader rows={6} showAvatar />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
+  }
+
   if (!data?.length) {
     return (
       <Screen>
-        <EmptyState title="No requests" description="Service requests will appear here" />
+        <EmptyState title="No requests" subtitle="All clear — no open requests" icon="✅" />
       </Screen>
     );
   }

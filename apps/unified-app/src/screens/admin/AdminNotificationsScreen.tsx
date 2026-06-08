@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Screen, StatusChip, colors } from '@prime/ui';
 
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetNotificationHistoryQuery, useSendBulkNotificationMutation } from '@/store/api/endpoints';
+import { queryErrorMessage } from '@/utils/queryError';
 
 const AUDIENCES = ['all', 'customers', 'officers', 'admins'];
 
 export function AdminNotificationsScreen() {
-  const { data: history, refetch } = useGetNotificationHistoryQuery();
+  const { data: history, isLoading, isError, error, refetch } = useGetNotificationHistoryQuery();
   const [sendBulk] = useSendBulkNotificationMutation();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -20,6 +22,22 @@ export function AdminNotificationsScreen() {
     setBody('');
     refetch();
   };
+
+  if (isLoading) {
+    return (
+      <Screen>
+        <SkeletonLoader rows={6} showAvatar />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen padded={false}>
@@ -41,20 +59,23 @@ export function AdminNotificationsScreen() {
         <Button label="Queue notification" onPress={onSend} />
       </View>
       <Text style={styles.historyTitle}>Delivery history</Text>
-      <FlatList
-        data={history ?? []}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.notifTitle}>{item.title}</Text>
-              <Text style={styles.meta}>{item.audience} · Sent: {item.sentCount}</Text>
+      {!history?.length ? (
+        <EmptyState title="No notifications sent" subtitle="Queued notifications will appear here" icon="🔔" />
+      ) : (
+        <FlatList
+          data={history}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.notifTitle}>{item.title}</Text>
+                <Text style={styles.meta}>{item.audience} · Sent: {item.sentCount}</Text>
+              </View>
+              <StatusChip status={item.status} />
             </View>
-            <StatusChip status={item.status} />
-          </View>
-        )}
-        ListEmptyComponent={<Text style={styles.muted}>No notifications sent yet</Text>}
-      />
+          )}
+        />
+      )}
     </Screen>
   );
 }
@@ -70,5 +91,4 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, alignItems: 'center' },
   notifTitle: { fontWeight: '600' },
   meta: { color: colors.textSecondary, fontSize: 12 },
-  muted: { padding: 16, color: colors.textSecondary },
 });

@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, EmptyState, Screen, colors } from '@prime/ui';
+import { Button, Screen, colors } from '@prime/ui';
 
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetOfficersQuery, useInviteOfficerMutation, useUpdateOfficerMutation } from '@/store/api/endpoints';
+import { queryErrorMessage } from '@/utils/queryError';
 
 export function AdminOfficersScreen() {
-  const { data, refetch } = useGetOfficersQuery();
+  const { data, isLoading, isError, error, refetch } = useGetOfficersQuery();
   const [inviteOfficer] = useInviteOfficerMutation();
   const [updateOfficer] = useUpdateOfficerMutation();
   const [email, setEmail] = useState('');
@@ -21,6 +23,22 @@ export function AdminOfficersScreen() {
     refetch();
   };
 
+  if (isLoading) {
+    return (
+      <Screen>
+        <SkeletonLoader rows={6} showAvatar />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
+  }
+
   return (
     <Screen padded={false}>
       <View style={styles.form}>
@@ -32,7 +50,7 @@ export function AdminOfficersScreen() {
         <Button label="Send invite" onPress={onInvite} />
       </View>
       {!data?.length ? (
-        <EmptyState title="No officers" description="Invite officers to get started" />
+        <EmptyState title="No officers yet" subtitle="Invite your first officer" icon="🛡️" />
       ) : (
         <FlatList
           data={data}

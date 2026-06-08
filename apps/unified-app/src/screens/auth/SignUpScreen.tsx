@@ -3,33 +3,39 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
-import { StyleSheet, Text, TextInput } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Screen, colors } from '@prime/ui';
 import { SignUpSchema } from '@prime/types';
 import { z } from 'zod';
 
-import { signUp } from '@/hooks/useAuth';
+import { ErrorState } from '@/components/common';
+import { useSignUpMutation } from '@/store/api/endpoints';
 import type { AuthStackParamList } from '@/types/navigation';
+import { queryErrorMessage } from '@/utils/queryError';
 
 type FormData = z.infer<typeof SignUpSchema>;
 
 export function SignUpScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
-  const [loading, setLoading] = useState(false);
+  const [signUp, { isLoading, isError, error, reset }] = useSignUpMutation();
   const [message, setMessage] = useState<string | null>(null);
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(SignUpSchema),
   });
 
   const onSubmit = async (data: FormData) => {
-    setLoading(true);
+    reset();
+    setMessage(null);
     try {
-      await signUp(data.name, data.email, data.phone, data.password);
+      await signUp({
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        password: data.password,
+      }).unwrap();
       setMessage('Check your email to verify your account.');
     } catch {
-      setMessage('Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
+      // isError surfaces via ErrorState below
     }
   };
 
@@ -60,8 +66,13 @@ export function SignUpScreen() {
           </Text>
         ) : null,
       )}
+      {isError ? (
+        <View style={styles.formError}>
+          <ErrorState message={queryErrorMessage(error, 'Registration failed. Please try again.')} onRetry={reset} />
+        </View>
+      ) : null}
       {message ? <Text style={styles.info}>{message}</Text> : null}
-      <Button label={loading ? 'Creating…' : 'Register'} onPress={handleSubmit(onSubmit)} />
+      <Button label={isLoading ? 'Creating…' : 'Register'} onPress={handleSubmit(onSubmit)} disabled={isLoading} />
       <Button label="Back to sign in" variant="ghost" onPress={() => navigation.goBack()} />
     </Screen>
   );
@@ -78,5 +89,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWhite,
   },
   error: { color: colors.errorRed },
+  formError: { marginVertical: 8, minHeight: 120 },
   info: { color: colors.successGreen, marginVertical: 8 },
 });

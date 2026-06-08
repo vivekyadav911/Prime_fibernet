@@ -3,13 +3,15 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Screen, colors } from '@prime/ui';
 import type { PaymentGateway } from '@prime/types';
 
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { signOut } from '@/hooks/useAuth';
 import { useAppDispatch } from '@/store/hooks';
 import { useGetAdminSettingsQuery, useUpdateAdminSettingsMutation } from '@/store/api/endpoints';
+import { queryErrorMessage } from '@/utils/queryError';
 
 export function AdminSettingsScreen() {
   const dispatch = useAppDispatch();
-  const { data: settings, refetch } = useGetAdminSettingsQuery();
+  const { data: settings, isLoading, isError, error, refetch } = useGetAdminSettingsQuery();
   const [updateSettings] = useUpdateAdminSettingsMutation();
   const [companyName, setCompanyName] = useState('');
   const [companyEmail, setCompanyEmail] = useState('');
@@ -34,6 +36,30 @@ export function AdminSettingsScreen() {
     refetch();
     setTimeout(() => setSaved(false), 2000);
   };
+
+  if (isLoading) {
+    return (
+      <Screen>
+        <SkeletonLoader rows={4} />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
+  }
+
+  if (!settings) {
+    return (
+      <Screen>
+        <EmptyState title="Settings unavailable" subtitle="Could not load company settings" icon="⚙️" />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>

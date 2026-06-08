@@ -1,12 +1,14 @@
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button, EmptyState, Screen, StatusChip, colors } from '@prime/ui';
+import { Button, Screen, StatusChip, colors } from '@prime/ui';
 
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { SyncManager } from '@/services/offline/syncManager';
 import { useAppSelector } from '@/store/hooks';
 import { useGetAssignedRequestsQuery, useUpdateRequestStatusMutation } from '@/store/api/endpoints';
 import type { OfficerStackParamList } from '@/types/navigation';
+import { queryErrorMessage } from '@/utils/queryError';
 
 const STATUS_FLOW: Record<string, string | null> = {
   pending: 'working',
@@ -19,7 +21,9 @@ const STATUS_FLOW: Record<string, string | null> = {
 export function OfficerRequestsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<OfficerStackParamList>>();
   const user = useAppSelector((s) => s.auth.user);
-  const { data: requests, refetch } = useGetAssignedRequestsQuery(user?.id, { skip: !user?.id });
+  const { data: requests, isLoading, isError, error, refetch } = useGetAssignedRequestsQuery(user?.id, {
+    skip: !user?.id,
+  });
   const [updateStatus] = useUpdateRequestStatusMutation();
 
   const sorted = [...(requests ?? [])].sort((a, b) => a.priority.localeCompare(b.priority));
@@ -40,33 +44,53 @@ export function OfficerRequestsScreen() {
     refetch();
   };
 
+  if (isLoading) {
+    return (
+      <Screen>
+        <SkeletonLoader rows={6} showAvatar />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
+  }
+
+  if (!sorted.length) {
+    return (
+      <Screen>
+        <EmptyState title="No assigned requests" subtitle="You're all caught up" icon="✅" />
+      </Screen>
+    );
+  }
+
   return (
     <Screen padded={false}>
-      {!sorted.length ? (
-        <EmptyState title="No requests" description="Assigned requests will appear here" />
-      ) : (
-        <FlatList
-          data={sorted}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Pressable style={styles.card} onPress={() => navigation.navigate('RequestDetail', { requestId: item.id })}>
-              <View style={styles.header}>
-                <Text style={styles.type}>{item.requestType}</Text>
-                <StatusChip status={item.priority} />
-              </View>
-              <Text style={styles.address}>{item.address}</Text>
-              <StatusChip status={item.status} />
-              {STATUS_FLOW[item.status] ? (
-                <Button
-                  label={item.status === 'working' ? 'Mark resolved' : 'Start work'}
-                  onPress={() => onAdvance(item.id, item.status)}
-                  style={styles.btn}
-                />
-              ) : null}
-            </Pressable>
-          )}
-        />
-      )}
+      <FlatList
+        data={sorted}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <Pressable style={styles.card} onPress={() => navigation.navigate('RequestDetail', { requestId: item.id })}>
+            <View style={styles.header}>
+              <Text style={styles.type}>{item.requestType}</Text>
+              <StatusChip status={item.priority} />
+            </View>
+            <Text style={styles.address}>{item.address}</Text>
+            <StatusChip status={item.status} />
+            {STATUS_FLOW[item.status] ? (
+              <Button
+                label={item.status === 'working' ? 'Mark resolved' : 'Start work'}
+                onPress={() => onAdvance(item.id, item.status)}
+                style={styles.btn}
+              />
+            ) : null}
+          </Pressable>
+        )}
+      />
     </Screen>
   );
 }

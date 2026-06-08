@@ -1,13 +1,17 @@
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { Button, EmptyState, Screen, StatusChip, colors } from '@prime/ui';
+import * as Location from 'expo-location';
+import { Button, Screen, StatusChip, colors } from '@prime/ui';
 
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import { useGetAssignedRequestsQuery, useClockInMutation } from '@/store/api/endpoints';
-import * as Location from 'expo-location';
+import { queryErrorMessage } from '@/utils/queryError';
 
 export function OfficerDashboardScreen() {
   const user = useAppSelector((s) => s.auth.user);
-  const { data: requests } = useGetAssignedRequestsQuery(user?.id, { skip: !user?.id });
+  const { data: requests, isLoading, isError, error, refetch } = useGetAssignedRequestsQuery(user?.id, {
+    skip: !user?.id,
+  });
   const [clockIn] = useClockInMutation();
 
   const newCount = requests?.filter((r) => r.status === 'pending').length ?? 0;
@@ -23,6 +27,22 @@ export function OfficerDashboardScreen() {
     await clockIn({ userId: user.id, latitude: coords.coords.latitude, longitude: coords.coords.longitude });
   };
 
+  if (isLoading) {
+    return (
+      <Screen>
+        <SkeletonLoader rows={3} tall />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       <View style={styles.shiftCard}>
@@ -34,7 +54,7 @@ export function OfficerDashboardScreen() {
         <Text style={styles.chip}>In progress: {inProgress}</Text>
       </View>
       {!requests?.length ? (
-        <EmptyState title="No assignments" description="New requests will appear here" />
+        <EmptyState title="No assignments" subtitle="New requests will appear here" icon="📋" />
       ) : (
         <FlatList
           data={requests.slice(0, 3)}
