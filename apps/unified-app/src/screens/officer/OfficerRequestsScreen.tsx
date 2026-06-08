@@ -1,9 +1,12 @@
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button, EmptyState, Screen, StatusChip, colors } from '@prime/ui';
 
 import { SyncManager } from '@/services/offline/syncManager';
 import { useAppSelector } from '@/store/hooks';
 import { useGetAssignedRequestsQuery, useUpdateRequestStatusMutation } from '@/store/api/endpoints';
+import type { OfficerStackParamList } from '@/types/navigation';
 
 const STATUS_FLOW: Record<string, string | null> = {
   pending: 'working',
@@ -14,6 +17,7 @@ const STATUS_FLOW: Record<string, string | null> = {
 };
 
 export function OfficerRequestsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<OfficerStackParamList>>();
   const user = useAppSelector((s) => s.auth.user);
   const { data: requests, refetch } = useGetAssignedRequestsQuery(user?.id, { skip: !user?.id });
   const [updateStatus] = useUpdateRequestStatusMutation();
@@ -29,9 +33,8 @@ export function OfficerRequestsScreen() {
     } catch {
       await SyncManager.enqueue({
         id: `${id}-${next}-${Date.now()}`,
-        type: 'updateRequestStatus',
-        payload: { id, status: next },
-        execute,
+        endpoint: 'updateRequestStatus',
+        payload: { id, status: next, note: `Status changed to ${next}` },
       });
     }
     refetch();
@@ -46,7 +49,7 @@ export function OfficerRequestsScreen() {
           data={sorted}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.card}>
+            <Pressable style={styles.card} onPress={() => navigation.navigate('RequestDetail', { requestId: item.id })}>
               <View style={styles.header}>
                 <Text style={styles.type}>{item.requestType}</Text>
                 <StatusChip status={item.priority} />
@@ -60,7 +63,7 @@ export function OfficerRequestsScreen() {
                   style={styles.btn}
                 />
               ) : null}
-            </View>
+            </Pressable>
           )}
         />
       )}

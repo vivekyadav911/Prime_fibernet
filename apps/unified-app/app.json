@@ -15,18 +15,69 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.primefibernet.app"
+      "bundleIdentifier": "com.primefibernet.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Prime Fibernet uses your location for officer shift check-in/out and field tracking.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Prime Fibernet needs background location during active officer shifts for live field tracking.",
+        "NSLocationAlwaysUsageDescription": "Prime Fibernet needs background location during active officer shifts for live field tracking.",
+        "NSCameraUsageDescription": "Prime Fibernet uses the camera to capture profile photos and service request attachments.",
+        "NSPhotoLibraryUsageDescription": "Prime Fibernet accesses your photo library to select profile pictures and request attachments.",
+        "NSPhotoLibraryAddUsageDescription": "Prime Fibernet saves photos to your library when you export invoices or receipts.",
+        "NSFaceIDUsageDescription": "Prime Fibernet uses Face ID to securely unlock the app after sign-in."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1B3A6B"
       },
-      "package": "com.primefibernet.app"
+      "package": "com.primefibernet.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE",
+        "POST_NOTIFICATIONS",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "SCHEDULE_EXACT_ALARM"
+      ]
     },
     "plugins": [
       "expo-secure-store",
-      "expo-notifications"
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Prime Fibernet needs background location during active officer shifts for live field tracking.",
+          "locationWhenInUsePermission": "Prime Fibernet uses your location for officer shift check-in/out and field tracking.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Prime Fibernet accesses your photos for profile pictures and service request attachments.",
+          "cameraPermission": "Prime Fibernet uses the camera to capture profile photos and service request attachments."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Prime Fibernet uses Face ID to securely unlock the app after sign-in."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1B3A6B",
+          "sounds": [],
+          "mode": "production"
+        }
+      ]
     ],
     "extra": {
       "eas": {

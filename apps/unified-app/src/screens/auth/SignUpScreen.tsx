@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { StyleSheet, Text, TextInput } from 'react-native';
@@ -8,11 +9,12 @@ import { SignUpSchema } from '@prime/types';
 import { z } from 'zod';
 
 import { signUp } from '@/hooks/useAuth';
+import type { AuthStackParamList } from '@/types/navigation';
 
 type FormData = z.infer<typeof SignUpSchema>;
 
 export function SignUpScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({

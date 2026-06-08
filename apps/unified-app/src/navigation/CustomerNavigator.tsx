@@ -1,39 +1,140 @@
+import { useMemo } from 'react';
+import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { CustomerDashboardScreen } from '@/screens/customer/CustomerDashboardScreen';
-import { PaymentsScreen } from '@/screens/customer/PaymentsScreen';
-import { PlansScreen } from '@/screens/customer/PlansScreen';
-import { ProfileScreen } from '@/screens/customer/ProfileScreen';
-import { RequestsScreen } from '@/screens/customer/RequestsScreen';
+import { DashboardScreen } from '@/screens/customer/dashboard/DashboardScreen';
 import { ChatbotScreen } from '@/screens/customer/ChatbotScreen';
+import { PaymentsScreen } from '@/screens/customer/payments/PaymentsScreen';
+import { PlansScreen } from '@/screens/customer/plans/PlansScreen';
+import { ProfileScreen } from '@/screens/customer/profile/ProfileScreen';
+import { RequestsScreen } from '@/screens/customer/requests/RequestsScreen';
+import { useGetMyRequestsQuery } from '@/store/api/endpoints';
+import { useAppSelector } from '@/store/hooks';
+import type { CustomerStackParamList, CustomerTabParamList } from '@/types/navigation';
 import { colors } from '@prime/ui';
 
-export type CustomerTabParamList = {
-  Home: undefined;
-  Plans: undefined;
-  Payments: undefined;
-  Requests: undefined;
-  Support: undefined;
-  Profile: undefined;
-};
+import {
+  AboutScreen,
+  CheckoutScreen,
+  CreateRequestScreen,
+  CustomerNotificationsScreen,
+  MakePaymentScreen,
+  PaymentGatewayScreen,
+  PaymentHistoryScreen,
+  PaymentSelectionScreen,
+  PaymentSuccessScreen,
+  PlanDetailsScreen,
+  PrivacyScreen,
+  RefundScreen,
+  RequestDetailsScreen,
+  TermsScreen,
+} from './customerStackScreens';
 
 const Tab = createBottomTabNavigator<CustomerTabParamList>();
+const Stack = createNativeStackNavigator<CustomerStackParamList>();
 
-export function CustomerNavigator() {
+const UNRESOLVED_STATUSES = new Set(['pending', 'assigned', 'in_progress', 'awaiting_customer']);
+
+function TabIcon({ label, focused }: { label: string; focused: boolean }) {
+  return (
+    <Text style={{ fontSize: 18, opacity: focused ? 1 : 0.5, color: focused ? colors.accentTeal : colors.textSecondary }}>
+      {label}
+    </Text>
+  );
+}
+
+function CustomerTabs() {
+  const userId = useAppSelector((s) => s.auth.user?.id ?? '');
+  const { data: requests } = useGetMyRequestsQuery(userId, { skip: !userId });
+
+  const unresolvedCount = useMemo(
+    () => (requests ?? []).filter((r) => UNRESOLVED_STATUSES.has(r.status)).length,
+    [requests],
+  );
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: colors.primaryNavy },
         headerTintColor: colors.white,
         tabBarActiveTintColor: colors.accentTeal,
+        tabBarInactiveTintColor: colors.textSecondary,
       }}
     >
-      <Tab.Screen name="Home" component={CustomerDashboardScreen} />
-      <Tab.Screen name="Plans" component={PlansScreen} />
-      <Tab.Screen name="Payments" component={PaymentsScreen} />
-      <Tab.Screen name="Requests" component={RequestsScreen} />
-      <Tab.Screen name="Support" component={ChatbotScreen} options={{ title: 'Support' }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen
+        name="Home"
+        component={DashboardScreen}
+        options={{
+          title: 'Dashboard',
+          tabBarIcon: ({ focused }) => <TabIcon label="⌂" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="Plans"
+        component={PlansScreen}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon label="◎" focused={focused} /> }}
+      />
+      <Tab.Screen
+        name="Payments"
+        component={PaymentsScreen}
+        options={{
+          title: 'Pay',
+          tabBarIcon: ({ focused }) => <TabIcon label="₹" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="Requests"
+        component={RequestsScreen}
+        options={{
+          tabBarBadge: unresolvedCount > 0 ? unresolvedCount : undefined,
+          tabBarIcon: ({ focused }) => <TabIcon label="☰" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="Support"
+        component={ChatbotScreen}
+        options={{
+          title: 'Support',
+          tabBarIcon: ({ focused }) => <TabIcon label="💬" focused={focused} />,
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon label="👤" focused={focused} /> }}
+      />
     </Tab.Navigator>
+  );
+}
+
+/**
+ * Flutter `RootShell` (bottom tabs) + `MaterialApp.routes` pushed screens.
+ * Tab bar auto-hides when a stack detail screen is focused.
+ */
+export function CustomerNavigator() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.primaryNavy },
+        headerTintColor: colors.white,
+      }}
+    >
+      <Stack.Screen name="CustomerTabs" component={CustomerTabs} options={{ headerShown: false }} />
+      <Stack.Screen name="PlanDetails" component={PlanDetailsScreen} options={{ title: 'Plan details' }} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
+      <Stack.Screen name="PaymentSelection" component={PaymentSelectionScreen} options={{ title: 'Payment' }} />
+      <Stack.Screen name="PaymentGateway" component={PaymentGatewayScreen} options={{ title: 'Payment gateway' }} />
+      <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ title: 'Success', headerShown: false }} />
+      <Stack.Screen name="MakePayment" component={MakePaymentScreen} options={{ title: 'Make payment' }} />
+      <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} options={{ title: 'Payment history' }} />
+      <Stack.Screen name="CreateRequest" component={CreateRequestScreen} options={{ title: 'New request' }} />
+      <Stack.Screen name="RequestDetails" component={RequestDetailsScreen} options={{ title: 'Request' }} />
+      <Stack.Screen name="Notifications" component={CustomerNotificationsScreen} options={{ title: 'Notifications' }} />
+      <Stack.Screen name="About" component={AboutScreen} options={{ title: 'About' }} />
+      <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms' }} />
+      <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ title: 'Privacy' }} />
+      <Stack.Screen name="Refund" component={RefundScreen} options={{ title: 'Refund policy' }} />
+    </Stack.Navigator>
   );
 }

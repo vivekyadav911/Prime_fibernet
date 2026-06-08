@@ -1,10 +1,14 @@
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput } from 'react-native';
 import { Button, Screen, colors } from '@prime/ui';
 
 import { resetPassword } from '@/hooks/useAuth';
+import type { AuthStackParamList } from '@/types/navigation';
 
 export function ForgotPasswordScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
@@ -30,6 +34,7 @@ export function ForgotPasswordScreen() {
       />
       {message ? <Text style={styles.info}>{message}</Text> : null}
       <Button label="Send reset link" onPress={onSubmit} />
+      <Button label="Back to sign in" variant="ghost" onPress={() => navigation.navigate('Login')} />
     </Screen>
   );
 }

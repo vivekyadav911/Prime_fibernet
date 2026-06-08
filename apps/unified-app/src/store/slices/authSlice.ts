@@ -42,12 +42,36 @@ function mapUser(user: User): AuthUser {
   };
 }
 
+export type AuthCredentialsPayload = {
+  session: Session;
+  user: User;
+};
+
 export const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
     setLoading(state, action: PayloadAction<boolean>) {
       state.isLoading = action.payload;
+    },
+    setCredentials(state, action: PayloadAction<AuthCredentialsPayload>) {
+      const { session, user } = action.payload;
+      state.session = session;
+      state.isDevSession = (user.email ?? '').endsWith('@prime.local');
+      state.user = mapUser(user);
+      state.isAuthenticated = true;
+      state.requires2FA = state.user.role === 'admin' && !user.app_metadata?.totp_verified;
+      state.isLoading = false;
+      state.error = null;
+    },
+    clearCredentials(state) {
+      state.session = null;
+      state.user = null;
+      state.isAuthenticated = false;
+      state.requires2FA = false;
+      state.isDevSession = false;
+      state.error = null;
+      state.isLoading = false;
     },
     setSession(state, action: PayloadAction<{ session: Session | null; user: User | null }>) {
       const { session, user } = action.payload;
@@ -92,4 +116,13 @@ export const authSlice = createSlice({
   },
 });
 
-export const { setLoading, setSession, setError, setRequires2FA, signInDevUser, logout } = authSlice.actions;
+export const {
+  setLoading,
+  setCredentials,
+  clearCredentials,
+  setSession,
+  setError,
+  setRequires2FA,
+  signInDevUser,
+  logout,
+} = authSlice.actions;

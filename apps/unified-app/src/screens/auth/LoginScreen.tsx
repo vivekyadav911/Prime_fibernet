@@ -9,7 +9,7 @@ import { LoginSchema } from '@prime/types';
 import type { AppRole } from '@prime/types';
 import { z } from 'zod';
 
-import type { AuthStackParamList } from '@/navigation/AuthNavigator';
+import type { AuthStackParamList } from '@/types/navigation';
 import { devQuickSignIn, signInWithPassword } from '@/hooks/useAuth';
 import { authenticateWithBiometrics } from '@/services/biometric';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -100,7 +100,7 @@ export function LoginScreen() {
           if (ok) await onDevSignIn('customer');
         }}
       />
-      <Button label="Create account" variant="ghost" onPress={() => navigation.navigate('SignUp')} />
+      <Button label="Create account" variant="ghost" onPress={() => navigation.navigate('Register')} />
       <Button label="Forgot password" variant="ghost" onPress={() => navigation.navigate('ForgotPassword')} />
       {__DEV__ ? (
         <View style={styles.devSection}>

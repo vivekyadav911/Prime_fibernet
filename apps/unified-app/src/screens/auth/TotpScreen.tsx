@@ -1,3 +1,5 @@
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput } from 'react-native';
 import { Button, Screen, colors } from '@prime/ui';
@@ -5,8 +7,11 @@ import { Button, Screen, colors } from '@prime/ui';
 import { verifyAdminTotp } from '@/hooks/useAuth';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setRequires2FA } from '@/store/slices/authSlice';
+import type { RootStackParamList } from '@/types/navigation';
 
 export function TotpScreen() {
+  const _navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  void _navigation;
   const [code, setCode] = useState('');
   const user = useAppSelector((s) => s.auth.user);
   const dispatch = useAppDispatch();

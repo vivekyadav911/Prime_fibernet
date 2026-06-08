@@ -3,6 +3,7 @@ export const colors = {
   accentTeal: '#0D7377',
   successGreen: '#1A6B3A',
   warningAmber: '#D4820A',
+  warning: '#D4820A',
   errorRed: '#C0392B',
   background: '#F5F7FA',
   surfaceWhite: '#FFFFFF',
