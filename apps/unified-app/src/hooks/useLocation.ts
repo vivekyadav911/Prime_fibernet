@@ -22,6 +22,9 @@ type UseLocationResult = {
   accuracy: number | null;
   error: string | null;
   isLoading: boolean;
+  permissionGranted: boolean | null;
+  checkPermission: () => Promise<boolean>;
+  requestPermission: () => Promise<boolean>;
   startTracking: () => Promise<LocationCoords | null>;
   stopTracking: () => void;
 };
@@ -34,6 +37,7 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
 
   const watcherRef = useRef<Location.LocationSubscription | null>(null);
   const permissionsRequested = useRef(false);
@@ -46,6 +50,23 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
       accuracy: position.coords.accuracy,
     });
     setAccuracy(position.coords.accuracy);
+  }, []);
+
+  const checkPermission = useCallback(async (): Promise<boolean> => {
+    const fg = await Location.getForegroundPermissionsAsync();
+    const granted = fg.status === 'granted';
+    setPermissionGranted(granted);
+    return granted;
+  }, []);
+
+  const requestPermission = useCallback(async (): Promise<boolean> => {
+    const fg = await Location.requestForegroundPermissionsAsync();
+    const granted = fg.status === 'granted';
+    setPermissionGranted(granted);
+    if (!granted) {
+      setError('Location permission denied');
+    }
+    return granted;
   }, []);
 
   const ensurePermissions = useCallback(async () => {
@@ -127,6 +148,10 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
     watcherRef.current = null;
   }, []);
 
+  useEffect(() => {
+    void checkPermission();
+  }, [checkPermission]);
+
   useEffect(() => () => {
     watcherRef.current?.remove();
     watcherRef.current = null;
@@ -138,6 +163,9 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
     accuracy,
     error,
     isLoading,
+    permissionGranted,
+    checkPermission,
+    requestPermission,
     startTracking,
     stopTracking,
   };

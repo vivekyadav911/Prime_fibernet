@@ -5,6 +5,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusChip } from '@/components/common';
 import { ProfileScreen } from '@/screens/customer/profile/ProfileScreen';
 import { ChatbotScreen } from '@/screens/customer/ChatbotScreen';
+import { CollectPaymentScreen } from '@/screens/officer/CollectPaymentScreen';
+import { InvoiceScreen } from '@/screens/officer/InvoiceScreen';
+import { LocationGateScreen } from '@/screens/officer/LocationGateScreen';
 import { OfficerDashboardScreen } from '@/screens/officer/OfficerDashboardScreen';
 import { OfficerInventoryScreen } from '@/screens/officer/OfficerInventoryScreen';
 import { OfficerLeaveScreen } from '@/screens/officer/OfficerLeaveScreen';
@@ -14,7 +17,8 @@ import { OfficerRequestsScreen } from '@/screens/officer/OfficerRequestsScreen';
 import { OfficerShiftsScreen } from '@/screens/officer/OfficerShiftsScreen';
 import { useAppSelector } from '@/store/hooks';
 import type { OfficerDrawerParamList, OfficerStackParamList } from '@/types/navigation';
-import { colors } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 import { OfficerRequestDetailScreen } from './officerStackScreens';
 
@@ -25,7 +29,7 @@ function ShiftStatusHeader() {
   const shift = useAppSelector((s) => s.office.currentShift);
   if (!shift) return null;
   return (
-    <View style={{ marginRight: 12 }}>
+    <View style={{ marginRight: spacing.sm }}>
       <StatusChip status={shift.status} />
     </View>
   );
@@ -62,6 +66,16 @@ function OfficerDrawerNav() {
         component={OfficerShiftsScreen}
         options={{ title: 'Shifts', drawerLabel: 'Shifts' }}
       />
+      <Drawer.Screen
+        name="CollectPayment"
+        component={CollectPaymentScreen}
+        options={{ title: 'Collect payment', drawerLabel: 'Collect Payment' }}
+      />
+      <Drawer.Screen
+        name="Invoice"
+        component={InvoiceScreen}
+        options={{ title: 'Invoice', drawerLabel: 'Invoice' }}
+      />
       <Drawer.Screen name="Inventory" component={OfficerInventoryScreen} />
       <Drawer.Screen
         name="Payslip"
@@ -84,17 +98,18 @@ function OfficerDrawerNav() {
 }
 
 /**
- * Flutter `OfficerRootShell` (drawer + bottom tabs) + named `RequestDetailScreen.route`.
- * Location gate handled at app bootstrap; drawer maps Flutter attendance to Shifts.
+ * Flutter `OfficerRootShell` — LocationGate gates access until GPS is enabled.
  */
 export function OfficerNavigator() {
   return (
     <Stack.Navigator
+      initialRouteName="LocationGate"
       screenOptions={{
         headerStyle: { backgroundColor: colors.primaryNavy },
         headerTintColor: colors.white,
       }}
     >
+      <Stack.Screen name="LocationGate" component={LocationGateScreen} options={{ headerShown: false }} />
       <Stack.Screen name="OfficerDrawer" component={OfficerDrawerNav} options={{ headerShown: false }} />
       <Stack.Screen
         name="RequestDetail"

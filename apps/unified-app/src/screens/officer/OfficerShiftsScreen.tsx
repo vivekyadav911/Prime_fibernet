@@ -1,7 +1,9 @@
 import { useCallback } from 'react';
 import { FlatList } from 'react-native';
 import type { Shift } from '@prime/types';
-import { Button, Screen, colors } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 import { StyleSheet, Text } from 'react-native';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
@@ -119,5 +121,5 @@ const styles = StyleSheet.create({
   muted: { color: colors.textSecondary, marginBottom: 12 },
   error: { color: colors.errorRed, marginBottom: 8 },
   btn: { marginBottom: 12 },
-  historyTitle: { fontWeight: '600', marginTop: 24, marginBottom: 8 },
+  historyTitle: { fontWeight: '600', marginTop: spacing.xl, marginBottom: 8 },
 });

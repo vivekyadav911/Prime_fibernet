@@ -4,7 +4,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, Screen, colors } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
 import { LoginSchema } from '@prime/types';
 import type { AppRole } from '@prime/types';
 import { z } from 'zod';
@@ -130,8 +132,8 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
     marginBottom: 8,
     backgroundColor: colors.surfaceWhite,
   },
@@ -156,6 +158,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
   },
-  devButtons: { gap: 8 },
+  devButtons: { gap: spacing.xs },
   devBtn: { marginBottom: 0 },
 });

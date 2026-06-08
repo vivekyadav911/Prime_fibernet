@@ -2,7 +2,9 @@ import { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import type { ServiceRequest } from '@prime/types';
-import { Button, Screen, colors } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
@@ -75,8 +77,8 @@ export function OfficerDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  shiftCard: { backgroundColor: colors.primaryNavy, padding: 16, borderRadius: 12, marginBottom: 16 },
+  shiftCard: { backgroundColor: colors.primaryNavy, padding: spacing.md, borderRadius: radius.md, marginBottom: spacing.md },
   shiftTitle: { color: colors.white, fontSize: 18, marginBottom: 12 },
-  chips: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  chip: { backgroundColor: colors.background, padding: 8, borderRadius: 8 },
+  chips: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
+  chip: { backgroundColor: colors.background, padding: 8, borderRadius: radius.sm },
 });

@@ -13,7 +13,8 @@ import {
   View,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
-import { Button, Screen, colors } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
 
 import { ErrorState, LoadingOverlay, PriorityBadge, SkeletonLoader, StatusChip } from '@/components/common';
 import { useCamera } from '@/hooks/useCamera';
@@ -24,7 +25,7 @@ import {
 import { useUpdateRequestStatusMutation } from '@/services/api/requestsApi';
 import { useAppSelector } from '@/store/hooks';
 import type { OfficerStackParamList } from '@/types/navigation';
-import { spacing } from '@/theme/spacing';
+import { radius, spacing } from '@/theme/spacing';
 
 type Props = NativeStackScreenProps<OfficerStackParamList, 'RequestDetail'>;
 
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: spacing.xxxl },
   card: {
     backgroundColor: colors.surfaceWhite,
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: spacing.lg,
     gap: spacing.sm,
     borderWidth: 1,
@@ -314,9 +315,9 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
   body: { color: colors.textPrimary, lineHeight: 22 },
   address: { color: colors.textSecondary },
-  photo: { width: 120, height: 120, borderRadius: 8, marginRight: spacing.sm },
+  photo: { width: 120, height: 120, borderRadius: radius.sm, marginRight: spacing.sm },
   mapHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  map: { height: 180, borderRadius: 12, marginTop: spacing.sm },
+  map: { height: 180, borderRadius: radius.md, marginTop: spacing.sm },
   actions: { gap: spacing.sm },
   timelineItem: {
     borderLeftWidth: 2,
@@ -331,7 +332,7 @@ const styles = StyleSheet.create({
   noteInput: {
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     padding: spacing.md,
     minHeight: 100,
     textAlignVertical: 'top',
@@ -342,6 +343,6 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    borderRadius: 8,
+    borderRadius: radius.sm,
   },
 });

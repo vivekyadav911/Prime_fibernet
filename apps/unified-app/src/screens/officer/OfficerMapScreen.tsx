@@ -2,7 +2,8 @@ import { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import type { ServiceRequest } from '@prime/types';
-import { Screen, colors } from '@prime/ui';
+import { Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
 
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';

@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, Share, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { Payment, PaymentGateway } from '@prime/types';
@@ -13,9 +15,12 @@ import { spacing } from '@/theme/spacing';
 import { DateRangeChips } from './components/DateRangeChips';
 import { PaymentHistoryItem } from './components/PaymentHistoryItem';
 import { PaymentSummaryCard } from './components/PaymentSummaryCard';
+import type { CustomerStackParamList } from '@/types/navigation';
+
 import { usePayments } from './hooks/usePayments';
 
 export function PaymentsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const {
     payments,
     totalSpent,
@@ -114,6 +119,7 @@ export function PaymentsScreen() {
         totalSpent={totalSpent}
         showPayNow={!!subscription}
         onPayNow={() => openCheckout(payRenewal)}
+        onViewBills={() => navigation.navigate('MyBills')}
       />
       <DateRangeChips selected={dateRange} onSelect={setDateRange} />
       {!payments.length ? (

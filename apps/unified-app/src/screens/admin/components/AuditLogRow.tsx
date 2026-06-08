@@ -1,7 +1,9 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import type { AuditLog } from '@prime/types';
-import { StatusChip, colors } from '@prime/ui';
+import { StatusChip } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 type AuditLogRowProps = {
   log: AuditLog;
@@ -17,5 +19,5 @@ export const AuditLogRow = React.memo(function AuditLogRow({ log }: AuditLogRowP
 });
 
 const styles = StyleSheet.create({
-  row: { padding: 12, borderBottomWidth: 1, borderColor: colors.borderDefault, fontSize: 13 },
+  row: { padding: spacing.sm, borderBottomWidth: 1, borderColor: colors.borderDefault, fontSize: 13 },
 });

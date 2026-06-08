@@ -5,7 +5,7 @@ import { LoginScreen } from '@/screens/auth/LoginScreen';
 import { OtpVerificationScreen } from '@/screens/auth/OtpVerificationScreen';
 import { SignUpScreen } from '@/screens/auth/SignUpScreen';
 import type { AuthStackParamList } from '@/types/navigation';
-import { colors } from '@prime/ui';
+import { colors } from '@/theme/colors';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { ErrorState, SkeletonLoader } from '@/components/common';
@@ -13,9 +15,12 @@ import { DeleteAccountModal } from './components/DeleteAccountModal';
 import { NotificationToggles } from './components/NotificationToggles';
 import { ProfileForm } from './components/ProfileForm';
 import { ProfileHeader } from './components/ProfileHeader';
+import type { CustomerStackParamList } from '@/types/navigation';
+
 import { useProfile } from './hooks/useProfile';
 
 export function ProfileScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const dispatch = useAppDispatch();
   const {
     authUser,
@@ -122,6 +127,7 @@ export function ProfileScreen() {
         />
 
         <View style={styles.actions}>
+          <Button label="My bills" variant="secondary" onPress={() => navigation.navigate('MyBills')} />
           <Button label="Change password" variant="secondary" onPress={() => setPasswordModalVisible(true)} />
           <Button label="Delete account" variant="secondary" onPress={() => setDeleteModalVisible(true)} />
           <Button label="Sign out" onPress={() => signOut(dispatch)} />

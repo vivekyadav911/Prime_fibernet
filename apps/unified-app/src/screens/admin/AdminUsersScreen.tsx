@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput } from 'react-native';
 import type { UserProfile } from '@prime/types';
-import { Screen, colors } from '@prime/ui';
+import { Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useBlockUserMutation, useGetAllUsersQuery, useUnblockUserMutation } from '@/store/api/endpoints';
@@ -90,5 +92,5 @@ export function AdminUsersScreen() {
 }
 
 const styles = StyleSheet.create({
-  search: { margin: 12, borderWidth: 1, borderColor: colors.borderDefault, borderRadius: 8, padding: 10 },
+  search: { margin: spacing.sm, borderWidth: 1, borderColor: colors.borderDefault, borderRadius: radius.sm, padding: spacing.sm },
 });

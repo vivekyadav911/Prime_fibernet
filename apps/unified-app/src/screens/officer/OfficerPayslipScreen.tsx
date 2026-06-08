@@ -1,3 +1,4 @@
+import { spacing } from '@/theme/spacing';
 import { useCallback } from 'react';
 import { FlatList, Linking, StyleSheet } from 'react-native';
 import type { Payslip } from '@prime/types';
@@ -62,5 +63,5 @@ export function OfficerPayslipScreen() {
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 16 },
+  list: { padding: spacing.md },
 });

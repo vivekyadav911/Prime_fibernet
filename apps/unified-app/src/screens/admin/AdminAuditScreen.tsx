@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, TextInput } from 'react-native';
 import type { AuditLog } from '@prime/types';
-import { Screen, colors } from '@prime/ui';
+import { Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetAuditLogsQuery } from '@/store/api/endpoints';
@@ -56,5 +58,5 @@ export function AdminAuditScreen() {
 }
 
 const styles = StyleSheet.create({
-  filter: { margin: 12, borderWidth: 1, borderColor: colors.borderDefault, borderRadius: 8, padding: 10 },
+  filter: { margin: spacing.sm, borderWidth: 1, borderColor: colors.borderDefault, borderRadius: radius.sm, padding: spacing.sm },
 });

@@ -1,6 +1,30 @@
-import type { Payment, PaymentGateway, PaymentOrderResponse } from '@prime/types';
+import type { Payment, PaymentGateway, PaymentOrderResponse, PaymentStatus } from '@prime/types';
 
 import { baseApi } from './baseApi';
+
+export type InvoiceDetail = {
+  id: string;
+  invoiceNumber: string | null;
+  customerName: string;
+  planName: string | null;
+  amount: number;
+  gstAmount: number;
+  totalAmount: number;
+  paymentMethod: string | null;
+  createdAt: string;
+};
+
+export type PaymentLedgerEntry = {
+  id: string;
+  userId: string;
+  userName: string;
+  planName: string | null;
+  amount: number;
+  paymentMethod: string;
+  paymentStatus: PaymentStatus;
+  createdAt: string;
+  invoiceNumber: string | null;
+};
 
 function mapPayment(row: Record<string, unknown>): Payment {
   return {
@@ -264,6 +288,73 @@ export const paymentsApi = baseApi.injectEndpoints({
       providesTags: ['Payments'],
     }),
 
+    getInvoice: builder.query<InvoiceDetail, string>({
+      query: (paymentId) => ({
+        handler: async (client) => {
+          const { data, error } = await client.from('user_payments').select('*').eq('id', paymentId).maybeSingle();
+          if (error) throw error;
+          if (!data) throw new Error('Invoice not found');
+          const amount = Number(data.amount ?? 0);
+          const gstAmount = Math.round(amount * 0.18 * 100) / 100;
+          return {
+            id: data.id as string,
+            invoiceNumber: (data.invoice_number as string) ?? null,
+            customerName: (data.user_name as string) ?? 'Customer',
+            planName: (data.plan_name as string) ?? null,
+            amount,
+            gstAmount,
+            totalAmount: amount,
+            paymentMethod: (data.payment_method as string) ?? null,
+            createdAt: data.created_at as string,
+          };
+        },
+      }),
+      providesTags: (_result, _error, paymentId) => [{ type: 'Payments', id: paymentId }],
+    }),
+
+    getAllPayments: builder.query<
+      PaymentLedgerEntry[],
+      { search?: string; status?: PaymentStatus | 'all'; method?: string; startDate?: string; endDate?: string } | void
+    >({
+      query: (filters) => ({
+        handler: async (client) => {
+          let query = client.from('user_payments').select('*').order('created_at', { ascending: false }).limit(200);
+          if (filters?.status && filters.status !== 'all') {
+            query = query.eq('payment_status', filters.status);
+          }
+          if (filters?.method && filters.method !== 'all') {
+            query = query.eq('payment_method', filters.method);
+          }
+          if (filters?.startDate) query = query.gte('created_at', filters.startDate);
+          if (filters?.endDate) query = query.lte('created_at', filters.endDate);
+          const { data, error } = await query;
+          if (error) throw error;
+          let rows = (data ?? []).map((row) => ({
+            id: row.id as string,
+            userId: row.user_id as string,
+            userName: (row.user_name as string) ?? 'Unknown',
+            planName: (row.plan_name as string) ?? null,
+            amount: Number(row.amount ?? 0),
+            paymentMethod: (row.payment_method as string) ?? 'unknown',
+            paymentStatus: (row.payment_status as PaymentStatus) ?? 'pending',
+            createdAt: row.created_at as string,
+            invoiceNumber: (row.invoice_number as string) ?? null,
+          }));
+          if (filters?.search?.trim()) {
+            const q = filters.search.toLowerCase();
+            rows = rows.filter(
+              (r) =>
+                r.userName.toLowerCase().includes(q) ||
+                r.planName?.toLowerCase().includes(q) ||
+                r.id.toLowerCase().includes(q),
+            );
+          }
+          return rows;
+        },
+      }),
+      providesTags: ['Payments'],
+    }),
+
     getInvoiceUrl: builder.query<string, string>({
       query: (paymentId) => ({
         handler: async (client) => {
@@ -297,6 +388,8 @@ export const {
   useVerifyPaymentMutation,
   useConfirmPaymentMutation,
   useGetPaymentStatusQuery,
+  useGetInvoiceQuery,
+  useGetAllPaymentsQuery,
   useGetInvoiceUrlQuery,
   useLazyGetInvoiceUrlQuery,
   useProcessRefundMutation,
@@ -304,3 +397,6 @@ export const {
 
 /** Alias for checkout screens */
 export const useCreateOrderMutation = useCreatePaymentOrderMutation;
+
+/** Alias for admin refund flows */
+export const useRefundMutation = useProcessRefundMutation;

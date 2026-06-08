@@ -3,11 +3,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, Text, TextInput } from 'react-native';
-import { Button, Screen, colors } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
 import { z } from 'zod';
 
 import type { AuthStackParamList } from '@/types/navigation';
-import { spacing } from '@/theme/spacing';
+import { radius, spacing } from '@/theme/spacing';
 import {
   useSendLoginOtpMutation,
   useVerifyLoginOtpMutation,
@@ -90,8 +91,8 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
     fontSize: 20,
     letterSpacing: 8,
     textAlign: 'center',

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 
-import { colors } from '@prime/ui';
+import { colors } from '@/theme/colors';
 
 type TabIconProps = {
   label: string;

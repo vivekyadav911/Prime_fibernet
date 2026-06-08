@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { StatusChip, colors } from '@prime/ui';
+import { StatusChip } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 type NotificationHistoryItem = {
   id: string;
@@ -27,7 +29,7 @@ export const NotificationRow = React.memo(function NotificationRow({ notificatio
 });
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, alignItems: 'center' },
+  row: { flexDirection: 'row', padding: spacing.md, borderBottomWidth: 1, borderColor: colors.borderDefault, alignItems: 'center' },
   info: { flex: 1 },
   notifTitle: { fontWeight: '600' },
   meta: { color: colors.textSecondary, fontSize: 12 },

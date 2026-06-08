@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, Screen, colors } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetNotificationHistoryQuery, useSendBulkNotificationMutation } from '@/store/api/endpoints';
@@ -80,11 +82,11 @@ export function AdminNotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  form: { padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: 8 },
+  form: { padding: spacing.md, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: spacing.xs },
   formTitle: { fontWeight: '600' },
-  input: { borderWidth: 1, borderColor: colors.borderDefault, borderRadius: 8, padding: 10 },
-  audienceRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  audienceChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: colors.borderDefault, textTransform: 'capitalize' },
+  input: { borderWidth: 1, borderColor: colors.borderDefault, borderRadius: radius.sm, padding: spacing.sm },
+  audienceRow: { flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' },
+  audienceChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderDefault, textTransform: 'capitalize' },
   audienceActive: { backgroundColor: colors.primaryNavy, color: colors.white, borderColor: colors.primaryNavy },
-  historyTitle: { fontWeight: '600', padding: 16, paddingBottom: 8 },
+  historyTitle: { fontWeight: '600', padding: spacing.md, paddingBottom: 8 },
 });

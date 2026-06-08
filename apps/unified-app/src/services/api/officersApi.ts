@@ -395,6 +395,56 @@ export const officersApi = baseApi.injectEndpoints({
       invalidatesTags: ['Leave'],
     }),
 
+    recordPayment: builder.mutation<
+      { paymentId: string },
+      {
+        officerUserId: string;
+        userId: string;
+        customerName: string;
+        amount: number;
+        paymentMethod: 'cash' | 'upi' | 'credit_card';
+        referenceNumber?: string;
+        planName?: string;
+        latitude?: number;
+        longitude?: number;
+      }
+    >({
+      query: (body) => ({
+        handler: async (client) => {
+          const officerId = await getOfficerIdForUser(client, body.officerUserId);
+          if (!officerId) throw new Error('Officer profile not found');
+          const now = new Date().toISOString();
+          const location =
+            body.latitude != null && body.longitude != null
+              ? `POINT(${body.longitude} ${body.latitude})`
+              : null;
+          const { data, error } = await client
+            .from('user_payments')
+            .insert({
+              user_id: body.userId,
+              user_name: body.customerName,
+              amount: body.amount,
+              payment_method: body.paymentMethod,
+              payment_status: 'success',
+              gateway_transaction_id: body.referenceNumber ?? null,
+              upi_reference_id: body.referenceNumber ?? null,
+              plan_name: body.planName ?? null,
+              collected_by_officer_id: officerId,
+              collection_location: location,
+              collection_timestamp: now,
+              created_by: 'officer',
+              created_at: now,
+              updated_at: now,
+            })
+            .select('id')
+            .single();
+          if (error) throw error;
+          return { paymentId: data.id as string };
+        },
+      }),
+      invalidatesTags: ['Payments'],
+    }),
+
     getLeaveRequests: builder.query<LeaveRequest[], string>({
       query: (userId) => ({
         handler: async (client) => {
@@ -439,4 +489,5 @@ export const {
   useGetPayslipsQuery,
   useCreateLeaveRequestMutation,
   useGetLeaveRequestsQuery,
+  useRecordPaymentMutation,
 } = officersApi;

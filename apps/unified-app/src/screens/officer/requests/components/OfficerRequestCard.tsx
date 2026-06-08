@@ -1,7 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ServiceRequest } from '@prime/types';
-import { Button, StatusChip, colors } from '@prime/ui';
+import { Button, StatusChip } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 type OfficerRequestCardProps = {
   request: ServiceRequest;
@@ -36,7 +38,7 @@ export const OfficerRequestCard = React.memo(function OfficerRequestCard({
 });
 
 const styles = StyleSheet.create({
-  card: { padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: 8 },
+  card: { padding: spacing.md, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: spacing.xs },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   type: { textTransform: 'capitalize', fontWeight: '600', fontSize: 16 },
   address: { color: colors.textSecondary },

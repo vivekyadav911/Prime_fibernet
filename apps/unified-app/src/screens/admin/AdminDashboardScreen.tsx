@@ -1,5 +1,7 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { ErrorState, KpiCard, Screen, colors } from '@prime/ui';
+import { ErrorState, KpiCard, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
 
 import { useGetAnalyticsReportQuery, useGetDashboardKpisQuery } from '@/store/api/endpoints';
 
@@ -45,9 +47,9 @@ export function AdminDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 16 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  report: { marginTop: 24, padding: 16, backgroundColor: colors.background, borderRadius: 12 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.md },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  report: { marginTop: spacing.xl, padding: spacing.md, backgroundColor: colors.background, borderRadius: radius.md },
   reportTitle: { fontWeight: '600', marginBottom: 8 },
   reportRow: { color: colors.textSecondary, marginTop: 4 },
 });

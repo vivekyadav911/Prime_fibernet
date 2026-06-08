@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import type { Officer } from '@prime/types';
-import { colors } from '@prime/ui';
+import { colors } from '@/theme/colors';
 
 type OfficerChipProps = {
   officer: Officer;

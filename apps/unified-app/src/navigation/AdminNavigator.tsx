@@ -7,20 +7,18 @@ import { AdminAuditScreen } from '@/screens/admin/AdminAuditScreen';
 import { AdminDashboardScreen } from '@/screens/admin/AdminDashboardScreen';
 import { AdminNotificationsScreen } from '@/screens/admin/AdminNotificationsScreen';
 import { AdminOfficersScreen } from '@/screens/admin/AdminOfficersScreen';
+import { AdminPaymentDetailScreen } from '@/screens/admin/AdminPaymentDetailScreen';
+import { AdminPaymentsScreen } from '@/screens/admin/AdminPaymentsScreen';
 import { AdminPlansScreen } from '@/screens/admin/AdminPlansScreen';
 import { AdminRequestsScreen } from '@/screens/admin/AdminRequestsScreen';
 import { AdminSettingsScreen } from '@/screens/admin/AdminSettingsScreen';
 import { AdminUsersScreen } from '@/screens/admin/AdminUsersScreen';
 import type { AdminDrawerParamList, AdminStackParamList } from '@/types/navigation';
-import { colors } from '@prime/ui';
+import { colors } from '@/theme/colors';
 
 const Drawer = createDrawerNavigator<AdminDrawerParamList>();
 const Stack = createNativeStackNavigator<AdminStackParamList>();
 
-/**
- * Flutter `AdminShell` primary destinations (indices 0,1,2,6,7,8,12,13).
- * Web uses permanent sidebar like Flutter's collapsible CRM drawer.
- */
 function AdminDrawerNav() {
   const { width } = useWindowDimensions();
   const isWebSidebar = Platform.OS === 'web' && width >= 1024;
@@ -47,6 +45,11 @@ function AdminDrawerNav() {
         options={{ title: 'Analytics', drawerLabel: 'Analytics' }}
       />
       <Drawer.Screen
+        name="Payments"
+        component={AdminPaymentsScreen}
+        options={{ title: 'Payments & invoices', drawerLabel: 'Payments & Invoices' }}
+      />
+      <Drawer.Screen
         name="Audit"
         component={AdminAuditScreen}
         options={{ title: 'Audit Logs', drawerLabel: 'Audit Logs' }}
@@ -57,11 +60,20 @@ function AdminDrawerNav() {
   );
 }
 
-/** Flutter go_router `/` → `AdminShell` */
 export function AdminNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="AdminDrawer" component={AdminDrawerNav} />
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.primaryNavy },
+        headerTintColor: colors.white,
+      }}
+    >
+      <Stack.Screen name="AdminDrawer" component={AdminDrawerNav} options={{ headerShown: false }} />
+      <Stack.Screen
+        name="PaymentDetail"
+        component={AdminPaymentDetailScreen}
+        options={{ title: 'Payment invoice' }}
+      />
     </Stack.Navigator>
   );
 }

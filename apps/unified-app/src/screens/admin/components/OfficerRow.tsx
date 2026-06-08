@@ -1,7 +1,9 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Officer } from '@prime/types';
-import { Button, colors } from '@prime/ui';
+import { Button } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 type OfficerRowProps = {
   officer: Officer;
@@ -22,7 +24,7 @@ export const OfficerRow = React.memo(function OfficerRow({ officer, onSetAvailab
 });
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault },
+  row: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderBottomWidth: 1, borderColor: colors.borderDefault },
   info: { flex: 1 },
   name: { fontWeight: '600' },
   meta: { color: colors.textSecondary, fontSize: 12 },

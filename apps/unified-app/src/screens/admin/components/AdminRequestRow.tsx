@@ -1,7 +1,9 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { ServiceRequest } from '@prime/types';
-import { Button, StatusChip, colors } from '@prime/ui';
+import { Button, StatusChip } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 type AdminRequestRowProps = {
   request: ServiceRequest;
@@ -34,10 +36,10 @@ export const AdminRequestRow = React.memo(function AdminRequestRow({
 });
 
 const styles = StyleSheet.create({
-  card: { padding: 16, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: 8 },
+  card: { padding: spacing.md, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: spacing.xs },
   type: { textTransform: 'capitalize', fontWeight: '600', fontSize: 16 },
   address: { color: colors.textSecondary },
-  chips: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  chips: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center' },
   unassigned: { color: colors.warningAmber, fontSize: 12 },
-  actions: { flexDirection: 'row', gap: 8 },
+  actions: { flexDirection: 'row', gap: spacing.xs },
 });

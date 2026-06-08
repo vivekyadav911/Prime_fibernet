@@ -9,7 +9,9 @@ import { PlansScreen } from '@/screens/customer/plans/PlansScreen';
 import { ProfileScreen } from '@/screens/customer/profile/ProfileScreen';
 import { RequestsScreen } from '@/screens/customer/requests/RequestsScreen';
 import type { CustomerStackParamList, CustomerTabParamList } from '@/types/navigation';
-import { colors } from '@prime/ui';
+import { MyBillsScreen } from '@/screens/customer/bills/MyBillsScreen';
+import { InvoiceScreen } from '@/screens/officer/InvoiceScreen';
+import { colors } from '@/theme/colors';
 
 import {
   AboutScreen,
@@ -110,6 +112,8 @@ export function CustomerNavigator() {
       <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ title: 'Success', headerShown: false }} />
       <Stack.Screen name="MakePayment" component={MakePaymentScreen} options={{ title: 'Make payment' }} />
       <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreen} options={{ title: 'Payment history' }} />
+      <Stack.Screen name="MyBills" component={MyBillsScreen} options={{ title: 'My bills' }} />
+      <Stack.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Invoice' }} />
       <Stack.Screen name="CreateRequest" component={CreateRequestScreen} options={{ title: 'New request' }} />
       <Stack.Screen name="RequestDetails" component={RequestDetailsScreen} options={{ title: 'Request' }} />
       <Stack.Screen name="Notifications" component={CustomerNotificationsScreen} options={{ title: 'Notifications' }} />

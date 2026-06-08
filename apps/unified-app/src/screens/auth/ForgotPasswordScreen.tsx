@@ -2,7 +2,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, Screen, colors } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
 
 import { useResetPasswordMutation } from '@/store/api/endpoints';
 import type { AuthStackParamList } from '@/types/navigation';
@@ -45,15 +47,15 @@ export function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 24, fontWeight: '600', color: colors.primaryNavy, marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: '600', color: colors.primaryNavy, marginBottom: spacing.md },
   input: {
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
     marginBottom: 12,
   },
   info: { color: colors.textSecondary, marginBottom: 12 },
-  submitRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  submitRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 8 },
   spinner: { marginLeft: 4 },
 });

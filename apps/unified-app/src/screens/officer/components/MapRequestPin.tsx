@@ -1,7 +1,9 @@
 import React from 'react';
 import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import type { ServiceRequest } from '@prime/types';
-import { StatusChip, colors } from '@prime/ui';
+import { StatusChip } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 type MapRequestPinProps = {
   request: ServiceRequest;
@@ -34,7 +36,7 @@ export function openMapsNavigation(address: string): void {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: spacing.xs },
   textCol: { flex: 1 },
   capitalize: { textTransform: 'capitalize', fontWeight: '600' },
   address: { color: colors.textSecondary, fontSize: 12 },

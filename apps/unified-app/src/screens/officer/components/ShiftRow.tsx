@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import type { Shift } from '@prime/types';
-import { StatusChip, colors } from '@prime/ui';
+import { StatusChip } from '@prime/ui';
+import { colors } from '@/theme/colors';
 
 type ShiftRowProps = {
   shift: Shift;

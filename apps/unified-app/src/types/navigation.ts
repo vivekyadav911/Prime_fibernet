@@ -72,6 +72,7 @@ export type CustomerStackParamList = {
   MakePayment: { userId?: string } | undefined;
   PaymentHistory: undefined;
   MyBills: undefined;
+  Invoice: { invoiceId: string };
   CreateRequest: { planId?: string } | undefined;
   RequestDetails: { requestId: string };
   NearbyMap: undefined;
@@ -99,8 +100,8 @@ export type OfficerDrawerParamList = {
   ShiftCheckOut: { scheduleId?: string } | undefined;
   ShiftManagement: undefined;
   ShiftRequest: undefined;
-  CollectPayment: { userId?: string } | undefined;
-  Invoice: undefined;
+  CollectPayment: { userId?: string; customerName?: string } | undefined;
+  Invoice: { invoiceId?: string } | undefined;
   Inventory: undefined;
   Earnings: undefined;
   PerformanceWallet: undefined;
@@ -125,12 +126,12 @@ export type OfficerDrawerParamList = {
 };
 
 export type OfficerStackParamList = {
+  LocationGate: undefined;
   OfficerDrawer: NavigatorScreenParams<OfficerDrawerParamList> | undefined;
   /** Flutter: `RequestDetailScreen.route` */
   RequestDetail: { requestId: string };
   OfficerLogin: undefined;
   OfficerAuth: undefined;
-  LocationGate: undefined;
 };
 
 /**
@@ -195,6 +196,7 @@ export type AdminDrawerParamList = {
 
 export type AdminStackParamList = {
   AdminDrawer: NavigatorScreenParams<AdminDrawerParamList> | undefined;
+  PaymentDetail: { paymentId: string };
   /** go_router `/login` */
   AdminAuth: undefined;
 };

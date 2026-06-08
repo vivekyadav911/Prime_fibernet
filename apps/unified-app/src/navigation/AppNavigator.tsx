@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { TotpScreen } from '@/screens/auth/TotpScreen';
 import { useAppSelector } from '@/store/hooks';
 import type { RootStackParamList } from '@/types/navigation';
-import { colors } from '@prime/ui';
+import { colors } from '@/theme/colors';
 
 import { AdminNavigator } from './AdminNavigator';
 import { AuthNavigator } from './AuthNavigator';

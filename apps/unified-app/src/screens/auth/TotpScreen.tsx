@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, Screen, colors } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
 
 import { ErrorState } from '@/components/common';
 import { useVerifyAdminTotpMutation } from '@/store/api/endpoints';
@@ -59,11 +61,11 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
     letterSpacing: 8,
     textAlign: 'center',
   },
-  errorWrap: { marginBottom: 16, minHeight: 100 },
+  errorWrap: { marginBottom: spacing.md, minHeight: 100 },
 });

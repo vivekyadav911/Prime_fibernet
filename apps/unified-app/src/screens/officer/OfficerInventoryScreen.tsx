@@ -1,3 +1,4 @@
+import { spacing } from '@/theme/spacing';
 import { useCallback } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import type { InventoryItem } from '@prime/types';
@@ -58,5 +59,5 @@ export function OfficerInventoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 16 },
+  list: { padding: spacing.md },
 });

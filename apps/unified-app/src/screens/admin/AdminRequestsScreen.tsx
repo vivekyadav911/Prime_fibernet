@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { Officer, ServiceRequest } from '@prime/types';
-import { Screen, colors } from '@prime/ui';
+import { Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import {
@@ -107,6 +109,6 @@ export function AdminRequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  officerPicker: { padding: 12, borderBottomWidth: 1, borderColor: colors.borderDefault },
+  officerPicker: { padding: spacing.sm, borderBottomWidth: 1, borderColor: colors.borderDefault },
   pickerLabel: { fontWeight: '600', marginBottom: 8 },
 });

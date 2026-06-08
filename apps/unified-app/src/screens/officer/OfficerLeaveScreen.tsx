@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput } from 'react-native';
 import type { LeaveRequest } from '@prime/types';
-import { Button, Screen, colors } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
@@ -72,8 +74,8 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
     marginBottom: 8,
     backgroundColor: colors.surfaceWhite,
   },

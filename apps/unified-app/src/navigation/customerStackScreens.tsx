@@ -1,6 +1,8 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { StyleSheet, Text, View } from 'react-native';
-import { Screen, colors } from '@prime/ui';
+import { Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 import type { CustomerStackParamList } from '@/types/navigation';
 
@@ -89,7 +91,7 @@ export function RefundScreen(_props: ScreenProps<'Refund'>) {
 }
 
 const styles = StyleSheet.create({
-  box: { gap: 8 },
+  box: { gap: spacing.xs },
   title: { fontSize: 22, fontWeight: '700', color: colors.textPrimary },
   detail: { color: colors.textSecondary },
   note: { marginTop: 12, color: colors.textSecondary, fontSize: 13 },

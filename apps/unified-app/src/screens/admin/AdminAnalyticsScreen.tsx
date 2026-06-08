@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { Button, KpiCard, Screen, colors } from '@prime/ui';
+import { Button, KpiCard, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useExportBackupMutation, useGetAnalyticsReportQuery } from '@/store/api/endpoints';
@@ -59,9 +61,9 @@ export function AdminAnalyticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 16 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  section: { fontWeight: '600', marginTop: 24, marginBottom: 4 },
-  desc: { color: colors.textSecondary, marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.md },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  section: { fontWeight: '600', marginTop: spacing.xl, marginBottom: 4 },
+  desc: { color: colors.textSecondary, marginBottom: spacing.md },
   btn: { marginBottom: 8 },
 });

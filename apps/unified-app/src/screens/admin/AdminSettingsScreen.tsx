@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, Screen, colors } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
 import type { PaymentGateway } from '@prime/types';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
@@ -92,22 +94,22 @@ export function AdminSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.md },
   section: { fontWeight: '600', marginTop: 16, marginBottom: 8 },
   hint: { color: colors.textSecondary, fontSize: 13, marginBottom: 12 },
   input: {
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
     marginBottom: 8,
     backgroundColor: colors.surfaceWhite,
   },
-  gatewayRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  gatewayRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   gatewayChip: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
+    padding: spacing.md,
+    borderRadius: radius.md,
     borderWidth: 2,
     borderColor: colors.borderDefault,
     alignItems: 'center',
