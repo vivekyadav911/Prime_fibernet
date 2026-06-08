@@ -10,9 +10,8 @@ import type { AppRole } from '@prime/types';
 import { z } from 'zod';
 
 import type { AuthStackParamList } from '@/types/navigation';
-import { devQuickSignIn, signInWithPassword } from '@/hooks/useAuth';
+import { devQuickSignIn, signInWithPassword, useBiometricLogin } from '@/hooks/useAuth';
 import { LoadingOverlay } from '@/components/common';
-import { authenticateWithBiometrics } from '@/services/biometric';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setError } from '@/store/slices/authSlice';
 
@@ -30,6 +29,7 @@ export function LoginScreen() {
   const authError = useAppSelector((s) => s.auth.error);
   const [loading, setLoading] = useState(false);
   const [devLoading, setDevLoading] = useState<AppRole | null>(null);
+  const { biometricLogin, isAvailable: biometricsAvailable } = useBiometricLogin();
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(LoginSchema),
     defaultValues: { email: '', password: '' },
@@ -94,14 +94,13 @@ export function LoginScreen() {
       {errors.password ? <Text style={styles.error}>{errors.password.message}</Text> : null}
       {authError ? <Text style={styles.error}>{authError}</Text> : null}
       <Button label={loading ? 'Signing in…' : 'Sign in'} onPress={handleSubmit(onSubmit)} style={styles.btn} />
-      <Button
-        label="Sign in with biometrics"
-        variant="ghost"
-        onPress={async () => {
-          const ok = await authenticateWithBiometrics();
-          if (ok) await onDevSignIn('customer');
-        }}
-      />
+      {biometricsAvailable ? (
+        <Button
+          label="Sign in with biometrics"
+          variant="ghost"
+          onPress={() => void biometricLogin()}
+        />
+      ) : null}
       <Button label="Create account" variant="ghost" onPress={() => navigation.navigate('Register')} />
       <Button label="Forgot password" variant="ghost" onPress={() => navigation.navigate('ForgotPassword')} />
       {__DEV__ ? (

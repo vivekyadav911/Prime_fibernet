@@ -1,12 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as ImagePicker from 'expo-image-picker';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '@prime/ui';
 import { RequestTypeSchema, type RequestType } from '@prime/types';
 import { z } from 'zod';
 
+import { useCamera } from '@/hooks/useCamera';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
@@ -39,6 +39,7 @@ export function CreateRequestForm({
   onOpenTypeSheet,
   submitting,
 }: CreateRequestFormProps) {
+  const { pickFromGallery, takePhoto } = useCamera();
   const { control, handleSubmit, watch, setValue } = useForm<CreateRequestFormValues>({
     resolver: zodResolver(createRequestSchema),
     defaultValues: { requestType: selectedRequestType ?? 'repair', address: '', description: '' },
@@ -50,25 +51,29 @@ export function CreateRequestForm({
 
   const requestType = watch('requestType');
 
-  const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission needed', 'Allow photo access to attach images.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
+  const handleGallery = useCallback(async () => {
     try {
-      onAddAttachment(asset.uri, asset.fileName ?? 'photo.jpg', asset.fileSize ?? 0);
+      const uri = await pickFromGallery();
+      onAddAttachment(uri, 'photo.jpg', 0);
     } catch (e) {
-      Alert.alert('Attachment error', e instanceof Error ? e.message : 'Could not add photo');
+      const message = e instanceof Error ? e.message : 'Could not add photo';
+      if (message !== 'No image selected') {
+        Alert.alert('Attachment error', message);
+      }
     }
-  };
+  }, [onAddAttachment, pickFromGallery]);
+
+  const handleCamera = useCallback(async () => {
+    try {
+      const uri = await takePhoto();
+      onAddAttachment(uri, 'photo.jpg', 0);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Could not add photo';
+      if (message !== 'Photo capture cancelled') {
+        Alert.alert('Attachment error', message);
+      }
+    }
+  }, [onAddAttachment, takePhoto]);
 
   return (
     <View style={styles.form}>
@@ -117,7 +122,10 @@ export function CreateRequestForm({
 
       <View style={styles.attachments}>
         <Text style={styles.label}>Photos ({attachments.length}/3)</Text>
-        <Button label="Add photo" variant="secondary" onPress={pickImage} />
+        <View style={styles.photoButtons}>
+          <Button label="Gallery" variant="secondary" onPress={handleGallery} />
+          <Button label="Camera" variant="secondary" onPress={handleCamera} />
+        </View>
         <View style={styles.thumbs}>
           {attachments.map((file) => (
             <Pressable key={file.id} onPress={() => onRemoveAttachment(file.id)}>
@@ -157,6 +165,7 @@ const styles = StyleSheet.create({
   multiline: { minHeight: 88, textAlignVertical: 'top' },
   error: { color: colors.errorRed, fontSize: 12, marginTop: spacing.xxs },
   attachments: { gap: spacing.xs },
+  photoButtons: { flexDirection: 'row', gap: spacing.xs },
   thumbs: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs },
   thumb: { width: 64, height: 64, borderRadius: radius.sm },
 });

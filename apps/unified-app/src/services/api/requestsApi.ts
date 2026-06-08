@@ -115,6 +115,7 @@ export const requestsApi = baseApi.injectEndpoints({
         userPhone?: string;
         city?: string;
         notes?: string;
+        photoUrls?: string[];
       }
     >({
       query: (body) => ({
@@ -132,6 +133,7 @@ export const requestsApi = baseApi.injectEndpoints({
             user_phone: body.userPhone,
             city: body.city,
             address: body.address,
+            photo_urls: body.photoUrls ?? [],
             status: 'pending',
             created_at: now,
             updated_at: now,

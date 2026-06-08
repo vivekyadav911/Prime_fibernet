@@ -22,7 +22,7 @@ type UseLocationResult = {
   accuracy: number | null;
   error: string | null;
   isLoading: boolean;
-  startTracking: () => Promise<void>;
+  startTracking: () => Promise<LocationCoords | null>;
   stopTracking: () => void;
 };
 
@@ -79,7 +79,7 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
     }
   }, []);
 
-  const startTracking = useCallback(async () => {
+  const startTracking = useCallback(async (): Promise<LocationCoords | null> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -88,6 +88,12 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
       const current = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
+      const position: LocationCoords = {
+        latitude: current.coords.latitude,
+        longitude: current.coords.longitude,
+        altitude: current.coords.altitude,
+        accuracy: current.coords.accuracy,
+      };
       applyPosition(current);
       await refreshHeading();
 
@@ -102,13 +108,15 @@ export function useLocation(options: UseLocationOptions = {}): UseLocationResult
           distanceInterval: distanceIntervalM,
           mayShowUserSettingsDialog: true,
         },
-        (position) => {
-          applyPosition(position);
+        (pos) => {
+          applyPosition(pos);
           void refreshHeading();
         },
       );
+      return position;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to start location tracking');
+      return null;
     } finally {
       setIsLoading(false);
     }

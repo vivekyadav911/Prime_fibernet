@@ -1,6 +1,5 @@
 import type { PaymentGateway } from '@prime/types';
 
-import { getSupabase } from '@/services/supabase';
 import { store } from '@/store/store';
 import { paymentsApi } from '@/services/api/paymentsApi';
 
@@ -95,29 +94,27 @@ export async function createOrder(
   user: RazorpayUserInfo,
   planName: string,
 ): Promise<RazorpayOrderResult> {
-  const client = getSupabase();
-  const { data, error } = await client.functions.invoke('create-payment-order', {
-    body: {
-      userId: user.userId,
-      userName: user.name,
-      userEmail: user.email,
-      userPhone: user.phone ?? '',
-      planId,
-      planName,
-      amount,
-      paymentMethod: 'gateway',
-    },
-  });
-  if (error) throw error;
+  const res = await store
+    .dispatch(
+      paymentsApi.endpoints.createPaymentOrder.initiate({
+        userId: user.userId,
+        userName: user.name,
+        userEmail: user.email,
+        userPhone: user.phone,
+        planId,
+        planName,
+        amount,
+      }),
+    )
+    .unwrap();
 
-  const res = data as Record<string, unknown>;
   const gateway = (res.gateway ?? 'razorpay') as PaymentGateway;
   return {
-    paymentId: String(res.paymentId ?? ''),
-    orderId: String(res.orderId ?? ''),
-    checkoutUrl: (res.checkoutUrl ?? res.paymentUrl ?? null) as string | null,
+    paymentId: res.paymentId,
+    orderId: res.orderId,
+    checkoutUrl: res.checkoutUrl,
     gateway,
-    amount: Number(res.amount ?? amount),
+    amount: res.amount,
   };
 }
 

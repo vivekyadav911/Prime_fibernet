@@ -287,6 +287,18 @@ export const analyticsApi = baseApi.injectEndpoints({
       providesTags: ['Notifications'],
     }),
 
+    exportBackup: builder.mutation<{ url: string }, void>({
+      query: () => ({
+        handler: async (client) => {
+          const { data, error } = await client.functions.invoke('admin-backup-export', {
+            body: { tables: ['user_payments', 'service_requests'] },
+          });
+          if (error) throw error;
+          return data as { url: string };
+        },
+      }),
+    }),
+
     sendChatMessage: builder.mutation<{ reply: string }, { message: string; userId: string }>({
       query: (body) => ({
         handler: async (client) => {
@@ -325,5 +337,6 @@ export const {
   useGetAuditLogsQuery,
   useSendBulkNotificationMutation,
   useGetNotificationHistoryQuery,
+  useExportBackupMutation,
   useSendChatMessageMutation,
 } = analyticsApi;

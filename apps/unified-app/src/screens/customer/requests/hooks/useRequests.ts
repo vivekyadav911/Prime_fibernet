@@ -19,6 +19,23 @@ export type Attachment = {
 const MAX_ATTACHMENTS = 3;
 const MAX_BYTES = 5 * 1024 * 1024;
 
+async function uploadPhotos(uris: string[]): Promise<string[]> {
+  const supabase = getSupabase();
+  return Promise.all(
+    uris.map(async (uri) => {
+      const filename = `requests/${Date.now()}-${Math.random()}.jpg`;
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const { error } = await supabase.storage
+        .from('attachments')
+        .upload(filename, blob, { contentType: 'image/jpeg' });
+      if (error) throw error;
+      const { data } = supabase.storage.from('attachments').getPublicUrl(filename);
+      return data.publicUrl;
+    }),
+  );
+}
+
 export function useRequests() {
   const user = useAppSelector((s) => s.auth.user);
   const userId = user?.id ?? '';
@@ -71,6 +88,7 @@ export function useRequests() {
     description?: string;
   }) => {
     if (!userId) throw new Error('Sign in required');
+    const photoUrls = attachments.length > 0 ? await uploadPhotos(attachments.map((a) => a.uri)) : [];
     await createRequest({
       userId,
       requestType: input.requestType,
@@ -78,6 +96,7 @@ export function useRequests() {
       description: input.description,
       userName: user?.name,
       userEmail: user?.email,
+      photoUrls,
     }).unwrap();
     setAttachments([]);
     await refetch();

@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import * as ImageManipulator from 'expo-image-manipulator';
-import * as ImagePicker from 'expo-image-picker';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { useCamera } from '@/hooks/useCamera';
 import { signOut } from '@/hooks/useAuth';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
@@ -19,6 +18,7 @@ export type ProfileFormValues = {
 };
 
 export function useProfile() {
+  const { pickFromGallery } = useCamera();
   const dispatch = useAppDispatch();
   const authUser = useAppSelector((s) => s.auth.user);
   const userId = authUser?.id ?? '';
@@ -85,35 +85,23 @@ export function useProfile() {
     }).unwrap();
   };
 
-  const pickAndUploadPhoto = async () => {
+  const pickAndUploadPhoto = useCallback(async () => {
     if (!userId) return;
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) throw new Error('Photo library permission required');
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-    });
-    if (result.canceled || !result.assets[0]) return;
-
-    setUploadingPhoto(true);
     try {
-      const manipulated = await ImageManipulator.manipulateAsync(
-        result.assets[0].uri,
-        [{ resize: { width: 512 } }],
-        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
-      );
-      setPhotoUri(manipulated.uri);
-      const publicUrl = await uploadProfilePhoto(userId, manipulated.uri);
+      const uri = await pickFromGallery();
+      setUploadingPhoto(true);
+      setPhotoUri(uri);
+      const publicUrl = await uploadProfilePhoto(userId, uri);
       await updateProfile({ userId, profilePictureUrl: publicUrl }).unwrap();
       setPhotoUri(publicUrl);
       await profileQuery.refetch();
+    } catch (e) {
+      if (e instanceof Error && e.message === 'No image selected') return;
+      throw e;
     } finally {
       setUploadingPhoto(false);
     }
-  };
+  }, [pickFromGallery, profileQuery, updateProfile, userId]);
 
   const updatePassword = async (newPassword: string) => {
     await changePassword({ newPassword }).unwrap();

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { registerFcmToken } from '@/services/supabase';
+import { store } from '@/store/store';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -27,6 +28,8 @@ type UseNotificationsResult = {
   error: string | null;
   requestPermission: () => Promise<boolean>;
   getToken: (userId?: string) => Promise<string | null>;
+  registerToken: () => Promise<string | null>;
+  setupForegroundHandler: () => void;
 };
 
 /**
@@ -95,12 +98,21 @@ export function useNotifications(): UseNotificationsResult {
     return pushToken;
   }, [requestPermission]);
 
-  useEffect(() => {
-    void requestPermission();
+  const registerToken = useCallback(async (): Promise<string | null> => {
+    const userId = store.getState().auth.user?.id;
+    if (!userId) return null;
+    return getToken(userId);
+  }, [getToken]);
 
+  const setupForegroundHandler = useCallback(() => {
+    foregroundSub.current?.remove();
     foregroundSub.current = Notifications.addNotificationReceivedListener(() => {
       // Foreground display handled by Notifications.setNotificationHandler above.
     });
+  }, []);
+
+  useEffect(() => {
+    void requestPermission();
 
     const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
       const payload = response.notification.request.content.data;
@@ -121,11 +133,13 @@ export function useNotifications(): UseNotificationsResult {
     error,
     requestPermission,
     getToken,
+    registerToken,
+    setupForegroundHandler,
   };
 }
 
-/** Register background notification task — call once from App entry (Expo task API). */
-export async function registerBackgroundNotificationHandler(): Promise<void> {
+/** Call once at module level from App entry. */
+export function setupBackgroundHandler(): void {
   if (Platform.OS === 'web') return;
   Notifications.setNotificationHandler({
     handleNotification: async () => ({

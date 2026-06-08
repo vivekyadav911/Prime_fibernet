@@ -2,15 +2,15 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button, KpiCard, Screen, colors } from '@prime/ui';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
-import { getSupabase } from '@/services/supabase';
-import { useGetAnalyticsReportQuery } from '@/store/api/endpoints';
+import { useExportBackupMutation, useGetAnalyticsReportQuery } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
 
 export function AdminAnalyticsScreen() {
   const { data, isLoading, isError, error, refetch } = useGetAnalyticsReportQuery();
+  const [exportBackup, { isLoading: exporting }] = useExportBackupMutation();
 
   const onExport = async () => {
-    await getSupabase().functions.invoke('admin-backup-export', { body: { tables: ['user_payments', 'service_requests'] } });
+    await exportBackup().unwrap();
   };
 
   if (isLoading) {
@@ -47,7 +47,12 @@ export function AdminAnalyticsScreen() {
       </View>
       <Text style={styles.section}>Reports</Text>
       <Text style={styles.desc}>Revenue, turnaround time, and officer attendance metrics.</Text>
-      <Button label="Export CSV backup" variant="secondary" onPress={onExport} style={styles.btn} />
+      <Button
+        label={exporting ? 'Exporting…' : 'Export CSV backup'}
+        variant="secondary"
+        onPress={onExport}
+        style={styles.btn}
+      />
       <Button label="Refresh" variant="ghost" onPress={refetch} />
     </Screen>
   );

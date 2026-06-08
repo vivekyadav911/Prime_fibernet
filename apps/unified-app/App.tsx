@@ -14,9 +14,13 @@ import { StyleSheet, View } from 'react-native';
 import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { AppNavigator, linking } from '@/navigation';
 import { useAuthBootstrap } from '@/hooks/useAuth';
+import { setupBackgroundHandler, useNotifications } from '@/hooks/useNotifications';
 import { SyncManager } from '@/services/offline/syncManager';
+import { useAppSelector } from '@/store/hooks';
 import { requestsApi } from '@/services/api/requestsApi';
 import { persistor, store } from '@/store/store';
+
+setupBackgroundHandler();
 
 if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
   Sentry.init({
@@ -34,6 +38,15 @@ if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
 
 function Root() {
   useAuthBootstrap();
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
+  const { registerToken, setupForegroundHandler } = useNotifications();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      void registerToken();
+      setupForegroundHandler();
+    }
+  }, [isAuthenticated, registerToken, setupForegroundHandler]);
 
   useEffect(() => {
     SyncManager.setExecutor(async (mutation) => {

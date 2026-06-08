@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 
+import { useBiometrics } from '@/hooks/useBiometrics';
 import { getSupabase } from '@/services/supabase';
-import { setupNotifications } from '@/services/notifications';
 import { useAppDispatch } from '@/store/hooks';
 import { DEV_AUTH_CREDENTIALS, type AppRole } from '@prime/types';
 
@@ -23,9 +23,6 @@ export function useAuthBootstrap() {
             user: session?.user ?? null,
           }),
         );
-        if (session?.user) {
-          void setupNotifications(session.user.id);
-        }
       })
       .catch(() => {
         dispatch(setSession({ session: null, user: null }));
@@ -42,9 +39,6 @@ export function useAuthBootstrap() {
           user: session?.user ?? null,
         }),
       );
-      if (session?.user) {
-        void setupNotifications(session.user.id);
-      }
     });
 
     return () => subscription.unsubscribe();
@@ -90,6 +84,27 @@ export async function signOut(dispatch: ReturnType<typeof useAppDispatch>) {
     await getSupabase().auth.signOut();
   }
   dispatch(logoutAction());
+}
+
+export function useBiometricLogin() {
+  const dispatch = useAppDispatch();
+  const { isAvailable, authenticate } = useBiometrics();
+
+  const biometricLogin = useCallback(async (): Promise<boolean> => {
+    if (!isAvailable) return false;
+    const success = await authenticate('Confirm your identity to log in');
+    if (!success) return false;
+
+    const supabase = getSupabase();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      dispatch(setSession({ session, user: session.user }));
+      return true;
+    }
+    return false;
+  }, [authenticate, dispatch, isAvailable]);
+
+  return { biometricLogin, isAvailable };
 }
 
 export async function verifyAdminTotp(code: string, userId: string): Promise<boolean> {

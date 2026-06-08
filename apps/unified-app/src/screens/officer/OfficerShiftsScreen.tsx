@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
-import * as Location from 'expo-location';
+import { useCallback } from 'react';
 import { FlatList } from 'react-native';
 import type { Shift } from '@prime/types';
 import { Button, Screen, colors } from '@prime/ui';
 import { StyleSheet, Text } from 'react-native';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
+import { useLocation } from '@/hooks/useLocation';
 import { useAppSelector } from '@/store/hooks';
 import {
   useClockInMutation,
@@ -19,6 +19,9 @@ import { ShiftRow } from './components/ShiftRow';
 
 export function OfficerShiftsScreen() {
   const user = useAppSelector((s) => s.auth.user);
+  const { coords, error: locationError, startTracking, stopTracking } = useLocation({
+    enableBackground: true,
+  });
   const {
     data: activeShift,
     isLoading: activeLoading,
@@ -35,7 +38,6 @@ export function OfficerShiftsScreen() {
   } = useGetShiftHistoryQuery(user?.id ?? '', { skip: !user?.id });
   const [clockIn, { isLoading: clockingIn }] = useClockInMutation();
   const [clockOut, { isLoading: clockingOut }] = useClockOutMutation();
-  const [locationError, setLocationError] = useState<string | null>(null);
 
   const isLoading = activeLoading || historyLoading;
   const isError = activeError || historyError;
@@ -46,32 +48,21 @@ export function OfficerShiftsScreen() {
     refetchHistory();
   }, [refetchActive, refetchHistory]);
 
-  useEffect(() => {
-    void Location.requestForegroundPermissionsAsync();
-  }, []);
-
-  const getLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      setLocationError('Location permission denied');
-      return { latitude: 0, longitude: 0 };
-    }
-    const loc = await Location.getCurrentPositionAsync({});
-    return { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-  };
-
-  const onClockIn = async () => {
+  const handleClockIn = useCallback(async () => {
     if (!user) return;
-    const coords = await getLocation();
-    await clockIn({ userId: user.id, ...coords });
+    const position = await startTracking();
+    const latitude = position?.latitude ?? coords?.latitude ?? 0;
+    const longitude = position?.longitude ?? coords?.longitude ?? 0;
+    await clockIn({ userId: user.id, latitude, longitude });
     refetch();
-  };
+  }, [clockIn, coords?.latitude, coords?.longitude, refetch, startTracking, user]);
 
-  const onClockOut = async () => {
+  const handleClockOut = useCallback(async () => {
     if (!user) return;
     await clockOut({ userId: user.id, shiftId: activeShift?.id });
+    stopTracking();
     refetch();
-  };
+  }, [activeShift?.id, clockOut, refetch, stopTracking, user]);
 
   const keyExtractor = useCallback((item: Shift) => item.id, []);
 
@@ -107,9 +98,9 @@ export function OfficerShiftsScreen() {
         <Text style={styles.muted}>Not clocked in</Text>
       )}
       {!activeShift ? (
-        <Button label={clockingIn ? 'Clocking in…' : 'Clock in'} onPress={onClockIn} style={styles.btn} />
+        <Button label={clockingIn ? 'Clocking in…' : 'Clock in'} onPress={handleClockIn} style={styles.btn} />
       ) : (
-        <Button label={clockingOut ? 'Clocking out…' : 'Clock out'} variant="secondary" onPress={onClockOut} />
+        <Button label={clockingOut ? 'Clocking out…' : 'Clock out'} variant="secondary" onPress={handleClockOut} />
       )}
       <Text style={styles.historyTitle}>Shift history</Text>
       {!history?.length ? (
