@@ -26,6 +26,10 @@
         "NSFaceIDUsageDescription": "Prime Fibernet uses Face ID to securely unlock the app after sign-in."
       }
     },
+    "web": {
+      "favicon": "./assets/icon.png",
+      "bundler": "metro"
+    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

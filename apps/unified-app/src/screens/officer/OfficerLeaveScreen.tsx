@@ -5,7 +5,7 @@ import { Button, Screen } from '@prime/ui';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
-import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
+import { DateRangePicker, EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import { useCreateLeaveRequestMutation, useGetLeaveRequestsQuery } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -55,8 +55,14 @@ export function OfficerLeaveScreen() {
     <Screen>
       <Text style={styles.title}>Leave request</Text>
       <TextInput style={styles.input} placeholder="Leave type (casual/sick)" value={leaveType} onChangeText={setLeaveType} />
-      <TextInput style={styles.input} placeholder="Start date (YYYY-MM-DD)" value={startDate} onChangeText={setStartDate} />
-      <TextInput style={styles.input} placeholder="End date (YYYY-MM-DD)" value={endDate} onChangeText={setEndDate} />
+      <DateRangePicker
+        from={startDate}
+        to={endDate}
+        onFromChange={setStartDate}
+        onToChange={setEndDate}
+        fromLabel="Start date"
+        toLabel="End date"
+      />
       <TextInput style={styles.input} placeholder="Reason" value={reason} onChangeText={setReason} multiline />
       <Button label="Submit leave request" onPress={onSubmit} style={styles.btn} />
       <Text style={styles.historyTitle}>Previous requests</Text>

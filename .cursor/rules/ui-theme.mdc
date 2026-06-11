@@ -1,0 +1,54 @@
+---
+description: UI styling, theme tokens, and component consistency
+alwaysApply: true
+---
+
+# UI & Theme Consistency
+
+## Theme tokens (never hardcode hex in screens)
+
+| Token file | Use for |
+|------------|---------|
+| `@/theme/colors` | Shared palette (extends `@prime/ui`) |
+| `@/theme/spacing` | `spacing.*`, `radius.*` |
+| `@/theme/admin` | Admin accent, canvas, cards, badges |
+| `@prime/ui` `typography` | Display, heading, body, label scales |
+
+## Styling rules
+
+- Use `StyleSheet.create` — no inline style objects
+- Form labels: 12px, weight 600, `colors.textSecondary`, uppercase
+- Inputs: 1px `colors.borderDefault` border, `radius.sm`, `spacing.sm` padding, `colors.surfaceWhite` background
+- Error state: `colors.errorRed` border and helper text
+
+## Role-specific accents
+
+**Admin** (`apps/unified-app/src/screens/admin/`)
+
+- Canvas: `adminColors.canvasBg`
+- Cards: `adminColors.cardBg`
+- Primary actions / active states: `adminColors.primary`
+- Reuse `@/components/admin`: `FormField`, `SelectField`, `DateField`, `SectionCard`, `FilterChips`, `StatusBadge`, `KPICard`
+
+**Customer / Officer**
+
+- Accent: `colors.primaryNavy`
+- Canvas: `colors.background`
+- Reuse `@/components/common` and `@prime/ui` (`Screen`, `Button`, `EmptyState`)
+
+## Lists & states
+
+- Lists: `FlatList` with stable `keyExtractor` and memoized `renderItem`
+- Every screen: loading, error, and empty states via `@/components/common`
+
+## Sheets & modals
+
+- Surface: `colors.surfaceWhite`
+- Top corners: `radius.lg`
+- Backdrop: `colors.overlay`
+- Header: Cancel / title / Done row with `colors.borderDefault` divider
+
+## Forms
+
+- React Hook Form + Zod for all forms
+- Use shared field components — do not build one-off inputs when a shared component exists

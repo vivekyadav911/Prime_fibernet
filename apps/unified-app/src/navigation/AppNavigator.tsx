@@ -1,7 +1,8 @@
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { TotpScreen } from '@/screens/auth/TotpScreen';
+import { WebUnsupportedScreen } from '@/screens/auth/WebUnsupportedScreen';
 import { useAppSelector } from '@/store/hooks';
 import type { RootStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
@@ -12,6 +13,7 @@ import { CustomerNavigator } from './CustomerNavigator';
 import { OfficerNavigator } from './OfficerNavigator';
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
+const isWeb = Platform.OS === 'web';
 
 export function AppNavigator() {
   const { isAuthenticated, isLoading, user, requires2FA } = useAppSelector((s) => s.auth);
@@ -24,26 +26,34 @@ export function AppNavigator() {
     );
   }
 
+  const showAuth = !isAuthenticated || !user;
+  const showTotp = isAuthenticated && user && requires2FA;
+  const showWebUnsupported =
+    isWeb && isAuthenticated && user && !requires2FA && user.role !== 'admin';
+  const showAdmin = isAuthenticated && user && !requires2FA && user.role === 'admin';
+  const showCustomer =
+    !isWeb && isAuthenticated && user && !requires2FA && user.role === 'customer';
+  const showOfficer =
+    !isWeb && isAuthenticated && user && !requires2FA && user.role === 'officer';
+  const showUnknownRole =
+    isAuthenticated &&
+    user &&
+    !requires2FA &&
+    user.role !== 'customer' &&
+    user.role !== 'officer' &&
+    user.role !== 'admin';
+
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
-      {(!isAuthenticated || !user) && (
-        <RootStack.Screen name="Auth" component={AuthNavigator} />
+      {showAuth && <RootStack.Screen name="Auth" component={AuthNavigator} />}
+      {showTotp && <RootStack.Screen name="Totp" component={TotpScreen} />}
+      {showWebUnsupported && (
+        <RootStack.Screen name="WebUnsupported" component={WebUnsupportedScreen} />
       )}
-      {isAuthenticated && user && requires2FA && (
-        <RootStack.Screen name="Totp" component={TotpScreen} />
-      )}
-      {isAuthenticated && user && !requires2FA && user.role === 'customer' && (
-        <RootStack.Screen name="Customer" component={CustomerNavigator} />
-      )}
-      {isAuthenticated && user && !requires2FA && user.role === 'officer' && (
-        <RootStack.Screen name="Officer" component={OfficerNavigator} />
-      )}
-      {isAuthenticated && user && !requires2FA && user.role === 'admin' && (
-        <RootStack.Screen name="Admin" component={AdminNavigator} />
-      )}
-      {isAuthenticated && user && !requires2FA && user.role !== 'customer' && user.role !== 'officer' && user.role !== 'admin' && (
-        <RootStack.Screen name="Auth" component={AuthNavigator} />
-      )}
+      {showCustomer && <RootStack.Screen name="Customer" component={CustomerNavigator} />}
+      {showOfficer && <RootStack.Screen name="Officer" component={OfficerNavigator} />}
+      {showAdmin && <RootStack.Screen name="Admin" component={AdminNavigator} />}
+      {showUnknownRole && <RootStack.Screen name="Auth" component={AuthNavigator} />}
     </RootStack.Navigator>
   );
 }

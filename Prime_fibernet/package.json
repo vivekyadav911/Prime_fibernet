@@ -1,0 +1,36 @@
+{
+  "name": "prime_fibernet",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "eject": "expo eject"
+  },
+  "dependencies": {
+    "expo": "~48.0.0",
+    "react": "18.0.0",
+    "react-dom": "18.0.0",
+    "react-native": "0.71.0",
+    "react-redux": "^8.0.0",
+    "redux": "^4.2.0",
+    "typescript": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.0",
+    "@types/react-native": "^0.67.0",
+    "@types/react-redux": "^7.1.0",
+    "babel-preset-expo": "8.0.0"
+  },
+  "jest": {
+    "preset": "react-native",
+    "transform": {
+      "^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
+    }
+  },
+  "homepage": "https://github.com/yourusername/prime_fibernet",
+  "license": "MIT"
+}

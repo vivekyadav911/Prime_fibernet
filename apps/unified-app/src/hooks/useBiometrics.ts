@@ -1,4 +1,4 @@
-import * as LocalAuthentication from 'expo-local-authentication';
+import { Platform } from 'react-native';
 import { useCallback, useEffect, useState } from 'react';
 
 type UseBiometricsResult = {
@@ -16,8 +16,15 @@ export function useBiometrics(): UseBiometricsResult {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      setIsAvailable(false);
+      return;
+    }
+
     void (async () => {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const LocalAuthentication = require('expo-local-authentication') as typeof import('expo-local-authentication');
         const hardware = await LocalAuthentication.hasHardwareAsync();
         const enrolled = await LocalAuthentication.isEnrolledAsync();
         setIsAvailable(hardware && enrolled);
@@ -29,12 +36,19 @@ export function useBiometrics(): UseBiometricsResult {
   }, []);
 
   const authenticate = useCallback(async (reason: string): Promise<boolean> => {
+    if (Platform.OS === 'web') {
+      setError('Biometric authentication is not available on web');
+      return false;
+    }
+
     setError(null);
     try {
       if (!isAvailable) {
         setError('Biometric authentication is not available');
         return false;
       }
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const LocalAuthentication = require('expo-local-authentication') as typeof import('expo-local-authentication');
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: reason,
         fallbackLabel: 'Use passcode',

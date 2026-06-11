@@ -1,0 +1,18 @@
+---
+description: Flutter-to-React Native migration patterns
+globs: apps/unified-app/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Flutter Migration Rules
+
+- Read the Flutter widget file first, understand intent, then write idiomatic RN
+- Never do a direct line-by-line translation from Dart to TypeScript
+- StatefulWidget + setState → useState hook
+- Provider/Riverpod → Redux slice + useAppSelector
+- Bloc/Cubit → Redux Toolkit createSlice
+- FutureBuilder → RTK Query useXxxQuery hook
+- StreamBuilder → Supabase Realtime + useEffect subscription
+- ListView.builder → FlatList
+- Column/Row → View with flexDirection
+- Navigator.push → navigation.navigate with typed params

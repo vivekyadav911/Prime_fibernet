@@ -7,9 +7,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import * as Sentry from '@sentry/react-native';
-
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { AppNavigator, linking } from '@/navigation';
@@ -20,20 +18,8 @@ import { useAppSelector } from '@/store/hooks';
 import { requestsApi } from '@/services/api/requestsApi';
 import { persistor, store } from '@/store/store';
 
-setupBackgroundHandler();
-
-if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
-    environment: process.env.EXPO_PUBLIC_APP_ENV ?? 'development',
-    tracesSampleRate: 0.1,
-    beforeSend(event) {
-      if (event.request?.headers?.authorization) {
-        delete event.request.headers.authorization;
-      }
-      return event;
-    },
-  });
+if (Platform.OS !== 'web') {
+  void setupBackgroundHandler();
 }
 
 function Root() {
@@ -49,6 +35,8 @@ function Root() {
   }, [isAuthenticated, registerToken, setupForegroundHandler]);
 
   useEffect(() => {
+    if (Platform.OS === 'web') return;
+
     SyncManager.setExecutor(async (mutation) => {
       const op = mutation.operation ?? mutation.endpoint;
       if (op === 'updateRequestStatus') {
@@ -96,7 +84,26 @@ function App() {
   );
 }
 
-export default process.env.EXPO_PUBLIC_SENTRY_DSN ? Sentry.wrap(App) : App;
+let AppExport: typeof App = App;
+
+if (Platform.OS !== 'web' && process.env.EXPO_PUBLIC_SENTRY_DSN) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const Sentry = require('@sentry/react-native') as typeof import('@sentry/react-native');
+  Sentry.init({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+    environment: process.env.EXPO_PUBLIC_APP_ENV ?? 'development',
+    tracesSampleRate: 0.1,
+    beforeSend(event) {
+      if (event.request?.headers?.authorization) {
+        delete event.request.headers.authorization;
+      }
+      return event;
+    },
+  });
+  AppExport = Sentry.wrap(App) as typeof App;
+}
+
+export default AppExport;
 
 const styles = StyleSheet.create({
   root: { flex: 1 },

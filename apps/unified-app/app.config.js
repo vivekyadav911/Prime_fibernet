@@ -1,15 +1,21 @@
 /** @type {import('expo/config').ExpoConfig} */
 export default ({ config }) => ({
   ...config,
+  web: {
+    favicon: './assets/icon.png',
+    bundler: 'metro',
+  },
   extra: {
     ...config.extra,
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     appEnv: process.env.EXPO_PUBLIC_APP_ENV ?? 'development',
+    appVariant: process.env.EXPO_PUBLIC_APP_VARIANT ?? 'unified',
     razorpayKeyId: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID,
   },
   plugins: [
     ...(config.plugins ?? []),
+    '@react-native-community/datetimepicker',
     '@sentry/react-native',
     [
       'expo-location',

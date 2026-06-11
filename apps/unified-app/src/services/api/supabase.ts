@@ -1,7 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { BaseQueryFn } from '@reduxjs/toolkit/query';
 import { Mutex } from 'async-mutex';
-import * as SecureStore from 'expo-secure-store';
 
 import type { Database } from '@/types/database';
 import { getEnvConfig } from '@/services/env';
@@ -12,7 +11,6 @@ export type TypedSupabaseClient = SupabaseClient;
 
 export type { Database };
 
-const SESSION_STORAGE_KEY = 'sb-auth-token';
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 400;
 
@@ -35,9 +33,15 @@ export function getSupabase(): TypedSupabaseClient {
   return client;
 }
 
-/** Read persisted JWT access token from expo-secure-store (Supabase session storage). */
+function getSessionStorageKey(supabaseUrl: string): string {
+  const projectRef = new URL(supabaseUrl).hostname.split('.')[0] ?? 'local';
+  return `sb-${projectRef}-auth-token`;
+}
+
+/** Read persisted JWT access token from hybrid session storage (Supabase auth). */
 export async function getStoredAccessToken(): Promise<string | null> {
-  const raw = await SecureStore.getItemAsync(SESSION_STORAGE_KEY);
+  const config = getEnvConfig();
+  const raw = await secureStorageAdapter.getItem(getSessionStorageKey(config.supabaseUrl));
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as { access_token?: string };

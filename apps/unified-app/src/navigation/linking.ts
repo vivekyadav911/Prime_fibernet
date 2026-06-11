@@ -1,6 +1,19 @@
+import { getStateFromPath as defaultGetStateFromPath } from '@react-navigation/native';
 import type { LinkingOptions } from '@react-navigation/native';
+import { Platform } from 'react-native';
 
 import type { RootStackParamList } from '@/types/navigation';
+
+const MOBILE_ONLY_PATH = /^(\/)?(customer|officer)(\/|$)/i;
+
+function getStateFromPath(path: string, options: Parameters<typeof defaultGetStateFromPath>[1]) {
+  if (Platform.OS === 'web' && MOBILE_ONLY_PATH.test(path)) {
+    return {
+      routes: [{ name: 'WebUnsupported' as const }],
+    };
+  }
+  return defaultGetStateFromPath(path, options);
+}
 
 /**
  * Deep link map derived from Flutter:
@@ -10,6 +23,7 @@ import type { RootStackParamList } from '@/types/navigation';
  */
 export const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['primefibernet://', 'https://admin.primefibernet.com', 'https://app.primefibernet.com'],
+  getStateFromPath,
   config: {
     screens: {
       Auth: {
@@ -23,6 +37,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
           Totp: 'totp',
         },
       },
+      WebUnsupported: 'unsupported',
       Customer: {
         path: 'customer',
         screens: {

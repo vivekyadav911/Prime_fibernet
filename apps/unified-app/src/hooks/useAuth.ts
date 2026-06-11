@@ -74,7 +74,10 @@ export async function devQuickSignIn(dispatch: ReturnType<typeof useAppDispatch>
     email: creds.email,
     password: creds.password,
   });
-  if (!error) return data;
+  if (!error && data.session && data.user) {
+    dispatch(setSession({ session: data.session, user: data.user }));
+    return data;
+  }
 
   dispatch(signInDevUser(role));
 }

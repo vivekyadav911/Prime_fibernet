@@ -134,18 +134,78 @@ export type OfficerStackParamList = {
   OfficerAuth: undefined;
 };
 
+/** Nested admin stack param lists */
+export type AdminUsersStackParamList = {
+  UserList: undefined;
+  UserDetail: { userId: string };
+  UserEdit: { userId: string };
+  AddUser: undefined;
+};
+
+export type AdminOfficersStackParamList = {
+  OfficerList: undefined;
+  OfficerDetail: { officerId: string };
+  OfficerEdit: { officerId: string; section?: 'personal' | 'contact' | 'role' | 'contract' };
+  AddOfficer: undefined;
+};
+
+export type AdminAttendanceStackParamList = {
+  Attendance: undefined;
+  CheckInExceptions: undefined;
+  AttendanceRecords: undefined;
+  CompletedShifts: undefined;
+};
+
+export type AdminPayrollStackParamList = {
+  Payroll: undefined;
+  PayslipsManagement: undefined;
+};
+
+export type AdminRequestsStackParamList = {
+  RequestList: undefined;
+  RequestDetail: { requestId: string };
+};
+
+export type AdminPlansStackParamList = {
+  PlanList: undefined;
+  PlanForm: { planId?: string } | undefined;
+};
+
+export type AdminPaymentsStackParamList = {
+  PaymentList: undefined;
+};
+
+export type AdminInvoicesStackParamList = {
+  InvoiceList: undefined;
+  InvoiceHistory: undefined;
+  ManualGstInvoice: undefined;
+};
+
+export type AdminInventoryStackParamList = {
+  InventoryList: undefined;
+  AssignmentRequests: undefined;
+  InventoryHistory: undefined;
+  Categories: undefined;
+  BulkOperations: undefined;
+};
+
 /**
  * Admin drawer / shell — Flutter `AdminShell` indexed destinations + go_router `/`.
  */
 export type AdminDrawerParamList = {
   Dashboard: undefined;
-  Users: undefined;
-  Officers: undefined;
+  Users: NavigatorScreenParams<AdminUsersStackParamList> | undefined;
+  Officers: NavigatorScreenParams<AdminOfficersStackParamList> | undefined;
   AddOfficer: undefined;
   OfficerDetail: { officerId: string };
+  Attendance: NavigatorScreenParams<AdminAttendanceStackParamList> | undefined;
+  /** @deprecated Use Attendance stack */
   AttendanceManagement: undefined;
+  /** @deprecated Use Attendance stack */
   CheckInReview: undefined;
+  /** @deprecated Use Attendance stack */
   AttendanceRecords: undefined;
+  /** @deprecated Use Attendance stack */
   CompletedShifts: undefined;
   LocationManagement: undefined;
   OfficerOfficeHours: undefined;
@@ -155,23 +215,24 @@ export type AdminDrawerParamList = {
   ShiftRequests: undefined;
   ShiftApproval: undefined;
   ShiftAssignment: undefined;
-  Payroll: undefined;
+  Payroll: NavigatorScreenParams<AdminPayrollStackParamList> | undefined;
   PayRunReview: { payRunId: string };
   RoleManagement: undefined;
-  Requests: undefined;
-  TicketPortal: undefined;
-  Plans: undefined;
+  Requests: NavigatorScreenParams<AdminRequestsStackParamList> | undefined;
+  TicketPortal: NavigatorScreenParams<AdminRequestsStackParamList> | undefined;
+  Plans: NavigatorScreenParams<AdminPlansStackParamList> | undefined;
   EnhancedPlans: undefined;
   Notifications: undefined;
   NotificationEditor: { draftId?: string } | undefined;
-  Payments: undefined;
+  Payments: NavigatorScreenParams<AdminPaymentsStackParamList> | undefined;
   PaymentDetail: { paymentId: string };
+  Invoices: NavigatorScreenParams<AdminInvoicesStackParamList> | undefined;
   InvoiceManagement: undefined;
   EnhancedInvoiceManagement: undefined;
   InvoiceEditor: { invoiceId?: string } | undefined;
   InvoiceHistory: undefined;
   ManualGstInvoice: undefined;
-  Inventory: undefined;
+  Inventory: NavigatorScreenParams<AdminInventoryStackParamList> | undefined;
   InventoryItemDetail: { itemId: string };
   AddEditInventoryItem: { itemId?: string } | undefined;
   InventoryCategories: undefined;
@@ -184,8 +245,12 @@ export type AdminDrawerParamList = {
   /** Unified app drawer label for Flutter `ReportsScreen` */
   Analytics: undefined;
   Audit: undefined;
+  Map: undefined;
+  /** @deprecated Use Map */
   OfficerMap: undefined;
   BillingInvoices: undefined;
+  Support: undefined;
+  /** @deprecated Use Support */
   FaqSupport: undefined;
   Settings: undefined;
   OnboardingApplications: undefined;
@@ -208,6 +273,8 @@ export type RootStackParamList = {
   Officer: NavigatorScreenParams<OfficerStackParamList> | undefined;
   Admin: NavigatorScreenParams<AdminStackParamList> | undefined;
   Totp: undefined;
+  /** Shown on web when a customer or officer account tries to use the browser app */
+  WebUnsupported: undefined;
 };
 
 declare global {

@@ -1,0 +1,48 @@
+---
+description: Standard date/time picker UX and component usage
+alwaysApply: true
+---
+
+# Date & Time Pickers
+
+## Required components
+
+Always use shared pickers from `@/components/common/pickers`:
+
+- `DateField` — single date (`YYYY-MM-DD`)
+- `DateRangePicker` — from/to date range
+- `TimeField` — single time in 24h format (`HH:mm`)
+
+Admin screens may import from `@/components/admin` (thin wrappers with `adminColors.primary` accent).
+
+## Never use
+
+- `@react-native-community/datetimepicker` or other third-party pickers in screens
+- Raw `TextInput` for date or time entry
+- OS-native date/time dialogs
+
+## Required UX
+
+**Date pickers**
+
+- Year: scrollable vertical list (`YearScrollPicker`)
+- Month: left/right buttons **and** horizontal swipe (`MonthNavigator`)
+- Day: calendar grid tap (`CalendarGrid`)
+- Modal bottom sheet with Cancel / Done
+
+**Time pickers (24h)**
+
+- Hour: scrollable vertical list (`HourScrollPicker`, 00–23)
+- Minutes: left/right buttons **and** horizontal swipe (`MinuteNavigator`)
+- Modal bottom sheet with Cancel / Done
+
+## Props & values
+
+- Dates: ISO `YYYY-MM-DD` strings
+- Times: `HH:mm` (24-hour)
+- Support `minimumDate`, `maximumDate`, `minYear`, `maxYear` where relevant
+- Admin accent: `accentColor={adminColors.primary}`; customer/officer use default navy
+
+## Extending
+
+Add new picker behavior inside `apps/unified-app/src/components/common/pickers/` — never duplicate picker UI in screens.

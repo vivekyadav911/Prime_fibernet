@@ -9,27 +9,28 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import type { DrawerScreenProps } from '@react-navigation/drawer';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { PaymentStatus } from '@prime/types';
 import { Button, Screen } from '@prime/ui';
 
+import { DateRangePicker } from '@/components/admin';
 import { EmptyState, ErrorState, SkeletonLoader, StatusChip } from '@/components/common';
 import type { PaymentLedgerEntry } from '@/services/api/paymentsApi';
 import {
   useGetAllPaymentsQuery,
   useRefundMutation,
 } from '@/store/api/endpoints';
-import type { AdminDrawerParamList } from '@/types/navigation';
+import type { AdminStackParamList } from '@/types/navigation';
 import { queryErrorMessage } from '@/utils/queryError';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
-type Props = DrawerScreenProps<AdminDrawerParamList, 'Payments'>;
-
 type StatusFilter = PaymentStatus | 'all';
 type MethodFilter = 'all' | 'cash' | 'upi' | 'credit_card' | 'razorpay' | 'easybuzz';
 
-export function AdminPaymentsScreen({ navigation }: Props) {
+export function AdminPaymentsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [methodFilter, setMethodFilter] = useState<MethodFilter>('all');
@@ -97,7 +98,7 @@ export function AdminPaymentsScreen({ navigation }: Props) {
           <Button
             label="Invoice"
             variant="ghost"
-            onPress={() => navigation.getParent()?.navigate('PaymentDetail', { paymentId: item.id })}
+            onPress={() => navigation.navigate('PaymentDetail', { paymentId: item.id })}
           />
           {item.paymentStatus === 'success' ? (
             <Button label="Refund" variant="secondary" onPress={() => openRefund(item)} />
@@ -155,8 +156,14 @@ export function AdminPaymentsScreen({ navigation }: Props) {
         ))}
       </View>
       <View style={styles.dateRow}>
-        <TextInput style={styles.dateInput} placeholder="Start YYYY-MM-DD" value={startDate} onChangeText={setStartDate} />
-        <TextInput style={styles.dateInput} placeholder="End YYYY-MM-DD" value={endDate} onChangeText={setEndDate} />
+        <DateRangePicker
+          from={startDate}
+          to={endDate}
+          onFromChange={setStartDate}
+          onToChange={setEndDate}
+          fromLabel="Start"
+          toLabel="End"
+        />
       </View>
 
       {!rows.length ? (
@@ -235,15 +242,7 @@ const styles = StyleSheet.create({
   chipActive: { borderColor: colors.accentTeal, backgroundColor: `${colors.accentTeal}18` },
   chipText: { color: colors.textSecondary, fontSize: 12, textTransform: 'capitalize' },
   chipTextActive: { color: colors.accentTeal, fontWeight: '600' },
-  dateRow: { flexDirection: 'row', gap: spacing.xs, paddingHorizontal: spacing.sm, marginBottom: spacing.sm },
-  dateInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    backgroundColor: colors.surfaceWhite,
-  },
+  dateRow: { paddingHorizontal: spacing.sm, marginBottom: spacing.sm },
   row: {
     padding: spacing.md,
     borderBottomWidth: 1,

@@ -1,0 +1,33 @@
+---
+description: Prime Fibernet project context, stack, and folder structure
+alwaysApply: true
+---
+
+# Prime Fibernet — Project Context
+
+Migrating from Flutter to React Native (Expo SDK 50, TypeScript 5).
+Single unified app for 3 roles: Customer, Officer, Admin.
+Backend: Supabase (PostgreSQL + Auth + Realtime + Edge Functions).
+State: Redux Toolkit + RTK Query.
+Navigation: React Navigation 6 (tab for customer, drawer for officer/admin).
+
+## Stack
+
+- React Native 0.73+ / Expo SDK 50+
+- TypeScript (strict mode) — never use `any`
+- Redux Toolkit + RTK Query for all state and API calls
+- Zod for all input validation (client and server)
+- Nativewind (TailwindCSS) for styling
+- Supabase JS SDK 2.38+
+- React Navigation 6.x
+- React Hook Form 7.48+
+
+## Folder structure
+
+- Screens: `apps/unified-app/src/screens/<role>/<feature>/`
+- Components: `apps/unified-app/src/components/`
+- API slices: `apps/unified-app/src/services/api/`
+- Redux slices: `apps/unified-app/src/store/slices/`
+- Types: `apps/unified-app/src/types/`
+- Hooks: `apps/unified-app/src/hooks/`
+- Utils: `apps/unified-app/src/utils/`

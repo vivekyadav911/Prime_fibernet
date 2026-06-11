@@ -1,20 +1,37 @@
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { registerFcmToken } from '@/services/supabase';
 import { store } from '@/store/store';
+import { isPushNotificationsSupported } from '@/utils/pushNotifications';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+import type * as NotificationsModule from 'expo-notifications';
+
+type NotificationsApi = typeof NotificationsModule;
+
+let notificationsPromise: Promise<NotificationsApi | null> | null = null;
+
+async function loadNotifications(): Promise<NotificationsApi | null> {
+  if (!isPushNotificationsSupported()) return null;
+
+  if (!notificationsPromise) {
+    notificationsPromise = import('expo-notifications').then((module) => {
+      module.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+      return module;
+    });
+  }
+
+  return notificationsPromise;
+}
 
 export type PushMessage = {
   title: string;
@@ -35,17 +52,22 @@ type UseNotificationsResult = {
 /**
  * Push notifications for the unified Expo app.
  *
- * Flutter officer app uses `flutter_local_notifications` for shift reminders only.
- * There is no `@react-native-firebase/messaging` in the Flutter apps — this hook uses
- * `expo-notifications` (Expo push token stored in `user_fcm_tokens`, same table).
+ * Skipped in Expo Go (SDK 53+ removed Android remote push support there).
+ * Use a development build for full push notification testing.
  */
 export function useNotifications(): UseNotificationsResult {
   const [token, setToken] = useState<string | null>(null);
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const foregroundSub = useRef<Notifications.EventSubscription | null>(null);
+  const foregroundSub = useRef<NotificationsModule.EventSubscription | null>(null);
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
+    const Notifications = await loadNotifications();
+    if (!Notifications) {
+      setError('Push notifications require a development build');
+      return false;
+    }
+
     if (!Device.isDevice) {
       setError('Push notifications require a physical device');
       return false;
@@ -68,6 +90,9 @@ export function useNotifications(): UseNotificationsResult {
 
   const getToken = useCallback(async (userId?: string): Promise<string | null> => {
     setError(null);
+    const Notifications = await loadNotifications();
+    if (!Notifications) return null;
+
     const granted = await requestPermission();
     if (!granted) return null;
 
@@ -105,25 +130,37 @@ export function useNotifications(): UseNotificationsResult {
   }, [getToken]);
 
   const setupForegroundHandler = useCallback(() => {
-    foregroundSub.current?.remove();
-    foregroundSub.current = Notifications.addNotificationReceivedListener(() => {
-      // Foreground display handled by Notifications.setNotificationHandler above.
+    void loadNotifications().then((Notifications) => {
+      if (!Notifications) return;
+
+      foregroundSub.current?.remove();
+      foregroundSub.current = Notifications.addNotificationReceivedListener(() => {
+        // Foreground display handled by setNotificationHandler in loadNotifications.
+      });
     });
   }, []);
 
   useEffect(() => {
+    if (!isPushNotificationsSupported()) return;
+
     void requestPermission();
 
-    const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const payload = response.notification.request.content.data;
-      if (__DEV__) {
-        console.log('[notifications] tapped', payload);
-      }
+    let responseSub: NotificationsModule.EventSubscription | null = null;
+
+    void loadNotifications().then((Notifications) => {
+      if (!Notifications) return;
+
+      responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
+        const payload = response.notification.request.content.data;
+        if (__DEV__) {
+          console.log('[notifications] tapped', payload);
+        }
+      });
     });
 
     return () => {
       foregroundSub.current?.remove();
-      responseSub.remove();
+      responseSub?.remove();
     };
   }, [requestPermission]);
 
@@ -138,16 +175,8 @@ export function useNotifications(): UseNotificationsResult {
   };
 }
 
-/** Call once at module level from App entry. */
-export function setupBackgroundHandler(): void {
-  if (Platform.OS === 'web') return;
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
+/** Call once at app startup from App entry (no-op in Expo Go). */
+export async function setupBackgroundHandler(): Promise<void> {
+  if (Platform.OS === 'web' || !isPushNotificationsSupported()) return;
+  await loadNotifications();
 }

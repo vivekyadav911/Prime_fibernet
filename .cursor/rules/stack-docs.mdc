@@ -1,0 +1,17 @@
+---
+description: Official stack documentation references for Prime Fibernet
+alwaysApply: true
+---
+
+# Stack Documentation
+
+Reference these official docs when implementing features. In chat, use `@Docs` to pull indexed content.
+
+| Library | URL |
+|---------|-----|
+| Expo | https://docs.expo.dev |
+| React Navigation | https://reactnavigation.org/docs/getting-started |
+| Redux Toolkit | https://redux-toolkit.js.org/introduction/getting-started |
+| Supabase | https://supabase.com/docs |
+| NativeWind | https://www.nativewind.dev/overview |
+| React Hook Form | https://react-hook-form.com/get-started |
