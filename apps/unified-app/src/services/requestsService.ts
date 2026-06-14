@@ -1,105 +1,69 @@
 import type { Officer as PrimeOfficer } from '@prime/types';
 
+import {
+  fetchActivitiesForRequest,
+  fetchPlanMap,
+  loadAdminRequestBoard,
+} from '@/services/api/adminRequestsBoardApi';
+import { requestsApi } from '@/services/api/requestsApi';
 import { getSupabase } from '@/services/supabase';
 import { store } from '@/store/store';
-import { requestsApi } from '@/services/api/requestsApi';
 import type { Officer, RequestFilters, ServiceRequest } from '@/types/requests';
 import { mapDbRowToServiceRequest, officerInitials } from '@/utils/requestViewMappers';
 
-async function fetchPlanMap(): Promise<Map<string, { name: string; isActive: boolean }>> {
-  const client = getSupabase();
-  const { data, error } = await client.from('plans').select('id, name, is_active');
-  if (error) throw error;
-  const map = new Map<string, { name: string; isActive: boolean }>();
-  for (const row of data ?? []) {
-    map.set(String(row.id), {
-      name: String(row.name),
-      isActive: Boolean(row.is_active),
-    });
-  }
-  return map;
-}
-
-async function attachActivities(
-  client: ReturnType<typeof getSupabase>,
-  requestIds: string[],
-): Promise<Map<string, Record<string, unknown>[]>> {
-  if (!requestIds.length) return new Map();
-
-  const { data, error } = await client
-    .from('request_activities')
-    .select('*')
-    .in('request_id', requestIds)
-    .order('timestamp', { ascending: true });
-
-  if (error) throw error;
-
-  const map = new Map<string, Record<string, unknown>[]>();
-  for (const row of data ?? []) {
-    const requestId = String(row.request_id);
-    const list = map.get(requestId) ?? [];
-    list.push(row as Record<string, unknown>);
-    map.set(requestId, list);
-  }
-  return map;
-}
-
-function mapPrimeOfficer(o: PrimeOfficer): Officer {
-  return {
-    id: o.id,
-    name: o.name,
-    role: 'Field Technician',
-    area: o.region ?? 'Unassigned area',
-    avatarInitials: officerInitials(o.name),
-  };
-}
-
 export async function fetchRequests(_filters?: Partial<RequestFilters>): Promise<ServiceRequest[]> {
   const client = getSupabase();
-  const [planMap, requestsResult] = await Promise.all([
-    fetchPlanMap(),
-    client.from('service_requests').select('*').order('created_at', { ascending: false }),
-  ]);
-
-  if (requestsResult.error) throw requestsResult.error;
-
-  const rows = (requestsResult.data ?? []) as Record<string, unknown>[];
-  const activityMap = await attachActivities(
-    client,
-    rows.map((r) => String(r.id)),
-  );
-
-  return rows.map((row) =>
-    mapDbRowToServiceRequest(row, activityMap.get(String(row.id)) ?? [], planMap),
-  );
+  const { data: sessionData, error: sessionError } = await client.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!sessionData.session) {
+    throw new Error('Please sign in to view requests.');
+  }
+  return loadAdminRequestBoard(client);
 }
 
 export async function fetchRequestById(id: string): Promise<ServiceRequest> {
   const client = getSupabase();
+  const { data: sessionData, error: sessionError } = await client.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!sessionData.session) {
+    throw new Error('Please sign in to view requests.');
+  }
+
   const [planMap, requestResult] = await Promise.all([
-    fetchPlanMap(),
+    fetchPlanMap(client),
     client.from('service_requests').select('*').eq('id', id).maybeSingle(),
   ]);
 
   if (requestResult.error) throw requestResult.error;
   if (!requestResult.data) throw new Error('Request not found');
 
-  const activityMap = await attachActivities(client, [id]);
+  const activities = await fetchActivitiesForRequest(client, id);
   return mapDbRowToServiceRequest(
     requestResult.data as Record<string, unknown>,
-    activityMap.get(id) ?? [],
+    activities,
     planMap,
   );
 }
 
 export async function fetchOfficers(): Promise<Officer[]> {
   const client = getSupabase();
-  const { data, error } = await client.from('officers').select('*, users(name, email)');
+  const { data, error } = await client.from('officers').select('id, region, email, user_id');
   if (error) throw error;
 
-  const officers: Officer[] = (data ?? []).map((row) => {
-    const name =
-      (row.users as { name?: string } | null)?.name ?? String(row.full_name ?? row.name ?? 'Officer');
+  const rows = data ?? [];
+  const userIds = rows.map((row) => row.user_id).filter(Boolean) as string[];
+  const nameByUserId = new Map<string, string>();
+
+  if (userIds.length) {
+    const { data: users } = await client.from('users').select('id, name').in('id', userIds);
+    for (const user of users ?? []) {
+      nameByUserId.set(String(user.id), String(user.name));
+    }
+  }
+
+  return rows.map((row) => {
+    const userId = row.user_id ? String(row.user_id) : null;
+    const name = (userId && nameByUserId.get(userId)) || String(row.email ?? 'Officer');
     const region = String(row.region ?? 'Unassigned area');
     return {
       id: String(row.id),
@@ -109,8 +73,6 @@ export async function fetchOfficers(): Promise<Officer[]> {
       avatarInitials: officerInitials(name),
     };
   });
-
-  return officers;
 }
 
 export async function assignOfficer(
@@ -205,7 +167,6 @@ export async function createRequest(
     location_address: data.customerAddress,
     plan_id: data.planId,
     officer_id: data.assignedOfficerId,
-    officer_name: data.assignedOfficerName,
     source: data.source,
     notes: data.notes.join('\n'),
     created_at: now,
@@ -224,11 +185,19 @@ export async function createRequest(
     request_id: row.id,
     actor_name: data.customerName,
     action: 'Request created',
-    notes: 'Service request created by admin',
-    timestamp: now,
+    note: 'Service request created by admin',
+    created_at: now,
   });
 
   return fetchRequestById(String(row.id));
 }
 
-export { mapPrimeOfficer };
+export function mapPrimeOfficer(o: PrimeOfficer): Officer {
+  return {
+    id: o.id,
+    name: o.name,
+    role: 'Field Technician',
+    area: o.region ?? 'Unassigned area',
+    avatarInitials: officerInitials(o.name),
+  };
+}

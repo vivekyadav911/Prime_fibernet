@@ -8,7 +8,7 @@ export interface ActivityEvent {
   description: string;
   performedBy: string;
   performedByRole?: string;
-  timestamp: Date;
+  timestamp: string;
 }
 
 export interface ServiceRequest {
@@ -28,9 +28,9 @@ export interface ServiceRequest {
   assignedOfficerId: string | null;
   assignedOfficerName: string | null;
   assignedOfficerRole: string | null;
-  createdAt: Date;
-  assignedAt: Date | null;
-  completedAt: Date | null;
+  createdAt: string;
+  assignedAt: string | null;
+  completedAt: string | null;
   activityTimeline: ActivityEvent[];
   notes: string[];
 }

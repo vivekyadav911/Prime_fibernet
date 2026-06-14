@@ -113,7 +113,7 @@ export function RequestDetailModal({
 
   const statusStyle = STATUS_STYLES[request.status];
   const timeline = [...request.activityTimeline].sort(
-    (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
+    (a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp),
   );
 
   return (
