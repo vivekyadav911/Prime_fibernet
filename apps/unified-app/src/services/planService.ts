@@ -337,3 +337,5 @@ export function subscribeToPlans(callback: (plans: Plan[]) => void): () => void 
 export function isPlansRealtimeAvailable(): boolean {
   return !plansRealtimeFailed;
 }
+
+export { getPlanDeactivationPrefill as getPlanDeactivationNotificationPrefill } from '@/utils/notificationUtils';

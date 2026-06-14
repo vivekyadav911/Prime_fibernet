@@ -2,7 +2,7 @@ import * as Device from 'expo-device';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
-import { registerFcmToken } from '@/services/supabase';
+import { registerFcmToken, getSupabase } from '@/services/supabase';
 import { store } from '@/store/store';
 import { isPushNotificationsSupported } from '@/utils/pushNotifications';
 
@@ -98,8 +98,18 @@ export function useNotifications(): UseNotificationsResult {
 
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Default',
+        name: 'General',
+        importance: Notifications.AndroidImportance.DEFAULT,
+      });
+      await Notifications.setNotificationChannelAsync('urgent', {
+        name: 'Urgent Alerts',
         importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#EF4444',
+      });
+      await Notifications.setNotificationChannelAsync('promotional', {
+        name: 'Promotions',
+        importance: Notifications.AndroidImportance.LOW,
       });
       await Notifications.setNotificationChannelAsync('shifts', {
         name: 'Shift reminders',
@@ -114,7 +124,28 @@ export function useNotifications(): UseNotificationsResult {
 
     if (userId) {
       try {
-        await registerFcmToken(userId, pushToken);
+        const authUser = store.getState().auth.user;
+        const userType = authUser?.role ?? 'customer';
+        let planId: string | undefined;
+        let area: string | undefined;
+
+        const client = getSupabase();
+        const { data: profile } = await client
+          .from('users')
+          .select('city')
+          .eq('id', userId)
+          .maybeSingle();
+        area = profile?.city ? String(profile.city) : undefined;
+
+        const { data: sub } = await client
+          .from('subscriptions')
+          .select('plan_id')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .maybeSingle();
+        planId = sub?.plan_id ? String(sub.plan_id) : undefined;
+
+        await registerFcmToken(userId, pushToken, { userType, planId, area });
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to store push token');
       }

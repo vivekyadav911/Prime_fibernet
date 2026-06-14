@@ -6,6 +6,7 @@ import {
   loadAdminRequestBoard,
 } from '@/services/api/adminRequestsBoardApi';
 import { requestsApi } from '@/services/api/requestsApi';
+import { sendAutoNotification } from '@/services/broadcastNotificationService';
 import { getSupabase } from '@/services/supabase';
 import { store } from '@/store/store';
 import type { Officer, RequestFilters, ServiceRequest } from '@/types/requests';
@@ -100,6 +101,23 @@ export async function assignOfficer(
       }),
     )
     .unwrap();
+
+  try {
+    const request = await fetchRequestById(requestId);
+    if (request.customerId) {
+      await sendAutoNotification({
+        title: 'Officer assigned to your request',
+        message: `${officer.name} has been assigned to handle your ${request.type} request.`,
+        priority: 'Normal',
+        eventType: 'requestUpdate',
+        audience: { type: 'specific_users', userIds: [request.customerId] },
+        linkedRequestId: requestId,
+        deepLinkUrl: `primefiber://requests/${requestId}`,
+      });
+    }
+  } catch {
+    /* non-blocking */
+  }
 }
 
 export async function reassignOfficer(
@@ -127,6 +145,52 @@ export async function reassignOfficer(
       }),
     )
     .unwrap();
+
+  try {
+    const request = await fetchRequestById(requestId);
+    if (request.customerId) {
+      await sendAutoNotification({
+        title: 'Officer assigned to your request',
+        message: `${officer.name} has been assigned to handle your ${request.type} request.`,
+        priority: 'Normal',
+        eventType: 'requestUpdate',
+        audience: { type: 'specific_users', userIds: [request.customerId] },
+        linkedRequestId: requestId,
+      });
+    }
+  } catch {
+    /* non-blocking */
+  }
+}
+
+export async function updateRequestStatusWithNotification(
+  id: string,
+  status: string,
+  note?: string,
+  officerName?: string,
+): Promise<void> {
+  await store
+    .dispatch(requestsApi.endpoints.updateRequestStatus.initiate({ id, status, note, officerName }))
+    .unwrap();
+
+  if (status.toLowerCase() !== 'completed') return;
+
+  try {
+    const request = await fetchRequestById(id);
+    if (request.customerId) {
+      await sendAutoNotification({
+        title: 'Your request has been completed',
+        message: `Your ${request.type} request has been resolved by our team.`,
+        priority: 'Normal',
+        eventType: 'requestUpdate',
+        audience: { type: 'specific_users', userIds: [request.customerId] },
+        linkedRequestId: id,
+        deepLinkUrl: `primefiber://requests/${id}`,
+      });
+    }
+  } catch {
+    /* non-blocking */
+  }
 }
 
 export async function addNote(requestId: string, note: string, authorName: string): Promise<void> {

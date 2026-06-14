@@ -7,15 +7,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { signOut } from '@/hooks/useAuth';
 import { useUnassignedRequestCount } from '@/hooks/useAdminRequests';
 import { usePlansSidebarBadge } from '@/hooks/usePlans';
+import { useNotificationsSidebarBadge } from '@/hooks/useNotificationHub';
 import { useTicketPortalBadge } from '@/hooks/useTickets';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
-import type { AdminDrawerParamList } from '@/types/navigation';
+import type { AdminDrawerParamList, AdminInventoryStackParamList } from '@/types/navigation';
 
 type DrawerItem = {
   route: keyof AdminDrawerParamList;
+  screen?: keyof AdminInventoryStackParamList;
   label: string;
   icon: string;
   showBadge?: boolean;
@@ -57,7 +59,7 @@ const SECTIONS: DrawerSection[] = [
       { route: 'Requests', label: 'Requests', icon: '📋', showBadge: true },
       { route: 'TicketPortal', label: 'Ticket Portal', icon: '🎫', showBadge: true },
       { route: 'Plans', label: 'Plans', icon: '📶', showBadge: true },
-      { route: 'Notifications', label: 'Notifications', icon: '🔔' },
+      { route: 'Notifications', label: 'Notifications', icon: '🔔', showBadge: true },
     ],
   },
   {
@@ -71,7 +73,13 @@ const SECTIONS: DrawerSection[] = [
   {
     id: 'assets',
     label: 'Assets',
-    items: [{ route: 'Inventory', label: 'Inventory', icon: '📦' }],
+    items: [
+      { route: 'Inventory', screen: 'InventoryList', label: 'Inventory', icon: '📦' },
+      { route: 'Inventory', screen: 'AssignmentRequests', label: 'Assignment Requests', icon: '📋' },
+      { route: 'Inventory', screen: 'InventoryHistory', label: 'Inventory History', icon: '🕐' },
+      { route: 'Inventory', screen: 'Categories', label: 'Categories', icon: '🏷️' },
+      { route: 'Inventory', screen: 'BulkOperations', label: 'Bulk Operations', icon: '⚡' },
+    ],
   },
   {
     id: 'reports',
@@ -122,6 +130,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
   const unassignedCount = useUnassignedRequestCount();
   const ticketBadge = useTicketPortalBadge();
   const plansBadge = usePlansSidebarBadge();
+  const notificationsBadge = useNotificationsSidebarBadge();
   const { state, navigation } = props;
   const activeRoute = state.routes[state.index]?.name;
 
@@ -157,17 +166,34 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
             };
           }
           return null;
+        case 'Notifications':
+          if (notificationsBadge.draftCount > 0) {
+            return {
+              kind: 'pill',
+              label: `${formatNavCount(notificationsBadge.draftCount)} draft`,
+              tone: 'warning',
+            };
+          }
+          if (notificationsBadge.hasUpcomingScheduled) {
+            return { kind: 'pill', label: 'Soon', tone: 'primary' };
+          }
+          return null;
         default:
           return null;
       }
     },
-    [unassignedCount, ticketBadge, plansBadge.count],
+    [unassignedCount, ticketBadge, plansBadge.count, notificationsBadge],
   );
 
   const navigate = useCallback(
-    (route: keyof AdminDrawerParamList) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      navigation.navigate(route as any);
+    (route: keyof AdminDrawerParamList, screen?: keyof AdminInventoryStackParamList) => {
+      if (screen) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        navigation.navigate(route as any, { screen });
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        navigation.navigate(route as any);
+      }
     },
     [navigation],
   );
@@ -188,15 +214,25 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
           ) : null}
 
           {section.items.map((item) => {
-            const isActive = activeRoute === item.route;
+            const inventoryState = state.routes.find((r) => r.name === 'Inventory')?.state;
+            const nestedRoute =
+              inventoryState && 'routes' in inventoryState && inventoryState.index != null
+                ? inventoryState.routes[inventoryState.index]?.name
+                : undefined;
+            const isActive =
+              item.screen != null
+                ? activeRoute === item.route && nestedRoute === item.screen
+                : activeRoute === item.route;
+            const itemKey = item.screen ? `${item.route}-${item.screen}` : item.route;
             const notification = getNotification(item.route, item.showBadge);
 
             return (
               <Pressable
-                key={item.route}
+                key={itemKey}
                 style={[styles.item, isActive && styles.itemActive]}
-                onPress={() => navigate(item.route)}
+                onPress={() => navigate(item.route, item.screen)}
               >
+                {isActive ? <View style={styles.activeBar} /> : null}
                 <Text style={styles.itemIcon}>{item.icon}</Text>
                 <Text
                   style={[styles.itemLabel, isActive && styles.itemLabelActive]}
@@ -210,7 +246,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
           })}
         </View>
       )),
-    [activeRoute, getNotification, navigate],
+    [activeRoute, getNotification, navigate, state.routes],
   );
 
   return (
@@ -349,9 +385,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginHorizontal: DRAWER_EDGE_INSET,
     borderRadius: radius.full,
+    position: 'relative',
   },
   itemActive: {
     backgroundColor: adminColors.primaryTint,
+  },
+  activeBar: {
+    position: 'absolute',
+    left: 0,
+    top: 4,
+    bottom: 4,
+    width: 3,
+    backgroundColor: adminColors.activeBorder,
+    borderRadius: 2,
   },
   itemIcon: {
     width: 28,

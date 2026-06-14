@@ -34,6 +34,7 @@
     "async-mutex": "^0.5.0",
     "date-fns": "^4.4.0",
     "expo": "~54.0.35",
+    "expo-background-fetch": "~14.0.9",
     "expo-battery": "^56.0.4",
     "expo-constants": "~18.0.13",
     "expo-device": "~8.0.10",

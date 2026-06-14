@@ -185,6 +185,16 @@ export type AdminPlansStackParamList = {
   PlanForm: { mode: 'create' | 'edit'; planId?: string } | undefined;
 };
 
+export type AdminNotificationsStackParamList = {
+  NotificationList: { initialTab?: 'drafts' | 'sent' } | undefined;
+  CreateNotification: {
+    mode: 'create' | 'edit';
+    notificationId?: string;
+    prefill?: import('@/types/notifications').CreateNotificationFormData;
+  };
+  NotificationDetail: { notificationId: string };
+};
+
 export type AdminPaymentsStackParamList = {
   PaymentList: undefined;
 };
@@ -201,6 +211,10 @@ export type AdminInventoryStackParamList = {
   InventoryHistory: undefined;
   Categories: undefined;
   BulkOperations: undefined;
+  ItemDetail: { itemId: string };
+  QuickAction: { itemId: string; defaultAction?: 'sold' | 'damaged' | 'returned' | 'add_stock' };
+  AddItem: undefined;
+  EditItem: { itemId: string };
 };
 
 /**
@@ -236,8 +250,7 @@ export type AdminDrawerParamList = {
   TicketPortal: NavigatorScreenParams<AdminTicketsStackParamList> | undefined;
   Plans: NavigatorScreenParams<AdminPlansStackParamList> | undefined;
   EnhancedPlans: undefined;
-  Notifications: undefined;
-  NotificationEditor: { draftId?: string } | undefined;
+  Notifications: NavigatorScreenParams<AdminNotificationsStackParamList> | undefined;
   Payments: NavigatorScreenParams<AdminPaymentsStackParamList> | undefined;
   PaymentDetail: { paymentId: string };
   Invoices: NavigatorScreenParams<AdminInvoicesStackParamList> | undefined;

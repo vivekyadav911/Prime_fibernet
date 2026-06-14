@@ -6,6 +6,7 @@ import { Button } from '@prime/ui';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { getPlanDeactivationNotificationPrefill } from '@/services/planService';
 import type { Plan } from '@/types/plans';
 
 type DeletePlanModalProps = {
@@ -14,6 +15,7 @@ type DeletePlanModalProps = {
   onClose: () => void;
   onConfirm: () => Promise<void>;
   onMigrate: () => void;
+  onNotifySubscribers?: () => void;
 };
 
 export function DeletePlanModal({
@@ -22,6 +24,7 @@ export function DeletePlanModal({
   onClose,
   onConfirm,
   onMigrate,
+  onNotifySubscribers,
 }: DeletePlanModalProps) {
   const [loading, setLoading] = useState(false);
 
@@ -45,6 +48,9 @@ export function DeletePlanModal({
                   subscribed to this plan. You must migrate them to another plan before deleting.
                 </Text>
               </View>
+              {onNotifySubscribers ? (
+                <Button label="Notify Subscribers" variant="ghost" onPress={onNotifySubscribers} />
+              ) : null}
               <Button label="Migrate Subscribers" onPress={onMigrate} />
               <Button label="Cancel" variant="ghost" onPress={onClose} />
             </>

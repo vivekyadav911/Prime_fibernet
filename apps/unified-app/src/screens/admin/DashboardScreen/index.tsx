@@ -6,6 +6,7 @@ import { Screen } from '@prime/ui';
 
 import { QuickAccessGrid, type QuickAccessItem } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
+import { useNotificationsDashboardStats } from '@/hooks/useNotificationHub';
 import { usePlansDashboardStats } from '@/hooks/usePlans';
 import { useTickets } from '@/hooks/useTickets';
 import {
@@ -63,6 +64,7 @@ export function DashboardScreen() {
   const { data: allRequests } = useGetAllRequestsQuery();
   const { openCount, breachedCount, unassignedCount: unassignedTickets, allTickets } = useTickets();
   const { stats: planStats } = usePlansDashboardStats();
+  const { stats: notificationStats } = useNotificationsDashboardStats();
   const [sendBulk] = useSendBulkRechargeNotificationMutation();
 
   const ticketSummary = useMemo(() => {
@@ -176,14 +178,25 @@ export function DashboardScreen() {
             : {},
       users: urgentRenewals.length > 0 ? { badge: urgentRenewals.length, badgeTone: 'warning' } : {},
       officers: (kpis?.officersOnline ?? 0) === 0 ? { alertDot: true, badgeTone: 'danger' } : {},
-      notifications: urgentRenewals.length > 0 ? { alertDot: true, badgeTone: 'warning' } : {},
+      notifications:
+        (notificationStats?.totalDrafts ?? 0) > 0
+          ? { badge: notificationStats?.totalDrafts ?? 0, badgeTone: 'warning' as const }
+          : urgentRenewals.length > 0
+            ? { alertDot: true, badgeTone: 'warning' as const }
+            : {},
     };
 
     return QUICK_ACCESS_BASE.map((item) => ({
       ...item,
       ...badges[item.id],
     }));
-  }, [kpis?.officersOnline, requestSummary.pending, requestSummary.unassigned, urgentRenewals.length]);
+  }, [
+    kpis?.officersOnline,
+    notificationStats?.totalDrafts,
+    requestSummary.pending,
+    requestSummary.unassigned,
+    urgentRenewals.length,
+  ]);
 
   const primaryShortcuts = useMemo(
     () => shortcutItems.filter((item) => item.priority === 'primary'),

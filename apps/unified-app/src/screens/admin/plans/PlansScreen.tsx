@@ -25,6 +25,7 @@ import {
 import { AdminEmptyState, RoleGuard, SearchBar } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePlans } from '@/hooks/usePlans';
+import { getPlanDeactivationNotificationPrefill } from '@/services/planService';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { adminColors } from '@/theme/admin';
@@ -131,20 +132,59 @@ export function PlansScreen({ navigation }: Props) {
 
   const handleToggle = useCallback(
     async (plan: Plan, isActive: boolean) => {
-      try {
-        await togglePlanStatus(plan.id, isActive);
-      } catch (e) {
-        dispatch(
-          enqueueToast({
-            id: `plan-toggle-${Date.now()}`,
-            type: 'error',
-            message: e instanceof Error ? e.message : 'Could not update plan',
-          }),
+      const applyToggle = async () => {
+        try {
+          await togglePlanStatus(plan.id, isActive);
+        } catch (e) {
+          dispatch(
+            enqueueToast({
+              id: `plan-toggle-${Date.now()}`,
+              type: 'error',
+              message: e instanceof Error ? e.message : 'Could not update plan',
+            }),
+          );
+          throw e;
+        }
+      };
+
+      if (!isActive && plan.subscriberCount > 0) {
+        Alert.alert(
+          'Notify subscribers?',
+          `Would you like to notify ${plan.subscriberCount} subscriber${plan.subscriberCount === 1 ? '' : 's'} about this plan change?`,
+          [
+            {
+              text: 'Skip',
+              style: 'cancel',
+              onPress: () => {
+                void applyToggle();
+              },
+            },
+            {
+              text: 'Notify',
+              onPress: () => {
+                void applyToggle().then(() => {
+                  navigation.getParent()?.navigate('Notifications', {
+                    screen: 'CreateNotification',
+                    params: {
+                      mode: 'create',
+                      prefill: getPlanDeactivationNotificationPrefill(
+                        plan.id,
+                        plan.displayName,
+                        plan.subscriberCount,
+                      ),
+                    },
+                  });
+                });
+              },
+            },
+          ],
         );
-        throw e;
+        return;
       }
+
+      await applyToggle();
     },
-    [dispatch, togglePlanStatus],
+    [dispatch, navigation, togglePlanStatus],
   );
 
   const handleDuplicate = useCallback(

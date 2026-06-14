@@ -14,6 +14,7 @@ import { AppNavigator } from '@/navigation/AppNavigator';
 import { linking } from '@/navigation/linking';
 import { useAuthBootstrap } from '@/hooks/useAuth';
 import { setupBackgroundHandler, useNotifications } from '@/hooks/useNotifications';
+import { recoverStuckSendingNotifications } from '@/services/broadcastNotificationService';
 import { SyncManager } from '@/services/offline/syncManager';
 import '@/services/LocationService';
 import { attendanceApi } from '@/services/api/attendanceApi';
@@ -34,6 +35,12 @@ function Root() {
     if (isAuthenticated) {
       void registerToken();
       setupForegroundHandler();
+      void recoverStuckSendingNotifications();
+      if (Platform.OS !== 'web') {
+        void import('@/tasks/scheduledNotificationsTask')
+          .then((mod) => mod.registerScheduledNotificationsTask())
+          .catch(() => undefined);
+      }
     }
   }, [isAuthenticated, registerToken, setupForegroundHandler]);
 

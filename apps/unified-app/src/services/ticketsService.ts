@@ -13,6 +13,7 @@ import type {
   TicketStatus,
 } from '@/types/tickets';
 import { getSupabase } from '@/services/supabase';
+import { sendAutoNotification } from '@/services/broadcastNotificationService';
 import { fetchOfficers } from '@/services/requestsService';
 import {
   buildSlaInsertFields,
@@ -247,6 +248,22 @@ export async function updateTicketStatus(
     performedByRole: 'Admin',
     metadata: { oldStatus: ticket.status, newStatus: status },
   });
+
+  if (status === 'Resolved' && ticket.customerId) {
+    try {
+      await sendAutoNotification({
+        title: 'Your complaint has been resolved',
+        message: `Ticket #${ticket.ticketNumber} — ${resolutionSummary ?? ticket.resolutionSummary ?? 'Your issue has been resolved.'}`,
+        priority: 'Normal',
+        eventType: 'ticketUpdate',
+        audience: { type: 'specific_users', userIds: [ticket.customerId] },
+        linkedTicketId: ticketId,
+        deepLinkUrl: `primefiber://tickets/${ticketId}`,
+      });
+    } catch {
+      /* non-blocking */
+    }
+  }
 }
 
 export async function updateTicketPriority(
