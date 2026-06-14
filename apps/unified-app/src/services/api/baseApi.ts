@@ -27,6 +27,10 @@ export const baseApi = createApi({
     'Roles',
     'Reports',
     'Map',
+    'Geofences',
+    'Attendance',
+    'Approvals',
+    'ShiftDefinitions',
   ],
   endpoints: () => ({}),
 });

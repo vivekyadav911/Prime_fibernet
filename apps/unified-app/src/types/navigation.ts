@@ -150,10 +150,18 @@ export type AdminOfficersStackParamList = {
 };
 
 export type AdminAttendanceStackParamList = {
+  LiveAttendance: undefined;
   Attendance: undefined;
   CheckInExceptions: undefined;
   AttendanceRecords: undefined;
   CompletedShifts: undefined;
+  GeofenceManagement: undefined;
+  CreateGeofence: { geofenceId?: string } | undefined;
+  AssignGeofence: { geofenceId: string };
+  ApprovalRequests: undefined;
+  ShiftManagement: undefined;
+  LeaveManagement: undefined;
+  AttendanceReports: undefined;
 };
 
 export type AdminPayrollStackParamList = {

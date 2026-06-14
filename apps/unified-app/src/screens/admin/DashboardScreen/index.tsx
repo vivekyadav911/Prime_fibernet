@@ -17,6 +17,7 @@ import {
 } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
+  useGetAllRequestsQuery,
   useGetDashboardKpisQuery,
   useGetRecentActivitiesQuery,
   useGetUpcomingRechargesQuery,
@@ -68,7 +69,16 @@ export function DashboardScreen() {
     sort,
   });
   const { data: activities } = useGetRecentActivitiesQuery({ page: 1, limit: 20 });
+  const { data: allRequests } = useGetAllRequestsQuery();
   const [sendBulk] = useSendBulkRechargeNotificationMutation();
+
+  const requestSummary = useMemo(() => {
+    const open = (allRequests ?? []).filter((r) =>
+      ['pending', 'assigned', 'in_transit', 'on_site', 'working'].includes(r.status),
+    );
+    const unassigned = open.filter((r) => !r.officerId);
+    return { pending: open.length, unassigned: unassigned.length };
+  }, [allRequests]);
 
   const toggleSort = useCallback(() => {
     setSort((s) => (s === 'expiry_asc' ? 'expiry_desc' : 'expiry_asc'));
@@ -127,6 +137,24 @@ export function DashboardScreen() {
 
         <SectionCard title="Quick Access">
           <QuickAccessGrid items={QUICK_ACCESS} onPress={handleQuickAccess} />
+        </SectionCard>
+
+        <SectionCard title="Requests Summary">
+          <View style={styles.requestsSummaryRow}>
+            <View style={styles.requestsStat}>
+              <Text style={styles.requestsStatValue}>{requestSummary.pending}</Text>
+              <Text style={styles.requestsStatLabel}>Pending requests</Text>
+            </View>
+            <View style={styles.requestsStat}>
+              <Text style={[styles.requestsStatValue, styles.requestsStatWarning]}>
+                {requestSummary.unassigned}
+              </Text>
+              <Text style={styles.requestsStatLabel}>Unassigned</Text>
+            </View>
+          </View>
+          <Pressable onPress={() => navigation.navigate('Requests')} style={styles.viewAllLink}>
+            <Text style={styles.viewAllText}>View All</Text>
+          </Pressable>
         </SectionCard>
 
         <SectionCard
@@ -191,6 +219,13 @@ const styles = StyleSheet.create({
   canvas: { backgroundColor: adminColors.canvasBg },
   title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.md, color: colors.textPrimary },
   kpiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+  requestsSummaryRow: { flexDirection: 'row', gap: spacing.lg, marginBottom: spacing.sm },
+  requestsStat: { flex: 1 },
+  requestsStatValue: { fontSize: 28, fontWeight: '700', color: colors.textPrimary },
+  requestsStatWarning: { color: adminColors.badgePending },
+  requestsStatLabel: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  viewAllLink: { alignSelf: 'flex-start' },
+  viewAllText: { fontSize: 14, fontWeight: '600', color: adminColors.primary },
   sortBtn: { alignSelf: 'flex-end', marginVertical: spacing.xs },
   sortText: { color: adminColors.primary, fontWeight: '600', fontSize: 12 },
   rechargeCard: {

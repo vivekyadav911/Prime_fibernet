@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.primefibernet.app",
       "infoPlist": {
+        "UIBackgroundModes": ["location", "fetch", "remote-notification"],
         "NSLocationWhenInUseUsageDescription": "Prime Fibernet uses your location for officer shift check-in/out and field tracking.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Prime Fibernet needs background location during active officer shifts for live field tracking.",
         "NSLocationAlwaysUsageDescription": "Prime Fibernet needs background location during active officer shifts for live field tracking.",
@@ -27,7 +28,7 @@
       }
     },
     "web": {
-      "favicon": "./assets/icon.png",
+      "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "android": {

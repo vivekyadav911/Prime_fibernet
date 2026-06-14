@@ -25,9 +25,15 @@ export function AttendanceScreen({ navigation }: Props) {
       <Screen padded={false}>
         <View style={styles.toolbar}>
           <DateField label="Date" value={date} onChange={setDate} placeholder="Select date" />
-          <Button label="Exceptions" variant="ghost" onPress={() => navigation.navigate('CheckInExceptions')} />
+          <Button label="Live" variant="ghost" onPress={() => navigation.navigate('LiveAttendance')} />
+          <Button label="Geofences" variant="ghost" onPress={() => navigation.navigate('GeofenceManagement')} />
+          <Button label="Approvals" variant="ghost" onPress={() => navigation.navigate('ApprovalRequests')} />
           <Button label="Records" variant="ghost" onPress={() => navigation.navigate('AttendanceRecords')} />
-          <Button label="Completed Shifts" variant="ghost" onPress={() => navigation.navigate('CompletedShifts')} />
+          <Button label="Shifts" variant="ghost" onPress={() => navigation.navigate('ShiftManagement')} />
+          <Button label="Leave" variant="ghost" onPress={() => navigation.navigate('LeaveManagement')} />
+          <Button label="Reports" variant="ghost" onPress={() => navigation.navigate('AttendanceReports')} />
+          <Button label="Exceptions" variant="ghost" onPress={() => navigation.navigate('CheckInExceptions')} />
+          <Button label="Completed" variant="ghost" onPress={() => navigation.navigate('CompletedShifts')} />
         </View>
         <FlatList
           data={data ?? []}

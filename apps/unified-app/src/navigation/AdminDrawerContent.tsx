@@ -5,16 +5,24 @@ import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { signOut } from '@/hooks/useAuth';
+import { useUnassignedRequestCount } from '@/hooks/useAdminRequests';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { adminColors, adminDrawerWidth } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminDrawerParamList } from '@/types/navigation';
 
+type DrawerItem = {
+  route: keyof AdminDrawerParamList;
+  label: string;
+  icon: string;
+  showBadge?: boolean;
+};
+
 type DrawerSection = {
   id: string;
   label: string;
-  items: { route: keyof AdminDrawerParamList; label: string; icon: string }[];
+  items: DrawerItem[];
 };
 
 const SECTIONS: DrawerSection[] = [
@@ -40,7 +48,7 @@ const SECTIONS: DrawerSection[] = [
     id: 'ops',
     label: 'Operations',
     items: [
-      { route: 'Requests', label: 'Requests', icon: '📋' },
+      { route: 'Requests', label: 'Requests', icon: '📋', showBadge: true },
       { route: 'TicketPortal', label: 'Ticket Portal', icon: '🎫' },
       { route: 'Plans', label: 'Plans', icon: '📶' },
       { route: 'Notifications', label: 'Notifications', icon: '🔔' },
@@ -75,6 +83,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
+  const unassignedCount = useUnassignedRequestCount();
   const { state, navigation } = props;
   const activeRoute = state.routes[state.index]?.name;
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
@@ -140,7 +149,10 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
                   onPress={() => navigate(item.route)}
                 >
                   {isActive ? <View style={styles.activeBar} /> : null}
-                  <Text style={styles.itemIcon}>{item.icon}</Text>
+                  <View style={styles.itemIconWrap}>
+                    <Text style={styles.itemIcon}>{item.icon}</Text>
+                    {item.showBadge && unassignedCount > 0 ? <View style={styles.navBadge} /> : null}
+                  </View>
                   <Text style={[styles.itemLabel, isActive && styles.itemLabelActive]}>{item.label}</Text>
                 </Pressable>
               );
@@ -176,7 +188,17 @@ const styles = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md, marginHorizontal: spacing.xs, borderRadius: 8, position: 'relative' },
   itemActive: { backgroundColor: adminColors.primaryTint },
   activeBar: { position: 'absolute', left: 0, top: 4, bottom: 4, width: 3, backgroundColor: adminColors.activeBorder, borderRadius: 2 },
-  itemIcon: { fontSize: 16, marginRight: spacing.sm, marginLeft: spacing.xs },
+  itemIconWrap: { position: 'relative', marginRight: spacing.sm, marginLeft: spacing.xs },
+  itemIcon: { fontSize: 16 },
+  navBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: adminColors.primary,
+  },
   itemLabel: { fontSize: 14, color: colors.textPrimary, fontWeight: '500' },
   itemLabelActive: { color: adminColors.primary, fontWeight: '700' },
   signOutBtn: {

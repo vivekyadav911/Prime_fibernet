@@ -55,3 +55,28 @@ export async function getOfficerIdForUser(client: TypedSupabaseClient, userId: s
     .maybeSingle();
   return data?.id ?? null;
 }
+
+export function parseGeographyPoint(value: unknown): { latitude: number; longitude: number } | null {
+  if (!value) return null;
+  if (typeof value === 'object' && value !== null) {
+    const obj = value as Record<string, unknown>;
+    if (obj.coordinates && Array.isArray(obj.coordinates)) {
+      const coords = obj.coordinates as number[];
+      const lng = coords[0];
+      const lat = coords[1];
+      if (typeof lng === 'number' && typeof lat === 'number') {
+        return { latitude: lat, longitude: lng };
+      }
+    }
+    if (typeof obj.latitude === 'number' && typeof obj.longitude === 'number') {
+      return { latitude: obj.latitude, longitude: obj.longitude };
+    }
+  }
+  if (typeof value === 'string') {
+    const match = value.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
+    if (match?.[1] && match[2]) {
+      return { latitude: parseFloat(match[2]), longitude: parseFloat(match[1]) };
+    }
+  }
+  return null;
+}

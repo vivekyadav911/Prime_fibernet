@@ -1,5 +1,6 @@
 import { Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { NativeStackHeaderBackProps } from '@react-navigation/native-stack';
 
 import { DashboardScreen } from '@/screens/admin/DashboardScreen';
 import { InventoryScreen } from '@/screens/admin/assets/inventory/InventoryScreen';
@@ -11,9 +12,17 @@ import { InvoiceHistoryScreen } from '@/screens/admin/finance/invoices/InvoiceHi
 import { InvoiceListScreen } from '@/screens/admin/finance/invoices/InvoiceListScreen';
 import { ManualGSTInvoiceScreen } from '@/screens/admin/finance/invoices/ManualGSTInvoiceScreen';
 import { AttendanceScreen } from '@/screens/admin/hr/AttendanceScreen';
-import { AttendanceRecordsScreen } from '@/screens/admin/hr/AttendanceRecordsScreen';
+import { AttendanceRecordsScreenEnhanced as AttendanceRecordsScreen } from '@/screens/admin/hr/AttendanceRecordsScreenEnhanced';
+import { ApprovalRequestsScreen } from '@/screens/admin/hr/ApprovalRequestsScreen';
+import { AssignGeofenceScreen } from '@/screens/admin/hr/AssignGeofenceScreen';
+import { AttendanceReportsScreen } from '@/screens/admin/hr/AttendanceReportsScreen';
 import { CheckInExceptionsScreen } from '@/screens/admin/hr/CheckInExceptionsScreen';
 import { CompletedShiftsScreen } from '@/screens/admin/hr/CompletedShiftsScreen';
+import { CreateGeofenceScreen } from '@/screens/admin/hr/CreateGeofenceScreen';
+import { GeofenceManagementScreen } from '@/screens/admin/hr/GeofenceManagementScreen';
+import { LeaveManagementScreen } from '@/screens/admin/hr/LeaveManagementScreen';
+import { LiveAttendanceScreen } from '@/screens/admin/hr/LiveAttendanceScreen';
+import { ShiftManagementScreen } from '@/screens/admin/hr/ShiftManagementScreen';
 import { RoleManagementScreen } from '@/screens/admin/hr/RoleManagementScreen';
 import { PayrollScreen } from '@/screens/admin/hr/payroll/PayrollScreen';
 import { PayslipsManagementScreen } from '@/screens/admin/hr/payroll/PayslipsManagementScreen';
@@ -25,6 +34,7 @@ import { OfficerListScreen } from '@/screens/admin/officers/OfficerListScreen';
 import { PlanFormScreen } from '@/screens/admin/plans/PlanFormScreen';
 import { PlanListScreen } from '@/screens/admin/plans/PlanListScreen';
 import { RequestDetailScreen } from '@/screens/admin/requests/RequestDetailScreen';
+import { RequestsScreen } from '@/screens/admin/requests/RequestsScreen';
 import { RequestListScreen } from '@/screens/admin/requests/RequestListScreen';
 import { ReportsScreen } from '@/screens/admin/ReportsScreen';
 import { AdminMapScreen } from '@/screens/admin/system/MapScreen';
@@ -50,6 +60,8 @@ import type {
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 
+import { AdminDrawerHeaderLeft } from './AdminDrawerHeaderLeft';
+
 const UsersStack = createNativeStackNavigator<AdminUsersStackParamList>();
 const OfficersStack = createNativeStackNavigator<AdminOfficersStackParamList>();
 const AttendanceStack = createNativeStackNavigator<AdminAttendanceStackParamList>();
@@ -63,6 +75,7 @@ const InventoryStack = createNativeStackNavigator<AdminInventoryStackParamList>(
 const stackScreenOptions = {
   headerStyle: { backgroundColor: colors.primaryNavy },
   headerTintColor: colors.white,
+  headerLeft: (props: NativeStackHeaderBackProps) => <AdminDrawerHeaderLeft {...props} />,
 };
 
 const usersStackScreenOptions = {
@@ -70,6 +83,7 @@ const usersStackScreenOptions = {
   headerTintColor: colors.textPrimary,
   headerTitleStyle: { fontWeight: '700' as const },
   headerShadowVisible: true,
+  headerLeft: (props: NativeStackHeaderBackProps) => <AdminDrawerHeaderLeft {...props} />,
 };
 
 export function AdminUsersStackNav() {
@@ -109,10 +123,21 @@ export function AdminOfficersStackNav() {
 
 export function AdminAttendanceStackNav() {
   return (
-    <AttendanceStack.Navigator screenOptions={stackScreenOptions}>
-      <AttendanceStack.Screen name="Attendance" component={AttendanceScreen} options={{ title: 'Attendance' }} />
+    <AttendanceStack.Navigator
+      screenOptions={stackScreenOptions}
+      initialRouteName="LiveAttendance"
+    >
+      <AttendanceStack.Screen name="LiveAttendance" component={LiveAttendanceScreen} options={{ title: 'Live attendance' }} />
+      <AttendanceStack.Screen name="Attendance" component={AttendanceScreen} options={{ title: 'Attendance hub' }} />
+      <AttendanceStack.Screen name="GeofenceManagement" component={GeofenceManagementScreen} options={{ title: 'Geofences' }} />
+      <AttendanceStack.Screen name="CreateGeofence" component={CreateGeofenceScreen} options={{ title: 'Geofence', presentation: 'modal' }} />
+      <AttendanceStack.Screen name="AssignGeofence" component={AssignGeofenceScreen} options={{ title: 'Assign officers', presentation: 'modal' }} />
+      <AttendanceStack.Screen name="ApprovalRequests" component={ApprovalRequestsScreen} options={{ title: 'Approval requests' }} />
       <AttendanceStack.Screen name="CheckInExceptions" component={CheckInExceptionsScreen} options={{ title: 'Check-in exceptions' }} />
       <AttendanceStack.Screen name="AttendanceRecords" component={AttendanceRecordsScreen} options={{ title: 'Attendance records' }} />
+      <AttendanceStack.Screen name="ShiftManagement" component={ShiftManagementScreen} options={{ title: 'Shift management' }} />
+      <AttendanceStack.Screen name="LeaveManagement" component={LeaveManagementScreen} options={{ title: 'Leave management' }} />
+      <AttendanceStack.Screen name="AttendanceReports" component={AttendanceReportsScreen} options={{ title: 'Attendance reports' }} />
       <AttendanceStack.Screen name="CompletedShifts" component={CompletedShiftsScreen} options={{ title: 'Completed shifts' }} />
     </AttendanceStack.Navigator>
   );
@@ -130,8 +155,7 @@ export function AdminPayrollStackNav() {
 export function AdminRequestsStackNav() {
   return (
     <RequestsStack.Navigator screenOptions={stackScreenOptions}>
-      <RequestsStack.Screen name="RequestList" component={RequestListScreen} options={{ title: 'Requests' }} />
-      <RequestsStack.Screen name="RequestDetail" component={RequestDetailScreen} options={{ title: 'Request detail' }} />
+      <RequestsStack.Screen name="RequestList" component={RequestsScreen} options={{ title: 'Requests' }} />
     </RequestsStack.Navigator>
   );
 }

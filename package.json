@@ -13,7 +13,9 @@
     "seed:dev-users": "node scripts/seed-dev-users.mjs"
   },
   "dependencies": {
-    "expo-document-picker": "~14.0.7"
+    "expo-document-picker": "~14.0.7",
+    "expo-print": "~15.0.8",
+    "expo-sharing": "^14.0.8"
   },
   "devDependencies": {
     "prettier": "^3.5.3",

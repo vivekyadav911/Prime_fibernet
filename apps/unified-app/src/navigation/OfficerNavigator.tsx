@@ -14,7 +14,8 @@ import { OfficerLeaveScreen } from '@/screens/officer/OfficerLeaveScreen';
 import { OfficerMapScreen } from '@/screens/officer/OfficerMapScreen';
 import { OfficerPayslipScreen } from '@/screens/officer/OfficerPayslipScreen';
 import { OfficerRequestsScreen } from '@/screens/officer/OfficerRequestsScreen';
-import { OfficerShiftsScreen } from '@/screens/officer/OfficerShiftsScreen';
+import { OfficerAttendanceDashboard } from '@/screens/officer/OfficerAttendanceDashboard';
+import { AttendanceHistoryScreen } from '@/screens/officer/AttendanceHistoryScreen';
 import { useAppSelector } from '@/store/hooks';
 import type { OfficerDrawerParamList, OfficerStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
@@ -63,8 +64,13 @@ function OfficerDrawerNav() {
       <Drawer.Screen name="Map" component={OfficerMapScreen} />
       <Drawer.Screen
         name="Shifts"
-        component={OfficerShiftsScreen}
-        options={{ title: 'Shifts', drawerLabel: 'Shifts' }}
+        component={OfficerAttendanceDashboard}
+        options={{ title: 'Attendance', drawerLabel: 'Attendance' }}
+      />
+      <Drawer.Screen
+        name="AttendanceHistory"
+        component={AttendanceHistoryScreen}
+        options={{ title: 'Attendance history', drawerLabel: 'History' }}
       />
       <Drawer.Screen
         name="CollectPayment"

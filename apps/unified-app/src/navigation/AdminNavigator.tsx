@@ -8,6 +8,7 @@ import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 
 import { AdminDrawerContent } from './AdminDrawerContent';
+import { AdminDrawerToggleButton } from './AdminDrawerToggleButton';
 import {
   AdminAttendanceStackNav,
   AdminAuditScreen,
@@ -46,7 +47,7 @@ function AdminDrawerNav() {
         drawerType: isWebSidebar ? 'permanent' : 'front',
         drawerStyle: isWebSidebar ? { width: 280, backgroundColor: adminColors.sidebarBg } : { backgroundColor: adminColors.sidebarBg },
         overlayColor: isWebSidebar ? 'transparent' : undefined,
-        headerLeft: isWebSidebar ? () => null : undefined,
+        headerLeft: isWebSidebar ? () => null : () => <AdminDrawerToggleButton />,
         swipeEnabled: !isWebSidebar,
       }}
     >

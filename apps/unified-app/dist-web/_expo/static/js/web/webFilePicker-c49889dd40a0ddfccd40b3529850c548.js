@@ -1,0 +1,1 @@
+__d(function(g,r,i,a,m,e,d){"use strict";Object.defineProperty(e,'__esModule',{value:!0}),e.pickFileFromBrowser=function(n){return new Promise(t=>{const c=document.createElement('input');c.type='file',c.accept=n,c.onchange=()=>{t(c.files?.[0]??null)},c.click()})}},1647,[]);

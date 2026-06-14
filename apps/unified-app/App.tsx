@@ -10,13 +10,16 @@ import { StatusBar } from 'expo-status-bar';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { OfflineBanner } from '@/components/common/OfflineBanner';
-import { AppNavigator, linking } from '@/navigation';
+import { AppNavigator } from '@/navigation/AppNavigator';
+import { linking } from '@/navigation/linking';
 import { useAuthBootstrap } from '@/hooks/useAuth';
 import { setupBackgroundHandler, useNotifications } from '@/hooks/useNotifications';
 import { SyncManager } from '@/services/offline/syncManager';
-import { useAppSelector } from '@/store/hooks';
+import '@/services/LocationService';
+import { attendanceApi } from '@/services/api/attendanceApi';
 import { requestsApi } from '@/services/api/requestsApi';
 import { persistor, store } from '@/store/store';
+import { useAppSelector } from '@/store/hooks';
 
 if (Platform.OS !== 'web') {
   void setupBackgroundHandler();
@@ -43,6 +46,55 @@ function Root() {
         const payload = mutation.payload as { id: string; status: string; note?: string };
         await store
           .dispatch(requestsApi.endpoints.updateRequestStatus.initiate(payload))
+          .unwrap();
+        return;
+      }
+      if (op === 'attendanceCheckIn') {
+        const payload = mutation.payload as {
+          coords: { latitude: number; longitude: number };
+          notes?: string;
+          method: string;
+          geofenceId?: string;
+          distanceFromFence?: number;
+        };
+        await store
+          .dispatch(
+            attendanceApi.endpoints.checkIn.initiate({
+              coords: payload.coords,
+              notes: payload.notes,
+              method: payload.method,
+              geofenceId: payload.geofenceId ?? '',
+              distanceFromFence: payload.distanceFromFence ?? 0,
+            }),
+          )
+          .unwrap();
+        return;
+      }
+      if (op === 'attendanceCheckOut') {
+        const payload = mutation.payload as {
+          coords: { latitude: number; longitude: number };
+          notes?: string;
+          distanceFromFence?: number;
+        };
+        await store
+          .dispatch(
+            attendanceApi.endpoints.checkOut.initiate({
+              coords: payload.coords,
+              notes: payload.notes,
+              distanceFromFence: payload.distanceFromFence ?? 0,
+            }),
+          )
+          .unwrap();
+        return;
+      }
+      if (op === 'locationUpdate') {
+        const payload = mutation.payload as {
+          coords: { latitude: number; longitude: number };
+          accuracy: number;
+          timestamp: string;
+        };
+        await store
+          .dispatch(attendanceApi.endpoints.updateOfficerLocation.initiate(payload))
           .unwrap();
         return;
       }

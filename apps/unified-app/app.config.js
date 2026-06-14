@@ -2,7 +2,7 @@
 export default ({ config }) => ({
   ...config,
   web: {
-    favicon: './assets/icon.png',
+    favicon: './assets/favicon.png',
     bundler: 'metro',
   },
   extra: {
@@ -12,6 +12,7 @@ export default ({ config }) => ({
     appEnv: process.env.EXPO_PUBLIC_APP_ENV ?? 'development',
     appVariant: process.env.EXPO_PUBLIC_APP_VARIANT ?? 'unified',
     razorpayKeyId: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID,
+    googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
   },
   plugins: [
     ...(config.plugins ?? []),
@@ -51,5 +52,27 @@ export default ({ config }) => ({
         mode: 'production',
       },
     ],
+    'expo-task-manager',
   ],
+  android: {
+    ...(config.android ?? {}),
+    config: {
+      ...(config.android?.config ?? {}),
+      googleMaps: {
+        ...(config.android?.config?.googleMaps ?? {}),
+        apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+      },
+    },
+  },
+  ios: {
+    ...(config.ios ?? {}),
+    config: {
+      ...(config.ios?.config ?? {}),
+      googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+    },
+    infoPlist: {
+      ...(config.ios?.infoPlist ?? {}),
+      UIBackgroundModes: ['location', 'fetch', 'remote-notification'],
+    },
+  },
 });

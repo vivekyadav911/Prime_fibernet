@@ -16,6 +16,7 @@ import '@/services/api';
 
 import { securePersistStorage } from './persistStorage';
 import { authSlice } from './slices/authSlice';
+import { attendanceSlice } from './slices/attendanceSlice';
 import { officeSlice } from './slices/officeSlice';
 import { paymentsSlice } from './slices/paymentsSlice';
 import { plansSlice } from './slices/plansSlice';
@@ -36,6 +37,7 @@ const rootReducer = combineReducers({
   requests: requestsSlice.reducer,
   payments: paymentsSlice.reducer,
   office: officeSlice.reducer,
+  attendance: attendanceSlice.reducer,
   ui: uiSlice.reducer,
   [baseApi.reducerPath]: baseApi.reducer,
 });

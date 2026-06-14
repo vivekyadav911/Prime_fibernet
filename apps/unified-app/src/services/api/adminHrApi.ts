@@ -8,7 +8,7 @@ export const adminHrApi = baseApi.injectEndpoints({
       query: ({ date, officerId }) => ({
         handler: async (client) => {
           const targetDate = date ?? new Date().toISOString().slice(0, 10);
-          let query = client.from('shifts').select('*, officers(name)').eq('shift_date', targetDate);
+          let query = client.from('shifts').select('*, officers(full_name)').eq('shift_date', targetDate);
           if (officerId) query = query.eq('officer_id', officerId);
           const { data, error } = await query;
           if (error) throw error;
@@ -23,7 +23,7 @@ export const adminHrApi = baseApi.injectEndpoints({
             return {
               id: row.id as string,
               officerId: row.officer_id as string,
-              officerName: (row.officers as { name?: string })?.name ?? 'Officer',
+              officerName: (row.officers as { full_name?: string })?.full_name ?? 'Officer',
               checkInTime: checkIn,
               checkOutTime: checkOut,
               hoursWorked: Math.round(hours * 10) / 10,
@@ -44,13 +44,13 @@ export const adminHrApi = baseApi.injectEndpoints({
         handler: async (client) => {
           const { data, error } = await client
             .from('attendance_exceptions')
-            .select('*, officers(name)')
+            .select('*, officers(full_name)')
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
           if (error) throw error;
           return (data ?? []).map((row) => ({
             id: row.id as string,
-            officerName: (row.officers as { name?: string })?.name ?? 'Officer',
+            officerName: (row.officers as { full_name?: string })?.full_name ?? 'Officer',
             checkInTime: row.check_in_time as string,
             reason: (row.reason as string) ?? 'Geofence exception',
             status: row.status as string,
@@ -80,7 +80,7 @@ export const adminHrApi = baseApi.injectEndpoints({
       query: ({ month, officerId }) => ({
         handler: async (client) => {
           const monthStart = month ?? new Date().toISOString().slice(0, 7);
-          let query = client.from('shifts').select('*, officers(name)').gte('shift_date', `${monthStart}-01`);
+          let query = client.from('shifts').select('*, officers(full_name)').gte('shift_date', `${monthStart}-01`);
           if (officerId) query = query.eq('officer_id', officerId);
           const { data, error } = await query;
           if (error) throw error;
@@ -89,7 +89,7 @@ export const adminHrApi = baseApi.injectEndpoints({
           for (const row of data ?? []) {
             const oid = row.officer_id as string;
             const existing = byOfficer.get(oid) ?? {
-              name: (row.officers as { name?: string })?.name ?? 'Officer',
+              name: (row.officers as { full_name?: string })?.full_name ?? 'Officer',
               present: 0,
               absent: 0,
               late: 0,
@@ -122,7 +122,7 @@ export const adminHrApi = baseApi.injectEndpoints({
         handler: async (client) => {
           const { data, error } = await client
             .from('shifts')
-            .select('*, officers(name)')
+            .select('*, officers(full_name)')
             .eq('status', 'completed')
             .order('shift_date', { ascending: false })
             .limit(100);
@@ -136,7 +136,7 @@ export const adminHrApi = baseApi.injectEndpoints({
                 : 0;
             return {
               id: row.id as string,
-              officerName: (row.officers as { name?: string })?.name ?? 'Officer',
+              officerName: (row.officers as { full_name?: string })?.full_name ?? 'Officer',
               shiftDate: row.shift_date as string,
               startTime: start,
               endTime: end,
@@ -191,13 +191,13 @@ export const adminHrApi = baseApi.injectEndpoints({
     >({
       query: ({ officerId }) => ({
         handler: async (client) => {
-          let query = client.from('payslips').select('*, officers(name)').order('month', { ascending: false });
+          let query = client.from('payslips').select('*, officers(full_name)').order('month', { ascending: false });
           if (officerId) query = query.eq('officer_id', officerId);
           const { data, error } = await query;
           if (error) throw error;
           return (data ?? []).map((row) => ({
             id: row.id as string,
-            officerName: (row.officers as { name?: string })?.name ?? 'Officer',
+            officerName: (row.officers as { full_name?: string })?.full_name ?? 'Officer',
             month: row.month as string,
             amount: Number(row.net_pay ?? 0),
             issuedDate: (row.issued_at as string) ?? row.month as string,

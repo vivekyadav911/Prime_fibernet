@@ -104,8 +104,9 @@ export const supabaseBaseQuery: BaseQueryFn<
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
     try {
       await ensureValidSession(supabase);
-      const data = await handler(supabase);
-      return { data };
+      const result = await handler(supabase);
+      // RTK Query rejects `{ data: undefined }`; normalize void handlers to null.
+      return { data: result === undefined ? null : result };
     } catch (error) {
       const shouldRetry = isNetworkError(error) && attempt < MAX_RETRIES;
       if (shouldRetry) {
