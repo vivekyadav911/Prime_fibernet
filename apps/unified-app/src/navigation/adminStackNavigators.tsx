@@ -117,10 +117,10 @@ const inventoryStackScreenOptions = {
 };
 
 const usersStackScreenOptions = {
-  headerStyle: { backgroundColor: adminColors.cardBg },
-  headerTintColor: colors.textPrimary,
-  headerTitleStyle: { fontWeight: '700' as const },
-  headerShadowVisible: true,
+  headerStyle: { backgroundColor: '#5B4FE9' },
+  headerTintColor: '#FFFFFF',
+  headerTitleStyle: { fontSize: 20, fontWeight: '600' as const },
+  headerShadowVisible: false,
   headerLeft: (props: NativeStackHeaderBackProps) => <AdminDrawerHeaderLeft {...props} />,
 };
 
@@ -130,7 +130,10 @@ export function AdminUsersStackNav() {
       <UsersStack.Screen
         name="UserList"
         component={UserListScreen}
-        options={{ title: 'Users', headerRight: () => <Text style={{ fontSize: 18 }}>👤</Text> }}
+        options={{
+          title: 'Users',
+          headerRight: () => <Text style={{ fontSize: 18, color: '#FFFFFF' }}>👤</Text>,
+        }}
       />
       <UsersStack.Screen name="UserDetail" component={UserDetailScreen} options={{ title: 'User profile' }} />
       <UsersStack.Screen name="UserEdit" component={UserEditScreen} options={{ title: 'Edit user' }} />
