@@ -27,4 +27,5 @@ export const adminColors = {
   },
 } as const;
 
-export const adminDrawerWidth = 280;
+/** Sidebar width — kept narrow so menu content fills the panel on mobile */
+export const adminDrawerWidth = 264;

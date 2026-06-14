@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { AdminPaymentDetailScreen } from '@/screens/admin/AdminPaymentDetailScreen';
 import type { AdminDrawerParamList, AdminStackParamList } from '@/types/navigation';
-import { adminColors } from '@/theme/admin';
+import { adminColors, adminDrawerWidth } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 
 import { AdminDrawerContent } from './AdminDrawerContent';
@@ -45,7 +45,7 @@ function AdminDrawerNav() {
         headerTintColor: colors.white,
         drawerActiveTintColor: adminColors.primary,
         drawerType: isWebSidebar ? 'permanent' : 'front',
-        drawerStyle: isWebSidebar ? { width: 280, backgroundColor: adminColors.sidebarBg } : { backgroundColor: adminColors.sidebarBg },
+        drawerStyle: { width: adminDrawerWidth, backgroundColor: adminColors.sidebarBg },
         overlayColor: isWebSidebar ? 'transparent' : undefined,
         headerLeft: isWebSidebar ? () => null : () => <AdminDrawerToggleButton />,
         swipeEnabled: !isWebSidebar,
