@@ -31,11 +31,12 @@ import { AddOfficerScreen } from '@/screens/admin/officers/AddOfficerScreen';
 import { EditOfficerScreen } from '@/screens/admin/officers/EditOfficerScreen';
 import { OfficerDetailScreen } from '@/screens/admin/officers/OfficerDetailScreen';
 import { OfficerListScreen } from '@/screens/admin/officers/OfficerListScreen';
-import { PlanFormScreen } from '@/screens/admin/plans/PlanFormScreen';
-import { PlanListScreen } from '@/screens/admin/plans/PlanListScreen';
-import { RequestDetailScreen } from '@/screens/admin/requests/RequestDetailScreen';
+import { PlanFormScreenV2 } from '@/screens/admin/plans/PlanFormScreenV2';
+import { PlansScreen } from '@/screens/admin/plans/PlansScreen';
 import { RequestsScreen } from '@/screens/admin/requests/RequestsScreen';
-import { RequestListScreen } from '@/screens/admin/requests/RequestListScreen';
+import { TicketDetailScreen } from '@/screens/admin/ticketPortal/TicketDetailScreen';
+import { TicketListScreen } from '@/screens/admin/ticketPortal/TicketListScreen';
+import { TicketPortalScreen } from '@/screens/admin/ticketPortal/TicketPortalScreen';
 import { ReportsScreen } from '@/screens/admin/ReportsScreen';
 import { AdminMapScreen } from '@/screens/admin/system/MapScreen';
 import { AdminSettingsScreenFull } from '@/screens/admin/system/SettingsScreen';
@@ -55,6 +56,7 @@ import type {
   AdminPaymentsStackParamList,
   AdminPlansStackParamList,
   AdminRequestsStackParamList,
+  AdminTicketsStackParamList,
   AdminUsersStackParamList,
 } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
@@ -67,6 +69,7 @@ const OfficersStack = createNativeStackNavigator<AdminOfficersStackParamList>();
 const AttendanceStack = createNativeStackNavigator<AdminAttendanceStackParamList>();
 const PayrollStack = createNativeStackNavigator<AdminPayrollStackParamList>();
 const RequestsStack = createNativeStackNavigator<AdminRequestsStackParamList>();
+const TicketsStack = createNativeStackNavigator<AdminTicketsStackParamList>();
 const PlansStack = createNativeStackNavigator<AdminPlansStackParamList>();
 const PaymentsStack = createNativeStackNavigator<AdminPaymentsStackParamList>();
 const InvoicesStack = createNativeStackNavigator<AdminInvoicesStackParamList>();
@@ -162,18 +165,19 @@ export function AdminRequestsStackNav() {
 
 export function AdminTicketPortalStackNav() {
   return (
-    <RequestsStack.Navigator screenOptions={stackScreenOptions}>
-      <RequestsStack.Screen name="RequestList" component={RequestListScreen} options={{ title: 'Ticket portal' }} />
-      <RequestsStack.Screen name="RequestDetail" component={RequestDetailScreen} options={{ title: 'Ticket detail' }} />
-    </RequestsStack.Navigator>
+    <TicketsStack.Navigator screenOptions={stackScreenOptions}>
+      <TicketsStack.Screen name="TicketPortal" component={TicketPortalScreen} options={{ title: 'Ticket Portal' }} />
+      <TicketsStack.Screen name="TicketList" component={TicketListScreen} options={{ title: 'All Tickets' }} />
+      <TicketsStack.Screen name="TicketDetail" component={TicketDetailScreen} options={{ title: 'Ticket Detail' }} />
+    </TicketsStack.Navigator>
   );
 }
 
 export function AdminPlansStackNav() {
   return (
     <PlansStack.Navigator screenOptions={stackScreenOptions}>
-      <PlansStack.Screen name="PlanList" component={PlanListScreen} options={{ title: 'Plans' }} />
-      <PlansStack.Screen name="PlanForm" component={PlanFormScreen} options={{ title: 'Plan form' }} />
+      <PlansStack.Screen name="PlanList" component={PlansScreen} options={{ title: 'Plans' }} />
+      <PlansStack.Screen name="PlanForm" component={PlanFormScreenV2} options={{ title: 'Plan form' }} />
     </PlansStack.Navigator>
   );
 }

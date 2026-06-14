@@ -114,6 +114,7 @@ export function RequestsScreen() {
             )}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
+            style={styles.list}
           />
         )}
       </View>
@@ -149,12 +150,13 @@ export function RequestsScreen() {
             value={filters.searchQuery}
             onChangeText={(searchQuery) => updateFilters({ searchQuery })}
             placeholder="Search by ID, customer or service type…"
+            containerStyle={styles.searchBar}
           />
 
           <View style={styles.controlsRow}>
             <View style={styles.sortWrap}>
               <SelectField
-                label=""
+                label="SORT BY"
                 value={filters.sortBy}
                 options={SORT_OPTIONS}
                 onSelect={(sortBy) => updateFilters({ sortBy })}
@@ -233,8 +235,9 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
   pageTitle: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
   toolbar: { padding: spacing.md, gap: spacing.sm },
+  searchBar: { flex: 0, width: '100%' },
   controlsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: spacing.sm },
-  sortWrap: { minWidth: 160, flex: 1 },
+  sortWrap: { minWidth: 160, flexGrow: 1 },
   exportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -246,9 +249,9 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   exportBtnText: { color: colors.surfaceWhite, fontWeight: '700', fontSize: 14 },
-  columnsRow: { flex: 1, flexDirection: 'row', paddingHorizontal: spacing.md, gap: spacing.md },
-  column: { flex: 1, minWidth: 0 },
-  columnMobile: { flex: 1, paddingHorizontal: spacing.md },
+  columnsRow: { flex: 1, flexDirection: 'row', paddingHorizontal: spacing.md, gap: spacing.md, minHeight: 0 },
+  column: { flex: 1, minWidth: 0, minHeight: 0 },
+  columnMobile: { flex: 1, paddingHorizontal: spacing.md, minHeight: 0 },
   columnHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
   columnTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
   countBadge: {
@@ -258,6 +261,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   countText: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+  list: { flex: 1 },
   listContent: { paddingBottom: spacing.xxl },
   tabRow: {
     flexDirection: 'row',

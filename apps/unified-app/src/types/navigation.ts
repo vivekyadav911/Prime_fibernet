@@ -136,7 +136,7 @@ export type OfficerStackParamList = {
 
 /** Nested admin stack param lists */
 export type AdminUsersStackParamList = {
-  UserList: undefined;
+  UserList: { planId?: string } | undefined;
   UserDetail: { userId: string };
   UserEdit: { userId: string };
   AddUser: undefined;
@@ -174,9 +174,15 @@ export type AdminRequestsStackParamList = {
   RequestDetail: { requestId: string };
 };
 
+export type AdminTicketsStackParamList = {
+  TicketPortal: { linkedRequestId?: string; linkedRequestNumber?: string } | undefined;
+  TicketList: undefined;
+  TicketDetail: { ticketId: string };
+};
+
 export type AdminPlansStackParamList = {
   PlanList: undefined;
-  PlanForm: { planId?: string } | undefined;
+  PlanForm: { mode: 'create' | 'edit'; planId?: string } | undefined;
 };
 
 export type AdminPaymentsStackParamList = {
@@ -227,7 +233,7 @@ export type AdminDrawerParamList = {
   PayRunReview: { payRunId: string };
   RoleManagement: undefined;
   Requests: NavigatorScreenParams<AdminRequestsStackParamList> | undefined;
-  TicketPortal: NavigatorScreenParams<AdminRequestsStackParamList> | undefined;
+  TicketPortal: NavigatorScreenParams<AdminTicketsStackParamList> | undefined;
   Plans: NavigatorScreenParams<AdminPlansStackParamList> | undefined;
   EnhancedPlans: undefined;
   Notifications: undefined;

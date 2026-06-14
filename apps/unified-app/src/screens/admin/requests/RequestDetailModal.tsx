@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import type { DrawerNavigationProp } from '@react-navigation/drawer';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
 
@@ -20,7 +22,12 @@ import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { ActivityEvent, Officer, ServiceRequest } from '@/types/requests';
+import type { AdminDrawerParamList } from '@/types/navigation';
+import { fetchPlanById } from '@/services/planService';
+import type { Plan } from '@/types/plans';
+import { formatINR, formatValidity } from '@/utils/planUtils';
 import { exportSingleRequestPdf } from '@/utils/exportRequestsPdf';
+import { truncateRequestId } from '@/utils/requestViewMappers';
 
 type RequestDetailModalProps = {
   visible: boolean;
@@ -65,12 +72,24 @@ export function RequestDetailModal({
   onAddNote,
 }: RequestDetailModalProps) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<DrawerNavigationProp<AdminDrawerParamList>>();
   const [note, setNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [assignVisible, setAssignVisible] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [addingNote, setAddingNote] = useState(false);
+  const [planDetails, setPlanDetails] = useState<Plan | null>(null);
+
+  useEffect(() => {
+    if (!visible || !request?.planId) {
+      setPlanDetails(null);
+      return;
+    }
+    void fetchPlanById(request.planId)
+      .then(setPlanDetails)
+      .catch(() => setPlanDetails(null));
+  }, [visible, request?.planId]);
 
   const handleAddNote = useCallback(async () => {
     if (!request || !note.trim()) return;
@@ -113,7 +132,7 @@ export function RequestDetailModal({
 
   const statusStyle = STATUS_STYLES[request.status];
   const timeline = [...request.activityTimeline].sort(
-    (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
+    (a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp),
   );
 
   return (
@@ -150,6 +169,12 @@ export function RequestDetailModal({
             <View style={styles.planCard}>
               <Text style={styles.planName}>{request.planName}</Text>
               {request.planId ? <Text style={styles.planId}>{request.planId}</Text> : null}
+              {planDetails ? (
+                <Text style={styles.planMeta}>
+                  {planDetails.speedMbps} Mbps · {formatINR(planDetails.price)} ·{' '}
+                  {formatValidity(planDetails.validityDays)} · {planDetails.dataLimit}
+                </Text>
+              ) : null}
               <View
                 style={[
                   styles.planBadge,
@@ -230,6 +255,23 @@ export function RequestDetailModal({
                 label="Add Note"
                 variant="secondary"
                 onPress={() => setShowNoteInput(true)}
+                style={styles.footerBtn}
+              />
+            </RoleGuard>
+            <RoleGuard requiredPermission="requests.edit">
+              <Button
+                label="Create Ticket"
+                variant="secondary"
+                onPress={() => {
+                  onClose();
+                  navigation.navigate('TicketPortal', {
+                    screen: 'TicketPortal',
+                    params: {
+                      linkedRequestId: request.id,
+                      linkedRequestNumber: truncateRequestId(request.id),
+                    },
+                  });
+                }}
                 style={styles.footerBtn}
               />
             </RoleGuard>
@@ -318,6 +360,7 @@ const styles = StyleSheet.create({
   },
   planName: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
   planId: { fontSize: 11, color: colors.textSecondary },
+  planMeta: { fontSize: 13, color: colors.textPrimary, marginTop: spacing.xxs },
   planBadge: {
     alignSelf: 'flex-start',
     borderRadius: radius.full,

@@ -16,6 +16,8 @@ import {
   type QuickAccessItem,
 } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
+import { usePlansDashboardStats } from '@/hooks/usePlans';
+import { useTickets } from '@/hooks/useTickets';
 import {
   useGetAllRequestsQuery,
   useGetDashboardKpisQuery,
@@ -28,6 +30,7 @@ import type { RechargeFilter, RechargeSort } from '@/services/api/adminDashboard
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { formatINR } from '@/utils/planUtils';
 import { queryErrorMessage } from '@/utils/queryError';
 
 const QUICK_ACCESS: QuickAccessItem[] = [
@@ -70,7 +73,15 @@ export function DashboardScreen() {
   });
   const { data: activities } = useGetRecentActivitiesQuery({ page: 1, limit: 20 });
   const { data: allRequests } = useGetAllRequestsQuery();
+  const { openCount, breachedCount, unassignedCount: unassignedTickets, allTickets } = useTickets();
+  const { stats: planStats } = usePlansDashboardStats();
   const [sendBulk] = useSendBulkRechargeNotificationMutation();
+
+  const ticketSummary = useMemo(() => {
+    const inProgress = allTickets.filter((t) => t.status === 'In Progress').length;
+    const resolved = allTickets.filter((t) => t.status === 'Resolved' || t.status === 'Closed').length;
+    return { open: openCount, inProgress, resolved, breached: breachedCount, unassigned: unassignedTickets };
+  }, [allTickets, breachedCount, openCount, unassignedTickets]);
 
   const requestSummary = useMemo(() => {
     const open = (allRequests ?? []).filter((r) =>
@@ -157,6 +168,59 @@ export function DashboardScreen() {
           </Pressable>
         </SectionCard>
 
+        <SectionCard title="Plans Overview">
+          <View style={styles.requestsSummaryRow}>
+            <View style={styles.requestsStat}>
+              <Text style={styles.requestsStatValue}>{planStats.totalPlans}</Text>
+              <Text style={styles.requestsStatLabel}>Total plans</Text>
+            </View>
+            <View style={styles.requestsStat}>
+              <Text style={[styles.requestsStatValue, styles.ticketResolved]}>{planStats.activePlansCount}</Text>
+              <Text style={styles.requestsStatLabel}>Active</Text>
+            </View>
+            <View style={styles.requestsStat}>
+              <Text style={styles.requestsStatValue}>
+                {formatINR(planStats.totalPotentialMonthlyRevenue)}
+              </Text>
+              <Text style={styles.requestsStatLabel}>Potential revenue</Text>
+            </View>
+          </View>
+          <Pressable onPress={() => navigation.navigate('Plans')} style={styles.viewAllLink}>
+            <Text style={styles.viewAllText}>View Plans</Text>
+          </Pressable>
+        </SectionCard>
+
+        <SectionCard title="Tickets Overview">
+          <View style={styles.ticketStatsRow}>
+            <View style={styles.requestsStat}>
+              <Text style={styles.requestsStatValue}>{ticketSummary.open}</Text>
+              <Text style={styles.requestsStatLabel}>Open</Text>
+            </View>
+            <View style={styles.requestsStat}>
+              <Text style={styles.requestsStatValue}>{ticketSummary.inProgress}</Text>
+              <Text style={styles.requestsStatLabel}>In Progress</Text>
+            </View>
+            <View style={styles.requestsStat}>
+              <Text style={[styles.requestsStatValue, styles.ticketResolved]}>{ticketSummary.resolved}</Text>
+              <Text style={styles.requestsStatLabel}>Resolved</Text>
+            </View>
+          </View>
+          {ticketSummary.breached > 0 ? (
+            <Text style={styles.ticketBreached}>SLA breached: {ticketSummary.breached}</Text>
+          ) : null}
+          {ticketSummary.unassigned > 0 ? (
+            <Text style={styles.ticketUnassigned}>
+              {ticketSummary.unassigned} unassigned ticket{ticketSummary.unassigned === 1 ? '' : 's'}
+            </Text>
+          ) : null}
+          <Pressable
+            onPress={() => navigation.navigate('TicketPortal', { screen: 'TicketList' })}
+            style={styles.viewAllLink}
+          >
+            <Text style={styles.viewAllText}>View All Tickets</Text>
+          </Pressable>
+        </SectionCard>
+
         <SectionCard
           title="Upcoming Recharges"
           actionLabel="Send Notification"
@@ -224,6 +288,10 @@ const styles = StyleSheet.create({
   requestsStatValue: { fontSize: 28, fontWeight: '700', color: colors.textPrimary },
   requestsStatWarning: { color: adminColors.badgePending },
   requestsStatLabel: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  ticketStatsRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm },
+  ticketResolved: { color: adminColors.badgeActive },
+  ticketBreached: { fontSize: 13, fontWeight: '600', color: adminColors.badgeBlocked, marginBottom: spacing.xxs },
+  ticketUnassigned: { fontSize: 13, color: adminColors.badgePending, marginBottom: spacing.sm },
   viewAllLink: { alignSelf: 'flex-start' },
   viewAllText: { fontSize: 14, fontWeight: '600', color: adminColors.primary },
   sortBtn: { alignSelf: 'flex-end', marginVertical: spacing.xs },

@@ -20,6 +20,7 @@ import './adminMapApi';
 import './adminRolesApi';
 import './adminSettingsApi';
 import './attendanceApi';
+import './adminRequestsBoardApi';
 
 export * from './authApi';
 export * from './plansApi';
@@ -39,3 +40,4 @@ export * from './adminMapApi';
 export * from './adminRolesApi';
 export * from './adminSettingsApi';
 export * from './attendanceApi';
+export * from './adminRequestsBoardApi';

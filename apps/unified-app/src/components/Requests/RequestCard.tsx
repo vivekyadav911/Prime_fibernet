@@ -58,8 +58,8 @@ function InfoRow({
 export function RequestCard({ request, variant, onPress, onAssign }: RequestCardProps) {
   const relativeTime =
     variant === 'assigned' && request.assignedAt
-      ? `Assigned ${formatDistanceToNow(request.assignedAt, { addSuffix: true })}`
-      : `Requested ${formatDistanceToNow(request.createdAt, { addSuffix: true })}`;
+      ? `Assigned ${formatDistanceToNow(new Date(request.assignedAt), { addSuffix: true })}`
+      : `Requested ${formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}`;
 
   const planLabel = request.planName && request.planName !== 'Unknown Plan' ? request.planName : 'Unknown Plan';
   const planMuted = planLabel === 'Unknown Plan';

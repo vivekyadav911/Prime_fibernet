@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 
+import { adminRequestsBoardApi, useGetAdminRequestBoardQuery } from '@/services/api/adminRequestsBoardApi';
 import {
   addNote as addNoteService,
   assignOfficer as assignOfficerService,
-  fetchRequests,
   reassignOfficer as reassignOfficerService,
 } from '@/services/requestsService';
 import { getSupabase } from '@/services/supabase';
-import { useAppSelector } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useGetAllRequestsQuery } from '@/store/api/endpoints';
 import type { Officer, RequestFilters, ServiceRequest } from '@/types/requests';
 import { applyRequestFilters } from '@/utils/requestViewMappers';
+import { queryErrorMessage } from '@/utils/queryError';
 
 const DEFAULT_FILTERS: RequestFilters = {
   status: 'All',
@@ -25,29 +27,24 @@ export function selectUnassignedRequestCount(requests: ServiceRequest[]): number
 }
 
 export function useAdminRequests() {
+  const dispatch = useAppDispatch();
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const adminName = useAppSelector((s) => s.auth.user?.name ?? 'Admin');
-  const [allRequests, setAllRequests] = useState<ServiceRequest[]>([]);
   const [filters, setFilters] = useState<RequestFilters>(DEFAULT_FILTERS);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [optimisticRequests, setOptimisticRequests] = useState<ServiceRequest[] | null>(null);
 
-  const loadRequests = useCallback(async () => {
-    setError(null);
-    try {
-      const data = await fetchRequests();
-      setAllRequests(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load requests');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const {
+    data: fetchedRequests,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch,
+  } = useGetAdminRequestBoardQuery(undefined, { skip: !isAuthenticated });
 
   useEffect(() => {
-    void loadRequests();
-  }, [loadRequests]);
+    if (!isAuthenticated) return;
 
-  useEffect(() => {
     const client = getSupabase();
     const channel = client
       .channel('admin-service-requests')
@@ -55,7 +52,7 @@ export function useAdminRequests() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'service_requests' },
         () => {
-          void loadRequests();
+          dispatch(adminRequestsBoardApi.util.invalidateTags(['Requests']));
         },
       )
       .subscribe();
@@ -63,7 +60,15 @@ export function useAdminRequests() {
     return () => {
       void client.removeChannel(channel);
     };
-  }, [loadRequests]);
+  }, [dispatch, isAuthenticated]);
+
+  useEffect(() => {
+    if (fetchedRequests) {
+      setOptimisticRequests(null);
+    }
+  }, [fetchedRequests]);
+
+  const allRequests = optimisticRequests ?? fetchedRequests ?? [];
 
   const filteredRequests = useMemo(
     () => applyRequestFilters(allRequests, filters),
@@ -85,17 +90,16 @@ export function useAdminRequests() {
   }, []);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
-    await loadRequests();
-  }, [loadRequests]);
+    await refetch();
+  }, [refetch]);
 
   const assignOfficer = useCallback(
     async (requestId: string, officer: Officer, isReassign = false) => {
       const previous = allRequests;
-      const now = new Date();
+      const now = new Date().toISOString();
 
-      setAllRequests((current) =>
-        current.map((r) =>
+      setOptimisticRequests(
+        previous.map((r) =>
           r.id === requestId
             ? {
                 ...r,
@@ -117,14 +121,14 @@ export function useAdminRequests() {
           await assignOfficerService(requestId, officer, adminName);
           Alert.alert('Success', 'Officer assigned successfully');
         }
-        await loadRequests();
+        await refetch();
       } catch (e) {
-        setAllRequests(previous);
+        setOptimisticRequests(null);
         Alert.alert('Failed', e instanceof Error ? e.message : 'Could not assign officer');
         throw e;
       }
     },
-    [adminName, allRequests, loadRequests],
+    [adminName, allRequests, refetch],
   );
 
   const addNote = useCallback(
@@ -138,11 +142,11 @@ export function useAdminRequests() {
         type: 'note_added' as const,
         description: trimmed,
         performedBy: adminName,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
-      setAllRequests((current) =>
-        current.map((r) =>
+      setOptimisticRequests(
+        previous.map((r) =>
           r.id === requestId
             ? {
                 ...r,
@@ -155,15 +159,21 @@ export function useAdminRequests() {
 
       try {
         await addNoteService(requestId, trimmed, adminName);
-        await loadRequests();
+        await refetch();
       } catch (e) {
-        setAllRequests(previous);
+        setOptimisticRequests(null);
         Alert.alert('Failed', e instanceof Error ? e.message : 'Could not add note');
         throw e;
       }
     },
-    [adminName, allRequests, loadRequests],
+    [adminName, allRequests, refetch],
   );
+
+  const errorMessage = !isAuthenticated
+    ? null
+    : isError
+      ? queryErrorMessage(error)
+      : null;
 
   return {
     allRequests,
@@ -172,8 +182,8 @@ export function useAdminRequests() {
     assignedRequests,
     filters,
     updateFilters,
-    loading,
-    error,
+    loading: isAuthenticated && isLoading && !allRequests.length,
+    error: errorMessage,
     refresh,
     assignOfficer,
     addNote,
@@ -181,34 +191,8 @@ export function useAdminRequests() {
 }
 
 export function useUnassignedRequestCount(): number {
-  const [count, setCount] = useState(0);
+  const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
+  const { data } = useGetAllRequestsQuery(undefined, { skip: !isAuthenticated });
 
-  const load = useCallback(async () => {
-    try {
-      const data = await fetchRequests();
-      setCount(selectUnassignedRequestCount(data));
-    } catch {
-      setCount(0);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-    const client = getSupabase();
-    const channel = client
-      .channel('admin-requests-badge')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'service_requests' },
-        () => {
-          void load();
-        },
-      )
-      .subscribe();
-    return () => {
-      void client.removeChannel(channel);
-    };
-  }, [load]);
-
-  return count;
+  return useMemo(() => (data ?? []).filter((r) => !r.officerId).length, [data]);
 }

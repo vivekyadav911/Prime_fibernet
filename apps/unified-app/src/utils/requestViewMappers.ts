@@ -35,6 +35,10 @@ function parseDate(value: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function toIsoString(value: unknown, fallback = new Date()): string {
+  return (parseDate(value) ?? fallback).toISOString();
+}
+
 function titleCaseType(raw: string): RequestType {
   const normalized = raw.trim().toLowerCase();
   if (DB_TYPE_MAP[normalized]) return DB_TYPE_MAP[normalized];
@@ -101,7 +105,7 @@ function mapActivityRow(row: Record<string, unknown>): ActivityEvent {
     description,
     performedBy: actor,
     performedByRole: undefined,
-    timestamp: parseDate(row.timestamp ?? row.created_at) ?? new Date(),
+    timestamp: toIsoString(row.timestamp ?? row.created_at),
   };
 }
 
@@ -119,12 +123,12 @@ export function mapDbRowToServiceRequest(
 
   const timeline = activities
     .map(mapActivityRow)
-    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
 
   const notes = timeline.filter((e) => e.type === 'note_added').map((e) => e.description);
 
   const updatedAt = parseDate(row.updated_at);
-  const createdAt = parseDate(row.created_at) ?? new Date();
+  const createdAtIso = toIsoString(row.created_at);
 
   return {
     id: String(row.id),
@@ -143,9 +147,9 @@ export function mapDbRowToServiceRequest(
     assignedOfficerId: officerId,
     assignedOfficerName: officerId ? String(row.officer_name ?? 'Officer') : null,
     assignedOfficerRole: officerId ? 'Field Technician' : null,
-    createdAt,
-    assignedAt: officerId ? updatedAt : null,
-    completedAt: parseDate(row.completed_at),
+    createdAt: createdAtIso,
+    assignedAt: officerId && updatedAt ? updatedAt.toISOString() : null,
+    completedAt: parseDate(row.completed_at)?.toISOString() ?? null,
     activityTimeline: timeline,
     notes,
   };
@@ -187,7 +191,7 @@ export function applyRequestFilters(
   }
 
   result.sort((a, b) => {
-    const diff = b.createdAt.getTime() - a.createdAt.getTime();
+    const diff = Date.parse(b.createdAt) - Date.parse(a.createdAt);
     return filters.sortBy === 'newest' ? diff : -diff;
   });
 
