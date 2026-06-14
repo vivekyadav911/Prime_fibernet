@@ -33,6 +33,7 @@ export interface ServiceRequest {
   completedAt: string | null;
   activityTimeline: ActivityEvent[];
   notes: string[];
+  linkedTicketId?: string | null;
 }
 
 export interface Officer {

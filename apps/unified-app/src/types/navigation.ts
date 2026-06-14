@@ -174,6 +174,12 @@ export type AdminRequestsStackParamList = {
   RequestDetail: { requestId: string };
 };
 
+export type AdminTicketsStackParamList = {
+  TicketPortal: { linkedRequestId?: string; linkedRequestNumber?: string } | undefined;
+  TicketList: undefined;
+  TicketDetail: { ticketId: string };
+};
+
 export type AdminPlansStackParamList = {
   PlanList: undefined;
   PlanForm: { planId?: string } | undefined;
@@ -227,7 +233,7 @@ export type AdminDrawerParamList = {
   PayRunReview: { payRunId: string };
   RoleManagement: undefined;
   Requests: NavigatorScreenParams<AdminRequestsStackParamList> | undefined;
-  TicketPortal: NavigatorScreenParams<AdminRequestsStackParamList> | undefined;
+  TicketPortal: NavigatorScreenParams<AdminTicketsStackParamList> | undefined;
   Plans: NavigatorScreenParams<AdminPlansStackParamList> | undefined;
   EnhancedPlans: undefined;
   Notifications: undefined;

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { signOut } from '@/hooks/useAuth';
 import { useUnassignedRequestCount } from '@/hooks/useAdminRequests';
+import { useTicketPortalBadge } from '@/hooks/useTickets';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { adminColors, adminDrawerWidth } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -49,7 +50,7 @@ const SECTIONS: DrawerSection[] = [
     label: 'Operations',
     items: [
       { route: 'Requests', label: 'Requests', icon: '📋', showBadge: true },
-      { route: 'TicketPortal', label: 'Ticket Portal', icon: '🎫' },
+      { route: 'TicketPortal', label: 'Ticket Portal', icon: '🎫', showBadge: true },
       { route: 'Plans', label: 'Plans', icon: '📶' },
       { route: 'Notifications', label: 'Notifications', icon: '🔔' },
     ],
@@ -84,6 +85,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
   const unassignedCount = useUnassignedRequestCount();
+  const ticketBadge = useTicketPortalBadge();
   const { state, navigation } = props;
   const activeRoute = state.routes[state.index]?.name;
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
@@ -151,7 +153,17 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
                   {isActive ? <View style={styles.activeBar} /> : null}
                   <View style={styles.itemIconWrap}>
                     <Text style={styles.itemIcon}>{item.icon}</Text>
-                    {item.showBadge && unassignedCount > 0 ? <View style={styles.navBadge} /> : null}
+                    {item.route === 'Requests' && item.showBadge && unassignedCount > 0 ? (
+                      <View style={styles.navBadge} />
+                    ) : null}
+                    {item.route === 'TicketPortal' && ticketBadge.showBadge ? (
+                      <View
+                        style={[
+                          styles.navBadge,
+                          ticketBadge.isBreached ? styles.navBadgeDanger : styles.navBadgeWarning,
+                        ]}
+                      />
+                    ) : null}
                   </View>
                   <Text style={[styles.itemLabel, isActive && styles.itemLabelActive]}>{item.label}</Text>
                 </Pressable>
@@ -198,6 +210,12 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: adminColors.primary,
+  },
+  navBadgeWarning: {
+    backgroundColor: adminColors.badgePending,
+  },
+  navBadgeDanger: {
+    backgroundColor: adminColors.badgeBlocked,
   },
   itemLabel: { fontSize: 14, color: colors.textPrimary, fontWeight: '500' },
   itemLabelActive: { color: adminColors.primary, fontWeight: '700' },

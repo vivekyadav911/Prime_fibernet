@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import type { DrawerNavigationProp } from '@react-navigation/drawer';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
 
@@ -20,7 +22,9 @@ import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { ActivityEvent, Officer, ServiceRequest } from '@/types/requests';
+import type { AdminDrawerParamList } from '@/types/navigation';
 import { exportSingleRequestPdf } from '@/utils/exportRequestsPdf';
+import { truncateRequestId } from '@/utils/requestViewMappers';
 
 type RequestDetailModalProps = {
   visible: boolean;
@@ -65,6 +69,7 @@ export function RequestDetailModal({
   onAddNote,
 }: RequestDetailModalProps) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<DrawerNavigationProp<AdminDrawerParamList>>();
   const [note, setNote] = useState('');
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [assignVisible, setAssignVisible] = useState(false);
@@ -230,6 +235,23 @@ export function RequestDetailModal({
                 label="Add Note"
                 variant="secondary"
                 onPress={() => setShowNoteInput(true)}
+                style={styles.footerBtn}
+              />
+            </RoleGuard>
+            <RoleGuard requiredPermission="requests.edit">
+              <Button
+                label="Create Ticket"
+                variant="secondary"
+                onPress={() => {
+                  onClose();
+                  navigation.navigate('TicketPortal', {
+                    screen: 'TicketPortal',
+                    params: {
+                      linkedRequestId: request.id,
+                      linkedRequestNumber: truncateRequestId(request.id),
+                    },
+                  });
+                }}
                 style={styles.footerBtn}
               />
             </RoleGuard>
