@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { AdminPaymentDetailScreen } from '@/screens/admin/AdminPaymentDetailScreen';
 import type { AdminDrawerParamList, AdminStackParamList } from '@/types/navigation';
-import { adminColors, adminDrawerWidth } from '@/theme/admin';
+import { adminColors, getAdminDrawerWidth } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 
 import { AdminDrawerContent } from './AdminDrawerContent';
@@ -45,13 +45,26 @@ function AdminDrawerNav() {
         headerTintColor: colors.white,
         drawerActiveTintColor: adminColors.primary,
         drawerType: isWebSidebar ? 'permanent' : 'front',
-        drawerStyle: { width: adminDrawerWidth, backgroundColor: adminColors.sidebarBg },
+        drawerStyle: {
+          width: getAdminDrawerWidth(width, isWebSidebar),
+          backgroundColor: adminColors.sidebarBg,
+        },
         overlayColor: isWebSidebar ? 'transparent' : undefined,
         headerLeft: isWebSidebar ? () => null : () => <AdminDrawerToggleButton />,
         swipeEnabled: !isWebSidebar,
       }}
     >
-      <Drawer.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Dashboard' }} />
+      <Drawer.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{
+          title: 'Dashboard',
+          headerStyle: { backgroundColor: '#5B4FE9' },
+          headerTintColor: '#FFFFFF',
+          headerTitleStyle: { fontSize: 20, fontWeight: '600' },
+          headerShadowVisible: false,
+        }}
+      />
       <Drawer.Screen name="Users" component={AdminUsersStackNav} options={{ headerShown: false, title: 'Users' }} />
       <Drawer.Screen name="Officers" component={AdminOfficersStackNav} options={{ headerShown: false, title: 'Officers' }} />
       <Drawer.Screen name="Attendance" component={AdminAttendanceStackNav} options={{ headerShown: false, title: 'Attendance' }} />

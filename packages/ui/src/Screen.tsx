@@ -5,16 +5,27 @@ import { colors } from './theme';
 
 type ScreenProps = ViewProps & {
   padded?: boolean;
+  /** Disable when the screen sits below a navigation header that already handles the top inset. */
+  safeAreaTop?: boolean;
 };
 
-export function Screen({ children, padded = true, style, ...props }: ScreenProps) {
+export function Screen({
+  children,
+  padded = true,
+  safeAreaTop = true,
+  style,
+  ...props
+}: ScreenProps) {
   const insets = useSafeAreaInsets();
 
   return (
     <View
       style={[
         styles.safe,
-        { paddingTop: insets.top, paddingBottom: insets.bottom },
+        {
+          paddingTop: safeAreaTop ? insets.top : 0,
+          paddingBottom: insets.bottom,
+        },
       ]}
     >
       <View style={[styles.container, padded && styles.padded, style]} {...props}>

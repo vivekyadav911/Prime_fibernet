@@ -165,21 +165,22 @@ export function usePlans() {
 
 export function usePlansSidebarBadge() {
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
-  const [showBadge, setShowBadge] = useState(false);
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated) return;
     const check = async () => {
       try {
         const plans = await fetchPlans();
-        setShowBadge(plans.some((p) => !p.isActive && p.subscriberCount > 0));
+        const reviewCount = plans.filter((p) => !p.isActive && p.subscriberCount > 0).length;
+        setCount(reviewCount);
       } catch {
-        setShowBadge(false);
+        setCount(0);
       }
     };
     void check();
     const unsubscribe = subscribeToPlans((plans) => {
-      setShowBadge(plans.some((p) => !p.isActive && p.subscriberCount > 0));
+      setCount(plans.filter((p) => !p.isActive && p.subscriberCount > 0).length);
     });
     const poll = setInterval(() => void check(), 60_000);
     return () => {
@@ -188,7 +189,7 @@ export function usePlansSidebarBadge() {
     };
   }, [isAuthenticated]);
 
-  return { showBadge };
+  return { showBadge: count > 0, count };
 }
 
 export function usePlansDashboardStats() {

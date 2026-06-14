@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
@@ -26,6 +26,10 @@ type DrawerSection = {
   label: string;
   items: DrawerItem[];
 };
+
+type NavNotification =
+  | { kind: 'count'; value: number }
+  | { kind: 'pill'; label: string; tone: 'primary' | 'warning' | 'danger' | 'success' };
 
 const SECTIONS: DrawerSection[] = [
   { id: 'top', label: '', items: [{ route: 'Dashboard', label: 'Dashboard', icon: '🏠' }] },
@@ -86,6 +90,31 @@ const SECTIONS: DrawerSection[] = [
   },
 ];
 
+function formatNavCount(count: number): string {
+  return count > 99 ? '99+' : String(count);
+}
+
+function NavNotificationBadge({ notification }: { notification: NavNotification }) {
+  if (notification.kind === 'count') {
+    return <Text style={styles.navCount}>{formatNavCount(notification.value)}</Text>;
+  }
+
+  const pillToneStyles = {
+    primary: { pill: styles.navPillPrimary, text: styles.navPillTextPrimary },
+    warning: { pill: styles.navPillWarning, text: styles.navPillTextWarning },
+    danger: { pill: styles.navPillDanger, text: styles.navPillTextDanger },
+    success: { pill: styles.navPillSuccess, text: styles.navPillTextSuccess },
+  } as const;
+
+  const tone = pillToneStyles[notification.tone];
+
+  return (
+    <View style={[styles.navPill, tone.pill]}>
+      <Text style={[styles.navPillText, tone.text]}>{notification.label}</Text>
+    </View>
+  );
+}
+
 export function AdminDrawerContent(props: DrawerContentComponentProps) {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
@@ -95,6 +124,45 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
   const plansBadge = usePlansSidebarBadge();
   const { state, navigation } = props;
   const activeRoute = state.routes[state.index]?.name;
+
+  const getNotification = useCallback(
+    (route: keyof AdminDrawerParamList, showBadge?: boolean): NavNotification | null => {
+      if (!showBadge) return null;
+
+      switch (route) {
+        case 'Requests':
+          return unassignedCount > 0 ? { kind: 'count', value: unassignedCount } : null;
+        case 'TicketPortal':
+          if (ticketBadge.breachedCount > 0) {
+            return {
+              kind: 'pill',
+              label: `${formatNavCount(ticketBadge.breachedCount)} urgent`,
+              tone: 'danger',
+            };
+          }
+          if (ticketBadge.openCount > 0) {
+            return {
+              kind: 'pill',
+              label: `${formatNavCount(ticketBadge.openCount)} new`,
+              tone: 'primary',
+            };
+          }
+          return null;
+        case 'Plans':
+          if (plansBadge.count > 0) {
+            return {
+              kind: 'pill',
+              label: `${formatNavCount(plansBadge.count)} review`,
+              tone: 'warning',
+            };
+          }
+          return null;
+        default:
+          return null;
+      }
+    },
+    [unassignedCount, ticketBadge, plansBadge.count],
+  );
 
   const navigate = useCallback(
     (route: keyof AdminDrawerParamList) => {
@@ -107,6 +175,43 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
   const handleSignOut = useCallback(() => {
     void signOut(dispatch);
   }, [dispatch]);
+
+  const sectionNodes = useMemo(
+    () =>
+      SECTIONS.map((section) => (
+        <View key={section.id} style={styles.section}>
+          {section.label ? (
+            <>
+              <View style={styles.sectionDivider} />
+              <Text style={styles.sectionLabel}>{section.label}</Text>
+            </>
+          ) : null}
+
+          {section.items.map((item) => {
+            const isActive = activeRoute === item.route;
+            const notification = getNotification(item.route, item.showBadge);
+
+            return (
+              <Pressable
+                key={item.route}
+                style={[styles.item, isActive && styles.itemActive]}
+                onPress={() => navigate(item.route)}
+              >
+                <Text style={styles.itemIcon}>{item.icon}</Text>
+                <Text
+                  style={[styles.itemLabel, isActive && styles.itemLabelActive]}
+                  numberOfLines={1}
+                >
+                  {item.label}
+                </Text>
+                {notification ? <NavNotificationBadge notification={notification} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      )),
+    [activeRoute, getNotification, navigate],
+  );
 
   return (
     <View
@@ -137,55 +242,11 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {SECTIONS.map((section) => (
-          <View key={section.id} style={styles.section}>
-            {section.label ? (
-              <>
-                <View style={styles.sectionDivider} />
-                <Text style={styles.sectionLabel}>{section.label}</Text>
-              </>
-            ) : null}
-
-            {section.items.map((item) => {
-              const isActive = activeRoute === item.route;
-              return (
-                <Pressable
-                  key={item.route}
-                  style={[styles.item, isActive && styles.itemActive]}
-                  onPress={() => navigate(item.route)}
-                >
-                  {isActive ? <View style={styles.activeBar} /> : null}
-                  <View style={styles.itemIconWrap}>
-                    <Text style={styles.itemIcon}>{item.icon}</Text>
-                    {item.route === 'Requests' && item.showBadge && unassignedCount > 0 ? (
-                      <View style={styles.navBadge} />
-                    ) : null}
-                    {item.route === 'TicketPortal' && ticketBadge.showBadge ? (
-                      <View
-                        style={[
-                          styles.navBadge,
-                          ticketBadge.isBreached ? styles.navBadgeDanger : styles.navBadgeWarning,
-                        ]}
-                      />
-                    ) : null}
-                    {item.route === 'Plans' && item.showBadge && plansBadge.showBadge ? (
-                      <View style={styles.navBadge} />
-                    ) : null}
-                  </View>
-                  <Text
-                    style={[styles.itemLabel, isActive && styles.itemLabelActive]}
-                    numberOfLines={1}
-                  >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        ))}
+        {sectionNodes}
       </DrawerContentScrollView>
 
       <View style={styles.footer}>
+        <View style={styles.footerDivider} />
         <Pressable style={styles.signOutBtn} onPress={handleSignOut}>
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
@@ -193,6 +254,9 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
     </View>
   );
 }
+
+const ITEM_HEIGHT = 48;
+const DRAWER_EDGE_INSET = spacing.xs;
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -202,7 +266,7 @@ const styles = StyleSheet.create({
     backgroundColor: adminColors.sidebarBg,
   },
   header: {
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingBottom: spacing.xs,
   },
   scroll: {
@@ -214,14 +278,18 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   footer: {
-    paddingHorizontal: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderDefault,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
     backgroundColor: adminColors.sidebarBg,
   },
+  footerDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.borderDefault,
+    marginBottom: spacing.sm,
+    marginRight: DRAWER_EDGE_INSET,
+  },
   brand: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
     color: adminColors.primary,
     paddingTop: spacing.sm,
@@ -237,7 +305,7 @@ const styles = StyleSheet.create({
   userCard: {
     marginBottom: spacing.xs,
     padding: spacing.sm,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     backgroundColor: adminColors.primaryTint,
     borderWidth: 1,
     borderColor: adminColors.permissionBoxBorder,
@@ -256,9 +324,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   sectionDivider: {
-    height: 1,
+    height: StyleSheet.hairlineWidth,
     backgroundColor: colors.borderDefault,
-    marginHorizontal: spacing.sm,
+    marginLeft: spacing.md,
+    marginRight: DRAWER_EDGE_INSET,
     marginTop: spacing.sm,
     marginBottom: spacing.xs,
   },
@@ -268,55 +337,26 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.7,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingTop: spacing.xxs,
-    paddingBottom: spacing.xxs,
+    paddingBottom: spacing.xs,
   },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'stretch',
-    paddingVertical: spacing.xs + 2,
-    paddingLeft: spacing.sm,
-    paddingRight: spacing.xs,
-    marginHorizontal: spacing.xxs,
-    borderRadius: radius.sm,
-    position: 'relative',
+    minHeight: ITEM_HEIGHT,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    marginHorizontal: DRAWER_EDGE_INSET,
+    borderRadius: radius.full,
   },
   itemActive: {
     backgroundColor: adminColors.primaryTint,
   },
-  activeBar: {
-    position: 'absolute',
-    left: 0,
-    top: 4,
-    bottom: 4,
-    width: 3,
-    backgroundColor: adminColors.activeBorder,
-    borderRadius: 2,
-  },
-  itemIconWrap: {
-    position: 'relative',
-    marginRight: spacing.xs + 2,
-    marginLeft: spacing.xxs,
-  },
   itemIcon: {
-    fontSize: 17,
-  },
-  navBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: adminColors.primary,
-  },
-  navBadgeWarning: {
-    backgroundColor: adminColors.badgePending,
-  },
-  navBadgeDanger: {
-    backgroundColor: adminColors.badgeBlocked,
+    width: 28,
+    fontSize: 20,
+    textAlign: 'center',
   },
   itemLabel: {
     flex: 1,
@@ -324,18 +364,62 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textPrimary,
     fontWeight: '500',
+    marginLeft: spacing.md,
+    marginRight: spacing.sm,
   },
   itemLabelActive: {
     color: adminColors.primary,
     fontWeight: '700',
   },
+  navCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    minWidth: 28,
+    textAlign: 'right',
+  },
+  navPill: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    maxWidth: 96,
+  },
+  navPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  navPillPrimary: {
+    backgroundColor: adminColors.navPillPrimaryBg,
+  },
+  navPillTextPrimary: {
+    color: adminColors.navPillPrimaryText,
+  },
+  navPillWarning: {
+    backgroundColor: adminColors.navPillWarningBg,
+  },
+  navPillTextWarning: {
+    color: adminColors.navPillWarningText,
+  },
+  navPillDanger: {
+    backgroundColor: adminColors.navPillDangerBg,
+  },
+  navPillTextDanger: {
+    color: adminColors.navPillDangerText,
+  },
+  navPillSuccess: {
+    backgroundColor: adminColors.navPillSuccessBg,
+  },
+  navPillTextSuccess: {
+    color: adminColors.navPillSuccessText,
+  },
   signOutBtn: {
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.borderDefault,
     backgroundColor: colors.surfaceWhite,
+    marginBottom: spacing.xs,
   },
   signOutText: {
     fontSize: 15,

@@ -1,6 +1,7 @@
 export { AdminEmptyState } from './AdminEmptyState';
 export { AdminWebLayout } from './AdminWebLayout';
 export { AdminKPICard } from './KPICard';
+export { KpiMetricTile, type KpiSurfaceKey, type KpiStatus, type KpiTileVariant, type KpiTileEmphasis } from './KpiMetricTile';
 export { AvatarIcon } from './AvatarIcon';
 export { ConfirmModal } from './ConfirmModal';
 export { DateField } from './DateField';
@@ -12,7 +13,7 @@ export { FormField } from './FormField';
 export { FormRow } from './FormRow';
 export { SectionLabel } from './SectionLabel';
 export { SelectField } from './SelectField';
-export { QuickAccessGrid, type QuickAccessItem } from './QuickAccessGrid';
+export { QuickAccessGrid, type QuickAccessItem, type QuickAccessBadgeTone } from './QuickAccessGrid';
 export { RoleGuard, useAdminPermission } from './RoleGuard';
 export { SearchBar } from './SearchBar';
 export { SectionCard } from './SectionCard';
