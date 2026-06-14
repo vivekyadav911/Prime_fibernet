@@ -1,36 +1,41 @@
+/**
+ * @deprecated Use inventoryService and hooks from @/services/inventoryService instead.
+ * Kept for RTK Query cache invalidation compatibility with officer APIs.
+ */
 import type { InventoryAdminItem } from '@/types/api/admin';
 
+import {
+  bulkAction,
+  createCategory,
+  createInventoryItem,
+  fetchAssignmentRequests,
+  fetchCategories,
+  fetchInventoryHistory,
+  fetchInventoryItems,
+  reviewAssignmentRequest,
+} from '@/services/inventoryService';
+
 import { baseApi } from './baseApi';
+
+function mapToLegacyItem(item: Awaited<ReturnType<typeof fetchInventoryItems>>[number]): InventoryAdminItem {
+  return {
+    id: item.id,
+    name: item.name,
+    category: item.categoryName,
+    totalQty: item.totalQuantity,
+    assignedQty: item.assignedQuantity,
+    availableQty: item.availableQuantity,
+    condition: item.stockStatus,
+  };
+}
 
 export const adminInventoryApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAdminInventory: builder.query<InventoryAdminItem[], void>({
       query: () => ({
-        handler: async (client) => {
-          const { data, error } = await client.from('inventory_items').select('*').order('name');
-          if (error) throw error;
-
-          const items = await Promise.all(
-            (data ?? []).map(async (row) => {
-              const { count } = await client
-                .from('inventory_assignments')
-                .select('id', { count: 'exact', head: true })
-                .eq('item_id', row.id)
-                .eq('status', 'assigned');
-              const total = Number(row.quantity ?? 0);
-              const assigned = count ?? 0;
-              return {
-                id: row.id as string,
-                name: row.name as string,
-                category: (row.category as string) ?? 'General',
-                totalQty: total,
-                assignedQty: assigned,
-                availableQty: Math.max(0, total - assigned),
-                condition: (row.condition as string) ?? 'good',
-              };
-            }),
-          );
-          return items;
+        handler: async () => {
+          const items = await fetchInventoryItems();
+          return items.map(mapToLegacyItem);
         },
       }),
       providesTags: ['Inventory'],
@@ -39,13 +44,29 @@ export const adminInventoryApi = baseApi.injectEndpoints({
     createInventoryItem: builder.mutation<void, { name: string; category: string; quantity: number }>({
       query: (body) => ({
         handler: async (client) => {
-          const { error } = await client.from('inventory_items').insert({
-            name: body.name,
-            category: body.category,
-            quantity: body.quantity,
-            status: 'available',
-          });
-          if (error) throw error;
+          const cats = await fetchCategories();
+          const category = cats.find((c) => c.name.toLowerCase() === body.category.toLowerCase());
+          const categoryId = category?.id ?? cats[0]?.id ?? '';
+          const session = await client.auth.getSession();
+          const userId = session.data.session?.user.id ?? '';
+          const userName = String(session.data.session?.user.user_metadata?.name ?? 'Admin');
+          await createInventoryItem(
+            {
+              name: body.name,
+              sku: `SKU-${Date.now()}`,
+              description: '',
+              categoryId,
+              status: 'active',
+              brand: '',
+              model: '',
+              totalQuantity: String(body.quantity),
+              unitCost: '0',
+              location: '',
+              notes: '',
+            },
+            userId,
+            userName,
+          );
         },
       }),
       invalidatesTags: ['Inventory'],
@@ -56,21 +77,15 @@ export const adminInventoryApi = baseApi.injectEndpoints({
       { status?: string }
     >({
       query: ({ status }) => ({
-        handler: async (client) => {
-          let query = client
-            .from('inventory_requests')
-            .select('*, officers(name), inventory_items(name)')
-            .order('created_at', { ascending: false });
-          if (status) query = query.eq('status', status);
-          const { data, error } = await query;
-          if (error) throw error;
-          return (data ?? []).map((row) => ({
-            id: row.id as string,
-            officerName: (row.officers as { name?: string })?.name ?? 'Officer',
-            itemName: (row.inventory_items as { name?: string })?.name ?? 'Item',
-            quantity: Number(row.quantity ?? 1),
-            date: row.created_at as string,
-            status: row.status as string,
+        handler: async () => {
+          const rows = await fetchAssignmentRequests(status);
+          return rows.map((row) => ({
+            id: row.id,
+            officerName: row.officerName,
+            itemName: row.itemName,
+            quantity: row.quantity,
+            date: row.date.toISOString(),
+            status: row.status,
           }));
         },
       }),
@@ -80,11 +95,10 @@ export const adminInventoryApi = baseApi.injectEndpoints({
     reviewAssignmentRequest: builder.mutation<void, { id: string; action: 'approve' | 'reject' }>({
       query: ({ id, action }) => ({
         handler: async (client) => {
-          const { error } = await client
-            .from('inventory_requests')
-            .update({ status: action === 'approve' ? 'approved' : 'rejected' })
-            .eq('id', id);
-          if (error) throw error;
+          const session = await client.auth.getSession();
+          const userId = session.data.session?.user.id ?? '';
+          const userName = String(session.data.session?.user.user_metadata?.name ?? 'Admin');
+          await reviewAssignmentRequest(id, action, userId, userName);
         },
       }),
       invalidatesTags: ['Inventory'],
@@ -95,20 +109,18 @@ export const adminInventoryApi = baseApi.injectEndpoints({
       void
     >({
       query: () => ({
-        handler: async (client) => {
-          const { data, error } = await client
-            .from('inventory_history')
-            .select('*, inventory_items(name), officers(name)')
-            .order('created_at', { ascending: false })
-            .limit(200);
-          if (error) throw error;
-          return (data ?? []).map((row) => ({
-            id: row.id as string,
-            itemName: (row.inventory_items as { name?: string })?.name ?? 'Item',
-            action: row.action as string,
-            officerName: (row.officers as { name?: string })?.name ?? '—',
-            quantity: Number(row.quantity ?? 0),
-            date: row.created_at as string,
+        handler: async () => {
+          const rows = await fetchInventoryHistory(
+            { itemId: null, actionType: null, dateFrom: null, dateTo: null },
+            200,
+          );
+          return rows.map((row) => ({
+            id: row.id,
+            itemName: row.itemName,
+            action: row.actionType,
+            officerName: row.performedBy,
+            quantity: row.quantityDelta,
+            date: row.timestamp.toISOString(),
           }));
         },
       }),
@@ -117,9 +129,11 @@ export const adminInventoryApi = baseApi.injectEndpoints({
 
     getInventoryCategories: builder.query<{ id: string; name: string }[], void>({
       query: () => ({
-        handler: async (client) => {
-          const { data, error } = await client.from('inventory_categories').select('*').order('name');
-          if (error) {
+        handler: async () => {
+          try {
+            const cats = await fetchCategories();
+            return cats.map((c) => ({ id: c.id, name: c.name }));
+          } catch {
             return [
               { id: '1', name: 'Router' },
               { id: '2', name: 'Modem' },
@@ -127,7 +141,6 @@ export const adminInventoryApi = baseApi.injectEndpoints({
               { id: '4', name: 'Tools' },
             ];
           }
-          return (data ?? []).map((row) => ({ id: row.id as string, name: row.name as string }));
         },
       }),
       providesTags: ['Inventory'],
@@ -135,9 +148,14 @@ export const adminInventoryApi = baseApi.injectEndpoints({
 
     createInventoryCategory: builder.mutation<void, { name: string }>({
       query: ({ name }) => ({
-        handler: async (client) => {
-          const { error } = await client.from('inventory_categories').insert({ name });
-          if (error) throw error;
+        handler: async () => {
+          await createCategory({
+            name,
+            description: '',
+            iconName: 'cube-outline',
+            iconColor: '#3B82F6',
+            iconBgColor: '#EFF6FF',
+          });
         },
       }),
       invalidatesTags: ['Inventory'],
@@ -165,3 +183,5 @@ export const {
   useCreateInventoryCategoryMutation,
   useBulkImportInventoryMutation,
 } = adminInventoryApi;
+
+export { bulkAction as bulkInventoryAction };

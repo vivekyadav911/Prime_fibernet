@@ -6,7 +6,11 @@ import { spacing } from '@/theme/spacing';
 
 import { AdminDrawerToggleButton } from './AdminDrawerToggleButton';
 
-export function AdminDrawerHeaderLeft({ tintColor, canGoBack }: NativeStackHeaderBackProps) {
+export function AdminDrawerHeaderLeft({
+  tintColor,
+  canGoBack,
+  onBackPress,
+}: NativeStackHeaderBackProps & { onBackPress?: () => void }) {
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
   const isWebSidebar = Platform.OS === 'web' && width >= 1024;
@@ -16,7 +20,7 @@ export function AdminDrawerHeaderLeft({ tintColor, canGoBack }: NativeStackHeade
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Go back"
-        onPress={() => navigation.goBack()}
+        onPress={() => (onBackPress ? onBackPress() : navigation.goBack())}
         style={styles.backButton}
         hitSlop={8}
       >

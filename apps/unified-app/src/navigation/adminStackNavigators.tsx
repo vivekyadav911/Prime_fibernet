@@ -1,9 +1,15 @@
 import { Text } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NavigationProp, RouteProp } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackHeaderBackProps } from '@react-navigation/native-stack';
 
 import { DashboardScreen } from '@/screens/admin/DashboardScreen';
-import { InventoryScreen } from '@/screens/admin/assets/inventory/InventoryScreen';
+import { InventoryListScreen } from '@/screens/admin/assets/inventory/InventoryListScreen';
+import { ItemDetailScreen } from '@/screens/admin/assets/inventory/ItemDetailScreen';
+import { QuickActionScreen } from '@/screens/admin/assets/inventory/QuickActionScreen';
+import { AddItemScreen } from '@/screens/admin/assets/inventory/AddItemScreen';
+import { EditItemScreen } from '@/screens/admin/assets/inventory/EditItemScreen';
 import { AssignmentRequestsScreen } from '@/screens/admin/assets/inventory/AssignmentRequestsScreen';
 import { BulkOperationsScreen } from '@/screens/admin/assets/inventory/BulkOperationsScreen';
 import { CategoriesScreen } from '@/screens/admin/assets/inventory/CategoriesScreen';
@@ -27,6 +33,9 @@ import { RoleManagementScreen } from '@/screens/admin/hr/RoleManagementScreen';
 import { PayrollScreen } from '@/screens/admin/hr/payroll/PayrollScreen';
 import { PayslipsManagementScreen } from '@/screens/admin/hr/payroll/PayslipsManagementScreen';
 import { NotificationCenterScreen } from '@/screens/admin/notifications/NotificationCenterScreen';
+import { NotificationsScreen } from '@/screens/admin/notifications/NotificationsScreen';
+import { CreateNotificationScreen } from '@/screens/admin/notifications/CreateNotificationScreen';
+import { NotificationDetailScreen } from '@/screens/admin/notifications/NotificationDetailScreen';
 import { AddOfficerScreen } from '@/screens/admin/officers/AddOfficerScreen';
 import { EditOfficerScreen } from '@/screens/admin/officers/EditOfficerScreen';
 import { OfficerDetailScreen } from '@/screens/admin/officers/OfficerDetailScreen';
@@ -55,6 +64,7 @@ import type {
   AdminPayrollStackParamList,
   AdminPaymentsStackParamList,
   AdminPlansStackParamList,
+  AdminNotificationsStackParamList,
   AdminRequestsStackParamList,
   AdminTicketsStackParamList,
   AdminUsersStackParamList,
@@ -71,6 +81,7 @@ const PayrollStack = createNativeStackNavigator<AdminPayrollStackParamList>();
 const RequestsStack = createNativeStackNavigator<AdminRequestsStackParamList>();
 const TicketsStack = createNativeStackNavigator<AdminTicketsStackParamList>();
 const PlansStack = createNativeStackNavigator<AdminPlansStackParamList>();
+const NotificationsStack = createNativeStackNavigator<AdminNotificationsStackParamList>();
 const PaymentsStack = createNativeStackNavigator<AdminPaymentsStackParamList>();
 const InvoicesStack = createNativeStackNavigator<AdminInvoicesStackParamList>();
 const InventoryStack = createNativeStackNavigator<AdminInventoryStackParamList>();
@@ -79,6 +90,30 @@ const stackScreenOptions = {
   headerStyle: { backgroundColor: colors.primaryNavy },
   headerTintColor: colors.white,
   headerLeft: (props: NativeStackHeaderBackProps) => <AdminDrawerHeaderLeft {...props} />,
+};
+
+function InventoryDrawerHeaderLeft(props: NativeStackHeaderBackProps) {
+  const route = useRoute<RouteProp<AdminInventoryStackParamList, keyof AdminInventoryStackParamList>>();
+  const navigation = useNavigation<NavigationProp<AdminInventoryStackParamList>>();
+
+  if (route.name === 'InventoryList') {
+    return <AdminDrawerHeaderLeft {...props} canGoBack={false} />;
+  }
+
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.navigate('InventoryList');
+  };
+
+  return <AdminDrawerHeaderLeft {...props} canGoBack onBackPress={handleBack} />;
+}
+
+const inventoryStackScreenOptions = {
+  ...stackScreenOptions,
+  headerLeft: (props: NativeStackHeaderBackProps) => <InventoryDrawerHeaderLeft {...props} />,
 };
 
 const usersStackScreenOptions = {
@@ -182,6 +217,30 @@ export function AdminPlansStackNav() {
   );
 }
 
+export function AdminNotificationsStackNav() {
+  return (
+    <NotificationsStack.Navigator screenOptions={stackScreenOptions}>
+      <NotificationsStack.Screen
+        name="NotificationList"
+        component={NotificationsScreen}
+        options={{ title: 'Notifications' }}
+      />
+      <NotificationsStack.Screen
+        name="CreateNotification"
+        component={CreateNotificationScreen}
+        options={({ route }) => ({
+          title: route.params.mode === 'edit' ? 'Edit Draft' : 'Create Notification',
+        })}
+      />
+      <NotificationsStack.Screen
+        name="NotificationDetail"
+        component={NotificationDetailScreen}
+        options={{ title: 'Notification Detail' }}
+      />
+    </NotificationsStack.Navigator>
+  );
+}
+
 export function AdminPaymentsStackNav() {
   return (
     <PaymentsStack.Navigator screenOptions={stackScreenOptions}>
@@ -202,12 +261,19 @@ export function AdminInvoicesStackNav() {
 
 export function AdminInventoryStackNav() {
   return (
-    <InventoryStack.Navigator screenOptions={stackScreenOptions}>
-      <InventoryStack.Screen name="InventoryList" component={InventoryScreen} options={{ title: 'Inventory' }} />
-      <InventoryStack.Screen name="AssignmentRequests" component={AssignmentRequestsScreen} options={{ title: 'Assignment requests' }} />
-      <InventoryStack.Screen name="InventoryHistory" component={InventoryHistoryScreen} options={{ title: 'Inventory history' }} />
+    <InventoryStack.Navigator
+      screenOptions={inventoryStackScreenOptions}
+      initialRouteName="InventoryList"
+    >
+      <InventoryStack.Screen name="InventoryList" component={InventoryListScreen} options={{ title: 'Inventory' }} />
+      <InventoryStack.Screen name="AssignmentRequests" component={AssignmentRequestsScreen} options={{ title: 'Assignment Requests' }} />
+      <InventoryStack.Screen name="InventoryHistory" component={InventoryHistoryScreen} options={{ title: 'Inventory History' }} />
       <InventoryStack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Categories' }} />
-      <InventoryStack.Screen name="BulkOperations" component={BulkOperationsScreen} options={{ title: 'Bulk operations' }} />
+      <InventoryStack.Screen name="BulkOperations" component={BulkOperationsScreen} options={{ title: 'Bulk Operations' }} />
+      <InventoryStack.Screen name="ItemDetail" component={ItemDetailScreen} options={{ title: 'Item Details' }} />
+      <InventoryStack.Screen name="QuickAction" component={QuickActionScreen} options={{ title: 'Quick Action' }} />
+      <InventoryStack.Screen name="AddItem" component={AddItemScreen} options={{ title: 'Add Inventory Item' }} />
+      <InventoryStack.Screen name="EditItem" component={EditItemScreen} options={{ title: 'Edit Inventory Item' }} />
     </InventoryStack.Navigator>
   );
 }

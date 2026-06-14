@@ -173,6 +173,56 @@ serve(async (req) => {
 
       if (subError) throw subError;
 
+      const { data: planRow } = await adminClient
+        .from('plans')
+        .select('name, display_name, speed_mbps')
+        .eq('id', planId)
+        .maybeSingle();
+      const planName = String(planRow?.display_name || planRow?.name || 'your plan');
+      const speedMbps = planRow?.speed_mbps ? String(planRow.speed_mbps) : '';
+
+      await adminClient.from('broadcast_notifications').insert({
+        title: 'Welcome to Prime Fibernet!',
+        message: `Hi ${fullName}, your ${planName} connection is now active${speedMbps ? `! Enjoy ${speedMbps} Mbps internet` : '!'}`,
+        priority: 'Normal',
+        event_type: 'welcomeMessage',
+        status: 'sent',
+        audience_type: 'specific_users',
+        audience_user_ids: [authUid],
+        audience_user_names: [fullName],
+        audience_estimated_count: 1,
+        total_targeted: 1,
+        is_draft: false,
+        is_auto_generated: true,
+        sent_at: new Date().toISOString(),
+        created_by_id: adminAuthUser?.id ?? 'system',
+        created_by_name: adminAuthUser?.email ?? 'System',
+        tags: ['auto', 'welcome'],
+        timezone: 'Asia/Kolkata',
+      });
+
+      const { data: tokenRow } = await adminClient
+        .from('user_fcm_tokens')
+        .select('token')
+        .eq('user_id', authUid)
+        .eq('is_active', true)
+        .limit(1)
+        .maybeSingle();
+
+      if (tokenRow?.token) {
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: tokenRow.token,
+            title: 'Welcome to Prime Fibernet!',
+            body: `Hi ${fullName}, your ${planName} connection is now active!`,
+            priority: 'default',
+            sound: 'default',
+          }),
+        });
+      }
+
       await adminClient.from('audit_logs').insert({
         actor_id: adminAuthUser?.id ?? null,
         action: 'customer_created',

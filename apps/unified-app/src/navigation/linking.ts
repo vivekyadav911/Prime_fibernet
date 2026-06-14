@@ -100,7 +100,13 @@ export const linking: LinkingOptions<RootStackParamList> = {
               Plans: 'plans',
               Requests: 'requests',
               Analytics: 'analytics',
-              Notifications: 'notifications',
+              Notifications: {
+                screens: {
+                  NotificationList: 'notifications',
+                  CreateNotification: 'notifications/create',
+                  NotificationDetail: 'notifications/:notificationId',
+                },
+              },
               Settings: 'settings',
             },
           },

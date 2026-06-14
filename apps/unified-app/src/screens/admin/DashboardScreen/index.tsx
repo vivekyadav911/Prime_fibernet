@@ -16,6 +16,7 @@ import {
   type QuickAccessItem,
 } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
+import { useNotificationsDashboardStats } from '@/hooks/useNotificationHub';
 import { usePlansDashboardStats } from '@/hooks/usePlans';
 import { useTickets } from '@/hooks/useTickets';
 import {
@@ -31,6 +32,7 @@ import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { formatINR } from '@/utils/planUtils';
+import { formatDeliveryRate, formatRelativeTime } from '@/utils/notificationUtils';
 import { queryErrorMessage } from '@/utils/queryError';
 
 const QUICK_ACCESS: QuickAccessItem[] = [
@@ -75,6 +77,7 @@ export function DashboardScreen() {
   const { data: allRequests } = useGetAllRequestsQuery();
   const { openCount, breachedCount, unassignedCount: unassignedTickets, allTickets } = useTickets();
   const { stats: planStats } = usePlansDashboardStats();
+  const { stats: notificationStats } = useNotificationsDashboardStats();
   const [sendBulk] = useSendBulkRechargeNotificationMutation();
 
   const ticketSummary = useMemo(() => {
@@ -222,6 +225,51 @@ export function DashboardScreen() {
         </SectionCard>
 
         <SectionCard
+          title="Notifications Overview"
+          actionLabel={notificationStats && notificationStats.totalDrafts > 0 ? 'Finish drafts' : undefined}
+          onAction={
+            notificationStats && notificationStats.totalDrafts > 0
+              ? () =>
+                  navigation.navigate('Notifications', {
+                    screen: 'NotificationList',
+                    params: { initialTab: 'drafts' },
+                  })
+              : undefined
+          }
+        >
+          <View style={styles.requestsSummaryRow}>
+            <View style={styles.requestsStat}>
+              <Text style={styles.requestsStatValue}>{notificationStats?.sentThisMonth ?? 0}</Text>
+              <Text style={styles.requestsStatLabel}>Sent this month</Text>
+            </View>
+            <View style={styles.requestsStat}>
+              <Text style={styles.requestsStatValue}>{notificationStats?.totalDrafts ?? 0}</Text>
+              <Text style={styles.requestsStatLabel}>Drafts</Text>
+            </View>
+            <View style={styles.requestsStat}>
+              <Text style={[styles.requestsStatValue, styles.ticketResolved]}>
+                {notificationStats ? formatDeliveryRate(notificationStats.avgDeliveryRate) : '—'}
+              </Text>
+              <Text style={styles.requestsStatLabel}>Avg delivery</Text>
+            </View>
+          </View>
+          {notificationStats?.lastSent ? (
+            <Text style={styles.notificationLastSent}>
+              Last sent: "{notificationStats.lastSent.title}"{' '}
+              {notificationStats.lastSent.schedule.sentAt
+                ? formatRelativeTime(notificationStats.lastSent.schedule.sentAt)
+                : ''}
+            </Text>
+          ) : null}
+          <Pressable
+            onPress={() => navigation.navigate('Notifications', { screen: 'NotificationList' })}
+            style={styles.viewAllLink}
+          >
+            <Text style={styles.viewAllText}>Open Notifications</Text>
+          </Pressable>
+        </SectionCard>
+
+        <SectionCard
           title="Upcoming Recharges"
           actionLabel="Send Notification"
           onAction={() => void handleBulkNotify()}
@@ -292,6 +340,7 @@ const styles = StyleSheet.create({
   ticketResolved: { color: adminColors.badgeActive },
   ticketBreached: { fontSize: 13, fontWeight: '600', color: adminColors.badgeBlocked, marginBottom: spacing.xxs },
   ticketUnassigned: { fontSize: 13, color: adminColors.badgePending, marginBottom: spacing.sm },
+  notificationLastSent: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm },
   viewAllLink: { alignSelf: 'flex-start' },
   viewAllText: { fontSize: 14, fontWeight: '600', color: adminColors.primary },
   sortBtn: { alignSelf: 'flex-end', marginVertical: spacing.xs },

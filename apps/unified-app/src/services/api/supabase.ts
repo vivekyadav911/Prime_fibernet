@@ -120,7 +120,17 @@ export const supabaseBaseQuery: BaseQueryFn<
   return { error: { status: 'CUSTOM_ERROR', error: 'Request failed after retries' } };
 };
 
-export async function registerFcmToken(userId: string, token: string): Promise<void> {
+export type FcmTokenMetadata = {
+  userType?: string;
+  planId?: string;
+  area?: string;
+};
+
+export async function registerFcmToken(
+  userId: string,
+  token: string,
+  metadata?: FcmTokenMetadata,
+): Promise<void> {
   const supabase = getSupabase();
   await supabase.from('user_fcm_tokens').upsert(
     {
@@ -128,6 +138,10 @@ export async function registerFcmToken(userId: string, token: string): Promise<v
       token,
       platform: 'mobile',
       updated_at: new Date().toISOString(),
+      is_active: true,
+      ...(metadata?.userType ? { user_type: metadata.userType } : {}),
+      ...(metadata?.planId ? { plan_id: metadata.planId } : {}),
+      ...(metadata?.area ? { area: metadata.area } : {}),
     },
     { onConflict: 'user_id,token' },
   );

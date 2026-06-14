@@ -19,13 +19,13 @@ import {
   AdminPayrollStackNav,
   AdminPaymentsStackNav,
   AdminPlansStackNav,
+  AdminNotificationsStackNav,
   AdminRequestsStackNav,
   AdminSettingsScreen,
   AdminSupportScreen,
   AdminTicketPortalStackNav,
   AdminUsersStackNav,
   DashboardScreen,
-  NotificationCenterScreen,
   ReportsScreen,
   RoleManagementScreen,
 } from './adminStackNavigators';
@@ -60,7 +60,7 @@ function AdminDrawerNav() {
       <Drawer.Screen name="Requests" component={AdminRequestsStackNav} options={{ headerShown: false, title: 'Requests' }} />
       <Drawer.Screen name="TicketPortal" component={AdminTicketPortalStackNav} options={{ headerShown: false, title: 'Ticket Portal' }} />
       <Drawer.Screen name="Plans" component={AdminPlansStackNav} options={{ headerShown: false, title: 'Plans' }} />
-      <Drawer.Screen name="Notifications" component={NotificationCenterScreen} options={{ title: 'Notifications' }} />
+      <Drawer.Screen name="Notifications" component={AdminNotificationsStackNav} options={{ headerShown: false, title: 'Notifications' }} />
       <Drawer.Screen name="Payments" component={AdminPaymentsStackNav} options={{ headerShown: false, title: 'Payments' }} />
       <Drawer.Screen name="Invoices" component={AdminInvoicesStackNav} options={{ headerShown: false, title: 'Invoices' }} />
       <Drawer.Screen name="Inventory" component={AdminInventoryStackNav} options={{ headerShown: false, title: 'Inventory' }} />
