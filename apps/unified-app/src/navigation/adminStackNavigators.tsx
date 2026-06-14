@@ -31,8 +31,8 @@ import { AddOfficerScreen } from '@/screens/admin/officers/AddOfficerScreen';
 import { EditOfficerScreen } from '@/screens/admin/officers/EditOfficerScreen';
 import { OfficerDetailScreen } from '@/screens/admin/officers/OfficerDetailScreen';
 import { OfficerListScreen } from '@/screens/admin/officers/OfficerListScreen';
-import { PlanFormScreen } from '@/screens/admin/plans/PlanFormScreen';
-import { PlanListScreen } from '@/screens/admin/plans/PlanListScreen';
+import { PlanFormScreenV2 } from '@/screens/admin/plans/PlanFormScreenV2';
+import { PlansScreen } from '@/screens/admin/plans/PlansScreen';
 import { RequestsScreen } from '@/screens/admin/requests/RequestsScreen';
 import { TicketDetailScreen } from '@/screens/admin/ticketPortal/TicketDetailScreen';
 import { TicketListScreen } from '@/screens/admin/ticketPortal/TicketListScreen';
@@ -176,8 +176,8 @@ export function AdminTicketPortalStackNav() {
 export function AdminPlansStackNav() {
   return (
     <PlansStack.Navigator screenOptions={stackScreenOptions}>
-      <PlansStack.Screen name="PlanList" component={PlanListScreen} options={{ title: 'Plans' }} />
-      <PlansStack.Screen name="PlanForm" component={PlanFormScreen} options={{ title: 'Plan form' }} />
+      <PlansStack.Screen name="PlanList" component={PlansScreen} options={{ title: 'Plans' }} />
+      <PlansStack.Screen name="PlanForm" component={PlanFormScreenV2} options={{ title: 'Plan form' }} />
     </PlansStack.Navigator>
   );
 }

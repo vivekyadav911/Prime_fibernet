@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +23,9 @@ import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { ActivityEvent, Officer, ServiceRequest } from '@/types/requests';
 import type { AdminDrawerParamList } from '@/types/navigation';
+import { fetchPlanById } from '@/services/planService';
+import type { Plan } from '@/types/plans';
+import { formatINR, formatValidity } from '@/utils/planUtils';
 import { exportSingleRequestPdf } from '@/utils/exportRequestsPdf';
 import { truncateRequestId } from '@/utils/requestViewMappers';
 
@@ -76,6 +79,17 @@ export function RequestDetailModal({
   const [assigning, setAssigning] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [addingNote, setAddingNote] = useState(false);
+  const [planDetails, setPlanDetails] = useState<Plan | null>(null);
+
+  useEffect(() => {
+    if (!visible || !request?.planId) {
+      setPlanDetails(null);
+      return;
+    }
+    void fetchPlanById(request.planId)
+      .then(setPlanDetails)
+      .catch(() => setPlanDetails(null));
+  }, [visible, request?.planId]);
 
   const handleAddNote = useCallback(async () => {
     if (!request || !note.trim()) return;
@@ -155,6 +169,12 @@ export function RequestDetailModal({
             <View style={styles.planCard}>
               <Text style={styles.planName}>{request.planName}</Text>
               {request.planId ? <Text style={styles.planId}>{request.planId}</Text> : null}
+              {planDetails ? (
+                <Text style={styles.planMeta}>
+                  {planDetails.speedMbps} Mbps · {formatINR(planDetails.price)} ·{' '}
+                  {formatValidity(planDetails.validityDays)} · {planDetails.dataLimit}
+                </Text>
+              ) : null}
               <View
                 style={[
                   styles.planBadge,
@@ -340,6 +360,7 @@ const styles = StyleSheet.create({
   },
   planName: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
   planId: { fontSize: 11, color: colors.textSecondary },
+  planMeta: { fontSize: 13, color: colors.textPrimary, marginTop: spacing.xxs },
   planBadge: {
     alignSelf: 'flex-start',
     borderRadius: radius.full,

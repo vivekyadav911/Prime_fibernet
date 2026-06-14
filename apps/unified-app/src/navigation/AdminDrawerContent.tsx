@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { signOut } from '@/hooks/useAuth';
 import { useUnassignedRequestCount } from '@/hooks/useAdminRequests';
+import { usePlansSidebarBadge } from '@/hooks/usePlans';
 import { useTicketPortalBadge } from '@/hooks/useTickets';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { adminColors, adminDrawerWidth } from '@/theme/admin';
@@ -51,7 +52,7 @@ const SECTIONS: DrawerSection[] = [
     items: [
       { route: 'Requests', label: 'Requests', icon: '📋', showBadge: true },
       { route: 'TicketPortal', label: 'Ticket Portal', icon: '🎫', showBadge: true },
-      { route: 'Plans', label: 'Plans', icon: '📶' },
+      { route: 'Plans', label: 'Plans', icon: '📶', showBadge: true },
       { route: 'Notifications', label: 'Notifications', icon: '🔔' },
     ],
   },
@@ -86,6 +87,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
   const user = useAppSelector((s) => s.auth.user);
   const unassignedCount = useUnassignedRequestCount();
   const ticketBadge = useTicketPortalBadge();
+  const plansBadge = usePlansSidebarBadge();
   const { state, navigation } = props;
   const activeRoute = state.routes[state.index]?.name;
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
@@ -163,6 +165,9 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
                           ticketBadge.isBreached ? styles.navBadgeDanger : styles.navBadgeWarning,
                         ]}
                       />
+                    ) : null}
+                    {item.route === 'Plans' && item.showBadge && plansBadge.showBadge ? (
+                      <View style={styles.navBadge} />
                     ) : null}
                   </View>
                   <Text style={[styles.itemLabel, isActive && styles.itemLabelActive]}>{item.label}</Text>

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -24,6 +24,7 @@ import {
 } from '@/components/admin';
 import { ErrorState, KeyboardDismissView, SkeletonLoader } from '@/components/common';
 import { useGetAdminUsersQuery } from '@/store/api/endpoints';
+import { fetchPlanById } from '@/services/planService';
 import type { AdminUserListItem } from '@/types/api/admin';
 import type { AdminUsersStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
@@ -209,8 +210,9 @@ function UsersTable({
   );
 }
 
-export function UserListScreen({ navigation }: Props) {
+export function UserListScreen({ navigation, route }: Props) {
   const canCreateUser = useAdminPermission('users.create');
+  const filterPlanId = route.params?.planId;
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
   const [search, setSearch] = useState('');
@@ -219,6 +221,17 @@ export function UserListScreen({ navigation }: Props) {
   const [blockFilter, setBlockFilter] = useState<BlockFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [page, setPage] = useState(1);
+  const [filterPlanName, setFilterPlanName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!filterPlanId) {
+      setFilterPlanName(null);
+      return;
+    }
+    void fetchPlanById(filterPlanId)
+      .then((plan) => setFilterPlanName(plan.displayName || plan.name))
+      .catch(() => setFilterPlanName(null));
+  }, [filterPlanId]);
 
   const { data, isLoading, isFetching, isError, error, refetch } = useGetAdminUsersQuery({
     page,
@@ -229,7 +242,13 @@ export function UserListScreen({ navigation }: Props) {
     blockFilter,
   });
 
-  const users = data?.items ?? [];
+  const users = useMemo(() => {
+    const items = data?.items ?? [];
+    if (!filterPlanName) return items;
+    return items.filter(
+      (u) => u.planName.toLowerCase() === filterPlanName.toLowerCase(),
+    );
+  }, [data?.items, filterPlanName]);
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const cities = data?.cities ?? [];
@@ -367,6 +386,17 @@ export function UserListScreen({ navigation }: Props) {
               </Text>
             </View>
 
+            {filterPlanName ? (
+              <View style={styles.planFilterBanner}>
+                <Text style={styles.planFilterText}>
+                  Filtered by plan: {filterPlanName}
+                </Text>
+                <Pressable onPress={() => navigation.setParams({ planId: undefined })}>
+                  <Text style={styles.planFilterClear}>Clear</Text>
+                </Pressable>
+              </View>
+            ) : null}
+
             <View style={styles.filtersRow}>
               <View style={styles.filtersLeft}>
                 <FilterDropdown label="City" value={city} options={cityOptions} onSelect={handleCity} />
@@ -485,6 +515,17 @@ const styles = StyleSheet.create({
   statsText: { fontSize: 14, color: colors.textPrimary },
   statsBold: { fontWeight: '700' },
   statsMuted: { fontSize: 13, color: colors.textSecondary },
+  planFilterBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: adminColors.primaryTint,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  planFilterText: { fontSize: 13, color: adminColors.primary, fontWeight: '600' },
+  planFilterClear: { fontSize: 13, color: adminColors.primary, fontWeight: '700' },
   filtersRow: {
     flexDirection: 'row',
     alignItems: 'center',

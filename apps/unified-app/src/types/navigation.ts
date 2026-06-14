@@ -136,7 +136,7 @@ export type OfficerStackParamList = {
 
 /** Nested admin stack param lists */
 export type AdminUsersStackParamList = {
-  UserList: undefined;
+  UserList: { planId?: string } | undefined;
   UserDetail: { userId: string };
   UserEdit: { userId: string };
   AddUser: undefined;
@@ -182,7 +182,7 @@ export type AdminTicketsStackParamList = {
 
 export type AdminPlansStackParamList = {
   PlanList: undefined;
-  PlanForm: { planId?: string } | undefined;
+  PlanForm: { mode: 'create' | 'edit'; planId?: string } | undefined;
 };
 
 export type AdminPaymentsStackParamList = {

@@ -16,6 +16,7 @@ import {
   type QuickAccessItem,
 } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
+import { usePlansDashboardStats } from '@/hooks/usePlans';
 import { useTickets } from '@/hooks/useTickets';
 import {
   useGetAllRequestsQuery,
@@ -29,6 +30,7 @@ import type { RechargeFilter, RechargeSort } from '@/services/api/adminDashboard
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { formatINR } from '@/utils/planUtils';
 import { queryErrorMessage } from '@/utils/queryError';
 
 const QUICK_ACCESS: QuickAccessItem[] = [
@@ -72,6 +74,7 @@ export function DashboardScreen() {
   const { data: activities } = useGetRecentActivitiesQuery({ page: 1, limit: 20 });
   const { data: allRequests } = useGetAllRequestsQuery();
   const { openCount, breachedCount, unassignedCount: unassignedTickets, allTickets } = useTickets();
+  const { stats: planStats } = usePlansDashboardStats();
   const [sendBulk] = useSendBulkRechargeNotificationMutation();
 
   const ticketSummary = useMemo(() => {
@@ -162,6 +165,28 @@ export function DashboardScreen() {
           </View>
           <Pressable onPress={() => navigation.navigate('Requests')} style={styles.viewAllLink}>
             <Text style={styles.viewAllText}>View All</Text>
+          </Pressable>
+        </SectionCard>
+
+        <SectionCard title="Plans Overview">
+          <View style={styles.requestsSummaryRow}>
+            <View style={styles.requestsStat}>
+              <Text style={styles.requestsStatValue}>{planStats.totalPlans}</Text>
+              <Text style={styles.requestsStatLabel}>Total plans</Text>
+            </View>
+            <View style={styles.requestsStat}>
+              <Text style={[styles.requestsStatValue, styles.ticketResolved]}>{planStats.activePlansCount}</Text>
+              <Text style={styles.requestsStatLabel}>Active</Text>
+            </View>
+            <View style={styles.requestsStat}>
+              <Text style={styles.requestsStatValue}>
+                {formatINR(planStats.totalPotentialMonthlyRevenue)}
+              </Text>
+              <Text style={styles.requestsStatLabel}>Potential revenue</Text>
+            </View>
+          </View>
+          <Pressable onPress={() => navigation.navigate('Plans')} style={styles.viewAllLink}>
+            <Text style={styles.viewAllText}>View Plans</Text>
           </Pressable>
         </SectionCard>
 

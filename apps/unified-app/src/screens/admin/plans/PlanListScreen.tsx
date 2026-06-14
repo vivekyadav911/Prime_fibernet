@@ -34,7 +34,7 @@ export function PlanListScreen({ navigation }: Props) {
         <Text style={styles.meta}>{item.speedMbps} Mbps · ₹{item.price} · {item.validityDays}d</Text>
         <StatusBadge status={item.isActive ? 'active' : 'blocked'} />
         <View style={styles.actions}>
-          <Button label="Edit" variant="ghost" onPress={() => navigation.navigate('PlanForm', { planId: item.id })} />
+          <Button label="Edit" variant="ghost" onPress={() => navigation.navigate('PlanForm', { mode: 'edit', planId: item.id })} />
           <Button label={item.isActive ? 'Deactivate' : 'Activate'} variant="secondary" onPress={() => toggleActive(item)} />
           <Button label="Delete" variant="ghost" onPress={() => deletePlan(item.id)} />
         </View>
@@ -50,7 +50,7 @@ export function PlanListScreen({ navigation }: Props) {
     <RoleGuard requiredPermission="plans.view">
       <Screen padded={false}>
         <View style={styles.header}>
-          <Button label="Add New Plan" onPress={() => navigation.navigate('PlanForm', {})} />
+          <Button label="Add New Plan" onPress={() => navigation.navigate('PlanForm', { mode: 'create' })} />
         </View>
         {!data?.length ? <AdminEmptyState title="No plans" icon="📶" /> : (
           <FlatList data={data} keyExtractor={(p) => p.id} renderItem={renderItem} />

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   Alert,
@@ -23,7 +23,9 @@ import {
 import { KeyboardDismissView } from '@/components/common';
 import { useKeyboardBottomInset } from '@/hooks/useKeyboardBottomInset';
 import { AdminCreateUserSchema, type AdminCreateUserFormData } from '@/schemas/adminCreateUser';
-import { useCreateAdminUserMutation, useGetPlansQuery } from '@/store/api/endpoints';
+import { useCreateAdminUserMutation } from '@/store/api/endpoints';
+import { fetchPlans, updateSubscriberCount } from '@/services/planService';
+import type { Plan } from '@/types/plans';
 import type { AdminUsersStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -51,10 +53,16 @@ function getMinimumExpiryDate(): Date {
 export function AddUserScreen({ navigation }: Props) {
   const keyboardInset = useKeyboardBottomInset(spacing.lg);
   const [createUser, { isLoading: saving }] = useCreateAdminUserMutation();
-  const { data: plans = [] } = useGetPlansQuery();
+  const [plans, setPlans] = useState<Plan[]>([]);
+
+  useEffect(() => {
+    void fetchPlans({ status: 'active' })
+      .then(setPlans)
+      .catch(() => setPlans([]));
+  }, []);
 
   const planOptions = useMemo(
-    () => plans.map((p) => ({ value: p.id, label: p.name })),
+    () => plans.map((p) => ({ value: p.id, label: p.displayName || p.name })),
     [plans],
   );
   const minimumExpiryDate = useMemo(() => getMinimumExpiryDate(), []);
@@ -112,6 +120,9 @@ export function AddUserScreen({ navigation }: Props) {
         state: data.state,
         expiryDate: data.expiryDate,
       }).unwrap();
+      if (data.planId) {
+        await updateSubscriberCount(data.planId, 1);
+      }
       Alert.alert('User created', 'The new customer account has been created successfully.');
       navigation.goBack();
     } catch (e) {

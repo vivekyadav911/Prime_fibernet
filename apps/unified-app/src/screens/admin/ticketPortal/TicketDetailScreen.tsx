@@ -38,11 +38,13 @@ import {
   fetchTicketById,
 } from '@/services/ticketsService';
 import { fetchRequestById as fetchLinkedRequest } from '@/services/requestsService';
+import { fetchPlans } from '@/services/planService';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import type { Plan } from '@/types/plans';
 import type { AdminTicketsStackParamList } from '@/types/navigation';
 import type { Officer, ServiceRequest } from '@/types/requests';
 import type { Ticket, TicketStatus } from '@/types/tickets';
@@ -91,6 +93,21 @@ export function TicketDetailScreen({ route, navigation }: Props) {
   const [downloading, setDownloading] = useState(false);
   const [resolutionSummary, setResolutionSummary] = useState('');
   const [pendingStatus, setPendingStatus] = useState<TicketStatus | null>(null);
+  const [resolutionPlanId, setResolutionPlanId] = useState('');
+  const [activePlans, setActivePlans] = useState<Plan[]>([]);
+
+  const isPlanChangeTicket =
+    ticket?.complaintType === 'Plan Upgrade' || ticket?.complaintType === 'Plan Downgrade';
+
+  useEffect(() => {
+    if (!isPlanChangeTicket) return;
+    void fetchPlans({ status: 'active' })
+      .then((plans) => {
+        setActivePlans(plans);
+        if (plans[0] && !resolutionPlanId) setResolutionPlanId(plans[0].id);
+      })
+      .catch(() => setActivePlans([]));
+  }, [isPlanChangeTicket, resolutionPlanId]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -166,15 +183,21 @@ export function TicketDetailScreen({ route, navigation }: Props) {
       }
 
       try {
-        await updateTicketStatus(ticket.id, newStatus, summary?.trim(), admin?.name ?? 'Admin');
+        const selectedPlan = activePlans.find((p) => p.id === resolutionPlanId);
+        const summaryWithPlan =
+          selectedPlan && isPlanChangeTicket
+            ? `${summary?.trim() ?? ''}\nTarget plan: ${selectedPlan.displayName} (${selectedPlan.id})`.trim()
+            : summary?.trim();
+        await updateTicketStatus(ticket.id, newStatus, summaryWithPlan, admin?.name ?? 'Admin');
         setPendingStatus(null);
         setResolutionSummary('');
+        setResolutionPlanId('');
         await load();
       } catch (e) {
         Alert.alert('Error', e instanceof Error ? e.message : 'Status update failed');
       }
     },
-    [admin?.name, load, ticket],
+    [activePlans, admin?.name, isPlanChangeTicket, load, resolutionPlanId, ticket],
   );
 
   const handlePostNote = useCallback(async () => {
@@ -280,6 +303,17 @@ export function TicketDetailScreen({ route, navigation }: Props) {
                 />
                 {pendingStatus ? (
                   <View style={styles.resolutionBox}>
+                    {isPlanChangeTicket && activePlans.length > 0 ? (
+                      <SelectField
+                        label="Target Plan"
+                        value={resolutionPlanId || activePlans[0]?.id || ''}
+                        options={activePlans.map((p) => ({
+                          value: p.id,
+                          label: `${p.displayName} · ${p.speedMbps} Mbps · ₹${p.price}`,
+                        }))}
+                        onSelect={setResolutionPlanId}
+                      />
+                    ) : null}
                     <Text style={styles.infoLabel}>RESOLUTION SUMMARY (REQUIRED)</Text>
                     <TextInput
                       style={styles.resolutionInput}
