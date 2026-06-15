@@ -76,6 +76,17 @@ export interface PaymentRecord {
   gateway?: PaymentGatewayRecord;
 }
 
+export type OfficerAssignedCustomer = {
+  id: string;
+  name: string;
+  customer_id: string;
+  phone: string | null;
+  outstanding_amount: number;
+  next_due_date: string | null;
+  payment_status: string | null;
+  assignmentType: 'assigned' | 'open_pool';
+};
+
 export interface PaymentGatewayRecord {
   id: string;
   name: string;

@@ -35,7 +35,7 @@ export function useAttendanceHistory(filters: { month: number; year: number; pag
 export function useCheckIn() {
   const [mutate, state] = useCheckInMutation();
   const checkIn = useCallback(
-    async (options?: { notes?: string; photoProof?: string }) =>
+    async (options?: { notes?: string; photoProof?: string; uiSaysInside?: boolean }) =>
       attendanceService.checkIn(options),
     [],
   );
@@ -45,7 +45,7 @@ export function useCheckIn() {
 export function useCheckOut() {
   const [mutate, state] = useCheckOutMutation();
   const checkOut = useCallback(
-    async (options?: { notes?: string; photoProof?: string }) =>
+    async (options?: { notes?: string; photoProof?: string; uiSaysInside?: boolean }) =>
       attendanceService.checkOut(options),
     [],
   );

@@ -1,7 +1,9 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import {
+  AssignedCustomersScreen,
   CashCollectionScreen,
+  CustomerPaymentHistoryScreen,
   OfficerCollectionHistoryScreen,
   OfficerCollectionScreen,
 } from '@/screens/officer/payments';
@@ -23,9 +25,13 @@ const CollectionsStack = createNativeStackNavigator<OfficerCollectionsStackParam
 const ProfileStack = createNativeStackNavigator<OfficerProfileStackParamList>();
 const LeaveStack = createNativeStackNavigator<OfficerLeaveStackParamList>();
 
+const OFFICER_HEADER_PURPLE = '#5B4FE9';
+
 const stackScreenOptions = {
-  headerStyle: { backgroundColor: colors.primaryNavy },
+  headerStyle: { backgroundColor: OFFICER_HEADER_PURPLE },
   headerTintColor: colors.white,
+  headerTitleStyle: { fontSize: 20, fontWeight: '600' as const },
+  headerShadowVisible: false,
 };
 
 export function OfficerRequestsStackNav() {
@@ -47,6 +53,16 @@ export function OfficerCollectionsStackNav() {
         name="CollectionsList"
         component={OfficerCollectionScreen}
         options={{ title: 'Collections' }}
+      />
+      <CollectionsStack.Screen
+        name="AssignedCustomers"
+        component={AssignedCustomersScreen}
+        options={{ title: 'Collect Payment' }}
+      />
+      <CollectionsStack.Screen
+        name="CustomerPaymentHistory"
+        component={CustomerPaymentHistoryScreen}
+        options={{ title: 'Payment history' }}
       />
       <CollectionsStack.Screen
         name="CashCollection"

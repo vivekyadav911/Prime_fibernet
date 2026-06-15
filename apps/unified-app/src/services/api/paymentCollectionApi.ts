@@ -5,6 +5,7 @@ import type {
   ConfirmPaymentPayload,
   CreateOrderPayload,
   CustomerBill,
+  OfficerAssignedCustomer,
   PaymentAnalyticsRow,
   PaymentFilters,
   PaymentGatewayRecord,
@@ -111,6 +112,31 @@ async function resolveCustomerUserId(client: SupabaseClient, authUserId?: string
   }
 
   throw rpcError ?? new Error('Customer profile not found');
+}
+
+function mapAssignedCustomerRow(row: Record<string, unknown>): OfficerAssignedCustomer {
+  const assignmentRaw = row.assignment_type != null ? String(row.assignment_type) : 'assigned';
+  return {
+    id: String(row.id),
+    name: String(row.name ?? ''),
+    customer_id: String(row.customer_id ?? ''),
+    phone: row.phone != null ? String(row.phone) : null,
+    outstanding_amount: Number(row.outstanding_amount ?? 0),
+    next_due_date: row.next_due_date != null ? String(row.next_due_date) : null,
+    payment_status: row.payment_status != null ? String(row.payment_status) : null,
+    assignmentType: assignmentRaw === 'open_pool' ? 'open_pool' : 'assigned',
+  };
+}
+
+async function fetchOfficerCollectibleCustomers(
+  client: SupabaseClient,
+  searchQuery = '',
+): Promise<OfficerAssignedCustomer[]> {
+  const { data, error } = await client.rpc('get_officer_collectible_customers', {
+    p_query: searchQuery.trim(),
+  });
+  if (error) throw error;
+  return (data ?? []).map((row: Record<string, unknown>) => mapAssignedCustomerRow(row));
 }
 
 export const paymentCollectionApi = baseApi.injectEndpoints({
@@ -383,7 +409,14 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             })
             .select()
             .single();
-          if (error) throw error;
+          if (error) {
+            if (error.code === '42501' || error.message.includes('policy')) {
+              throw new Error(
+                'You cannot collect from this customer. They may be assigned to another officer.',
+              );
+            }
+            throw error;
+          }
 
           if (body.photoUri) {
             const blob = await fetch(body.photoUri).then((r) => r.blob());
@@ -506,78 +539,65 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
     }),
 
     getOfficerCollections: builder.query<
-      { pending: PaymentRecord[]; todayTotal: number; confirmedToday: number },
-      string
+      {
+        assigned: OfficerAssignedCustomer[];
+        openPool: OfficerAssignedCustomer[];
+        pending: OfficerAssignedCustomer[];
+        todayTotal: number;
+        confirmedToday: number;
+      },
+      void
     >({
-      query: (officerId) => ({
+      query: () => ({
         handler: async (client) => {
           const today = new Date().toISOString().slice(0, 10);
-          const { data: assigned } = await client
-            .from('users')
-            .select('id, name, customer_id, outstanding_amount, next_due_date, payment_status')
-            .eq('assigned_officer_id', officerId)
-            .in('payment_status', ['pending', 'overdue']);
+          const collectible = await fetchOfficerCollectibleCustomers(client);
+          const assigned = collectible.filter((c) => c.assignmentType === 'assigned');
+          const openPool = collectible.filter((c) => c.assignmentType === 'open_pool');
 
+          const { data: officerId } = await client.rpc('current_officer_id');
           const { data: collections } = await client
             .from('payments')
             .select('*')
-            .eq('collected_by', officerId)
+            .eq('collected_by', officerId as string)
             .gte('created_at', `${today}T00:00:00`)
             .order('created_at', { ascending: false });
 
           const rows = collections ?? [];
           const todayTotal = rows.reduce((s, p) => s + Number(p.total_amount ?? 0), 0);
           const confirmedToday = rows.filter((p) => p.status === 'confirmed').length;
+          const pending = collectible.filter((c) => c.outstanding_amount > 0);
 
-          const pending = (assigned ?? []).map((u) => ({
-            id: u.id,
-            payment_number: '',
-            customer_id: u.id,
-            customer_name: u.name,
-            customer_phone: null,
-            account_number: u.customer_id ?? '',
-            plan_name: null,
-            amount: Number(u.outstanding_amount ?? 0),
-            tax_amount: 0,
-            discount_amount: 0,
-            total_amount: Number(u.outstanding_amount ?? 0),
-            currency: 'INR',
-            method: 'cash' as const,
-            channel: 'officer_cash' as const,
-            gateway_id: null,
-            gateway_slug: null,
-            gateway_order_id: null,
-            gateway_payment_id: null,
-            gateway_signature: null,
-            gateway_raw_response: null,
-            gateway_fee: null,
-            collected_by: officerId,
-            cash_collection_notes: null,
-            cash_denominations: null,
-            receipt_number: null,
-            collection_latitude: null,
-            collection_longitude: null,
-            evidence_photo_url: null,
-            status: 'initiated' as const,
-            reviewed_by: null,
-            reviewed_at: null,
-            review_notes: null,
-            failure_reason: null,
-            billing_period_start: null,
-            billing_period_end: null,
-            due_date: u.next_due_date,
-            next_due_date: null,
-            initiated_at: new Date().toISOString(),
-            paid_at: null,
-            confirmed_at: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }));
-
-          return { pending, todayTotal, confirmedToday };
+          return { assigned, openPool, pending, todayTotal, confirmedToday };
         },
       }),
       providesTags: ['Payments'],
+    }),
+
+    getOfficerAssignedCustomers: builder.query<OfficerAssignedCustomer[], string>({
+      query: (searchQuery) => ({
+        handler: async (client) => fetchOfficerCollectibleCustomers(client, searchQuery),
+      }),
+      providesTags: ['Payments'],
+    }),
+
+    getOfficerCustomerPaymentHistory: builder.query<PaymentRecord[], string>({
+      query: (customerId) => ({
+        handler: async (client) => {
+          const { data, error } = await client.rpc('get_officer_customer_payment_history', {
+            p_customer_id: customerId,
+          });
+          if (error) throw error;
+          return (data ?? []).map((row: Record<string, unknown>) => mapPayment(row));
+        },
+      }),
+      providesTags: ['Payments'],
+    }),
+
+    searchOfficerCustomers: builder.query<OfficerAssignedCustomer[], string>({
+      query: (searchQuery) => ({
+        handler: async (client) => fetchOfficerCollectibleCustomers(client, searchQuery),
+      }),
     }),
 
     getPaymentReceipt: builder.query<{ url: string | null; receiptNumber: string }, string>({
@@ -627,6 +647,11 @@ export const {
   useGetCustomerPaymentHistoryV2Query,
   useGetActivePaymentGatewayQuery,
   useGetOfficerCollectionsQuery,
+  useGetOfficerAssignedCustomersQuery,
+  useLazyGetOfficerAssignedCustomersQuery,
+  useGetOfficerCustomerPaymentHistoryQuery,
+  useSearchOfficerCustomersQuery,
+  useLazySearchOfficerCustomersQuery,
   useGetPaymentReceiptQuery,
   useLazyGetPaymentReceiptQuery,
   useInitiateRefundV2Mutation,

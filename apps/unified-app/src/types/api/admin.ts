@@ -34,6 +34,8 @@ export type AdminUserDetail = {
   city: string | null;
   joinDate: string;
   isBlocked: boolean;
+  assignedOfficerId: string | null;
+  assignedOfficerName: string | null;
   planName: string | null;
   planSpeed: number | null;
   expiryDate: string | null;
@@ -68,6 +70,34 @@ export type AdminUsersListResponse = {
   page: number;
   limit: number;
   cities: string[];
+};
+
+export type CollectionAssignmentRow = {
+  id: string;
+  name: string;
+  customerId: string;
+  phone: string | null;
+  outstandingAmount: number;
+  nextDueDate: string | null;
+  paymentStatus: string | null;
+  assignedOfficerId: string | null;
+  assignedOfficerName: string | null;
+};
+
+export type CollectionAssignmentsParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  officerFilter?: 'all' | 'unassigned' | string;
+  paymentStatus?: 'all' | 'paid' | 'pending' | 'overdue' | 'suspended';
+  outstandingOnly?: boolean;
+};
+
+export type CollectionAssignmentsResponse = {
+  items: CollectionAssignmentRow[];
+  total: number;
+  page: number;
+  limit: number;
 };
 
 export type CreateAdminUserInput = {

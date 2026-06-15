@@ -213,12 +213,15 @@ export async function processBackgroundLocation(data: LocationTaskData): Promise
   const coords: Coordinates = {
     latitude: latest.coords.latitude,
     longitude: latest.coords.longitude,
+    accuracy: latest.coords.accuracy ?? undefined,
   };
 
   store.dispatch(setCurrentLocation(coords));
 
   const geofences = await locationService.loadAssignedGeofences();
-  const status = checkGeofenceStatus(coords, geofences);
+  const status = checkGeofenceStatus(coords, geofences, {
+    accuracyMeters: coords.accuracy,
+  });
   store.dispatch(updateGeofenceStatus(status));
 
   const nextStatus = {
@@ -293,6 +296,7 @@ class LocationService {
         const coords = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy ?? undefined,
           mocked: position.mocked ?? undefined,
         };
         store.dispatch(setCurrentLocation(coords));
@@ -378,13 +382,19 @@ class LocationService {
     return Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
   }
 
-  async loadAssignedGeofences(): Promise<Geofence[]> {
-    const cached = await AsyncStorage.getItem(GEOFENCES_CACHE_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached) as CachedGeofences;
-      if (Date.now() - parsed.fetchedAt < GEOFENCES_CACHE_TTL_MS) {
-        store.dispatch(setAssignedGeofences(parsed.geofences));
-        return parsed.geofences;
+  async clearGeofenceCache(): Promise<void> {
+    await AsyncStorage.removeItem(GEOFENCES_CACHE_KEY);
+  }
+
+  async loadAssignedGeofences(forceRefresh = false): Promise<Geofence[]> {
+    if (!forceRefresh) {
+      const cached = await AsyncStorage.getItem(GEOFENCES_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached) as CachedGeofences;
+        if (Date.now() - parsed.fetchedAt < GEOFENCES_CACHE_TTL_MS) {
+          store.dispatch(setAssignedGeofences(parsed.geofences));
+          return parsed.geofences;
+        }
       }
     }
 
@@ -397,6 +407,7 @@ class LocationService {
       store.dispatch(setAssignedGeofences(result));
       return result;
     } catch {
+      const cached = await AsyncStorage.getItem(GEOFENCES_CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached) as CachedGeofences;
         return parsed.geofences;
@@ -407,7 +418,9 @@ class LocationService {
 
   async checkGeofenceStatus(coords: Coordinates) {
     const geofences = await this.loadAssignedGeofences();
-    const status = checkGeofenceStatus(coords, geofences);
+    const status = checkGeofenceStatus(coords, geofences, {
+      accuracyMeters: coords.accuracy,
+    });
     store.dispatch(updateGeofenceStatus(status));
     return status;
   }

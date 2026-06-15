@@ -73,7 +73,18 @@ export function CashCollectionScreen({ navigation, route }: Props) {
       await recordCollection(payload).unwrap();
       Alert.alert('Recorded', 'Cash collection recorded. Pending admin confirmation.');
       navigation.goBack();
-    } catch {
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Could not record this collection. Try again.';
+      if (
+        message.includes('not assigned') ||
+        message.includes('another officer') ||
+        message.includes('policy') ||
+        message.includes('permission')
+      ) {
+        Alert.alert('Cannot collect', message);
+        return;
+      }
       await SyncManager.enqueue({
         id: `collection-${customerId}-${Date.now()}`,
         operation: 'recordCashCollection',

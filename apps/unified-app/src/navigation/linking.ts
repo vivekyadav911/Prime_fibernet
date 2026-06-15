@@ -76,7 +76,13 @@ export const linking: LinkingOptions<RootStackParamList> = {
               RequestsStack: { screens: { RequestsList: 'requests' } },
               Map: 'map',
               Attendance: 'attendance',
-              CollectionsStack: { screens: { CollectionsList: 'collections' } },
+              CollectionsStack: {
+                screens: {
+                  CollectionsList: 'collections',
+                  AssignedCustomers: 'collections/search',
+                  CustomerPaymentHistory: 'collections/history/:customerId',
+                },
+              },
               LeaveStack: { screens: { LeaveList: 'leave' } },
               ProfileStack: { screens: { ProfileHome: 'profile' } },
             },

@@ -1,3 +1,4 @@
+export { CollectionAssignmentsScreen } from './CollectionAssignmentsScreen';
 export { GatewayConfigScreen } from './GatewayConfigScreen';
 export { PaymentAnalyticsScreen } from './PaymentAnalyticsScreen';
 export { PaymentDetailScreen } from './PaymentDetailScreen';

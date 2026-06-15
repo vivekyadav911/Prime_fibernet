@@ -34,9 +34,10 @@ export function isInsideCircle(
   point: Coordinates,
   center: Coordinates,
   radiusMeters: number,
+  accuracyBufferMeters = 0,
 ): boolean {
   if (radiusMeters <= 0) return false;
-  return getDistanceMeters(point, center) <= radiusMeters;
+  return getDistanceMeters(point, center) <= radiusMeters + accuracyBufferMeters;
 }
 
 /**
@@ -68,10 +69,14 @@ export function isInsidePolygon(point: Coordinates, vertices: Coordinates[]): bo
 /**
  * Master function — works for both circle and polygon shapes.
  */
-export function isInsideGeofence(point: Coordinates, geofence: Geofence): boolean {
+export function isInsideGeofence(
+  point: Coordinates,
+  geofence: Geofence,
+  accuracyBufferMeters = 0,
+): boolean {
   const { geometry } = geofence;
   if (geometry.shape === 'circle') {
-    return isInsideCircle(point, geometry.center, geometry.radius);
+    return isInsideCircle(point, geometry.center, geometry.radius, accuracyBufferMeters);
   }
   return isInsidePolygon(point, geometry.vertices);
 }
@@ -82,13 +87,14 @@ export function isInsideGeofence(point: Coordinates, geofence: Geofence): boolea
 export function getNearestGeofence(
   point: Coordinates,
   geofences: Geofence[],
+  accuracyBufferMeters = 0,
 ): { geofence: Geofence; distance: number; isInside: boolean } | null {
   if (geofences.length === 0) return null;
 
   let best: { geofence: Geofence; distance: number; isInside: boolean } | null = null;
 
   for (const geofence of geofences) {
-    const inside = isInsideGeofence(point, geofence);
+    const inside = isInsideGeofence(point, geofence, accuracyBufferMeters);
     const distance = inside
       ? 0
       : getDistanceToGeofenceEdge(point, geofence);
@@ -165,11 +171,17 @@ export function validateGeofence(geometry: CircleGeofence | PolygonGeofence): {
 export function checkGeofenceStatus(
   point: Coordinates,
   geofences: Geofence[],
+  options?: { accuracyMeters?: number },
 ): { isInside: boolean; geofence: Geofence | null; distance: number } {
-  const nearest = getNearestGeofence(point, geofences);
+  const accuracyBufferMeters =
+    options?.accuracyMeters != null ? Math.max(options.accuracyMeters, 25) : 0;
+
+  const nearest = getNearestGeofence(point, geofences, accuracyBufferMeters);
   if (!nearest) return { isInside: false, geofence: null, distance: Infinity };
 
-  const insideMatch = geofences.find((g) => isInsideGeofence(point, g));
+  const insideMatch = geofences.find((g) =>
+    isInsideGeofence(point, g, accuracyBufferMeters),
+  );
   if (insideMatch) {
     const dist = getDistanceToGeofenceEdge(point, insideMatch);
     return { isInside: true, geofence: insideMatch, distance: dist };

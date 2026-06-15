@@ -116,6 +116,8 @@ export type OfficerRequestsStackParamList = {
 
 export type OfficerCollectionsStackParamList = {
   CollectionsList: undefined;
+  AssignedCustomers: undefined;
+  CustomerPaymentHistory: { customerId: string; customerName: string };
   CashCollection: {
     customerId: string;
     customerName: string;
@@ -146,7 +148,7 @@ export type OfficerDrawerParamList = {
   ShiftManagement: undefined;
   ShiftRequest: undefined;
   CollectPayment: { userId?: string; customerName?: string } | undefined;
-  CollectionsStack: undefined;
+  CollectionsStack: NavigatorScreenParams<OfficerCollectionsStackParamList> | undefined;
   /** @deprecated use CollectionsStack */
   OfficerCollections: undefined;
   CashCollection: {
@@ -276,6 +278,7 @@ export type AdminNotificationsStackParamList = {
 
 export type AdminPaymentsStackParamList = {
   PaymentList: undefined;
+  CollectionAssignments: undefined;
   PaymentDetail: { paymentId: string };
   PaymentReview: { paymentId: string };
   GatewayConfig: undefined;

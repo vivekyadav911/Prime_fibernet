@@ -14,11 +14,17 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
-import type { AdminDrawerParamList, AdminInventoryStackParamList } from '@/types/navigation';
+import type {
+  AdminDrawerParamList,
+  AdminInventoryStackParamList,
+  AdminPaymentsStackParamList,
+} from '@/types/navigation';
+
+type DrawerNestedScreen = keyof AdminInventoryStackParamList | keyof AdminPaymentsStackParamList;
 
 type DrawerItem = {
   route: keyof AdminDrawerParamList;
-  screen?: keyof AdminInventoryStackParamList;
+  screen?: DrawerNestedScreen;
   label: string;
   icon: string;
   showBadge?: boolean;
@@ -67,6 +73,7 @@ const SECTIONS: DrawerSection[] = [
     label: 'Finance',
     items: [
       { route: 'Payments', label: 'Payments', icon: '💳' },
+      { route: 'Payments', screen: 'CollectionAssignments', label: 'Collection assignments', icon: '📋' },
       { route: 'Invoices', label: 'Invoices', icon: '🧾' },
     ],
   },
@@ -188,7 +195,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
   );
 
   const navigate = useCallback(
-    (route: keyof AdminDrawerParamList, screen?: keyof AdminInventoryStackParamList) => {
+    (route: keyof AdminDrawerParamList, screen?: DrawerNestedScreen) => {
       if (screen) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         navigation.navigate(route as any, { screen });
@@ -217,14 +224,20 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
 
           {section.items.map((item) => {
             const inventoryState = state.routes.find((r) => r.name === 'Inventory')?.state;
+            const paymentsState = state.routes.find((r) => r.name === 'Payments')?.state;
             const nestedRoute =
-              inventoryState && 'routes' in inventoryState && inventoryState.index != null
-                ? inventoryState.routes[inventoryState.index]?.name
-                : undefined;
+              item.route === 'Payments' && paymentsState && 'routes' in paymentsState && paymentsState.index != null
+                ? paymentsState.routes[paymentsState.index]?.name
+                : item.route === 'Inventory' &&
+                    inventoryState &&
+                    'routes' in inventoryState &&
+                    inventoryState.index != null
+                  ? inventoryState.routes[inventoryState.index]?.name
+                  : undefined;
             const isActive =
               item.screen != null
                 ? activeRoute === item.route && nestedRoute === item.screen
-                : activeRoute === item.route;
+                : activeRoute === item.route && nestedRoute == null;
             const itemKey = item.screen ? `${item.route}-${item.screen}` : item.route;
             const notification = getNotification(item.route, item.showBadge);
 

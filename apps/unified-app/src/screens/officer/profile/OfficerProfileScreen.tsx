@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -25,6 +25,10 @@ export function OfficerProfileScreen() {
   const [displayName, setDisplayName] = useState(profile?.name ?? '');
   const [editingName, setEditingName] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile?.name) setDisplayName(profile.name);
+  }, [profile?.name]);
 
   const onSaveName = useCallback(async () => {
     if (!officerId || !displayName.trim()) return;

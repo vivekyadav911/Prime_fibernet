@@ -57,6 +57,9 @@ export function PaymentsListScreen() {
       <View style={styles.toolbar}>
         <Text style={styles.title}>Payments</Text>
         <View style={styles.toolbarRight}>
+          <Pressable onPress={() => navigation.navigate('CollectionAssignments')}>
+            <Text style={styles.link}>Assignments</Text>
+          </Pressable>
           <Pressable onPress={() => navigation.navigate('GatewayConfig')}>
             <Text style={styles.link}>Gateways</Text>
           </Pressable>

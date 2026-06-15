@@ -547,6 +547,8 @@ export const attendanceApi = baseApi.injectEndpoints({
             .select(ATTENDANCE_SELECT)
             .eq('officer_id', officerId)
             .eq('shift_date', today)
+            .order('check_in_time', { ascending: false })
+            .limit(1)
             .maybeSingle();
           if (error) throw error;
           return data ? mapAttendanceRow(data as never) : null;

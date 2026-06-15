@@ -39,7 +39,7 @@ export function MonthCalendar({ month, year }: MonthCalendarProps) {
     if (key === todayKey) return '●';
     const status = byDate.get(key);
     if (status === 'present' || status === 'approved') return '✓';
-    if (status === 'leave') return 'L';
+    if (status === 'on_leave') return 'L';
     if (status === 'absent') return 'A';
     return '·';
   };

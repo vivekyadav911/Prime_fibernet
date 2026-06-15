@@ -6,8 +6,7 @@ import type { ServiceRequest } from '@prime/types';
 
 import { EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
 import { SyncManager } from '@/services/offline/syncManager';
-import { useAppDispatch } from '@/store/hooks';
-import { useAppSelector } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { useGetAssignedRequestsQuery, useUpdateRequestStatusMutation } from '@/store/api/endpoints';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import type { OfficerStackParamList } from '@/types/navigation';

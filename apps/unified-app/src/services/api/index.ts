@@ -24,6 +24,7 @@ import './attendanceApi';
 import './adminRequestsBoardApi';
 import './adminSupportApi';
 import './officerTrackingApi';
+import './collectionAssignmentsApi';
 
 export * from './authApi';
 export * from './plansApi';
@@ -47,3 +48,4 @@ export * from './attendanceApi';
 export * from './adminRequestsBoardApi';
 export * from './adminSupportApi';
 export * from './officerTrackingApi';
+export * from './collectionAssignmentsApi';

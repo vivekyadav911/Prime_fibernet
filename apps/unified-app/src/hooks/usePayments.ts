@@ -41,6 +41,6 @@ export function useCustomerPayments(customerId: string) {
   return { bill, history, createOrder, orderState, summary };
 }
 
-export function useOfficerCollections(officerId: string) {
-  return useGetOfficerCollectionsQuery(officerId, { skip: !officerId });
+export function useOfficerCollections() {
+  return useGetOfficerCollectionsQuery();
 }

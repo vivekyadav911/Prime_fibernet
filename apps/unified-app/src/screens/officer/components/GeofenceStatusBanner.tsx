@@ -7,11 +7,40 @@ import { radius, spacing } from '@/theme/spacing';
 export function GeofenceStatusBanner() {
   const geo = useLiveGeofenceStatus();
 
+  if (geo.isLoading && geo.geofences.length === 0) {
+    return (
+      <View style={[styles.banner, styles.neutral]}>
+        <Text style={styles.neutralText}>Loading assigned zones…</Text>
+      </View>
+    );
+  }
+
+  if (geo.geofences.length === 0) {
+    return (
+      <View style={[styles.banner, styles.warn]}>
+        <Text style={styles.warnText}>
+          No zone assigned — contact your admin to assign a geofence.
+        </Text>
+      </View>
+    );
+  }
+
+  if (!geo.currentLocation) {
+    return (
+      <View style={[styles.banner, styles.warn]}>
+        <Text style={styles.warnText}>
+          Location unavailable — enable GPS to check in.
+        </Text>
+      </View>
+    );
+  }
+
   if (geo.isInsideGeofence) {
+    const zoneName = geo.activeGeofence?.name ?? 'office zone';
     return (
       <View style={[styles.banner, styles.ok]}>
         <Text style={styles.okText}>
-          ✅ You&apos;re within the office zone. You can check in.
+          Inside {zoneName}. You can check in.
         </Text>
       </View>
     );
@@ -22,10 +51,12 @@ export function GeofenceStatusBanner() {
       ? `${Math.round(geo.distanceFromFence)}m`
       : `${(geo.distanceFromFence / 1000).toFixed(1)}km`;
 
+  const zoneName = geo.activeGeofence?.name ?? 'office';
+
   return (
     <View style={[styles.banner, styles.warn]}>
       <Text style={styles.warnText}>
-        📍 You&apos;re {dist} from the office. Check-in requires presence within the zone.
+        Outside {zoneName} — {dist} away. Move into the zone or request approval.
       </Text>
     </View>
   );
@@ -39,6 +70,8 @@ const styles = StyleSheet.create({
   },
   ok: { backgroundColor: colors.emeraldLight },
   warn: { backgroundColor: colors.amberLight },
+  neutral: { backgroundColor: colors.surfaceWhite, borderWidth: 1, borderColor: colors.borderDefault },
   okText: { color: colors.emerald, fontWeight: '600', fontSize: 14 },
   warnText: { color: colors.amber, fontWeight: '600', fontSize: 14 },
+  neutralText: { color: colors.textSecondary, fontWeight: '600', fontSize: 14 },
 });

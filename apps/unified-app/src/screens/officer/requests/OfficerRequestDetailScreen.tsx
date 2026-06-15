@@ -5,7 +5,6 @@ import {
   FlatList,
   Image,
   Linking,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -28,6 +27,8 @@ import { SyncManager } from '@/services/offline/syncManager';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import type { OfficerStackParamList } from '@/types/navigation';
+import { NavigationButton } from '../components/NavigationButton';
+import { StatusStepper } from '../components/StatusStepper';
 import { radius, spacing } from '@/theme/spacing';
 
 type Props = NativeStackScreenProps<OfficerStackParamList, 'RequestDetail'>;
@@ -50,14 +51,6 @@ function getStatusAction(status: string): StatusAction | null {
     default:
       return null;
   }
-}
-
-function mapsDeepLink(lat: number, lng: number, address: string): string {
-  const encoded = encodeURIComponent(address);
-  if (Platform.OS === 'ios') {
-    return `maps://?daddr=${lat},${lng}&q=${encoded}`;
-  }
-  return `google.navigation:q=${lat},${lng}`;
 }
 
 export function OfficerRequestDetailScreen({ route }: Props) {
@@ -84,13 +77,6 @@ export function OfficerRequestDetailScreen({ route }: Props) {
 
   const activityCount = request?.activities?.length ?? 0;
   const statusAction = request ? getStatusAction(request.status) : null;
-
-  const onNavigate = async () => {
-    if (!request?.latitude || !request?.longitude) return;
-    const url = mapsDeepLink(request.latitude, request.longitude, request.address);
-    const canOpen = await Linking.canOpenURL(url);
-    await Linking.openURL(canOpen ? url : `https://maps.google.com/?q=${request.latitude},${request.longitude}`);
-  };
 
   const onStatusPress = async () => {
     if (!request || !statusAction || !user) return;

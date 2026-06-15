@@ -1,6 +1,6 @@
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Button } from '@prime/ui';
@@ -18,7 +18,10 @@ import {
   useAttendanceHistory,
 } from '@/hooks/attendance/useAttendance';
 import { locationService } from '@/services/LocationService';
+import { useAppDispatch } from '@/store/hooks';
+import { enqueueToast } from '@/store/slices/uiSlice';
 import type { OfficerDrawerParamList } from '@/types/navigation';
+import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -28,6 +31,7 @@ import { MonthCalendar } from './components/MonthCalendar';
 
 export function OfficerAttendanceDashboard() {
   const navigation = useNavigation<DrawerNavigationProp<OfficerDrawerParamList>>();
+  const dispatch = useAppDispatch();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [sheetMode, setSheetMode] = useState<'check_in' | 'approval'>('check_in');
   const [limitedMode, setLimitedMode] = useState(false);
@@ -45,10 +49,13 @@ export function OfficerAttendanceDashboard() {
   const [requestApproval] = useRequestApproval();
 
   useEffect(() => {
+    void locationService.clearGeofenceCache().then(() => geo.refresh());
     void locationService.startBackgroundTracking().catch(() => undefined);
     return () => {
       void locationService.stopBackgroundTracking();
     };
+    // Bust geofence cache once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isCheckedIn = Boolean(today?.checkInTime && !today?.checkOutTime);
@@ -61,7 +68,7 @@ export function OfficerAttendanceDashboard() {
 
   const presentCount = (history ?? []).filter((r) => r.status === 'present' || r.checkInTime).length;
   const absentCount = (history ?? []).filter((r) => r.status === 'absent').length;
-  const leaveCount = (history ?? []).filter((r) => r.status === 'leave').length;
+  const leaveCount = (history ?? []).filter((r) => r.status === 'on_leave').length;
 
   const openCheckInSheet = useCallback(() => {
     setSheetMode('check_in');
@@ -78,10 +85,49 @@ export function OfficerAttendanceDashboard() {
       setActionLoading(true);
       try {
         if (sheetMode === 'check_in') {
-          const result = await checkIn({ notes: payload.notes });
+          const result = await checkIn({
+            notes: payload.notes,
+            uiSaysInside: geo.isInsideGeofence,
+          });
           if (result.action === 'needs_approval') {
+            Alert.alert(
+              'Outside zone',
+              `You appear to be ${Math.round(result.distance)}m from ${result.geofenceName ?? 'the assigned zone'}. Request approval or move closer and try again.`,
+            );
             setSheetMode('approval');
             return;
+          }
+          if (result.action === 'already_checked_in') {
+            dispatch(
+              enqueueToast({
+                id: `toast-${Date.now()}`,
+                type: 'info',
+                message: 'You are already checked in for today.',
+              }),
+            );
+            sheetRef.current?.dismiss();
+            refetch();
+            return;
+          }
+          if (result.action === 'offline_queued') {
+            dispatch(
+              enqueueToast({
+                id: `toast-${Date.now()}`,
+                type: 'info',
+                message: 'Check-in queued — will sync when online.',
+              }),
+            );
+            sheetRef.current?.dismiss();
+            return;
+          }
+          if (result.action === 'checked_in') {
+            dispatch(
+              enqueueToast({
+                id: `toast-${Date.now()}`,
+                type: 'success',
+                message: 'Checked in successfully.',
+              }),
+            );
           }
         } else {
           const coords = geo.currentLocation ?? (await locationService.getCurrentLocation());
@@ -91,30 +137,74 @@ export function OfficerAttendanceDashboard() {
             coords,
             date: new Date().toISOString().slice(0, 10),
           });
+          dispatch(
+            enqueueToast({
+              id: `toast-${Date.now()}`,
+              type: 'success',
+              message: 'Approval request submitted.',
+            }),
+          );
         }
         sheetRef.current?.dismiss();
         refetch();
+      } catch (e) {
+        Alert.alert(
+          'Attendance failed',
+          e instanceof Error ? e.message : 'Could not complete attendance action.',
+        );
       } finally {
         setActionLoading(false);
       }
     },
-    [checkIn, geo.currentLocation, refetch, requestApproval, sheetMode],
+    [checkIn, dispatch, geo.currentLocation, geo.isInsideGeofence, refetch, requestApproval, sheetMode],
   );
 
   const handleCheckOut = useCallback(async () => {
     setActionLoading(true);
     try {
-      const result = await checkOut();
+      const result = await checkOut({ uiSaysInside: geo.isInsideGeofence });
       if (result.action === 'needs_approval') {
+        Alert.alert(
+          'Outside zone',
+          `You appear to be ${Math.round(result.distance)}m from the zone. Request approval or move closer.`,
+        );
         setSheetMode('approval');
         sheetRef.current?.present();
-      } else {
-        refetch();
+        return;
       }
+      if (result.action === 'not_checked_in') {
+        Alert.alert('Not checked in', 'You need to check in before checking out.');
+        return;
+      }
+      if (result.action === 'offline_queued') {
+        dispatch(
+          enqueueToast({
+            id: `toast-${Date.now()}`,
+            type: 'info',
+            message: 'Check-out queued — will sync when online.',
+          }),
+        );
+        return;
+      }
+      if (result.action === 'checked_out') {
+        dispatch(
+          enqueueToast({
+            id: `toast-${Date.now()}`,
+            type: 'success',
+            message: 'Checked out successfully.',
+          }),
+        );
+      }
+      refetch();
+    } catch (e) {
+      Alert.alert(
+        'Check-out failed',
+        e instanceof Error ? e.message : 'Could not complete check-out.',
+      );
     } finally {
       setActionLoading(false);
     }
-  }, [checkOut, refetch]);
+  }, [checkOut, dispatch, geo.isInsideGeofence, refetch]);
 
   if (isLoading) {
     return (
@@ -223,7 +313,7 @@ export function OfficerAttendanceDashboard() {
           <Text style={styles.leaveLinkText}>Apply Leave Request →</Text>
         </Pressable>
 
-        {actionLoading ? <ActivityIndicator color={colors.primaryNavy} /> : null}
+        {actionLoading ? <ActivityIndicator color={adminColors.primary} /> : null}
 
         <CheckInSheet
           ref={sheetRef}
@@ -242,7 +332,7 @@ export function OfficerAttendanceDashboard() {
 }
 
 const styles = StyleSheet.create({
-  monthTitle: { fontSize: 18, fontWeight: '700', color: colors.primaryNavy, marginBottom: spacing.md },
+  monthTitle: { fontSize: 18, fontWeight: '700', color: adminColors.primary, marginBottom: spacing.md },
   todayLabel: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: spacing.xxs },
   statusCard: {
     backgroundColor: colors.surfaceWhite,
@@ -253,13 +343,13 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDefault,
     marginBottom: spacing.md,
   },
-  statusLabel: { fontSize: 18, fontWeight: '700', color: colors.primaryNavy },
+  statusLabel: { fontSize: 18, fontWeight: '700', color: adminColors.primary },
   statusMeta: { fontSize: 13, color: colors.textSecondary },
   duration: { fontSize: 14, fontWeight: '600', color: colors.accentTeal },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
   cta: { minHeight: 48 },
   summary: { fontSize: 14, color: colors.textSecondary, marginBottom: spacing.sm },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.primaryNavy, marginBottom: spacing.sm },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: adminColors.primary, marginBottom: spacing.sm },
   recordRow: {
     flexDirection: 'row',
     alignItems: 'center',

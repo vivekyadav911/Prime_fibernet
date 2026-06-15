@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { Alert, FlatList, Linking, Platform, StyleSheet, Text, View } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { Payslip } from '@prime/types';
 import { Button } from '@prime/ui';
