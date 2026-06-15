@@ -6,6 +6,11 @@ import { StatusChip } from '@/components/common';
 import { ProfileScreen } from '@/screens/customer/profile/ProfileScreen';
 import { ChatbotScreen } from '@/screens/customer/ChatbotScreen';
 import { CollectPaymentScreen } from '@/screens/officer/CollectPaymentScreen';
+import {
+  CashCollectionScreen,
+  OfficerCollectionHistoryScreen,
+  OfficerCollectionScreen,
+} from '@/screens/officer/payments';
 import { InvoiceScreen } from '@/screens/officer/InvoiceScreen';
 import { LocationGateScreen } from '@/screens/officer/LocationGateScreen';
 import { OfficerDashboardScreen } from '@/screens/officer/OfficerDashboardScreen';
@@ -73,9 +78,24 @@ function OfficerDrawerNav() {
         options={{ title: 'Attendance history', drawerLabel: 'History' }}
       />
       <Drawer.Screen
+        name="OfficerCollections"
+        component={OfficerCollectionScreen}
+        options={{ title: 'Collections', drawerLabel: 'Collections' }}
+      />
+      <Drawer.Screen
+        name="CashCollection"
+        component={CashCollectionScreen}
+        options={{ title: 'Collect cash', drawerItemStyle: { display: 'none' } }}
+      />
+      <Drawer.Screen
+        name="CollectionHistory"
+        component={OfficerCollectionHistoryScreen}
+        options={{ title: 'Collection history', drawerItemStyle: { display: 'none' } }}
+      />
+      <Drawer.Screen
         name="CollectPayment"
         component={CollectPaymentScreen}
-        options={{ title: 'Collect payment', drawerLabel: 'Collect Payment' }}
+        options={{ title: 'Collect payment (legacy)', drawerItemStyle: { display: 'none' } }}
       />
       <Drawer.Screen
         name="Invoice"

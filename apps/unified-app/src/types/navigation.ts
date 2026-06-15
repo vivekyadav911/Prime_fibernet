@@ -71,6 +71,15 @@ export type CustomerStackParamList = {
     planName: string;
     activationDate: string;
   };
+  CustomerBill: undefined;
+  PaymentMethod: { amount: number; planName: string; customerId: string };
+  GatewayWebView: {
+    amount: number;
+    planName: string;
+    customerId: string;
+    paymentMethod: import('@/types/payments').PaymentMethod;
+  };
+  Receipt: { paymentId: string };
   MakePayment: { userId?: string } | undefined;
   PaymentHistory: undefined;
   MyBills: undefined;
@@ -107,6 +116,24 @@ export type OfficerDrawerParamList = {
   ShiftManagement: undefined;
   ShiftRequest: undefined;
   CollectPayment: { userId?: string; customerName?: string } | undefined;
+  OfficerCollections: undefined;
+  CashCollection: {
+    customerId: string;
+    customerName: string;
+    accountNumber: string;
+    amount: number;
+    dueDate?: string;
+    planName?: string;
+  };
+  CollectionHistory: undefined;
+    customerId: string;
+    customerName: string;
+    accountNumber: string;
+    amount: number;
+    dueDate?: string;
+    planName?: string;
+  };
+  CollectionHistory: undefined;
   Invoice: { invoiceId?: string } | undefined;
   Inventory: undefined;
   Earnings: undefined;
@@ -221,6 +248,11 @@ export type AdminNotificationsStackParamList = {
 
 export type AdminPaymentsStackParamList = {
   PaymentList: undefined;
+  PaymentDetail: { paymentId: string };
+  PaymentReview: { paymentId: string };
+  GatewayConfig: undefined;
+  PaymentAnalytics: undefined;
+  Refund: { paymentId: string };
 };
 
 export type AdminInvoicesStackParamList = {
@@ -250,6 +282,7 @@ export type AdminSettingsStackParamList = {
   OfficerSalary: undefined;
   Notifications: undefined;
   Integrations: undefined;
+  GatewayConfig: undefined;
   Appearance: undefined;
   System: undefined;
   BackupExport: undefined;

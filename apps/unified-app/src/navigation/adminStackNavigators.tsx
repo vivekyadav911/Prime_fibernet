@@ -62,6 +62,7 @@ import {
   SettingsHubScreen,
   SystemSettingsScreen,
 } from '@/screens/admin/settings';
+import { GatewayConfigScreen } from '@/screens/admin/payments';
 import { AdminSupportScreen } from '@/screens/admin/system/SupportScreen';
 import {
   CannedResponsesScreen,
@@ -85,7 +86,14 @@ import { UserDetailScreen } from '@/screens/admin/users/UserDetailScreen';
 import { UserEditScreen } from '@/screens/admin/users/UserEditScreen';
 import { UserListScreen } from '@/screens/admin/users/UserListScreen';
 import { AdminAuditScreen } from '@/screens/admin/AdminAuditScreen';
-import { AdminPaymentsScreen } from '@/screens/admin/AdminPaymentsScreen';
+import {
+  GatewayConfigScreen,
+  PaymentAnalyticsScreen,
+  PaymentDetailScreen,
+  PaymentReviewScreen,
+  PaymentsListScreen,
+  RefundScreen,
+} from '@/screens/admin/payments';
 import type {
   AdminAttendanceStackParamList,
   AdminInventoryStackParamList,
@@ -281,7 +289,12 @@ export function AdminNotificationsStackNav() {
 export function AdminPaymentsStackNav() {
   return (
     <PaymentsStack.Navigator screenOptions={stackScreenOptions}>
-      <PaymentsStack.Screen name="PaymentList" component={AdminPaymentsScreen} options={{ title: 'Payments' }} />
+      <PaymentsStack.Screen name="PaymentList" component={PaymentsListScreen} options={{ title: 'Payments' }} />
+      <PaymentsStack.Screen name="PaymentDetail" component={PaymentDetailScreen} options={{ title: 'Payment detail' }} />
+      <PaymentsStack.Screen name="PaymentReview" component={PaymentReviewScreen} options={{ title: 'Review payment' }} />
+      <PaymentsStack.Screen name="GatewayConfig" component={GatewayConfigScreen} options={{ title: 'Payment gateways' }} />
+      <PaymentsStack.Screen name="PaymentAnalytics" component={PaymentAnalyticsScreen} options={{ title: 'Payment analytics' }} />
+      <PaymentsStack.Screen name="Refund" component={RefundScreen} options={{ title: 'Refund' }} />
     </PaymentsStack.Navigator>
   );
 }
@@ -329,6 +342,7 @@ export function AdminSettingsStackNav() {
       <SettingsStack.Screen name="OfficerSalary" component={OfficerSalaryScreen} options={{ title: 'Officer Salary' }} />
       <SettingsStack.Screen name="Notifications" component={NotificationsSettingsScreen} options={{ title: 'Notifications' }} />
       <SettingsStack.Screen name="Integrations" component={IntegrationsSettingsScreen} options={{ title: 'Integrations' }} />
+      <SettingsStack.Screen name="GatewayConfig" component={GatewayConfigScreen} options={{ title: 'Payment gateways' }} />
       <SettingsStack.Screen name="Appearance" component={AppearanceSettingsScreen} options={{ title: 'Appearance' }} />
       <SettingsStack.Screen name="System" component={SystemSettingsScreen} options={{ title: 'System' }} />
       <SettingsStack.Screen name="BackupExport" component={BackupExportScreen} options={{ title: 'Backup & Export' }} />

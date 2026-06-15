@@ -59,6 +59,13 @@ export default ({ config }) => ({
   ],
   android: {
     ...(config.android ?? {}),
+    intentFilters: [
+      {
+        action: 'VIEW',
+        data: [{ scheme: 'primefiber', host: 'payment' }],
+        category: ['BROWSABLE', 'DEFAULT'],
+      },
+    ],
   },
   ios: {
     ...(config.ios ?? {}),

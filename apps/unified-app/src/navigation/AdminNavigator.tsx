@@ -2,7 +2,6 @@ import { Platform, useWindowDimensions } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { AdminPaymentDetailScreen } from '@/screens/admin/AdminPaymentDetailScreen';
 import type { AdminDrawerParamList, AdminStackParamList } from '@/types/navigation';
 import { adminColors, getAdminDrawerWidth } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -97,11 +96,6 @@ export function AdminNavigator() {
       }}
     >
       <Stack.Screen name="AdminDrawer" component={AdminDrawerNav} options={{ headerShown: false }} />
-      <Stack.Screen
-        name="PaymentDetail"
-        component={AdminPaymentDetailScreen}
-        options={{ title: 'Payment invoice' }}
-      />
     </Stack.Navigator>
   );
 }

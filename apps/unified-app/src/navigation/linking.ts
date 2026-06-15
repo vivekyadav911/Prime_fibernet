@@ -22,7 +22,7 @@ function getStateFromPath(path: string, options: Parameters<typeof defaultGetSta
  * - Admin go_router `/login` + `/` (`prime_fibernet_admin_panel/lib/config/router.dart`)
  */
 export const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: ['primefibernet://', 'https://admin.primefibernet.com', 'https://app.primefibernet.com'],
+  prefixes: ['primefiber://', 'primefibernet://', 'https://admin.primefibernet.com', 'https://app.primefibernet.com'],
   getStateFromPath,
   config: {
     screens: {
@@ -56,6 +56,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
           PaymentGateway: 'payment-gateway/:paymentId',
           MakePayment: 'make-payment',
           PaymentHistory: 'payment-history',
+          PaymentSuccess: 'payment/result',
+          GatewayWebView: 'payment/checkout',
           CreateRequest: 'create-request',
           RequestDetails: 'requests/:requestId',
           Notifications: 'notifications',

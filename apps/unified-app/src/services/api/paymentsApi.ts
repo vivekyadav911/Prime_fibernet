@@ -38,6 +38,7 @@ function mapPayment(row: Record<string, unknown>): Payment {
   };
 }
 
+/** @deprecated Use paymentCollectionApi — queries legacy user_payments table */
 export const paymentsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getPaymentHistory: builder.query<Payment[], string>({
