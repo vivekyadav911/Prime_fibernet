@@ -63,7 +63,7 @@ export function RefundScreen({ route, navigation }: Props) {
         onChangeText={setReason}
         placeholderTextColor={colors.textSecondary}
       />
-      <Button label="Initiate refund" onPress={onSubmit} loading={refunding} />
+      <Button label="Initiate refund" onPress={onSubmit} disabled={refunding} />
     </Screen>
   );
 }

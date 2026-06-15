@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import type {
   CashCollectionPayload,
   ConfirmPaymentPayload,
@@ -10,6 +12,16 @@ import type {
 } from '@/types/payments';
 
 import { baseApi } from './baseApi';
+
+function mapOfficerJoin(raw: unknown): PaymentRecord['officer'] {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = raw as Record<string, unknown>;
+  return {
+    id: String(o.id),
+    name: String(o.full_name ?? o.name ?? 'Officer'),
+    email: (o.email as string) ?? null,
+  };
+}
 
 function mapPayment(row: Record<string, unknown>): PaymentRecord {
   return {
@@ -56,7 +68,7 @@ function mapPayment(row: Record<string, unknown>): PaymentRecord {
     created_at: String(row.created_at),
     updated_at: String(row.updated_at ?? row.created_at),
     customer: row.customer as PaymentRecord['customer'],
-    officer: row.officer as PaymentRecord['officer'],
+    officer: mapOfficerJoin(row.officer),
     gateway: row.gateway as PaymentRecord['gateway'],
   };
 }
@@ -84,7 +96,22 @@ export type PaymentsListResult = {
   total: number;
   confirmedSum: number;
   pendingSum: number;
+  reviewCount: number;
 };
+
+async function resolveCustomerUserId(client: SupabaseClient, authUserId?: string): Promise<string> {
+  const { data: rpcId, error: rpcError } = await client.rpc('current_customer_user_id');
+  if (!rpcError && rpcId) return String(rpcId);
+
+  if (authUserId) {
+    const byId = await client.from('users').select('id').eq('id', authUserId).maybeSingle();
+    if (byId.data?.id) return String(byId.data.id);
+    const byAuth = await client.from('users').select('id').eq('auth_user_id', authUserId).maybeSingle();
+    if (byAuth.data?.id) return String(byAuth.data.id);
+  }
+
+  throw rpcError ?? new Error('Customer profile not found');
+}
 
 export const paymentCollectionApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -102,7 +129,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             .select(
               `*,
               customer:users!payments_customer_id_fkey(id, name, phone, customer_id),
-              officer:officers!payments_collected_by_fkey(id, name, email),
+              officer:officers!payments_collected_by_fkey(id, full_name, email),
               gateway:payment_gateways(id, name, slug, logo_url)`,
               { count: 'exact' },
             )
@@ -135,7 +162,11 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             .filter((p) => p.status === 'pending_review' || p.status === 'cash_collected')
             .reduce((s, p) => s + Number(p.total_amount ?? 0), 0);
 
-          return { rows, total: count ?? rows.length, confirmedSum, pendingSum };
+          const reviewCount = all.filter(
+            (p) => p.status === 'pending_review' || p.status === 'cash_collected',
+          ).length;
+
+          return { rows, total: count ?? rows.length, confirmedSum, pendingSum, reviewCount };
         },
       }),
       providesTags: ['Payments'],
@@ -149,7 +180,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             .select(
               `*,
               customer:users!payments_customer_id_fkey(id, name, phone, customer_id),
-              officer:officers!payments_collected_by_fkey(id, name, email),
+              officer:officers!payments_collected_by_fkey(id, full_name, email),
               gateway:payment_gateways(id, name, slug, logo_url)`,
             )
             .eq('id', paymentId)
@@ -377,12 +408,16 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
       invalidatesTags: ['Payments'],
     }),
 
-    getCustomerBill: builder.query<CustomerBill, string>({
-      query: (customerId) => ({
+    getCustomerBill: builder.query<CustomerBill, string | void>({
+      query: (authUserId) => ({
         handler: async (client) => {
+          const customerId = await resolveCustomerUserId(client, authUserId ?? undefined);
+
           const { data: user, error } = await client
             .from('users')
-            .select('id, name, customer_id, payment_status, outstanding_amount, next_due_date, expiry_date')
+            .select(
+              'id, name, customer_id, payment_status, outstanding_amount, next_due_date, expiry_date, last_paid_amount, last_paid_at',
+            )
             .eq('id', customerId)
             .single();
           if (error) throw error;
@@ -397,11 +432,19 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
           let planName: string | null = null;
           let planAmount = Number(user.outstanding_amount ?? 0);
           if (sub?.plan_id) {
-            const { data: plan } = await client.from('plans').select('name, price').eq('id', sub.plan_id).maybeSingle();
+            const { data: plan } = await client
+              .from('plans')
+              .select('name, price')
+              .eq('id', sub.plan_id)
+              .maybeSingle();
             planName = plan?.name ?? null;
             planAmount = Number(plan?.price ?? planAmount);
           }
-          const taxAmount = 0;
+          if (planAmount <= 0 && user.outstanding_amount) {
+            planAmount = Number(user.outstanding_amount);
+          }
+
+          const taxAmount = Math.round(planAmount * 0.18 * 100) / 100;
 
           return {
             customerId: user.id,
@@ -410,26 +453,28 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             planName: planName ?? null,
             planAmount,
             taxAmount,
-            lateFee: 0,
-            totalPayable: planAmount + taxAmount,
+            lateFee: user.payment_status === 'overdue' ? Math.round(planAmount * 0.05 * 100) / 100 : 0,
+            totalPayable: planAmount + taxAmount + (user.payment_status === 'overdue' ? Math.round(planAmount * 0.05 * 100) / 100 : 0),
             billingPeriodStart: sub?.start_at ?? null,
             billingPeriodEnd: sub?.end_at ?? null,
             dueDate: user.next_due_date ?? user.expiry_date ?? null,
             paymentStatus: user.payment_status ?? 'pending',
             outstandingAmount: Number(user.outstanding_amount ?? 0),
+            lastPaidAmount: user.last_paid_amount != null ? Number(user.last_paid_amount) : null,
+            lastPaidAt: user.last_paid_at ?? null,
           };
         },
       }),
       providesTags: ['Payments'],
     }),
 
-    getCustomerPaymentHistoryV2: builder.query<PaymentRecord[], string>({
-      query: (customerId) => ({
+    getCustomerPaymentHistoryV2: builder.query<PaymentRecord[], string | void>({
+      query: (authUserId) => ({
         handler: async (client) => {
+          await resolveCustomerUserId(client, authUserId ?? undefined);
           const { data, error } = await client
             .from('payments')
             .select('*')
-            .eq('customer_id', customerId)
             .order('created_at', { ascending: false })
             .limit(50);
           if (error) throw error;
@@ -437,6 +482,27 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
         },
       }),
       providesTags: ['Payments'],
+    }),
+
+    getActivePaymentGateway: builder.query<
+      { slug: string; display_name: string; logo_url: string | null; supported_methods: string[]; test_mode: boolean } | null,
+      void
+    >({
+      query: () => ({
+        handler: async (client) => {
+          const { data, error } = await client.rpc('get_active_payment_gateway');
+          if (error) throw error;
+          const row = Array.isArray(data) ? data[0] : data;
+          if (!row) return null;
+          return {
+            slug: String(row.slug),
+            display_name: String(row.display_name ?? row.slug),
+            logo_url: (row.logo_url as string) ?? null,
+            supported_methods: (row.supported_methods as string[]) ?? [],
+            test_mode: Boolean(row.test_mode),
+          };
+        },
+      }),
     }),
 
     getOfficerCollections: builder.query<
@@ -559,6 +625,7 @@ export const {
   useRecordCashCollectionMutation,
   useGetCustomerBillQuery,
   useGetCustomerPaymentHistoryV2Query,
+  useGetActivePaymentGatewayQuery,
   useGetOfficerCollectionsQuery,
   useGetPaymentReceiptQuery,
   useLazyGetPaymentReceiptQuery,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
@@ -14,9 +14,15 @@ import {
 import type { GatewaySlug } from '@/types/payments';
 import type { CustomerStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { radius, spacing } from '@/theme/spacing';
+import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'GatewayWebView'>;
+
+function isGatewayNotConfigured(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes('no active payment gateway') || lower.includes('gateway not configured');
+}
 
 export function GatewayWebViewScreen({ route, navigation }: Props) {
   const user = useAppSelector((s) => s.auth.user);
@@ -37,7 +43,7 @@ export function GatewayWebViewScreen({ route, navigation }: Props) {
       customerId,
       userName: user.name,
       userEmail: user.email,
-      userPhone: user.phone,
+      userPhone: '',
       amount,
       planName,
       paymentMethod,
@@ -65,7 +71,7 @@ export function GatewayWebViewScreen({ route, navigation }: Props) {
       amount,
       paymentId: checkout.paymentId,
       customerName: user.name,
-      customerPhone: user.phone ?? '',
+      customerPhone: '',
       customerEmail: user.email,
       checkoutUrl: checkout.checkoutUrl,
       checkoutParams: checkout.checkoutParams,
@@ -89,8 +95,31 @@ export function GatewayWebViewScreen({ route, navigation }: Props) {
     [amount, checkout, navigation, planName],
   );
 
+  const errorMessage = error ? queryErrorMessage(error) : '';
+
+  if (error && isGatewayNotConfigured(errorMessage)) {
+    return (
+      <Screen style={styles.pendingScreen}>
+        <View style={styles.pendingCard}>
+          <Text style={styles.pendingIcon}>💳</Text>
+          <Text style={styles.pendingTitle}>Online payments not active yet</Text>
+          <Text style={styles.pendingBody}>
+            Your ISP is finishing payment gateway setup. You can pay cash to your field officer or visit our office in
+            the meantime.
+          </Text>
+          <Button label="Back to bill" onPress={() => navigation.navigate('CustomerBill')} />
+          <Button label="View payment history" variant="ghost" onPress={() => navigation.navigate('PaymentHistory')} />
+        </View>
+      </Screen>
+    );
+  }
+
   if (error) {
-    return <Screen><ErrorState message={error instanceof Error ? error.message : 'Order failed'} /></Screen>;
+    return (
+      <Screen>
+        <ErrorState message={errorMessage} />
+      </Screen>
+    );
   }
 
   return (
@@ -115,4 +144,17 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.surfaceWhite },
   bar: { padding: spacing.sm, paddingTop: spacing.md },
   webview: { flex: 1 },
+  pendingScreen: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', padding: spacing.lg },
+  pendingCard: {
+    backgroundColor: colors.surfaceWhite,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  pendingIcon: { fontSize: 40, marginBottom: spacing.xs },
+  pendingTitle: { fontSize: 18, fontWeight: '700', color: colors.primaryNavy, textAlign: 'center' },
+  pendingBody: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: spacing.sm },
 });

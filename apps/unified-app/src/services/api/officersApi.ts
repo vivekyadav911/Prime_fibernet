@@ -40,8 +40,35 @@ function mapOfficerRequestDetail(row: Record<string, unknown>, activities: Recor
   };
 }
 
+export type OfficerDashboardStats = {
+  newRequests: number;
+  activeRequests: number;
+  resolvedToday: number;
+  collectionsToday: number;
+};
+
+function mapDashboardStats(raw: Record<string, unknown>): OfficerDashboardStats {
+  return {
+    newRequests: Number(raw.new_requests ?? 0),
+    activeRequests: Number(raw.active_requests ?? 0),
+    resolvedToday: Number(raw.resolved_today ?? 0),
+    collectionsToday: Number(raw.collections_today ?? 0),
+  };
+}
+
 export const officersApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    getOfficerDashboardStats: builder.query<OfficerDashboardStats, void>({
+      query: () => ({
+        handler: async (client) => {
+          const { data, error } = await client.rpc('get_officer_dashboard_stats');
+          if (error) throw error;
+          return mapDashboardStats((data ?? {}) as Record<string, unknown>);
+        },
+      }),
+      providesTags: ['Requests', 'Payments'],
+    }),
+
     getRequestDetail: builder.query<OfficerRequestDetail, string>({
       query: (requestId) => ({
         handler: async (client) => {
@@ -473,6 +500,7 @@ export const officersApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetOfficerDashboardStatsQuery,
   useGetRequestDetailQuery,
   useAddActivityNoteMutation,
   useGetOfficersQuery,

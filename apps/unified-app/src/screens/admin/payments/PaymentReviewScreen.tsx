@@ -127,11 +127,11 @@ export function PaymentReviewScreen({ route, navigation }: Props) {
         </View>
 
         <View style={styles.actions}>
-          <Button label="Reject" variant="secondary" onPress={onReject} loading={rejecting} />
+          <Button label="Reject" variant="secondary" onPress={onReject} disabled={rejecting} />
           <Button
             label={isCash ? 'Confirm & receipt' : 'Confirm payment'}
             onPress={onConfirm}
-            loading={confirming}
+            disabled={confirming}
           />
         </View>
       </ScrollView>

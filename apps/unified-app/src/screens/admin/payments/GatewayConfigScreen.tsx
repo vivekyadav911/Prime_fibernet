@@ -132,8 +132,8 @@ export function GatewayConfigScreen() {
           {editing?.webhook_url ? (
             <Text style={styles.webhook}>Webhook: {editing.webhook_url}</Text>
           ) : null}
-          <Button label="Test connection" variant="secondary" onPress={() => runSave({ testOnly: true })} loading={busy} />
-          <Button label="Save & activate" onPress={() => runSave({ activate: true })} loading={busy} />
+          <Button label="Test connection" variant="secondary" onPress={() => runSave({ testOnly: true })} disabled={busy} />
+          <Button label="Save & activate" onPress={() => runSave({ activate: true })} disabled={busy} />
           <Button label="Set as default" variant="ghost" onPress={() => runSave({ activate: true, setDefault: true })} />
           <Button label="Close" variant="ghost" onPress={() => setEditing(null)} />
         </View>

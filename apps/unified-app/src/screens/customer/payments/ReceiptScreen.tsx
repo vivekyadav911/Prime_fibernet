@@ -1,9 +1,7 @@
 import { useCallback } from 'react';
-import { Alert, ScrollView, StyleSheet } from 'react-native';
+import { Alert, ScrollView, Share, StyleSheet } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
-import * as Sharing from 'expo-sharing';
-import { Share } from 'react-native';
 
 import { ReceiptTemplate } from '@/components/payments';
 import { ErrorState, SkeletonLoader } from '@/components/common';

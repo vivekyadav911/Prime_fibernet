@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Alert, FlatList, Pressable, Share, StyleSheet, Text } from 'react-native';
+import { Alert, FlatList, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Sharing from 'expo-sharing';
@@ -43,18 +43,25 @@ export function PaymentHistoryScreenV2() {
 
   return (
     <Screen style={styles.screen}>
+      <Text style={styles.title}>Payment history</Text>
       <FlatList
         data={data ?? []}
         keyExtractor={(item) => item.id}
-        ListEmptyComponent={<EmptyState title="No payments" message="Your payment history will appear here." />}
+        ListEmptyComponent={<EmptyState title="No payments" subtitle="Your payment history will appear here." />}
         renderItem={({ item }) => (
           <Pressable
             style={styles.row}
             onPress={() => item.status === 'confirmed' && onReceipt(item.id)}
           >
-            <Text style={styles.number}>{item.payment_number}</Text>
+            <View style={styles.rowTop}>
+              <Text style={styles.number}>{item.payment_number}</Text>
+              <PaymentStatusBadge status={item.status} />
+            </View>
             <AmountDisplay amount={item.total_amount} />
-            <PaymentStatusBadge status={item.status} />
+            <Text style={styles.meta}>
+              {item.method.toUpperCase()}
+              {item.gateway_slug ? ` · ${item.gateway_slug}` : ''}
+            </Text>
             <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
           </Pressable>
         )}
@@ -65,6 +72,7 @@ export function PaymentHistoryScreenV2() {
 
 const styles = StyleSheet.create({
   screen: { padding: spacing.md, backgroundColor: colors.background },
+  title: { fontSize: 20, fontWeight: '700', color: colors.primaryNavy, marginBottom: spacing.md },
   row: {
     backgroundColor: colors.surfaceWhite,
     borderRadius: radius.md,
@@ -75,5 +83,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   number: { fontFamily: 'monospace', fontWeight: '700', color: colors.textPrimary },
+  rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  meta: { fontSize: 11, color: colors.textSecondary, textTransform: 'capitalize' },
   date: { fontSize: 12, color: colors.textSecondary },
 });

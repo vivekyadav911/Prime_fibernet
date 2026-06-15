@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
+import { Linking } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as Linking from 'expo-linking';
 
 import { useCustomerRequestBadge } from '@/hooks/useCustomerRequestBadge';
 import { DashboardScreen } from '@/screens/customer/dashboard/DashboardScreen';
@@ -41,6 +41,17 @@ import {
   TermsScreen,
 } from './customerStackScreens';
 import { TabIcon } from './TabIcon';
+
+function parsePaymentDeepLink(url: string): { status?: string; paymentId?: string; amount?: string; planName?: string } {
+  const query = url.includes('?') ? url.split('?')[1] : '';
+  const params = new URLSearchParams(query);
+  return {
+    status: params.get('status') ?? undefined,
+    paymentId: params.get('paymentId') ?? undefined,
+    amount: params.get('amount') ?? undefined,
+    planName: params.get('planName') ?? undefined,
+  };
+}
 
 const Tab = createBottomTabNavigator<CustomerTabParamList>();
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
@@ -108,19 +119,15 @@ function CustomerTabsWithDeepLinks() {
 
   useEffect(() => {
     const handleUrl = (url: string) => {
-      const parsed = Linking.parse(url);
-      if (parsed.path === 'payment/result' || parsed.hostname === 'payment') {
-        const status = parsed.queryParams?.status;
-        const paymentId = String(parsed.queryParams?.paymentId ?? '');
-        const amount = Number(parsed.queryParams?.amount ?? 0);
-        if (status === 'success' && paymentId) {
-          navigation.navigate('PaymentSuccess', {
-            paymentId,
-            amount,
-            planName: String(parsed.queryParams?.planName ?? 'Broadband'),
-            activationDate: new Date().toISOString(),
-          });
-        }
+      if (!url.includes('payment')) return;
+      const params = parsePaymentDeepLink(url);
+      if (params.status === 'success' && params.paymentId) {
+        navigation.navigate('PaymentSuccess', {
+          paymentId: params.paymentId,
+          amount: Number(params.amount ?? 0),
+          planName: params.planName ?? 'Broadband',
+          activationDate: new Date().toISOString(),
+        });
       }
     };
 

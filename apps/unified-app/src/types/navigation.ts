@@ -1,6 +1,7 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
 import type { TimeRange } from '@/types/map';
+import type { PaymentMethod } from '@/types/payments';
 
 /**
  * Auth stack — Flutter `AdminAuthScreen`, customer/officer login, shared auth package.
@@ -72,12 +73,12 @@ export type CustomerStackParamList = {
     activationDate: string;
   };
   CustomerBill: undefined;
-  PaymentMethod: { amount: number; planName: string; customerId: string };
+  PaymentMethod: { amount: number; planName: string; customerId: string; paymentMethod?: PaymentMethod };
   GatewayWebView: {
     amount: number;
     planName: string;
     customerId: string;
-    paymentMethod: import('@/types/payments').PaymentMethod;
+    paymentMethod: PaymentMethod;
   };
   Receipt: { paymentId: string };
   MakePayment: { userId?: string } | undefined;
@@ -99,11 +100,40 @@ export type CustomerStackParamList = {
   CustomerSupportHub: undefined;
 };
 
+export type OfficerLeaveStackParamList = {
+  LeaveList: undefined;
+  ApplyLeave: undefined;
+};
+
+export type OfficerProfileStackParamList = {
+  ProfileHome: undefined;
+  ChangePassword: undefined;
+};
+
+export type OfficerRequestsStackParamList = {
+  RequestsList: undefined;
+};
+
+export type OfficerCollectionsStackParamList = {
+  CollectionsList: undefined;
+  CashCollection: {
+    customerId: string;
+    customerName: string;
+    accountNumber: string;
+    amount: number;
+    dueDate?: string;
+    planName?: string;
+  };
+  CollectionHistory: undefined;
+};
+
 /**
  * Officer drawer + tabs — Flutter `OfficerRootShell` + drawer pushes.
  */
 export type OfficerDrawerParamList = {
   Dashboard: undefined;
+  RequestsStack: undefined;
+  /** @deprecated use RequestsStack */
   Requests: undefined;
   Map: undefined;
   Attendance: undefined;
@@ -116,16 +146,10 @@ export type OfficerDrawerParamList = {
   ShiftManagement: undefined;
   ShiftRequest: undefined;
   CollectPayment: { userId?: string; customerName?: string } | undefined;
+  CollectionsStack: undefined;
+  /** @deprecated use CollectionsStack */
   OfficerCollections: undefined;
   CashCollection: {
-    customerId: string;
-    customerName: string;
-    accountNumber: string;
-    amount: number;
-    dueDate?: string;
-    planName?: string;
-  };
-  CollectionHistory: undefined;
     customerId: string;
     customerName: string;
     accountNumber: string;
@@ -139,6 +163,8 @@ export type OfficerDrawerParamList = {
   Earnings: undefined;
   PerformanceWallet: undefined;
   Leave: undefined;
+  LeaveStack: undefined;
+  ApplyLeave: undefined;
   TimeOff: undefined;
   Payslip: undefined;
   Payslips: undefined;
@@ -154,6 +180,8 @@ export type OfficerDrawerParamList = {
   Privacy: undefined;
   Support: undefined;
   Profile: undefined;
+  ProfileStack: undefined;
+  ChangePassword: undefined;
   /** Flutter: gates app until GPS enabled */
   LocationGate: undefined;
 };

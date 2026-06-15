@@ -63,7 +63,7 @@ export const analyticsApi = baseApi.injectEndpoints({
               .select('id', { count: 'exact', head: true })
               .eq('availability_status', 'available'),
           ]);
-          const mrr = (payments.data ?? []).reduce((sum, row) => sum + Number(row.total_amount ?? row.amount ?? 0), 0);
+          const mrr = (payments.data ?? []).reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0);
           return {
             activeSubscribers: subs.count ?? 0,
             mrr,

@@ -18,6 +18,8 @@ import { recoverStuckSendingNotifications } from '@/services/broadcastNotificati
 import { SyncManager } from '@/services/offline/syncManager';
 import '@/services/LocationService';
 import { attendanceApi } from '@/services/api/attendanceApi';
+import { officersApi } from '@/services/api/officersApi';
+import { paymentCollectionApi } from '@/services/api/paymentCollectionApi';
 import { requestsApi } from '@/services/api/requestsApi';
 import { persistor, store } from '@/store/store';
 import { useAppSelector } from '@/store/hooks';
@@ -103,6 +105,26 @@ function Root() {
         await store
           .dispatch(attendanceApi.endpoints.updateOfficerLocation.initiate(payload))
           .unwrap();
+        return;
+      }
+      if (op === 'recordCashCollection') {
+        await store
+          .dispatch(
+            paymentCollectionApi.endpoints.recordCashCollection.initiate(
+              mutation.payload as never,
+            ),
+          )
+          .unwrap();
+        return;
+      }
+      if (op === 'clockIn') {
+        const payload = mutation.payload as { userId: string; latitude: number; longitude: number };
+        await store.dispatch(officersApi.endpoints.clockIn.initiate(payload)).unwrap();
+        return;
+      }
+      if (op === 'clockOut') {
+        const payload = mutation.payload as { userId: string; shiftId?: string };
+        await store.dispatch(officersApi.endpoints.clockOut.initiate(payload)).unwrap();
         return;
       }
       throw new Error(`Unsupported offline mutation: ${op}`);

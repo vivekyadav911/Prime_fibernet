@@ -13,8 +13,8 @@ export function PaymentTimeline({ payment }: Props) {
   const steps: Step[] = [
     { label: 'Initiated', at: payment.initiated_at },
     { label: 'Paid / Collected', at: payment.paid_at },
-    { label: 'Pending Review', at: payment.status === 'pending_review' ? payment.paid_at : null, status: 'pending_review' },
-    { label: 'Confirmed', at: payment.confirmed_at, status: 'confirmed' },
+    { label: 'Pending Review', at: payment.status === 'pending_review' ? payment.paid_at : null, status: 'pending_review' as const },
+    { label: 'Confirmed', at: payment.confirmed_at, status: 'confirmed' as const },
   ].filter((s) => s.at);
 
   return (

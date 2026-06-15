@@ -143,6 +143,8 @@ export interface CustomerBill {
   dueDate: string | null;
   paymentStatus: string;
   outstandingAmount: number;
+  lastPaidAmount: number | null;
+  lastPaidAt: string | null;
 }
 
 export interface ConfirmPaymentPayload {

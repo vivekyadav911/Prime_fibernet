@@ -17,3 +17,13 @@ export const radius = {
   xl: 20,
   full: 999,
 } as const;
+
+export const shadow = {
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+} as const;

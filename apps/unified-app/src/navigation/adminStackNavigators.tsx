@@ -62,7 +62,6 @@ import {
   SettingsHubScreen,
   SystemSettingsScreen,
 } from '@/screens/admin/settings';
-import { GatewayConfigScreen } from '@/screens/admin/payments';
 import { AdminSupportScreen } from '@/screens/admin/system/SupportScreen';
 import {
   CannedResponsesScreen,

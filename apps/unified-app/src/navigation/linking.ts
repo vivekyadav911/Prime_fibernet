@@ -73,11 +73,12 @@ export const linking: LinkingOptions<RootStackParamList> = {
           OfficerDrawer: {
             screens: {
               Dashboard: 'dashboard',
-              Requests: 'requests',
+              RequestsStack: { screens: { RequestsList: 'requests' } },
               Map: 'map',
-              Shifts: 'attendance',
-              AttendanceHistory: 'attendance/history',
-              Leave: 'leave',
+              Attendance: 'attendance',
+              CollectionsStack: { screens: { CollectionsList: 'collections' } },
+              LeaveStack: { screens: { LeaveList: 'leave' } },
+              ProfileStack: { screens: { ProfileHome: 'profile' } },
             },
           },
           RequestDetail: 'request/:requestId',
