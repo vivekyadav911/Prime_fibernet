@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "pnpm --filter @prime/unified-app dev",
-    "start": "pnpm --filter @prime/unified-app dev",
+    "start": "node scripts/start-expo.mjs",
+    "start:android-usb": "node scripts/start-expo-android-usb.mjs",
     "web": "pnpm --filter @prime/unified-app web",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",

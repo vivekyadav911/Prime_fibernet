@@ -10,6 +10,11 @@ import { ThemeProvider } from '@/theme/ThemeProvider';
 
 import { AdminDrawerContent } from './AdminDrawerContent';
 import { AdminDrawerToggleButton } from './AdminDrawerToggleButton';
+import { AdminDrawerProfileButton } from './AdminDrawerProfileButton';
+import {
+  adminHeaderLeftContainerStyle,
+  adminHeaderRightContainerStyle,
+} from './AdminHeaderButton';
 import {
   AdminAttendanceStackNav,
   AdminInventoryStackNav,
@@ -52,6 +57,9 @@ function AdminDrawerNav() {
         },
         overlayColor: isWebSidebar ? 'transparent' : undefined,
         headerLeft: isWebSidebar ? () => null : () => <AdminDrawerToggleButton />,
+        headerRight: () => <AdminDrawerProfileButton />,
+        headerLeftContainerStyle: adminHeaderLeftContainerStyle,
+        headerRightContainerStyle: adminHeaderRightContainerStyle,
         swipeEnabled: !isWebSidebar,
       }}
     >

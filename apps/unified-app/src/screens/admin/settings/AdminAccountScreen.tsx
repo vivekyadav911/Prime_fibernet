@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '@prime/ui';
 
-import { FormField, RoleGuard } from '@/components/admin';
-import { SaveButton, SettingsHubLayout, SettingsSection } from '@/components/admin/settings';
+import { AvatarIcon, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
+import { SettingsHubLayout } from '@/components/admin/settings';
 import {
   useGetAdminProfileQuery,
   useUpdateAdminDisplayNameMutation,
@@ -13,10 +13,12 @@ import {
 } from '@/store/api/endpoints';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
-import { adminColors } from '@/theme/admin';
-import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
+
+import { ui } from './adminAccountUi';
+import { AdminAccountFormField } from './components/AdminAccountFormField';
+import { AdminAccountPrimaryButton } from './components/AdminAccountPrimaryButton';
+import { AdminAccountSectionCard } from './components/AdminAccountSectionCard';
 
 export function AdminAccountScreen() {
   const dispatch = useAppDispatch();
@@ -76,19 +78,53 @@ export function AdminAccountScreen() {
     }
   };
 
+  const summaryName = displayName.trim() || data?.displayName || 'Admin';
+
   const body = isLoading ? (
     <SkeletonLoader rows={6} />
   ) : isError ? (
     <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
   ) : (
     <>
-      <SettingsSection title="Profile">
-        <FormField label="Display Name" value={displayName} onChangeText={setDisplayName} />
-        <SaveButton label="Save Display Name" onPress={handleSaveName} loading={savingName} />
-        <FormField label="Login Email (read-only)" value={data?.email ?? ''} editable={false} />
-      </SettingsSection>
+      <View style={styles.summaryCard}>
+        <View style={styles.summaryTop}>
+          <AvatarIcon name={summaryName} size={52} />
+          <View style={styles.summaryText}>
+            <Text style={styles.summaryTitle}>Admin Account</Text>
+            <Text style={styles.summarySubtitle}>
+              Manage your profile, email, and account security.
+            </Text>
+          </View>
+        </View>
+        <View style={styles.summaryBadge}>
+          <Text style={styles.summaryBadgeText}>Administrator</Text>
+        </View>
+      </View>
 
-      <SettingsSection title="Change Email">
+      <AdminAccountSectionCard
+        title="Profile"
+        subtitle="Update how your name appears across the admin console."
+      >
+        <AdminAccountFormField
+          label="Display Name"
+          value={displayName}
+          onChangeText={setDisplayName}
+          placeholder="Enter display name"
+        />
+        <AdminAccountPrimaryButton label="Save Display Name" onPress={handleSaveName} loading={savingName} />
+        <View style={styles.fieldDivider} />
+        <AdminAccountFormField
+          label="Login Email (read-only)"
+          value={data?.email ?? ''}
+          readOnly
+          helperText="Your sign-in email. Use Change Email below to update it."
+        />
+      </AdminAccountSectionCard>
+
+      <AdminAccountSectionCard
+        title="Change Email"
+        subtitle="A confirmation link will be sent to your new address."
+      >
         {emailBanner ? (
           <View style={styles.banner}>
             <Text style={styles.bannerText}>
@@ -96,25 +132,76 @@ export function AdminAccountScreen() {
             </Text>
           </View>
         ) : null}
-        <FormField label="New Email" value={newEmail} onChangeText={setNewEmail} keyboardType="email-address" autoCapitalize="none" />
-        <FormField label="Current Password" value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
-        <SaveButton label="Request Email Change" onPress={handleChangeEmail} loading={savingEmail} />
-      </SettingsSection>
+        <AdminAccountFormField
+          label="New Email"
+          value={newEmail}
+          onChangeText={setNewEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          placeholder="new-email@example.com"
+        />
+        <AdminAccountFormField
+          label="Current Password"
+          value={currentPassword}
+          onChangeText={setCurrentPassword}
+          secureTextEntry
+          placeholder="Enter current password"
+        />
+        <AdminAccountPrimaryButton
+          label="Request Email Change"
+          onPress={handleChangeEmail}
+          loading={savingEmail}
+        />
+      </AdminAccountSectionCard>
 
-      <SettingsSection title="Change Password">
-        <FormField label="Current Password" value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
-        <FormField label="New Password" value={newPassword} onChangeText={setNewPassword} secureTextEntry />
-        <FormField label="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
-        <SaveButton label="Update Password" onPress={handleChangePassword} loading={savingPassword} />
-      </SettingsSection>
+      <AdminAccountSectionCard
+        title="Change Password"
+        subtitle="Choose a strong password with at least 8 characters."
+      >
+        <AdminAccountFormField
+          label="Current Password"
+          value={currentPassword}
+          onChangeText={setCurrentPassword}
+          secureTextEntry
+          placeholder="Enter current password"
+        />
+        <AdminAccountFormField
+          label="New Password"
+          value={newPassword}
+          onChangeText={setNewPassword}
+          secureTextEntry
+          placeholder="At least 8 characters"
+        />
+        <AdminAccountFormField
+          label="Confirm Password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+          placeholder="Re-enter new password"
+        />
+        <AdminAccountPrimaryButton
+          label="Update Password"
+          onPress={handleChangePassword}
+          loading={savingPassword}
+        />
+      </AdminAccountSectionCard>
     </>
   );
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen padded={false} safeAreaTop={false} style={styles.screen}>
         <SettingsHubLayout activeRoute="AdminAccount">
-          <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+          >
+            {body}
+          </ScrollView>
         </SettingsHubLayout>
       </Screen>
     </RoleGuard>
@@ -122,15 +209,74 @@ export function AdminAccountScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
-  content: { padding: 16 },
-  banner: {
-    backgroundColor: adminColors.badgeWarning + '22',
-    borderColor: adminColors.badgeWarning,
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    marginBottom: spacing.sm,
+  flex: { flex: 1 },
+  screen: { backgroundColor: ui.bg, flex: 1 },
+  content: {
+    paddingHorizontal: ui.pagePad,
+    paddingTop: 12,
+    paddingBottom: 32,
+    gap: ui.sectionGap,
   },
-  bannerText: { fontSize: 13, color: colors.textPrimary },
+  summaryCard: {
+    backgroundColor: ui.card,
+    borderRadius: ui.radiusHero,
+    padding: ui.cardPad,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: ui.border,
+    gap: 14,
+    ...ui.shadow,
+  },
+  summaryTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  summaryText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  summaryTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: ui.text,
+    letterSpacing: -0.3,
+  },
+  summarySubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: ui.textSecondary,
+    lineHeight: 20,
+  },
+  summaryBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(91, 79, 233, 0.08)',
+    borderRadius: ui.radiusPill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  summaryBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: ui.brand,
+  },
+  fieldDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: ui.border,
+    marginVertical: 4,
+  },
+  banner: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: ui.radiusSm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  bannerText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: ui.text,
+    lineHeight: 18,
+  },
 });

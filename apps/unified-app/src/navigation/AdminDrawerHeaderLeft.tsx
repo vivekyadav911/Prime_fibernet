@@ -1,9 +1,9 @@
-import { Platform, Pressable, StyleSheet, Text, useWindowDimensions } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Platform, useWindowDimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackHeaderBackProps } from '@react-navigation/native-stack';
 
-import { spacing } from '@/theme/spacing';
-
+import { AdminHeaderButton, ADMIN_HEADER_ICON_SIZE } from './AdminHeaderButton';
 import { AdminDrawerToggleButton } from './AdminDrawerToggleButton';
 
 export function AdminDrawerHeaderLeft({
@@ -17,15 +17,12 @@ export function AdminDrawerHeaderLeft({
 
   if (canGoBack) {
     return (
-      <Pressable
-        accessibilityRole="button"
+      <AdminHeaderButton
         accessibilityLabel="Go back"
         onPress={() => (onBackPress ? onBackPress() : navigation.goBack())}
-        style={styles.backButton}
-        hitSlop={8}
       >
-        <Text style={[styles.backIcon, { color: tintColor }]}>‹</Text>
-      </Pressable>
+        <Ionicons name="chevron-back" size={ADMIN_HEADER_ICON_SIZE + 2} color={tintColor} />
+      </AdminHeaderButton>
     );
   }
 
@@ -35,16 +32,3 @@ export function AdminDrawerHeaderLeft({
 
   return <AdminDrawerToggleButton tintColor={tintColor} />;
 }
-
-const styles = StyleSheet.create({
-  backButton: {
-    marginLeft: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs,
-  },
-  backIcon: {
-    fontSize: 32,
-    lineHeight: 32,
-    fontWeight: '300',
-  },
-});

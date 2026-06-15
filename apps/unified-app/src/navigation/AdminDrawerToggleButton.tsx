@@ -1,8 +1,9 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 
 import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+
+import { AdminHeaderButton, ADMIN_HEADER_ICON_SIZE } from './AdminHeaderButton';
 
 type AdminDrawerToggleButtonProps = {
   tintColor?: string;
@@ -14,30 +15,11 @@ export function AdminDrawerToggleButton({
   const navigation = useNavigation();
 
   return (
-    <Pressable
-      accessibilityRole="button"
+    <AdminHeaderButton
       accessibilityLabel="Open navigation menu"
       onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
-      style={styles.button}
-      hitSlop={8}
     >
-      <View style={[styles.bar, { backgroundColor: tintColor }]} />
-      <View style={[styles.bar, { backgroundColor: tintColor }]} />
-      <View style={[styles.bar, { backgroundColor: tintColor }]} />
-    </Pressable>
+      <Ionicons name="menu" size={ADMIN_HEADER_ICON_SIZE} color={tintColor} />
+    </AdminHeaderButton>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    marginLeft: spacing.md,
-    paddingVertical: spacing.xs,
-    paddingRight: spacing.xs,
-    gap: 4,
-  },
-  bar: {
-    width: 20,
-    height: 2,
-    borderRadius: 1,
-  },
-});

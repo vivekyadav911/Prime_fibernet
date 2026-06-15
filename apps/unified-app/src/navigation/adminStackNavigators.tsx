@@ -1,8 +1,7 @@
-import { Text } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import type { NavigationProp, RouteProp } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackHeaderBackProps } from '@react-navigation/native-stack';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NavigationProp, RouteProp } from '@react-navigation/native';
 
 import { DashboardScreen } from '@/screens/admin/DashboardScreen';
 import { InventoryListScreen } from '@/screens/admin/assets/inventory/InventoryListScreen';
@@ -113,6 +112,11 @@ import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 
 import { AdminDrawerHeaderLeft } from './AdminDrawerHeaderLeft';
+import { AdminDrawerProfileButton } from './AdminDrawerProfileButton';
+import {
+  adminHeaderLeftContainerStyle,
+  adminHeaderRightContainerStyle,
+} from './AdminHeaderButton';
 
 const UsersStack = createNativeStackNavigator<AdminUsersStackParamList>();
 const OfficersStack = createNativeStackNavigator<AdminOfficersStackParamList>();
@@ -132,6 +136,9 @@ const stackScreenOptions = {
   headerStyle: { backgroundColor: colors.primaryNavy },
   headerTintColor: colors.white,
   headerLeft: (props: NativeStackHeaderBackProps) => <AdminDrawerHeaderLeft {...props} />,
+  headerRight: () => <AdminDrawerProfileButton />,
+  headerLeftContainerStyle: adminHeaderLeftContainerStyle,
+  headerRightContainerStyle: adminHeaderRightContainerStyle,
 };
 
 function InventoryDrawerHeaderLeft(props: NativeStackHeaderBackProps) {
@@ -164,6 +171,9 @@ const usersStackScreenOptions = {
   headerTitleStyle: { fontSize: 20, fontWeight: '600' as const },
   headerShadowVisible: false,
   headerLeft: (props: NativeStackHeaderBackProps) => <AdminDrawerHeaderLeft {...props} />,
+  headerRight: () => <AdminDrawerProfileButton />,
+  headerLeftContainerStyle: adminHeaderLeftContainerStyle,
+  headerRightContainerStyle: adminHeaderRightContainerStyle,
 };
 
 export function AdminUsersStackNav() {
@@ -174,7 +184,6 @@ export function AdminUsersStackNav() {
         component={UserListScreen}
         options={{
           title: 'Users',
-          headerRight: () => <Text style={{ fontSize: 18, color: '#FFFFFF' }}>👤</Text>,
         }}
       />
       <UsersStack.Screen name="UserDetail" component={UserDetailScreen} options={{ title: 'User profile' }} />
@@ -341,7 +350,17 @@ export function AdminSettingsStackNav() {
   return (
     <SettingsStack.Navigator screenOptions={stackScreenOptions} initialRouteName="SettingsHub">
       <SettingsStack.Screen name="SettingsHub" component={SettingsHubScreen} options={{ title: 'Settings' }} />
-      <SettingsStack.Screen name="AdminAccount" component={AdminAccountScreen} options={{ title: 'Admin Account' }} />
+      <SettingsStack.Screen
+        name="AdminAccount"
+        component={AdminAccountScreen}
+        options={{
+          title: 'Admin Account',
+          headerStyle: { backgroundColor: '#5B4FE9' },
+          headerTintColor: '#FFFFFF',
+          headerTitleStyle: { fontSize: 20, fontWeight: '600' },
+          headerShadowVisible: false,
+        }}
+      />
       <SettingsStack.Screen name="General" component={GeneralSettingsScreen} options={{ title: 'General' }} />
       <SettingsStack.Screen name="Security" component={SecurityScreen} options={{ title: 'Security' }} />
       <SettingsStack.Screen name="Officers" component={OfficersSettingsScreen} options={{ title: 'Officers' }} />
