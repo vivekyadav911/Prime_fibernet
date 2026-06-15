@@ -1,10 +1,11 @@
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
-import MapView, { Circle } from 'react-native-maps';
+import { Circle } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { RoleGuard } from '@/components/admin';
+import { FreeMapView } from '@/components/map';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useDeleteGeofence,
@@ -128,7 +129,7 @@ export function GeofenceManagementScreen({ navigation }: Props) {
           />
         </View>
 
-        <MapView style={styles.map} initialRegion={mapRegion}>
+        <FreeMapView style={styles.map} initialRegion={mapRegion}>
           {(data ?? []).map((g) => {
             if (g.geometry.shape !== 'circle') return null;
             return (
@@ -141,7 +142,7 @@ export function GeofenceManagementScreen({ navigation }: Props) {
               />
             );
           })}
-        </MapView>
+        </FreeMapView>
 
         <FlatList
           data={data ?? []}

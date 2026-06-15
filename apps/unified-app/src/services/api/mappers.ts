@@ -56,6 +56,16 @@ export async function getOfficerIdForUser(client: TypedSupabaseClient, userId: s
   return data?.id ?? null;
 }
 
+export async function getCustomerIdForUser(client: TypedSupabaseClient, userId: string): Promise<string | null> {
+  const { data } = await client
+    .from('users')
+    .select('id')
+    .or(`id.eq.${userId},auth_user_id.eq.${userId}`)
+    .eq('role', 'customer')
+    .maybeSingle();
+  return data?.id ?? userId;
+}
+
 export function parseGeographyPoint(value: unknown): { latitude: number; longitude: number } | null {
   if (!value) return null;
   if (typeof value === 'object' && value !== null) {

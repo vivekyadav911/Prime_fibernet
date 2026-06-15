@@ -139,6 +139,13 @@ export function mapDbRowToTicket(
     },
     resolutionSummary: row.resolution_summary ? String(row.resolution_summary) : null,
     customerNotified: Boolean(row.customer_notified),
+    subCategory: row.sub_category ? String(row.sub_category) : null,
+    accountNumber: row.account_number ? String(row.account_number) : null,
+    firstResponseAt: row.first_response_at ? parseDate(row.first_response_at) : null,
+    escalationLevel: Number(row.escalation_level ?? 0),
+    csatScore: row.csat_score != null ? Number(row.csat_score) : null,
+    csatComment: row.csat_comment ? String(row.csat_comment) : null,
+    csatSentAt: row.csat_sent_at ? parseDate(row.csat_sent_at) : null,
   };
 
   baseTicket.slaStatus = computeSLAStatus(baseTicket);

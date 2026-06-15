@@ -1,0 +1,19 @@
+-- Schedule nightly compute-daily-activity edge function (requires pg_cron + pg_net extensions)
+-- Run manually in SQL editor after deploying the edge function:
+--
+-- SELECT cron.schedule(
+--   'compute-daily-officer-activity',
+--   '30 0 * * *',
+--   $$
+--   SELECT net.http_post(
+--     url := current_setting('app.settings.supabase_url', true) || '/functions/v1/compute-daily-activity',
+--     headers := jsonb_build_object(
+--       'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key', true),
+--       'Content-Type', 'application/json'
+--     ),
+--     body := '{}'::jsonb
+--   );
+--   $$
+-- );
+
+-- Placeholder migration documenting cron setup (actual schedule configured per project)

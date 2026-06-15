@@ -53,7 +53,7 @@ export const analyticsApi = baseApi.injectEndpoints({
         handler: async (client) => {
           const [subs, payments, requests, officers] = await Promise.all([
             client.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-            client.from('user_payments').select('amount').eq('payment_status', 'success'),
+            client.from('payments').select('total_amount').eq('status', 'confirmed'),
             client
               .from('service_requests')
               .select('id', { count: 'exact', head: true })
@@ -63,7 +63,7 @@ export const analyticsApi = baseApi.injectEndpoints({
               .select('id', { count: 'exact', head: true })
               .eq('availability_status', 'available'),
           ]);
-          const mrr = (payments.data ?? []).reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+          const mrr = (payments.data ?? []).reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0);
           return {
             activeSubscribers: subs.count ?? 0,
             mrr,

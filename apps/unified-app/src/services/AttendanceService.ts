@@ -15,19 +15,33 @@ import type {
 } from '@/types/attendance';
 import { checkGeofenceStatus } from '@/utils/geofenceUtils';
 
+async function resolveGeofenceStatus(
+  coords: Coordinates,
+  forceRefresh: boolean,
+): Promise<ReturnType<typeof checkGeofenceStatus>> {
+  const geofences = await locationService.loadAssignedGeofences(forceRefresh);
+  return checkGeofenceStatus(coords, geofences, { accuracyMeters: coords.accuracy });
+}
+
 class AttendanceService {
   async checkIn(options?: {
     notes?: string;
     photoProof?: string;
+    uiSaysInside?: boolean;
   }): Promise<CheckInResult> {
     const today = await this.getTodayRecord();
     if (today?.checkInTime && !today.checkOutTime) {
       return { action: 'already_checked_in', record: today };
     }
 
+    await locationService.clearGeofenceCache();
     const coords = await locationService.getCurrentLocation();
-    const geofences = await locationService.loadAssignedGeofences();
-    const status = checkGeofenceStatus(coords, geofences);
+    let status = await resolveGeofenceStatus(coords, true);
+
+    if (!status.isInside && options?.uiSaysInside) {
+      await locationService.clearGeofenceCache();
+      status = await resolveGeofenceStatus(coords, true);
+    }
 
     if (!status.isInside) {
       return {
@@ -68,15 +82,21 @@ class AttendanceService {
   async checkOut(options?: {
     notes?: string;
     photoProof?: string;
+    uiSaysInside?: boolean;
   }): Promise<CheckOutResult> {
     const today = await this.getTodayRecord();
     if (!today?.checkInTime || today.checkOutTime) {
       return { action: 'not_checked_in' };
     }
 
+    await locationService.clearGeofenceCache();
     const coords = await locationService.getCurrentLocation();
-    const geofences = await locationService.loadAssignedGeofences();
-    const status = checkGeofenceStatus(coords, geofences);
+    let status = await resolveGeofenceStatus(coords, true);
+
+    if (!status.isInside && options?.uiSaysInside) {
+      await locationService.clearGeofenceCache();
+      status = await resolveGeofenceStatus(coords, true);
+    }
 
     if (!status.isInside) {
       return { action: 'needs_approval', distance: status.distance };
@@ -114,8 +134,10 @@ class AttendanceService {
     photoProof?: string;
     date: string;
   }): Promise<ApprovalRequest> {
-    const geofences = await locationService.loadAssignedGeofences();
-    const status = checkGeofenceStatus(payload.coords, geofences);
+    const geofences = await locationService.loadAssignedGeofences(true);
+    const status = checkGeofenceStatus(payload.coords, geofences, {
+      accuracyMeters: payload.coords.accuracy,
+    });
 
     const request = await store
       .dispatch(

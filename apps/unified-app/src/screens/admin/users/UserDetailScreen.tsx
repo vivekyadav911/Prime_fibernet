@@ -36,6 +36,13 @@ export function UserDetailScreen({ route, navigation }: Props) {
           <Button label="Edit profile" onPress={() => navigation.navigate('UserEdit', { userId })} />
         </View>
 
+        <SectionCard title="Collection">
+          <Text>Officer: {user.assignedOfficerName ?? 'Unassigned'}</Text>
+          <Text style={styles.hint}>
+            Field officers can only collect from customers assigned to them.
+          </Text>
+        </SectionCard>
+
         <SectionCard title="Active subscription">
           <Text>Plan: {user.planName ?? '—'}</Text>
           <Text>Speed: {user.planSpeed ? `${user.planSpeed} Mbps` : '—'}</Text>
@@ -68,4 +75,5 @@ const styles = StyleSheet.create({
   name: { fontSize: 22, fontWeight: '700', color: colors.textPrimary },
   meta: { color: colors.textSecondary },
   row: { paddingVertical: spacing.xxs, color: colors.textSecondary, fontSize: 13 },
+  hint: { fontSize: 12, color: colors.textSecondary, marginTop: spacing.xs },
 });

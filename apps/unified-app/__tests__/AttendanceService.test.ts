@@ -7,6 +7,7 @@ jest.mock('@/services/LocationService', () => ({
   locationService: {
     getCurrentLocation: jest.fn(),
     loadAssignedGeofences: jest.fn(),
+    clearGeofenceCache: jest.fn().mockResolvedValue(undefined),
   },
 }));
 

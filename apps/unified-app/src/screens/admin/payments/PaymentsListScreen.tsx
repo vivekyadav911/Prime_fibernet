@@ -1,0 +1,148 @@
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Screen } from '@prime/ui';
+
+import {
+  ExportButton,
+  PaymentCard,
+  PaymentFilterBar,
+  PaymentSummaryBar,
+  type PaymentFilterState,
+} from '@/components/payments';
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
+import { usePayments } from '@/hooks/usePayments';
+import type { AdminPaymentsStackParamList } from '@/types/navigation';
+import { adminColors } from '@/theme/admin';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
+import { queryErrorMessage } from '@/utils/queryError';
+
+export function PaymentsListScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AdminPaymentsStackParamList>>();
+  const [filters, setFilters] = useState<PaymentFilterState>({
+    status: 'all',
+    method: 'all',
+    channel: 'all',
+    search: '',
+    dateFrom: '',
+    dateTo: '',
+  });
+
+  const { data, isLoading, isError, error, refetch } = usePayments({
+    status: filters.status,
+    method: filters.method,
+    channel: filters.channel,
+    search: filters.search,
+    dateFrom: filters.dateFrom || undefined,
+    dateTo: filters.dateTo || undefined,
+  });
+
+  const rows = useMemo(() => data?.rows ?? [], [data?.rows]);
+
+  const onOpen = useCallback(
+    (paymentId: string, status: string) => {
+      if (status === 'pending_review' || status === 'cash_collected') {
+        navigation.navigate('PaymentReview', { paymentId });
+      } else {
+        navigation.navigate('PaymentDetail', { paymentId });
+      }
+    },
+    [navigation],
+  );
+
+  const listHeader = (
+    <>
+      <View style={styles.toolbar}>
+        <Text style={styles.title}>Payments</Text>
+        <View style={styles.toolbarRight}>
+          <Pressable onPress={() => navigation.navigate('CollectionAssignments')}>
+            <Text style={styles.link}>Assignments</Text>
+          </Pressable>
+          <Pressable onPress={() => navigation.navigate('GatewayConfig')}>
+            <Text style={styles.link}>Gateways</Text>
+          </Pressable>
+          <Pressable onPress={() => navigation.navigate('PaymentAnalytics')}>
+            <Text style={styles.link}>Analytics</Text>
+          </Pressable>
+          <ExportButton filters={filters} />
+        </View>
+      </View>
+      <Text style={styles.subtitle}>Review collections, confirm cash, and track online payments</Text>
+      {data ? (
+        <PaymentSummaryBar
+          total={data.total}
+          confirmedSum={data.confirmedSum}
+          pendingSum={data.pendingSum}
+          reviewCount={data.reviewCount}
+        />
+      ) : null}
+      <TextInput
+        style={styles.search}
+        placeholder="Search payment no., customer, account…"
+        value={filters.search}
+        onChangeText={(search) => setFilters((f) => ({ ...f, search }))}
+        placeholderTextColor={colors.textSecondary}
+      />
+      <PaymentFilterBar value={filters} onChange={setFilters} />
+    </>
+  );
+
+  if (isLoading) {
+    return (
+      <Screen style={styles.screen}>
+        {listHeader}
+        <SkeletonLoader rows={6} />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen style={styles.screen}>
+        {listHeader}
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen style={styles.screen}>
+      <FlatList
+        data={rows}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={
+          <EmptyState
+            title="No payments yet"
+            subtitle="Payments from customers and officers will appear here once collected."
+          />
+        }
+        renderItem={({ item }) => (
+          <PaymentCard payment={item} onPress={() => onOpen(item.id, item.status)} />
+        )}
+        contentContainerStyle={styles.listContent}
+      />
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
+  listContent: { padding: spacing.md, paddingTop: 0 },
+  toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs },
+  toolbarRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  link: { fontSize: 13, fontWeight: '600', color: adminColors.primary },
+  title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
+  subtitle: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.md },
+  search: {
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 8,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.surfaceWhite,
+    color: colors.textPrimary,
+  },
+});

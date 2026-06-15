@@ -163,6 +163,17 @@ export const adminUsersApi = baseApi.injectEndpoints({
             .eq('status', 'active')
             .maybeSingle();
 
+          let assignedOfficerName: string | null = null;
+          const assignedOfficerId = (user.assigned_officer_id as string) ?? null;
+          if (assignedOfficerId) {
+            const { data: officer } = await client
+              .from('officers')
+              .select('full_name')
+              .eq('id', assignedOfficerId)
+              .maybeSingle();
+            assignedOfficerName = (officer?.full_name as string) ?? null;
+          }
+
           const plan = sub?.plans as { name?: string; speed_mbps?: number } | null;
           return {
             id: user.id as string,
@@ -173,6 +184,8 @@ export const adminUsersApi = baseApi.injectEndpoints({
             city: (user.city as string) ?? null,
             joinDate: (user.created_at as string) ?? '',
             isBlocked: Boolean(user.is_blocked),
+            assignedOfficerId,
+            assignedOfficerName,
             planName: plan?.name ?? null,
             planSpeed: plan?.speed_mbps != null ? Number(plan.speed_mbps) : null,
             expiryDate: (sub?.end_at as string) ?? (user.expiry_date as string) ?? null,
@@ -183,14 +196,33 @@ export const adminUsersApi = baseApi.injectEndpoints({
       providesTags: (_r, _e, id) => [{ type: 'Users', id }],
     }),
 
-    updateAdminUser: builder.mutation<void, { id: string; name?: string; email?: string; phone?: string; address?: string }>({
-      query: ({ id, ...updates }) => ({
+    updateAdminUser: builder.mutation<
+      void,
+      {
+        id: string;
+        name?: string;
+        email?: string;
+        phone?: string;
+        address?: string;
+        assignedOfficerId?: string | null;
+      }
+    >({
+      query: ({ id, assignedOfficerId, ...updates }) => ({
         handler: async (client) => {
-          const { error } = await client.from('users').update(updates).eq('id', id);
+          const payload: Record<string, unknown> = { ...updates };
+          if (assignedOfficerId !== undefined) {
+            payload.assigned_officer_id = assignedOfficerId;
+          }
+          const { error } = await client.from('users').update(payload).eq('id', id);
           if (error) throw error;
         },
       }),
-      invalidatesTags: (_r, _e, { id }) => [{ type: 'Users', id }, 'Users'],
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'Users', id },
+        'Users',
+        'CollectionAssignments',
+        'Payments',
+      ],
     }),
 
     getUserSubscriptions: builder.query<Subscription[], string>({

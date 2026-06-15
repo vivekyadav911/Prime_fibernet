@@ -1,7 +1,9 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 
-import type { InventoryAssignment, Shift } from '@/types/officer';
+import type { Shift } from '@prime/types';
+
+import type { InventoryAssignment } from '@/types/officer';
 import type { ServiceRequest } from '@/types/request';
 
 export type LiveLocation = {

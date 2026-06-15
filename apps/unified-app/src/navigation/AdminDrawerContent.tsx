@@ -9,15 +9,22 @@ import { useUnassignedRequestCount } from '@/hooks/useAdminRequests';
 import { usePlansSidebarBadge } from '@/hooks/usePlans';
 import { useNotificationsSidebarBadge } from '@/hooks/useNotificationHub';
 import { useTicketPortalBadge } from '@/hooks/useTickets';
+import { useChatSession } from '@/hooks/useChatSession';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
-import type { AdminDrawerParamList, AdminInventoryStackParamList } from '@/types/navigation';
+import type {
+  AdminDrawerParamList,
+  AdminInventoryStackParamList,
+  AdminPaymentsStackParamList,
+} from '@/types/navigation';
+
+type DrawerNestedScreen = keyof AdminInventoryStackParamList | keyof AdminPaymentsStackParamList;
 
 type DrawerItem = {
   route: keyof AdminDrawerParamList;
-  screen?: keyof AdminInventoryStackParamList;
+  screen?: DrawerNestedScreen;
   label: string;
   icon: string;
   showBadge?: boolean;
@@ -57,7 +64,6 @@ const SECTIONS: DrawerSection[] = [
     label: 'Operations',
     items: [
       { route: 'Requests', label: 'Requests', icon: '📋', showBadge: true },
-      { route: 'TicketPortal', label: 'Ticket Portal', icon: '🎫', showBadge: true },
       { route: 'Plans', label: 'Plans', icon: '📶', showBadge: true },
       { route: 'Notifications', label: 'Notifications', icon: '🔔', showBadge: true },
     ],
@@ -67,6 +73,7 @@ const SECTIONS: DrawerSection[] = [
     label: 'Finance',
     items: [
       { route: 'Payments', label: 'Payments', icon: '💳' },
+      { route: 'Payments', screen: 'CollectionAssignments', label: 'Collection assignments', icon: '📋' },
       { route: 'Invoices', label: 'Invoices', icon: '🧾' },
     ],
   },
@@ -90,10 +97,9 @@ const SECTIONS: DrawerSection[] = [
     id: 'system',
     label: 'System',
     items: [
-      { route: 'Support', label: 'Support', icon: '💬' },
+      { route: 'Support', label: 'Customer Support', icon: '💬', showBadge: true },
       { route: 'Settings', label: 'Settings', icon: '⚙️' },
       { route: 'Map', label: 'Map', icon: '🗺️' },
-      { route: 'Audit', label: 'Audit Logs', icon: '📜' },
     ],
   },
 ];
@@ -129,6 +135,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
   const user = useAppSelector((s) => s.auth.user);
   const unassignedCount = useUnassignedRequestCount();
   const ticketBadge = useTicketPortalBadge();
+  const { waitingCount } = useChatSession();
   const plansBadge = usePlansSidebarBadge();
   const notificationsBadge = useNotificationsSidebarBadge();
   const { state, navigation } = props;
@@ -141,22 +148,24 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
       switch (route) {
         case 'Requests':
           return unassignedCount > 0 ? { kind: 'count', value: unassignedCount } : null;
-        case 'TicketPortal':
-          if (ticketBadge.breachedCount > 0) {
+        case 'Support': {
+          const total = ticketBadge.breachedCount + waitingCount;
+          if (total > 0) {
             return {
               kind: 'pill',
-              label: `${formatNavCount(ticketBadge.breachedCount)} urgent`,
-              tone: 'danger',
+              label: `${formatNavCount(total)} alert`,
+              tone: ticketBadge.breachedCount > 0 ? 'danger' : 'warning',
             };
           }
           if (ticketBadge.openCount > 0) {
             return {
               kind: 'pill',
-              label: `${formatNavCount(ticketBadge.openCount)} new`,
+              label: `${formatNavCount(ticketBadge.openCount)} open`,
               tone: 'primary',
             };
           }
           return null;
+        }
         case 'Plans':
           if (plansBadge.count > 0) {
             return {
@@ -186,7 +195,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
   );
 
   const navigate = useCallback(
-    (route: keyof AdminDrawerParamList, screen?: keyof AdminInventoryStackParamList) => {
+    (route: keyof AdminDrawerParamList, screen?: DrawerNestedScreen) => {
       if (screen) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         navigation.navigate(route as any, { screen });
@@ -215,14 +224,20 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
 
           {section.items.map((item) => {
             const inventoryState = state.routes.find((r) => r.name === 'Inventory')?.state;
+            const paymentsState = state.routes.find((r) => r.name === 'Payments')?.state;
             const nestedRoute =
-              inventoryState && 'routes' in inventoryState && inventoryState.index != null
-                ? inventoryState.routes[inventoryState.index]?.name
-                : undefined;
+              item.route === 'Payments' && paymentsState && 'routes' in paymentsState && paymentsState.index != null
+                ? paymentsState.routes[paymentsState.index]?.name
+                : item.route === 'Inventory' &&
+                    inventoryState &&
+                    'routes' in inventoryState &&
+                    inventoryState.index != null
+                  ? inventoryState.routes[inventoryState.index]?.name
+                  : undefined;
             const isActive =
               item.screen != null
                 ? activeRoute === item.route && nestedRoute === item.screen
-                : activeRoute === item.route;
+                : activeRoute === item.route && nestedRoute == null;
             const itemKey = item.screen ? `${item.route}-${item.screen}` : item.route;
             const notification = getNotification(item.route, item.showBadge);
 

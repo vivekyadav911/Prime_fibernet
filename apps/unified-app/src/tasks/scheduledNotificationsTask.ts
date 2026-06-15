@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 import {
@@ -10,10 +11,16 @@ export const SCHEDULED_NOTIFICATION_TASK = 'check-scheduled-notifications';
 
 let taskDefined = false;
 
-async function loadBackgroundFetchModule(): Promise<typeof import('expo-background-fetch') | null> {
-  if (Platform.OS === 'web') return null;
+function isBackgroundTaskSupported(): boolean {
+  if (Platform.OS === 'web') return false;
+  // Background tasks are not available in Expo Go — only in dev/production builds.
+  return Constants.executionEnvironment !== 'storeClient';
+}
+
+async function loadBackgroundTaskModule(): Promise<typeof import('expo-background-task') | null> {
+  if (!isBackgroundTaskSupported()) return null;
   try {
-    return await import('expo-background-fetch');
+    return await import('expo-background-task');
   } catch {
     return null;
   }
@@ -31,12 +38,12 @@ async function loadTaskManagerModule(): Promise<typeof import('expo-task-manager
 async function ensureTaskDefined(): Promise<boolean> {
   if (taskDefined) return true;
 
-  const [BackgroundFetch, TaskManager] = await Promise.all([
-    loadBackgroundFetchModule(),
+  const [BackgroundTask, TaskManager] = await Promise.all([
+    loadBackgroundTaskModule(),
     loadTaskManagerModule(),
   ]);
 
-  if (!BackgroundFetch || !TaskManager) return false;
+  if (!BackgroundTask || !TaskManager) return false;
 
   if (!TaskManager.isTaskDefined(SCHEDULED_NOTIFICATION_TASK)) {
     TaskManager.defineTask(SCHEDULED_NOTIFICATION_TASK, async () => {
@@ -48,10 +55,10 @@ async function ensureTaskDefined(): Promise<boolean> {
           await sendNotification(notification.id, systemAdmin);
         }
         return due.length > 0
-          ? BackgroundFetch.BackgroundFetchResult.NewData
-          : BackgroundFetch.BackgroundFetchResult.NoData;
+          ? BackgroundTask.BackgroundTaskResult.Success
+          : BackgroundTask.BackgroundTaskResult.Success;
       } catch {
-        return BackgroundFetch.BackgroundFetchResult.Failed;
+        return BackgroundTask.BackgroundTaskResult.Failed;
       }
     });
   }
@@ -61,19 +68,19 @@ async function ensureTaskDefined(): Promise<boolean> {
 }
 
 export async function registerScheduledNotificationsTask(): Promise<void> {
+  if (!isBackgroundTaskSupported()) return;
+
   const ready = await ensureTaskDefined();
   if (!ready) return;
 
-  const BackgroundFetch = await loadBackgroundFetchModule();
+  const BackgroundTask = await loadBackgroundTaskModule();
   const TaskManager = await loadTaskManagerModule();
-  if (!BackgroundFetch || !TaskManager) return;
+  if (!BackgroundTask || !TaskManager) return;
 
   const isRegistered = await TaskManager.isTaskRegisteredAsync(SCHEDULED_NOTIFICATION_TASK);
   if (isRegistered) return;
 
-  await BackgroundFetch.registerTaskAsync(SCHEDULED_NOTIFICATION_TASK, {
-    minimumInterval: 15 * 60,
-    stopOnTerminate: false,
-    startOnBoot: true,
+  await BackgroundTask.registerTaskAsync(SCHEDULED_NOTIFICATION_TASK, {
+    minimumInterval: 15,
   });
 }

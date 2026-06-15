@@ -15,7 +15,7 @@ import type { AdminTicketsStackParamList } from '@/types/navigation';
 import type { Ticket } from '@/types/tickets';
 import { truncateTicketNumber } from '@/utils/ticketViewMappers';
 
-type Props = NativeStackScreenProps<AdminTicketsStackParamList, 'TicketPortal'>;
+type Props = NativeStackScreenProps<AdminTicketsStackParamList, 'TicketPortalHome'>;
 
 export function TicketPortalScreen({ navigation, route }: Props) {
   const scrollRef = useRef<ScrollView>(null);

@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +25,7 @@ import {
   TicketStatusBadge,
   TicketTimeline,
 } from '@/components/TicketPortal';
+import { EscalationBanner } from '@/components/support';
 import { AvatarIcon, FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { RequestDetailModal } from '@/screens/admin/requests/RequestDetailModal';
@@ -74,6 +76,7 @@ const VALID_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
 };
 
 export function TicketDetailScreen({ route, navigation }: Props) {
+  const supportNav = useNavigation();
   const { ticketId } = route.params;
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
@@ -276,12 +279,35 @@ export function TicketDetailScreen({ route, navigation }: Props) {
     <RoleGuard requiredPermission="requests.view">
       <Screen padded={false}>
         <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 80 }]}>
+          {ticket.escalationLevel > 0 ? (
+            <EscalationBanner
+              ticketNumber={ticket.ticketNumber}
+              priority={ticket.priority}
+              minutesOverdue={Math.abs(Math.floor(ticket.slaStatus.resolutionRemainingMs / 60000))}
+            />
+          ) : null}
+
           <SectionCard title="">
             <Text style={styles.ticketNumber}>{ticket.ticketNumber}</Text>
             <Text style={styles.mainTitle}>{ticket.title}</Text>
             <Text style={styles.meta}>
               Created {format(ticket.createdAt, 'MMM dd, yyyy HH:mm')} by {ticket.createdByAdminName}
             </Text>
+            {ticket.customerId ? (
+              <Pressable
+                onPress={() =>
+                  (supportNav as { navigate: (name: string, params: { customerId: string }) => void }).navigate(
+                    'CustomerSupportProfile',
+                    { customerId: ticket.customerId! },
+                  )
+                }
+              >
+                <Text style={styles.profileLink}>View Customer Profile →</Text>
+              </Pressable>
+            ) : null}
+            {ticket.csatScore != null ? (
+              <Text style={styles.csat}>CSAT: {ticket.csatScore} ⭐</Text>
+            ) : null}
             <View style={styles.badgeRow}>
               <TicketStatusBadge status={ticket.status} />
               <TicketPriorityBadge priority={ticket.priority} />
@@ -576,6 +602,18 @@ const styles = StyleSheet.create({
   scroll: {
     padding: spacing.md,
     gap: spacing.md,
+  },
+  profileLink: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: adminColors.primary,
+    marginBottom: spacing.sm,
+  },
+  csat: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: adminColors.badgeWarning,
+    marginBottom: spacing.sm,
   },
   ticketNumber: {
     fontFamily: 'monospace',

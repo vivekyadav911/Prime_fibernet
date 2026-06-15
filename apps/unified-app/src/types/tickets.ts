@@ -117,6 +117,13 @@ export interface Ticket {
   slaStatus: SLAStatus;
   resolutionSummary: string | null;
   customerNotified: boolean;
+  subCategory: string | null;
+  accountNumber: string | null;
+  firstResponseAt: Date | null;
+  escalationLevel: number;
+  csatScore: number | null;
+  csatComment: string | null;
+  csatSentAt: Date | null;
 }
 
 export interface TicketFormData {
@@ -134,6 +141,8 @@ export interface TicketFormData {
   linkedRequestNumber: string | null;
   customerId: string | null;
   tags: string[];
+  subCategory: string | null;
+  accountNumber: string | null;
 }
 
 export interface TicketFilters {

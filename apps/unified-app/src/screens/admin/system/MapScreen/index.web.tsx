@@ -4,7 +4,7 @@ import { Screen } from '@prime/ui';
 
 import { AdminWebLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
-import { useGetLiveOfficerPinsQuery, useGetOpenRequestPinsQuery } from '@/store/api/endpoints';
+import { useGetTrackingOfficerLocationsQuery, useGetOpenRequestPinsQuery } from '@/store/api/endpoints';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
@@ -21,7 +21,8 @@ const OFFICER_COLORS: Record<string, string> = {
 export function AdminMapScreen() {
   const [filter, setFilter] = useState<FilterMode>('both');
 
-  const { data: officers, isLoading: oLoad, isError: oErr, error: oError, refetch: oRefetch } = useGetLiveOfficerPinsQuery();
+  const { data: officers, isLoading: oLoad, isError: oErr, error: oError, refetch: oRefetch } =
+    useGetTrackingOfficerLocationsQuery();
   const { data: requests, isLoading: rLoad, isError: rErr, error: rError, refetch: rRefetch } = useGetOpenRequestPinsQuery();
 
   const showOfficers = filter === 'officers' || filter === 'both';
@@ -32,9 +33,9 @@ export function AdminMapScreen() {
     if (showOfficers) {
       for (const o of officers ?? []) {
         rows.push({
-          id: `officer-${o.officerId}`,
-          title: o.name,
-          subtitle: `Officer · ${o.status} · ${o.lat.toFixed(4)}, ${o.lng.toFixed(4)}`,
+          id: `officer-${o.officer_id}`,
+          title: o.officer?.name ?? 'Officer',
+          subtitle: `Officer · ${o.is_online ? 'online' : 'offline'} · ${o.latitude.toFixed(4)}, ${o.longitude.toFixed(4)}`,
           kind: 'officer',
         });
       }

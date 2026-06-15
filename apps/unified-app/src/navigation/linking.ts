@@ -22,7 +22,7 @@ function getStateFromPath(path: string, options: Parameters<typeof defaultGetSta
  * - Admin go_router `/login` + `/` (`prime_fibernet_admin_panel/lib/config/router.dart`)
  */
 export const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: ['primefibernet://', 'https://admin.primefibernet.com', 'https://app.primefibernet.com'],
+  prefixes: ['primefiber://', 'primefibernet://', 'https://admin.primefibernet.com', 'https://app.primefibernet.com'],
   getStateFromPath,
   config: {
     screens: {
@@ -56,6 +56,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
           PaymentGateway: 'payment-gateway/:paymentId',
           MakePayment: 'make-payment',
           PaymentHistory: 'payment-history',
+          PaymentSuccess: 'payment/result',
+          GatewayWebView: 'payment/checkout',
           CreateRequest: 'create-request',
           RequestDetails: 'requests/:requestId',
           Notifications: 'notifications',
@@ -71,11 +73,18 @@ export const linking: LinkingOptions<RootStackParamList> = {
           OfficerDrawer: {
             screens: {
               Dashboard: 'dashboard',
-              Requests: 'requests',
+              RequestsStack: { screens: { RequestsList: 'requests' } },
               Map: 'map',
-              Shifts: 'attendance',
-              AttendanceHistory: 'attendance/history',
-              Leave: 'leave',
+              Attendance: 'attendance',
+              CollectionsStack: {
+                screens: {
+                  CollectionsList: 'collections',
+                  AssignedCustomers: 'collections/search',
+                  CustomerPaymentHistory: 'collections/history/:customerId',
+                },
+              },
+              LeaveStack: { screens: { LeaveList: 'leave' } },
+              ProfileStack: { screens: { ProfileHome: 'profile' } },
             },
           },
           RequestDetail: 'request/:requestId',
@@ -107,7 +116,37 @@ export const linking: LinkingOptions<RootStackParamList> = {
                   NotificationDetail: 'notifications/:notificationId',
                 },
               },
-              Settings: 'settings',
+              Support: {
+                screens: {
+                  SupportDashboard: 'support',
+                  Tickets: 'support/tickets',
+                  FaqList: 'support/faqs',
+                  LiveChat: 'support/chat',
+                  SupportAnalytics: 'support/analytics',
+                },
+              },
+              Settings: {
+                screens: {
+                  SettingsHub: 'settings',
+                  AdminAccount: 'settings/account',
+                  General: 'settings/general',
+                  Security: 'settings/security',
+                  Officers: 'settings/officers',
+                  OfficerSalary: 'settings/officer-salary',
+                  Notifications: 'settings/notifications',
+                  Integrations: 'settings/integrations',
+                  Appearance: 'settings/appearance',
+                  System: 'settings/system',
+                  BackupExport: 'settings/backup',
+                  AuditLogs: 'settings/audit',
+                },
+              },
+              Map: {
+                screens: {
+                  MapMain: 'map',
+                  TrailReplay: 'map/trail/:officerId',
+                },
+              },
             },
           },
           AdminAuth: 'login',

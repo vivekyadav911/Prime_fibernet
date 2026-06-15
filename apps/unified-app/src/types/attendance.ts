@@ -5,6 +5,8 @@ export type GeofenceShape = 'circle' | 'polygon';
 export interface Coordinates {
   latitude: number;
   longitude: number;
+  accuracy?: number;
+  mocked?: boolean;
 }
 
 export interface CircleGeofence {

@@ -547,6 +547,8 @@ export const attendanceApi = baseApi.injectEndpoints({
             .select(ATTENDANCE_SELECT)
             .eq('officer_id', officerId)
             .eq('shift_date', today)
+            .order('check_in_time', { ascending: false })
+            .limit(1)
             .maybeSingle();
           if (error) throw error;
           return data ? mapAttendanceRow(data as never) : null;
@@ -741,7 +743,15 @@ export const attendanceApi = baseApi.injectEndpoints({
 
     updateOfficerLocation: builder.mutation<
       void,
-      { coords: Coordinates; accuracy: number; timestamp: string; batteryLevel?: number }
+      {
+        coords: Coordinates;
+        accuracy: number;
+        timestamp: string;
+        batteryLevel?: number;
+        heading?: number | null;
+        speed?: number | null;
+        altitude?: number | null;
+      }
     >({
       query: (body) => ({
         handler: async (client) => {
@@ -750,6 +760,9 @@ export const attendanceApi = baseApi.injectEndpoints({
           if (!userId) throw new Error('Not authenticated');
           const officerId = await getOfficerIdForUser(client, userId);
           if (!officerId) throw new Error('Officer not found');
+
+          const speed = body.speed ?? null;
+          const isMoving = speed !== null ? speed > 0.5 : true;
 
           const { error } = await client
             .from('officers')
@@ -766,11 +779,34 @@ export const attendanceApi = baseApi.injectEndpoints({
             latitude: body.coords.latitude,
             longitude: body.coords.longitude,
             accuracy: body.accuracy,
+            heading: body.heading ?? null,
+            speed,
+            altitude: body.altitude ?? null,
+            is_moving: isMoving,
+            battery_level: body.batteryLevel ?? null,
             event_type: 'location_update',
             recorded_at: body.timestamp,
           });
+
+          await client.from('officer_locations').upsert(
+            {
+              officer_id: officerId,
+              latitude: body.coords.latitude,
+              longitude: body.coords.longitude,
+              accuracy: body.accuracy,
+              heading: body.heading ?? null,
+              speed,
+              altitude: body.altitude ?? null,
+              battery_level: body.batteryLevel ?? null,
+              is_moving: isMoving,
+              is_online: true,
+              last_seen_at: body.timestamp,
+            },
+            { onConflict: 'officer_id' },
+          );
         },
       }),
+      invalidatesTags: ['Map'],
     }),
 
     getMyLeaveRequests: builder.query<LeaveRequestRecord[], void>({

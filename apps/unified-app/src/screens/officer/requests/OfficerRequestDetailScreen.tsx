@@ -5,26 +5,30 @@ import {
   FlatList,
   Image,
   Linking,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { Marker } from 'react-native-maps';
 import { Button, Screen } from '@prime/ui';
 import { colors } from '@/theme/colors';
 
-import { ErrorState, LoadingOverlay, PriorityBadge, SkeletonLoader, StatusChip } from '@/components/common';
+import { ErrorState, LoadingOverlay, PriorityBadge, SkeletonLoader, StatusChip, ScreenWrapper } from '@/components/common';
+import { FreeMapView } from '@/components/map';
 import { useCamera } from '@/hooks/useCamera';
 import {
   useAddActivityNoteMutation,
   useGetRequestDetailQuery,
 } from '@/services/api/officersApi';
 import { useUpdateRequestStatusMutation } from '@/services/api/requestsApi';
-import { useAppSelector } from '@/store/hooks';
+import { SyncManager } from '@/services/offline/syncManager';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { enqueueToast } from '@/store/slices/uiSlice';
 import type { OfficerStackParamList } from '@/types/navigation';
+import { NavigationButton } from '../components/NavigationButton';
+import { StatusStepper } from '../components/StatusStepper';
 import { radius, spacing } from '@/theme/spacing';
 
 type Props = NativeStackScreenProps<OfficerStackParamList, 'RequestDetail'>;
@@ -49,16 +53,9 @@ function getStatusAction(status: string): StatusAction | null {
   }
 }
 
-function mapsDeepLink(lat: number, lng: number, address: string): string {
-  const encoded = encodeURIComponent(address);
-  if (Platform.OS === 'ios') {
-    return `maps://?daddr=${lat},${lng}&q=${encoded}`;
-  }
-  return `google.navigation:q=${lat},${lng}`;
-}
-
 export function OfficerRequestDetailScreen({ route }: Props) {
   const { requestId } = route.params;
+  const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
   const { data: request, isLoading, error, refetch } = useGetRequestDetailQuery(requestId);
   const [updateStatus, { isLoading: updatingStatus }] = useUpdateRequestStatusMutation();
@@ -81,15 +78,20 @@ export function OfficerRequestDetailScreen({ route }: Props) {
   const activityCount = request?.activities?.length ?? 0;
   const statusAction = request ? getStatusAction(request.status) : null;
 
-  const onNavigate = async () => {
-    if (!request?.latitude || !request?.longitude) return;
-    const url = mapsDeepLink(request.latitude, request.longitude, request.address);
-    const canOpen = await Linking.canOpenURL(url);
-    await Linking.openURL(canOpen ? url : `https://maps.google.com/?q=${request.latitude},${request.longitude}`);
-  };
-
   const onStatusPress = async () => {
     if (!request || !statusAction || !user) return;
+
+    const applyStatus = async () => {
+      await updateStatus({
+        id: request.id,
+        status: statusAction.nextStatus,
+        note:
+          statusAction.nextStatus === 'resolved'
+            ? 'Request resolved'
+            : `Status changed to ${statusAction.nextStatus}`,
+        officerName: user.name,
+      }).unwrap();
+    };
 
     if (statusAction.nextStatus === 'resolved') {
       if (activityCount < 1) {
@@ -97,22 +99,36 @@ export function OfficerRequestDetailScreen({ route }: Props) {
         sheetRef.current?.expand();
         return;
       }
-      await updateStatus({
-        id: request.id,
-        status: statusAction.nextStatus,
-        note: 'Request resolved',
-        officerName: user.name,
-      }).unwrap();
+      try {
+        await applyStatus();
+      } catch {
+        await SyncManager.enqueue({
+          id: `${request.id}-resolved-${Date.now()}`,
+          operation: 'updateRequestStatus',
+          endpoint: 'updateRequestStatus',
+          payload: { id: request.id, status: 'resolved', note: 'Request resolved' },
+        });
+        dispatch(enqueueToast({ id: 'off-res', type: 'info', message: 'Saved offline' }));
+      }
       refetch();
       return;
     }
 
-    await updateStatus({
-      id: request.id,
-      status: statusAction.nextStatus,
-      note: `Status changed to ${statusAction.nextStatus}`,
-      officerName: user.name,
-    }).unwrap();
+    try {
+      await applyStatus();
+    } catch {
+      await SyncManager.enqueue({
+        id: `${request.id}-${statusAction.nextStatus}-${Date.now()}`,
+        operation: 'updateRequestStatus',
+        endpoint: 'updateRequestStatus',
+        payload: {
+          id: request.id,
+          status: statusAction.nextStatus,
+          note: `Status changed to ${statusAction.nextStatus}`,
+        },
+      });
+      dispatch(enqueueToast({ id: 'off-st', type: 'info', message: 'Saved offline' }));
+    }
     refetch();
   };
 
@@ -169,16 +185,33 @@ export function OfficerRequestDetailScreen({ route }: Props) {
   const hasLocation = request.latitude != null && request.longitude != null;
 
   return (
-    <Screen padded={false}>
+    <ScreenWrapper scrollable={false} padded={false}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <View style={styles.headerRow}>
             <Text style={styles.customerName}>{request.userName ?? 'Customer'}</Text>
             <PriorityBadge priority={request.priority} />
           </View>
-          {request.userPhone ? <Text style={styles.meta}>📞 {request.userPhone}</Text> : null}
+          {request.userPhone ? (
+            <Pressable onPress={() => void Linking.openURL(`tel:${request.userPhone}`)}>
+              <Text style={styles.meta}>📞 {request.userPhone}</Text>
+            </Pressable>
+          ) : null}
           {request.userEmail ? <Text style={styles.meta}>✉️ {request.userEmail}</Text> : null}
           <StatusChip status={request.status} />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Status progress</Text>
+          <StatusStepper status={request.status} />
+          {statusAction ? (
+            <Button
+              label={statusAction.label}
+              onPress={() => void onStatusPress()}
+              disabled={updatingStatus}
+              style={styles.statusCta}
+            />
+          ) : null}
         </View>
 
         <View style={styles.card}>
@@ -203,11 +236,16 @@ export function OfficerRequestDetailScreen({ route }: Props) {
           <View style={styles.mapHeader}>
             <Text style={styles.sectionTitle}>Customer location</Text>
             {hasLocation ? (
-              <Button label="Navigate" onPress={onNavigate} />
+              <NavigationButton
+                address={request.address}
+                latitude={request.latitude}
+                longitude={request.longitude}
+                variant="primary"
+              />
             ) : null}
           </View>
           {hasLocation ? (
-            <MapView
+            <FreeMapView
               style={styles.map}
               initialRegion={{
                 latitude: request.latitude!,
@@ -221,7 +259,7 @@ export function OfficerRequestDetailScreen({ route }: Props) {
                 title={request.userName ?? 'Customer'}
                 description={request.address}
               />
-            </MapView>
+            </FreeMapView>
           ) : (
             <Text style={styles.meta}>Location not available</Text>
           )}
@@ -229,11 +267,6 @@ export function OfficerRequestDetailScreen({ route }: Props) {
 
         {statusAction ? (
           <View style={styles.actions}>
-            <Button
-              label={statusAction.label}
-              onPress={onStatusPress}
-              disabled={updatingStatus}
-            />
             <Button
               label="Add activity note"
               variant="ghost"
@@ -295,7 +328,7 @@ export function OfficerRequestDetailScreen({ route }: Props) {
       </BottomSheet>
 
       <LoadingOverlay visible={updatingStatus || addingNote || isUploading} />
-    </Screen>
+    </ScreenWrapper>
   );
 }
 
@@ -319,6 +352,7 @@ const styles = StyleSheet.create({
   mapHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   map: { height: 180, borderRadius: radius.md, marginTop: spacing.sm },
   actions: { gap: spacing.sm },
+  statusCta: { marginTop: spacing.sm, minHeight: 48 },
   timelineItem: {
     borderLeftWidth: 2,
     borderLeftColor: colors.accentTeal,

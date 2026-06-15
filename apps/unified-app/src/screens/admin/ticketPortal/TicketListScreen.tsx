@@ -14,9 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@prime/ui';
 
 import { TicketCard, TicketFilterSheet } from '@/components/TicketPortal';
+import { StatsCard } from '@/components/support';
 import { AdminEmptyState, FilterChips, RoleGuard, SearchBar, SelectField } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { DEFAULT_TICKET_FILTERS, useTickets } from '@/hooks/useTickets';
+import { useGetSupportDashboardStatsQuery } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
@@ -56,6 +58,7 @@ export function TicketListScreen({ navigation }: Props) {
     onRefresh,
     error,
   } = useTickets();
+  const { data: stats } = useGetSupportDashboardStatsQuery();
 
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -119,6 +122,20 @@ export function TicketListScreen({ navigation }: Props) {
           <View style={styles.countBadge}>
             <Text style={styles.countText}>{tickets.length}</Text>
           </View>
+        </View>
+
+        <View style={styles.statsRow}>
+          <StatsCard
+            label="Open"
+            value={stats?.openTickets ?? 0}
+            onPress={() => updateFilters({ status: 'Open' })}
+          />
+          <StatsCard
+            label="In Progress"
+            value={stats?.inProgressTickets ?? 0}
+            onPress={() => updateFilters({ status: 'In Progress' })}
+          />
+          <StatsCard label="SLA Breaches" value={stats?.slaBreaches ?? 0} tone="danger" onPress={() => updateFilters({ slaBreached: true })} />
         </View>
 
         <View style={styles.toolbar}>
@@ -206,6 +223,12 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
   },
   countBadge: {
     backgroundColor: `${adminColors.primary}22`,

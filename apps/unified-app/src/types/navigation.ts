@@ -1,5 +1,8 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
+import type { TimeRange } from '@/types/map';
+import type { PaymentMethod } from '@/types/payments';
+
 /**
  * Auth stack — Flutter `AdminAuthScreen`, customer/officer login, shared auth package.
  */
@@ -69,6 +72,15 @@ export type CustomerStackParamList = {
     planName: string;
     activationDate: string;
   };
+  CustomerBill: undefined;
+  PaymentMethod: { amount: number; planName: string; customerId: string; paymentMethod?: PaymentMethod };
+  GatewayWebView: {
+    amount: number;
+    planName: string;
+    customerId: string;
+    paymentMethod: PaymentMethod;
+  };
+  Receipt: { paymentId: string };
   MakePayment: { userId?: string } | undefined;
   PaymentHistory: undefined;
   MyBills: undefined;
@@ -82,6 +94,39 @@ export type CustomerStackParamList = {
   Privacy: undefined;
   Refund: undefined;
   SupportScreen: undefined;
+  CustomerLiveChat: { sessionId?: string } | undefined;
+  CustomerFaqList: undefined;
+  CustomerFaqDetail: { faqId: string };
+  CustomerSupportHub: undefined;
+};
+
+export type OfficerLeaveStackParamList = {
+  LeaveList: undefined;
+  ApplyLeave: undefined;
+};
+
+export type OfficerProfileStackParamList = {
+  ProfileHome: undefined;
+  ChangePassword: undefined;
+};
+
+export type OfficerRequestsStackParamList = {
+  RequestsList: undefined;
+};
+
+export type OfficerCollectionsStackParamList = {
+  CollectionsList: undefined;
+  AssignedCustomers: undefined;
+  CustomerPaymentHistory: { customerId: string; customerName: string };
+  CashCollection: {
+    customerId: string;
+    customerName: string;
+    accountNumber: string;
+    amount: number;
+    dueDate?: string;
+    planName?: string;
+  };
+  CollectionHistory: undefined;
 };
 
 /**
@@ -89,6 +134,8 @@ export type CustomerStackParamList = {
  */
 export type OfficerDrawerParamList = {
   Dashboard: undefined;
+  RequestsStack: undefined;
+  /** @deprecated use RequestsStack */
   Requests: undefined;
   Map: undefined;
   Attendance: undefined;
@@ -101,11 +148,25 @@ export type OfficerDrawerParamList = {
   ShiftManagement: undefined;
   ShiftRequest: undefined;
   CollectPayment: { userId?: string; customerName?: string } | undefined;
+  CollectionsStack: NavigatorScreenParams<OfficerCollectionsStackParamList> | undefined;
+  /** @deprecated use CollectionsStack */
+  OfficerCollections: undefined;
+  CashCollection: {
+    customerId: string;
+    customerName: string;
+    accountNumber: string;
+    amount: number;
+    dueDate?: string;
+    planName?: string;
+  };
+  CollectionHistory: undefined;
   Invoice: { invoiceId?: string } | undefined;
   Inventory: undefined;
   Earnings: undefined;
   PerformanceWallet: undefined;
   Leave: undefined;
+  LeaveStack: undefined;
+  ApplyLeave: undefined;
   TimeOff: undefined;
   Payslip: undefined;
   Payslips: undefined;
@@ -121,6 +182,8 @@ export type OfficerDrawerParamList = {
   Privacy: undefined;
   Support: undefined;
   Profile: undefined;
+  ProfileStack: undefined;
+  ChangePassword: undefined;
   /** Flutter: gates app until GPS enabled */
   LocationGate: undefined;
 };
@@ -175,9 +238,27 @@ export type AdminRequestsStackParamList = {
 };
 
 export type AdminTicketsStackParamList = {
-  TicketPortal: { linkedRequestId?: string; linkedRequestNumber?: string } | undefined;
+  TicketPortalHome: { linkedRequestId?: string; linkedRequestNumber?: string } | undefined;
   TicketList: undefined;
   TicketDetail: { ticketId: string };
+};
+
+export type AdminSupportStackParamList = {
+  SupportDashboard: undefined;
+  Tickets: undefined;
+  TicketDetail: { ticketId: string };
+  CreateTicket: { linkedRequestId?: string; linkedRequestNumber?: string } | undefined;
+  LiveChat: undefined;
+  ChatConversation: { sessionId: string };
+  FaqList: undefined;
+  FaqEditor: { faqId?: string };
+  FaqCategories: undefined;
+  CustomerSupportProfile: { customerId: string };
+  Complaints: undefined;
+  ComplaintDetail: { complaintId: string };
+  SlaConfig: undefined;
+  CannedResponses: undefined;
+  SupportAnalytics: undefined;
 };
 
 export type AdminPlansStackParamList = {
@@ -197,6 +278,12 @@ export type AdminNotificationsStackParamList = {
 
 export type AdminPaymentsStackParamList = {
   PaymentList: undefined;
+  CollectionAssignments: undefined;
+  PaymentDetail: { paymentId: string };
+  PaymentReview: { paymentId: string };
+  GatewayConfig: undefined;
+  PaymentAnalytics: undefined;
+  Refund: { paymentId: string };
 };
 
 export type AdminInvoicesStackParamList = {
@@ -215,6 +302,32 @@ export type AdminInventoryStackParamList = {
   QuickAction: { itemId: string; defaultAction?: 'sold' | 'damaged' | 'returned' | 'add_stock' };
   AddItem: undefined;
   EditItem: { itemId: string };
+};
+
+export type AdminSettingsStackParamList = {
+  SettingsHub: undefined;
+  AdminAccount: undefined;
+  General: undefined;
+  Security: undefined;
+  Officers: undefined;
+  OfficerSalary: undefined;
+  Notifications: undefined;
+  Integrations: undefined;
+  GatewayConfig: undefined;
+  Appearance: undefined;
+  System: undefined;
+  BackupExport: undefined;
+  AuditLogs: undefined;
+};
+
+export type AdminMapStackParamList = {
+  MapMain: undefined;
+  TrailReplay: {
+    officerId: string;
+    officerName: string;
+    date: string;
+    timeRange: TimeRange;
+  };
 };
 
 /**
@@ -247,7 +360,6 @@ export type AdminDrawerParamList = {
   PayRunReview: { payRunId: string };
   RoleManagement: undefined;
   Requests: NavigatorScreenParams<AdminRequestsStackParamList> | undefined;
-  TicketPortal: NavigatorScreenParams<AdminTicketsStackParamList> | undefined;
   Plans: NavigatorScreenParams<AdminPlansStackParamList> | undefined;
   EnhancedPlans: undefined;
   Notifications: NavigatorScreenParams<AdminNotificationsStackParamList> | undefined;
@@ -272,14 +384,16 @@ export type AdminDrawerParamList = {
   /** Unified app drawer label for Flutter `ReportsScreen` */
   Analytics: undefined;
   Audit: undefined;
-  Map: undefined;
+  Map: NavigatorScreenParams<AdminMapStackParamList> | undefined;
   /** @deprecated Use Map */
   OfficerMap: undefined;
   BillingInvoices: undefined;
-  Support: undefined;
+  Support: NavigatorScreenParams<AdminSupportStackParamList> | undefined;
+  /** @deprecated Use Support stack Tickets */
+  TicketPortal: NavigatorScreenParams<AdminTicketsStackParamList> | undefined;
   /** @deprecated Use Support */
   FaqSupport: undefined;
-  Settings: undefined;
+  Settings: NavigatorScreenParams<AdminSettingsStackParamList> | undefined;
   OnboardingApplications: undefined;
   ReviewApplication: { applicationId: string };
   LeaveManagement: undefined;
