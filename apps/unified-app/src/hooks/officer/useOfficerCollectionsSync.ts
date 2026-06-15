@@ -19,8 +19,8 @@ export function useOfficerCollectionsSync() {
       dispatch(paymentCollectionApi.util.invalidateTags(['Payments']));
     };
 
-    const assignedChannel = client
-      .channel(`officer-collections-assigned-${officerId}`)
+    const channel = client
+      .channel(`officer-collections-sync-${officerId}`)
       .on(
         'postgres_changes',
         {
@@ -31,24 +31,6 @@ export function useOfficerCollectionsSync() {
         },
         invalidate,
       )
-      .subscribe();
-
-    const openPoolChannel = client
-      .channel('officer-collections-open-pool')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'users',
-          filter: 'assigned_officer_id=is.null',
-        },
-        invalidate,
-      )
-      .subscribe();
-
-    const unassignChannel = client
-      .channel(`officer-collections-unassign-${officerId}`)
       .on(
         'postgres_changes',
         {
@@ -58,7 +40,11 @@ export function useOfficerCollectionsSync() {
         },
         (payload) => {
           const prev = payload.old as { assigned_officer_id?: string | null };
-          if (prev.assigned_officer_id === officerId) {
+          const next = payload.new as { assigned_officer_id?: string | null };
+          if (
+            prev.assigned_officer_id === officerId ||
+            next.assigned_officer_id === officerId
+          ) {
             invalidate();
           }
         },
@@ -66,9 +52,7 @@ export function useOfficerCollectionsSync() {
       .subscribe();
 
     return () => {
-      void client.removeChannel(assignedChannel);
-      void client.removeChannel(openPoolChannel);
-      void client.removeChannel(unassignChannel);
+      void client.removeChannel(channel);
     };
   }, [dispatch, isAuthenticated, officerId, role]);
 }

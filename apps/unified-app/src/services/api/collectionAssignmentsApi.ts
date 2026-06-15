@@ -41,7 +41,9 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
               'id, name, customer_id, phone, outstanding_amount, next_due_date, payment_status, assigned_officer_id',
               { count: 'exact' },
             )
-            .eq('role', 'customer');
+            .or('role.eq.customer,role.is.null')
+            .not('role', 'eq', 'admin')
+            .not('role', 'eq', 'officer');
 
           const search = filters.search?.trim();
           if (search) {

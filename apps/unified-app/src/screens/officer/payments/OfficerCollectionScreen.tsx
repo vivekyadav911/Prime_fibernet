@@ -1,12 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '@prime/ui';
 
 import { AmountDisplay } from '@/components/payments';
 import { EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
-import { useOfficerCollectionsSync } from '@/hooks/officer/useOfficerCollectionsSync';
 import { useOfficerCollections } from '@/hooks/usePayments';
 import { formatINR } from '@/utils/currencyFormat';
 import type { OfficerCollectionsStackParamList } from '@/types/navigation';
@@ -20,11 +19,7 @@ import { OfficerCollectionHistoryScreen } from './OfficerCollectionHistoryScreen
 
 type TabKey = 'assigned' | 'history';
 
-type Section = { title: string; data: OfficerAssignedCustomer[] };
-
 export function OfficerCollectionScreen() {
-  useOfficerCollectionsSync();
-
   const navigation = useNavigation<NativeStackNavigationProp<OfficerCollectionsStackParamList>>();
   const [tab, setTab] = useState<TabKey>('assigned');
   const { data, isLoading, isError, error, refetch } = useOfficerCollections();
@@ -56,25 +51,6 @@ export function OfficerCollectionScreen() {
     [navigation],
   );
 
-  const sections = useMemo<Section[]>(() => {
-    const assigned = data?.assigned ?? [];
-    const openPool = data?.openPool ?? [];
-    const result: Section[] = [];
-    if (assigned.length) result.push({ title: 'My assignments', data: assigned });
-    if (openPool.length) result.push({ title: 'Open pool (any officer)', data: openPool });
-    return result;
-  }, [data?.assigned, data?.openPool]);
-
-  const outstandingTotal = useMemo(
-    () => sections.flatMap((s) => s.data).reduce((sum, c) => sum + c.outstanding_amount, 0),
-    [sections],
-  );
-
-  const totalCustomers = useMemo(
-    () => sections.reduce((sum, section) => sum + section.data.length, 0),
-    [sections],
-  );
-
   if (isLoading) {
     return (
       <ScreenWrapper scrollable={false}>
@@ -90,6 +66,9 @@ export function OfficerCollectionScreen() {
       </ScreenWrapper>
     );
   }
+
+  const assigned = data?.assigned ?? [];
+  const outstandingTotal = assigned.reduce((sum, c) => sum + c.outstanding_amount, 0);
 
   const tabs = (
     <View style={styles.tabs}>
@@ -116,35 +95,13 @@ export function OfficerCollectionScreen() {
     );
   }
 
-  const renderCustomer = (item: OfficerAssignedCustomer) => (
-    <View style={styles.card}>
-      <View style={styles.cardTop}>
-        <Text style={styles.name}>
-          {item.name} · {item.customer_id}
-        </Text>
-        {item.assignmentType === 'open_pool' ? (
-          <View style={styles.poolBadge}>
-            <Text style={styles.poolBadgeText}>Open pool</Text>
-          </View>
-        ) : null}
-      </View>
-      <AmountDisplay amount={item.outstanding_amount} />
-      {item.next_due_date ? <Text style={styles.due}>Due: {item.next_due_date}</Text> : null}
-      {item.payment_status ? <Text style={styles.status}>{item.payment_status}</Text> : null}
-      <View style={styles.row}>
-        <Button label="History" variant="secondary" onPress={() => onViewHistory(item)} />
-        <Button label="Collect →" onPress={() => onCollect(item)} />
-      </View>
-    </View>
-  );
-
   return (
     <ScreenWrapper scrollable={false} padded={false}>
       {tabs}
       <View style={styles.summaryBar}>
-        <Text style={styles.summaryTitle}>Collection customers</Text>
+        <Text style={styles.summaryTitle}>Assigned customers</Text>
         <Text style={styles.summaryLine}>
-          {totalCustomers} customers · {formatINR(outstandingTotal)} outstanding
+          {assigned.length} customers · {formatINR(outstandingTotal)} outstanding
         </Text>
         <Text style={styles.summaryLine}>
           Collected today: {formatINR(data?.todayTotal ?? 0)} · Confirmed: {data?.confirmedToday ?? 0}
@@ -153,23 +110,34 @@ export function OfficerCollectionScreen() {
           <Button label="Collect payment" onPress={onSearchCollect} />
         </View>
       </View>
-      <SectionList
-        sections={sections}
+      <FlatList
+        data={assigned}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
-        stickySectionHeadersEnabled={false}
         ListEmptyComponent={
           <EmptyState
-            title="No customers to collect"
-            subtitle="Ask admin to assign customers or add them to the open pool."
+            title="No assigned customers"
+            subtitle="Ask admin to assign customers to you for collection."
             actionLabel="Open collect list"
             onAction={onSearchCollect}
           />
         }
-        renderSectionHeader={({ section }) => (
-          <Text style={styles.sectionTitle}>{section.title}</Text>
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.name}>
+              {item.name} · {item.customer_id}
+            </Text>
+            <AmountDisplay amount={item.outstanding_amount} />
+            {item.next_due_date ? <Text style={styles.due}>Due: {item.next_due_date}</Text> : null}
+            {item.payment_status ? (
+              <Text style={styles.status}>{item.payment_status}</Text>
+            ) : null}
+            <View style={styles.row}>
+              <Button label="History" variant="secondary" onPress={() => onViewHistory(item)} />
+              <Button label="Collect →" onPress={() => onCollect(item)} />
+            </View>
+          </View>
         )}
-        renderItem={({ item }) => renderCustomer(item)}
       />
     </ScreenWrapper>
   );
@@ -206,14 +174,6 @@ const styles = StyleSheet.create({
   summaryLine: { fontSize: 13, color: colors.textSecondary },
   collectCta: { marginTop: spacing.sm },
   list: { padding: spacing.md, paddingTop: 0 },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
-  },
   card: {
     backgroundColor: colors.surfaceWhite,
     borderRadius: radius.lg,
@@ -224,22 +184,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     ...shadow.card,
   },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  name: { fontWeight: '600', color: colors.textPrimary, flex: 1 },
-  poolBadge: {
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    backgroundColor: adminColors.primaryTint,
-    borderWidth: 1,
-    borderColor: adminColors.permissionBoxBorder,
-  },
-  poolBadgeText: { fontSize: 11, fontWeight: '600', color: adminColors.primary },
+  name: { fontWeight: '600', color: colors.textPrimary },
   status: { fontSize: 12, color: colors.textSecondary, textTransform: 'capitalize' },
   due: { fontSize: 12, color: colors.amber },
   row: {

@@ -541,7 +541,6 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
     getOfficerCollections: builder.query<
       {
         assigned: OfficerAssignedCustomer[];
-        openPool: OfficerAssignedCustomer[];
         pending: OfficerAssignedCustomer[];
         todayTotal: number;
         confirmedToday: number;
@@ -551,9 +550,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
       query: () => ({
         handler: async (client) => {
           const today = new Date().toISOString().slice(0, 10);
-          const collectible = await fetchOfficerCollectibleCustomers(client);
-          const assigned = collectible.filter((c) => c.assignmentType === 'assigned');
-          const openPool = collectible.filter((c) => c.assignmentType === 'open_pool');
+          const assigned = await fetchOfficerCollectibleCustomers(client);
 
           const { data: officerId } = await client.rpc('current_officer_id');
           const { data: collections } = await client
@@ -566,9 +563,9 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
           const rows = collections ?? [];
           const todayTotal = rows.reduce((s, p) => s + Number(p.total_amount ?? 0), 0);
           const confirmedToday = rows.filter((p) => p.status === 'confirmed').length;
-          const pending = collectible.filter((c) => c.outstanding_amount > 0);
+          const pending = assigned.filter((c) => c.outstanding_amount > 0);
 
-          return { assigned, openPool, pending, todayTotal, confirmedToday };
+          return { assigned, pending, todayTotal, confirmedToday };
         },
       }),
       providesTags: ['Payments'],
