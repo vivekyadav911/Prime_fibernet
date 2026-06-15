@@ -142,9 +142,10 @@ export function AdminUsersStackNav() {
         component={AddUserScreen}
         options={{
           title: 'Add New User',
-          headerStyle: { backgroundColor: adminColors.primary },
-          headerTintColor: colors.white,
-          headerTitleStyle: { fontWeight: '700', color: colors.white },
+          headerStyle: { backgroundColor: '#5B4FE9' },
+          headerTintColor: '#FFFFFF',
+          headerTitleStyle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
+          headerShadowVisible: false,
         }}
       />
     </UsersStack.Navigator>

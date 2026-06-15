@@ -7,6 +7,9 @@ import {
   Text,
   View,
   useWindowDimensions,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
 } from 'react-native';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -24,6 +27,9 @@ type SelectFieldProps<T extends string> = {
   onSelect: (value: T) => void;
   error?: string;
   placeholder?: string;
+  containerStyle?: StyleProp<ViewStyle>;
+  triggerStyle?: StyleProp<ViewStyle>;
+  triggerTextStyle?: StyleProp<TextStyle>;
 };
 
 type MenuLayout = {
@@ -42,6 +48,9 @@ export function SelectField<T extends string>({
   onSelect,
   error,
   placeholder = 'Select…',
+  containerStyle,
+  triggerStyle,
+  triggerTextStyle,
 }: SelectFieldProps<T>) {
   const [open, setOpen] = useState(false);
   const [menuLayout, setMenuLayout] = useState<MenuLayout>({ top: 0, left: 0, width: 0 });
@@ -73,14 +82,14 @@ export function SelectField<T extends string>({
   );
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, containerStyle]}>
       <Text style={styles.label}>{label}</Text>
       <View ref={triggerRef} collapsable={false}>
         <Pressable
-          style={[styles.trigger, error ? styles.triggerError : null]}
+          style={[styles.trigger, triggerStyle, error ? styles.triggerError : null]}
           onPress={openMenu}
         >
-          <Text style={[styles.triggerText, !selected && styles.placeholder]}>
+          <Text style={[styles.triggerText, triggerTextStyle, !selected && styles.placeholder]}>
             {selected ?? placeholder}
           </Text>
           <Text style={styles.caret}>▾</Text>

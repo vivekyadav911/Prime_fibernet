@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
@@ -24,6 +24,9 @@ export type DateFieldProps = {
   maxYear?: number;
   accentColor?: string;
   accentTint?: string;
+  containerStyle?: StyleProp<ViewStyle>;
+  triggerStyle?: StyleProp<ViewStyle>;
+  triggerTextStyle?: StyleProp<TextStyle>;
 };
 
 export function DateField({
@@ -38,6 +41,9 @@ export function DateField({
   maxYear,
   accentColor,
   accentTint,
+  containerStyle,
+  triggerStyle,
+  triggerTextStyle,
 }: DateFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [draftDate, setDraftDate] = useState<Date>(() =>
@@ -71,15 +77,15 @@ export function DateField({
   }, []);
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, containerStyle]}>
       <Text style={styles.label}>{label}</Text>
       <Pressable
-        style={[styles.trigger, error ? styles.triggerError : null]}
+        style={[styles.trigger, triggerStyle, error ? styles.triggerError : null]}
         onPress={openPicker}
         accessibilityRole="button"
         accessibilityLabel={label}
       >
-        <Text style={[styles.triggerText, !displayValue && styles.placeholder]}>
+        <Text style={[styles.triggerText, triggerTextStyle, !displayValue && styles.placeholder]}>
           {displayValue || placeholder}
         </Text>
         <Text style={styles.calendarIcon}>📅</Text>

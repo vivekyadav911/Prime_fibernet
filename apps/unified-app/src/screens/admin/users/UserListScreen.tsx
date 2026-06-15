@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
@@ -11,6 +12,8 @@ import {
   Text,
   View,
   useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
@@ -44,6 +47,8 @@ const PAGE_SIZE = 50;
 const ADD_BTN_H = 48;
 const PAGE_BTN_SIZE = 36;
 const PAGE_BTN_GAP = 6;
+const FILTER_LIST_GAP = ui.sectionGap;
+const FILTER_TUCK_UNDER = ui.sectionGap;
 
 function PlanBadge({ label }: { label: string }) {
   return (
@@ -247,8 +252,111 @@ export function UserListScreen({ navigation, route }: Props) {
   const [page, setPage] = useState(1);
   const [filterPlanName, setFilterPlanName] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<FilterDropdownId | null>(null);
+  const [filterHeight, setFilterHeight] = useState(0);
+
+  const filterHeightRef = useRef(0);
+  const filterCollapse = useRef(new Animated.Value(0)).current;
+  const collapseRef = useRef(0);
+  const lastScrollY = useRef(0);
+  const listRef = useRef<FlatList<AdminUserListItem>>(null);
+  const gridScrollRef = useRef<ScrollView>(null);
+  const openDropdownRef = useRef<FilterDropdownId | null>(null);
+  openDropdownRef.current = openDropdown;
 
   const closeDropdown = useCallback(() => setOpenDropdown(null), []);
+
+  const listInsetTop = filterHeight > 0 ? filterHeight + FILTER_LIST_GAP : 0;
+
+  const filterAnimatedStyle = useMemo(() => {
+    if (filterHeight <= 0) return null;
+    const hideDistance = filterHeight + FILTER_TUCK_UNDER;
+    return {
+      transform: [
+        {
+          translateY: filterCollapse.interpolate({
+            inputRange: [0, filterHeight],
+            outputRange: [0, -hideDistance],
+            extrapolate: 'clamp',
+          }),
+        },
+      ],
+    };
+  }, [filterHeight, filterCollapse]);
+
+  const resetFilterCollapse = useCallback(() => {
+    collapseRef.current = 0;
+    lastScrollY.current = 0;
+    filterCollapse.setValue(0);
+  }, [filterCollapse]);
+
+  const pinCollapseAtBottom = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const maxHide = filterHeightRef.current;
+      if (maxHide <= 0) return;
+
+      const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+      const atBottom =
+        contentOffset.y + layoutMeasurement.height >= contentSize.height - 8;
+
+      if (atBottom && collapseRef.current > 0) {
+        collapseRef.current = maxHide;
+        filterCollapse.setValue(maxHide);
+      }
+    },
+    [filterCollapse],
+  );
+
+  const handleListScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const maxHide = filterHeightRef.current;
+      if (maxHide <= 0) return;
+
+      const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+      const y = Math.max(0, contentOffset.y);
+      const dy = y - lastScrollY.current;
+      lastScrollY.current = y;
+
+      if (openDropdownRef.current) {
+        closeDropdown();
+      }
+
+      const atBottom = y + layoutMeasurement.height >= contentSize.height - 8;
+      const atTop = y <= 0.5;
+
+      let next = collapseRef.current;
+
+      if (atTop) {
+        next = 0;
+      } else if (atBottom && dy > 0) {
+        next = maxHide;
+      } else if (dy > 0) {
+        next = Math.min(maxHide, next + dy);
+      } else if (dy < 0) {
+        next = Math.max(0, next + dy);
+      }
+
+      const rounded = Math.round(next);
+      if (rounded !== Math.round(collapseRef.current)) {
+        collapseRef.current = rounded;
+        filterCollapse.setValue(rounded);
+      }
+    },
+    [closeDropdown, filterCollapse],
+  );
+
+  useEffect(() => {
+    resetFilterCollapse();
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    gridScrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [page, resetFilterCollapse]);
+
+  const handleFilterBarLayout = useCallback((height: number) => {
+    const rounded = Math.round(height);
+    if (rounded > 0 && filterHeightRef.current !== rounded) {
+      filterHeightRef.current = rounded;
+      setFilterHeight(rounded);
+    }
+  }, []);
 
   const toggleDropdown = useCallback((id: FilterDropdownId) => {
     setOpenDropdown((prev) => (prev === id ? null : id));
@@ -403,183 +511,210 @@ export function UserListScreen({ navigation, route }: Props) {
         >
           <KeyboardDismissView style={styles.page}>
             <AdminWebLayout>
-              <View style={styles.actionCard}>
-                <View style={styles.searchRow}>
-                  <View style={styles.searchWrap}>
-                    <Ionicons name="search-outline" size={18} color={ui.textSecondary} style={styles.searchIcon} />
-                    <SearchBar
-                      value={search}
-                      onChangeText={handleSearch}
-                      placeholder="Search name, email, phone, ID…"
-                      containerStyle={styles.searchBarContainer}
-                      style={styles.searchInput}
+              <View style={styles.headerShell}>
+                <View style={styles.actionCard}>
+                  <View style={styles.searchRow}>
+                    <View style={styles.searchWrap}>
+                      <Ionicons name="search-outline" size={18} color={ui.textSecondary} style={styles.searchIcon} />
+                      <SearchBar
+                        value={search}
+                        onChangeText={handleSearch}
+                        placeholder="Search name, email, phone, ID…"
+                        containerStyle={styles.searchBarContainer}
+                        style={styles.searchInput}
+                      />
+                    </View>
+                    {canCreateUser ? (
+                      <Pressable
+                        style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
+                        onPress={() => navigation.navigate('AddUser')}
+                      >
+                        <Text style={styles.addBtnText}>Add New</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.summaryRow}>
+                    <View style={styles.summaryBlock}>
+                      <Text style={styles.summaryEyebrow}>Total users</Text>
+                      <Text style={styles.summaryValue}>{total.toLocaleString('en-IN')}</Text>
+                    </View>
+                    <View style={styles.summaryDivider} />
+                    <View style={styles.summaryBlock}>
+                      <Text style={styles.summaryEyebrow}>Showing</Text>
+                      <Text style={styles.summaryValueSm}>
+                        {users.length}
+                        <Text style={styles.summaryValueMuted}> / {total.toLocaleString('en-IN')}</Text>
+                      </Text>
+                      {blockedInView > 0 ? (
+                        <Text style={styles.summaryInsight}>{blockedInView} blocked in view</Text>
+                      ) : null}
+                      {isFetching ? <Text style={styles.summaryInsight}>Updating…</Text> : null}
+                    </View>
+                  </View>
+                </View>
+
+                {filterPlanName ? (
+                  <View style={styles.planFilterBanner}>
+                    <Text style={styles.planFilterText}>Filtered by plan: {filterPlanName}</Text>
+                    <Pressable onPress={() => navigation.setParams({ planId: undefined })} hitSlop={8}>
+                      <Text style={styles.planFilterClear}>Clear</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.listStage}>
+                <Animated.View
+                  style={[styles.filtersFloat, filterAnimatedStyle]}
+                  pointerEvents="box-none"
+                >
+                  <View
+                    style={styles.filtersCard}
+                    onLayout={(e) => handleFilterBarLayout(e.nativeEvent.layout.height)}
+                  >
+                    <Text style={styles.filtersEyebrow}>Filters</Text>
+                    <View style={styles.filtersRow}>
+                      <View style={styles.filtersLeft}>
+                        <FilterDropdown
+                          dropdownId="city"
+                          isOpen={openDropdown === 'city'}
+                          onToggle={toggleDropdown}
+                          onClose={closeDropdown}
+                          label="City"
+                          value={city}
+                          options={cityOptions}
+                          onSelect={handleCity}
+                        />
+                        <FilterDropdown
+                          dropdownId="status"
+                          isOpen={openDropdown === 'status'}
+                          onToggle={toggleDropdown}
+                          onClose={closeDropdown}
+                          label="Status"
+                          value={status}
+                          options={statusOptions}
+                          onSelect={handleStatus}
+                        />
+                        <Pressable
+                          style={[styles.filterChip, blockFilter === 'blocked' && styles.filterChipActive]}
+                          onPress={() => handleBlockFilter('blocked')}
+                          hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+                        >
+                          <Text
+                            style={[styles.filterChipText, blockFilter === 'blocked' && styles.filterChipTextActive]}
+                          >
+                            Blocked
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.filterChip, blockFilter === 'unblocked' && styles.filterChipActive]}
+                          onPress={() => handleBlockFilter('unblocked')}
+                          hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+                        >
+                          <Text
+                            style={[styles.filterChipText, blockFilter === 'unblocked' && styles.filterChipTextActive]}
+                          >
+                            Unblocked
+                          </Text>
+                        </Pressable>
+                      </View>
+
+                      <View style={styles.viewToggle}>
+                        <Pressable
+                          style={[styles.viewBtn, viewMode === 'list' && styles.viewBtnActive]}
+                          onPress={() => {
+                            closeDropdown();
+                            setViewMode('list');
+                          }}
+                          hitSlop={{ top: 4, bottom: 4, left: 4, right: 2 }}
+                        >
+                          <Ionicons
+                            name="list-outline"
+                            size={18}
+                            color={viewMode === 'list' ? ui.brand : ui.textSecondary}
+                          />
+                        </Pressable>
+                        <Pressable
+                          style={[styles.viewBtn, viewMode === 'grid' && styles.viewBtnActive]}
+                          onPress={() => {
+                            closeDropdown();
+                            setViewMode('grid');
+                          }}
+                          hitSlop={{ top: 4, bottom: 4, left: 2, right: 4 }}
+                        >
+                          <Ionicons
+                            name="grid-outline"
+                            size={18}
+                            color={viewMode === 'grid' ? ui.brand : ui.textSecondary}
+                          />
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                </Animated.View>
+
+                {!users.length ? (
+                  <View style={[styles.emptyWrap, listInsetTop > 0 ? { paddingTop: listInsetTop } : null]}>
+                    <AdminEmptyState
+                      title="No users found"
+                      subtitle={
+                        total === 0
+                          ? 'Sign in with an admin account that has database access.'
+                          : 'Adjust filters or search'
+                      }
+                      icon="👥"
                     />
                   </View>
-                  {canCreateUser ? (
-                    <Pressable
-                      style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
-                      onPress={() => navigation.navigate('AddUser')}
-                    >
-                      <Text style={styles.addBtnText}>Add New</Text>
-                    </Pressable>
-                  ) : null}
-                </View>
-
-                <View style={styles.summaryRow}>
-                  <View style={styles.summaryBlock}>
-                    <Text style={styles.summaryEyebrow}>Total users</Text>
-                    <Text style={styles.summaryValue}>{total.toLocaleString('en-IN')}</Text>
-                  </View>
-                  <View style={styles.summaryDivider} />
-                  <View style={styles.summaryBlock}>
-                    <Text style={styles.summaryEyebrow}>Showing</Text>
-                    <Text style={styles.summaryValueSm}>
-                      {users.length}
-                      <Text style={styles.summaryValueMuted}> / {total.toLocaleString('en-IN')}</Text>
-                    </Text>
-                    {blockedInView > 0 ? (
-                      <Text style={styles.summaryInsight}>{blockedInView} blocked in view</Text>
-                    ) : null}
-                    {isFetching ? <Text style={styles.summaryInsight}>Updating…</Text> : null}
-                  </View>
-                </View>
-              </View>
-
-              {filterPlanName ? (
-                <View style={styles.planFilterBanner}>
-                  <Text style={styles.planFilterText}>Filtered by plan: {filterPlanName}</Text>
-                  <Pressable onPress={() => navigation.setParams({ planId: undefined })} hitSlop={8}>
-                    <Text style={styles.planFilterClear}>Clear</Text>
-                  </Pressable>
-                </View>
-              ) : null}
-
-              <View style={styles.filtersLayer}>
-                <View style={styles.filtersCard}>
-                  <Text style={styles.filtersEyebrow}>Filters</Text>
-                  <View style={styles.filtersRow}>
-                    <View style={styles.filtersLeft}>
-                      <FilterDropdown
-                        dropdownId="city"
-                        isOpen={openDropdown === 'city'}
-                        onToggle={toggleDropdown}
-                        onClose={closeDropdown}
-                        label="City"
-                        value={city}
-                        options={cityOptions}
-                        onSelect={handleCity}
-                      />
-                      <FilterDropdown
-                        dropdownId="status"
-                        isOpen={openDropdown === 'status'}
-                        onToggle={toggleDropdown}
-                        onClose={closeDropdown}
-                        label="Status"
-                        value={status}
-                        options={statusOptions}
-                        onSelect={handleStatus}
-                      />
-                      <Pressable
-                        style={[styles.filterChip, blockFilter === 'blocked' && styles.filterChipActive]}
-                        onPress={() => handleBlockFilter('blocked')}
-                        hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
-                      >
-                        <Text
-                          style={[styles.filterChipText, blockFilter === 'blocked' && styles.filterChipTextActive]}
-                        >
-                          Blocked
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        style={[styles.filterChip, blockFilter === 'unblocked' && styles.filterChipActive]}
-                        onPress={() => handleBlockFilter('unblocked')}
-                        hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
-                      >
-                        <Text
-                          style={[styles.filterChipText, blockFilter === 'unblocked' && styles.filterChipTextActive]}
-                        >
-                          Unblocked
-                        </Text>
-                      </Pressable>
-                    </View>
-
-                    <View style={styles.viewToggle}>
-                      <Pressable
-                        style={[styles.viewBtn, viewMode === 'list' && styles.viewBtnActive]}
-                        onPress={() => {
-                          closeDropdown();
-                          setViewMode('list');
-                        }}
-                        hitSlop={{ top: 4, bottom: 4, left: 4, right: 2 }}
-                      >
-                        <Ionicons
-                          name="list-outline"
-                          size={18}
-                          color={viewMode === 'list' ? ui.brand : ui.textSecondary}
-                        />
-                      </Pressable>
-                      <Pressable
-                        style={[styles.viewBtn, viewMode === 'grid' && styles.viewBtnActive]}
-                        onPress={() => {
-                          closeDropdown();
-                          setViewMode('grid');
-                        }}
-                        hitSlop={{ top: 4, bottom: 4, left: 2, right: 4 }}
-                      >
-                        <Ionicons
-                          name="grid-outline"
-                          size={18}
-                          color={viewMode === 'grid' ? ui.brand : ui.textSecondary}
-                        />
-                      </Pressable>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              {!users.length ? (
-                <View style={styles.emptyWrap}>
-                  <AdminEmptyState
-                    title="No users found"
-                    subtitle={
-                      total === 0
-                        ? 'Sign in with an admin account that has database access.'
-                        : 'Adjust filters or search'
-                    }
-                    icon="👥"
+                ) : viewMode === 'list' ? (
+                  <FlatList
+                    ref={listRef}
+                    data={users}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderSubscriberRow}
+                    style={styles.listBody}
+                    contentContainerStyle={[
+                      styles.listContent,
+                      listInsetTop > 0 ? { paddingTop: listInsetTop } : null,
+                    ]}
+                    showsVerticalScrollIndicator
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    scrollEventThrottle={16}
+                    onScroll={handleListScroll}
+                    onScrollEndDrag={pinCollapseAtBottom}
+                    onMomentumScrollEnd={pinCollapseAtBottom}
+                    onScrollBeginDrag={() => {
+                      Keyboard.dismiss();
+                      closeDropdown();
+                    }}
                   />
-                </View>
-              ) : viewMode === 'list' ? (
-                <FlatList
-                  data={users}
-                  keyExtractor={(item) => item.id}
-                  renderItem={renderSubscriberRow}
-                  style={styles.listBody}
-                  contentContainerStyle={styles.listContent}
-                  showsVerticalScrollIndicator
-                  keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="on-drag"
-                  onScrollBeginDrag={() => {
-                    Keyboard.dismiss();
-                    closeDropdown();
-                  }}
-                />
-              ) : (
-                <ScrollView
-                  style={styles.listBody}
-                  contentContainerStyle={[styles.grid, isWide && styles.gridWide]}
-                  nestedScrollEnabled
-                  showsVerticalScrollIndicator
-                  keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="on-drag"
-                  onScrollBeginDrag={() => {
-                    Keyboard.dismiss();
-                    closeDropdown();
-                  }}
-                >
-                  {users.map(renderGridCard)}
-                </ScrollView>
-              )}
+                ) : (
+                  <ScrollView
+                    ref={gridScrollRef}
+                    style={styles.listBody}
+                    contentContainerStyle={[
+                      styles.grid,
+                      isWide && styles.gridWide,
+                      listInsetTop > 0 ? { paddingTop: listInsetTop } : null,
+                    ]}
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="on-drag"
+                    scrollEventThrottle={16}
+                    onScroll={handleListScroll}
+                    onScrollEndDrag={pinCollapseAtBottom}
+                    onMomentumScrollEnd={pinCollapseAtBottom}
+                    onScrollBeginDrag={() => {
+                      Keyboard.dismiss();
+                      closeDropdown();
+                    }}
+                  >
+                    {users.map(renderGridCard)}
+                  </ScrollView>
+                )}
+              </View>
 
               <View style={styles.footer}>
                 <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
@@ -603,6 +738,11 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: ui.sectionGap,
     overflow: 'visible',
+  },
+  headerShell: {
+    zIndex: 20,
+    elevation: 20,
+    gap: ui.sectionGap,
   },
   actionCard: {
     backgroundColor: ui.card,
@@ -710,15 +850,22 @@ const styles = StyleSheet.create({
     borderRadius: ui.radiusSm,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    marginTop: -6,
   },
   planFilterText: { fontSize: 13, color: ui.brand, fontWeight: '600', flex: 1 },
   planFilterClear: { fontSize: 13, color: ui.brand, fontWeight: '700' },
-  filtersLayer: {
+  listStage: {
+    flex: 1,
+    minHeight: 0,
     position: 'relative',
-    zIndex: 200,
-    elevation: 20,
-    overflow: 'visible',
+    zIndex: 1,
+  },
+  filtersFloat: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 8,
+    elevation: 8,
   },
   filtersCard: {
     backgroundColor: ui.card,
@@ -726,7 +873,6 @@ const styles = StyleSheet.create({
     padding: ui.compactPad,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: ui.border,
-    overflow: 'visible',
     ...ui.shadow,
   },
   filtersEyebrow: {
