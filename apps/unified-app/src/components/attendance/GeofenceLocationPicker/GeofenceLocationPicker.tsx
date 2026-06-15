@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { Platform, StyleSheet } from 'react-native';
-import MapView, { Circle, Marker, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
+import { StyleSheet } from 'react-native';
+import type MapView from 'react-native-maps';
+import { Circle, Marker, type Region } from 'react-native-maps';
 
-import { hasGoogleMapsApiKey } from '@/services/GeocodingService';
+import { FreeMapView } from '@/components/map';
 import { adminColors } from '@/theme/admin';
 import { coordinatesEqual } from '@/utils/coordinates';
 
@@ -36,13 +37,10 @@ export function GeofenceLocationPicker({
     mapRef.current?.animateToRegion(regionFromCenter(center), 350);
   }, [center]);
 
-  const useGoogleProvider = Platform.OS !== 'ios' && hasGoogleMapsApiKey();
-
   return (
-    <MapView
+    <FreeMapView
       ref={mapRef}
       style={[styles.map, { height: mapHeight }]}
-      provider={useGoogleProvider ? PROVIDER_GOOGLE : undefined}
       initialRegion={initialRegion}
       onPress={(event) => onCenterChange(event.nativeEvent.coordinate)}
     >
@@ -57,7 +55,7 @@ export function GeofenceLocationPicker({
         strokeColor={adminColors.primary}
         fillColor="rgba(91,79,207,0.2)"
       />
-    </MapView>
+    </FreeMapView>
   );
 }
 

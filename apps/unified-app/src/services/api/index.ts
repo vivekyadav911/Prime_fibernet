@@ -21,6 +21,8 @@ import './adminRolesApi';
 import './adminSettingsApi';
 import './attendanceApi';
 import './adminRequestsBoardApi';
+import './adminSupportApi';
+import './officerTrackingApi';
 
 export * from './authApi';
 export * from './plansApi';
@@ -41,3 +43,5 @@ export * from './adminRolesApi';
 export * from './adminSettingsApi';
 export * from './attendanceApi';
 export * from './adminRequestsBoardApi';
+export * from './adminSupportApi';
+export * from './officerTrackingApi';

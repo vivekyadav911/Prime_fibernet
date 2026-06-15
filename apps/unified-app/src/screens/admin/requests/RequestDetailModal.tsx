@@ -265,7 +265,7 @@ export function RequestDetailModal({
                 onPress={() => {
                   onClose();
                   navigation.navigate('TicketPortal', {
-                    screen: 'TicketPortal',
+                    screen: 'TicketPortalHome',
                     params: {
                       linkedRequestId: request.id,
                       linkedRequestNumber: truncateRequestId(request.id),

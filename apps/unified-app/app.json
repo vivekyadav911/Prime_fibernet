@@ -17,7 +17,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.primefibernet.app",
       "infoPlist": {
-        "UIBackgroundModes": ["location", "fetch", "remote-notification"],
+        "UIBackgroundModes": ["location", "processing", "remote-notification"],
+        "BGTaskSchedulerPermittedIdentifiers": ["com.expo.modules.backgroundtask.processing"],
         "NSLocationWhenInUseUsageDescription": "Prime Fibernet uses your location for officer shift check-in/out and field tracking.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Prime Fibernet needs background location during active officer shifts for live field tracking.",
         "NSLocationAlwaysUsageDescription": "Prime Fibernet needs background location during active officer shifts for live field tracking.",
@@ -52,15 +53,7 @@
     },
     "plugins": [
       "expo-secure-store",
-      [
-        "expo-location",
-        {
-          "locationAlwaysAndWhenInUsePermission": "Prime Fibernet needs background location during active officer shifts for live field tracking.",
-          "locationWhenInUsePermission": "Prime Fibernet uses your location for officer shift check-in/out and field tracking.",
-          "isAndroidBackgroundLocationEnabled": true,
-          "isAndroidForegroundServiceEnabled": true
-        }
-      ],
+      "expo-background-task",
       [
         "expo-image-picker",
         {

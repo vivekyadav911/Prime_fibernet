@@ -7,28 +7,29 @@ import type { AdminDrawerParamList, AdminStackParamList } from '@/types/navigati
 import { adminColors, getAdminDrawerWidth } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 
+import { ThemeProvider } from '@/theme/ThemeProvider';
+
 import { AdminDrawerContent } from './AdminDrawerContent';
 import { AdminDrawerToggleButton } from './AdminDrawerToggleButton';
 import {
   AdminAttendanceStackNav,
-  AdminAuditScreen,
   AdminInventoryStackNav,
   AdminInvoicesStackNav,
-  AdminMapScreen,
   AdminOfficersStackNav,
   AdminPayrollStackNav,
   AdminPaymentsStackNav,
   AdminPlansStackNav,
   AdminNotificationsStackNav,
   AdminRequestsStackNav,
-  AdminSettingsScreen,
-  AdminSupportScreen,
+  AdminSettingsStackNav,
+  AdminSupportStackNav,
   AdminTicketPortalStackNav,
   AdminUsersStackNav,
   DashboardScreen,
   ReportsScreen,
   RoleManagementScreen,
 } from './adminStackNavigators';
+import { MapNavigator } from './MapNavigator';
 
 const Drawer = createDrawerNavigator<AdminDrawerParamList>();
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -38,7 +39,8 @@ function AdminDrawerNav() {
   const isWebSidebar = Platform.OS === 'web' && width >= 1024;
 
   return (
-    <Drawer.Navigator
+    <ThemeProvider>
+      <Drawer.Navigator
       drawerContent={(props) => <AdminDrawerContent {...props} />}
       screenOptions={{
         headerStyle: { backgroundColor: colors.primaryNavy },
@@ -78,11 +80,11 @@ function AdminDrawerNav() {
       <Drawer.Screen name="Invoices" component={AdminInvoicesStackNav} options={{ headerShown: false, title: 'Invoices' }} />
       <Drawer.Screen name="Inventory" component={AdminInventoryStackNav} options={{ headerShown: false, title: 'Inventory' }} />
       <Drawer.Screen name="Reports" component={ReportsScreen} options={{ title: 'Reports' }} />
-      <Drawer.Screen name="Audit" component={AdminAuditScreen} options={{ title: 'Audit Logs' }} />
-      <Drawer.Screen name="Support" component={AdminSupportScreen} options={{ title: 'Support' }} />
-      <Drawer.Screen name="Settings" component={AdminSettingsScreen} options={{ title: 'Settings' }} />
-      <Drawer.Screen name="Map" component={AdminMapScreen} options={{ title: 'Map' }} />
+      <Drawer.Screen name="Support" component={AdminSupportStackNav} options={{ headerShown: false, title: 'Customer Support' }} />
+      <Drawer.Screen name="Settings" component={AdminSettingsStackNav} options={{ headerShown: false, title: 'Settings' }} />
+      <Drawer.Screen name="Map" component={MapNavigator} options={{ headerShown: false, title: 'Map' }} />
     </Drawer.Navigator>
+    </ThemeProvider>
   );
 }
 

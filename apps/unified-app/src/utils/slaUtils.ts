@@ -1,24 +1,52 @@
 import type { SLAPolicy, SLAStatus, Ticket, TicketPriority } from '@/types/tickets';
+import { getSupabase } from '@/services/supabase';
 
 export const DEFAULT_SLA_POLICIES: Record<TicketPriority, SLAPolicy> = {
-  Critical: { priorityLevel: 'Critical', responseTimeHours: 1, resolutionTimeHours: 4 },
-  High: { priorityLevel: 'High', responseTimeHours: 4, resolutionTimeHours: 12 },
-  Medium: { priorityLevel: 'Medium', responseTimeHours: 8, resolutionTimeHours: 24 },
-  Low: { priorityLevel: 'Low', responseTimeHours: 24, resolutionTimeHours: 72 },
+  Critical: { priorityLevel: 'Critical', responseTimeHours: 0.5, resolutionTimeHours: 2 },
+  High: { priorityLevel: 'High', responseTimeHours: 1, resolutionTimeHours: 4 },
+  Medium: { priorityLevel: 'Medium', responseTimeHours: 4, resolutionTimeHours: 24 },
+  Low: { priorityLevel: 'Low', responseTimeHours: 8, resolutionTimeHours: 72 },
 };
+
+let cachedDbPolicies: Record<TicketPriority, SLAPolicy> | null = null;
+
+export async function loadSlaPoliciesFromDb(): Promise<Record<TicketPriority, SLAPolicy>> {
+  if (cachedDbPolicies) return cachedDbPolicies;
+  try {
+    const client = getSupabase();
+    const { data } = await client.from('sla_policies').select('*').eq('is_active', true);
+    if (!data?.length) return DEFAULT_SLA_POLICIES;
+    const mapped = { ...DEFAULT_SLA_POLICIES };
+    for (const row of data) {
+      const priority = String(row.priority) as TicketPriority;
+      mapped[priority] = {
+        priorityLevel: priority,
+        responseTimeHours: Number(row.first_response_hours),
+        resolutionTimeHours: Number(row.resolution_hours),
+      };
+    }
+    cachedDbPolicies = mapped;
+    return mapped;
+  } catch {
+    return DEFAULT_SLA_POLICIES;
+  }
+}
+
+export function getSLAPolicy(priority: TicketPriority): SLAPolicy {
+  return (cachedDbPolicies ?? DEFAULT_SLA_POLICIES)[priority];
+}
 
 export function computeSLADeadlines(
   priority: TicketPriority,
   createdAt: Date,
 ): { responseDeadline: Date; resolutionDeadline: Date } {
-  const policy = DEFAULT_SLA_POLICIES[priority];
+  const policy = getSLAPolicy(priority);
   const responseDeadline = new Date(createdAt.getTime() + policy.responseTimeHours * 60 * 60 * 1000);
   const resolutionDeadline = new Date(createdAt.getTime() + policy.resolutionTimeHours * 60 * 60 * 1000);
   return { responseDeadline, resolutionDeadline };
 }
 
 export function computeSLAStatus(ticket: Ticket, now = new Date()): SLAStatus {
-  const policy = DEFAULT_SLA_POLICIES[ticket.priority];
   const responseDeadline = ticket.slaStatus.responseDeadline;
   const resolutionDeadline = ticket.slaStatus.resolutionDeadline;
   const responseRemainingMs = responseDeadline.getTime() - now.getTime();
@@ -65,6 +93,4 @@ export function getSLAColor(remainingMs: number, totalMs: number): string {
   return '#EF4444';
 }
 
-export function getSLAPolicy(priority: TicketPriority): SLAPolicy {
-  return DEFAULT_SLA_POLICIES[priority];
-}
+void loadSlaPoliciesFromDb();

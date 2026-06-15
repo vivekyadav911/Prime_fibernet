@@ -1,10 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import MapView, { Circle, Marker } from 'react-native-maps';
+import { Circle, Marker } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { RoleGuard, StatusBadge } from '@/components/admin';
+import { FreeMapView } from '@/components/map';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useAllAttendanceToday,
@@ -78,7 +79,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
   return (
     <RoleGuard requiredPermission="attendance.view">
       <Screen padded={false} style={styles.canvas}>
-        <MapView style={styles.map} initialRegion={initialRegion}>
+        <FreeMapView style={styles.map} initialRegion={initialRegion}>
           {(locations ?? []).map((loc) => (
             <Marker
               key={loc.officerId}
@@ -99,7 +100,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
               />
             );
           })}
-        </MapView>
+        </FreeMapView>
 
         <View style={styles.countsBar}>
           <Text style={styles.count}>Present {counts.present}</Text>

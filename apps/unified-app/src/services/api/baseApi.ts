@@ -31,6 +31,7 @@ export const baseApi = createApi({
     'Attendance',
     'Approvals',
     'ShiftDefinitions',
+    'Support',
   ],
   endpoints: () => ({}),
 });

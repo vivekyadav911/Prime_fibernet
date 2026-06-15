@@ -1,5 +1,3 @@
-import Constants from 'expo-constants';
-
 export type GeocodeResult = {
   latitude: number;
   longitude: number;
@@ -19,67 +17,8 @@ export type ReverseGeocodeResult = {
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
 const USER_AGENT = 'PrimeFibernet/1.0 (geofence-admin)';
 
-function getGoogleMapsApiKey(): string | undefined {
-  const extra = Constants.expoConfig?.extra as Record<string, string | undefined> | undefined;
-  const key = extra?.googleMapsApiKey ?? process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
-  return key?.trim() || undefined;
-}
-
 function buildAddressQuery(parts: { address?: string; city?: string; state?: string }): string {
   return [parts.address, parts.city, parts.state].filter(Boolean).join(', ').trim();
-}
-
-async function geocodeWithGoogle(query: string): Promise<GeocodeResult> {
-  const apiKey = getGoogleMapsApiKey();
-  if (!apiKey) {
-    throw new Error('Google Maps API key is not configured');
-  }
-
-  const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
-  url.searchParams.set('address', query);
-  url.searchParams.set('key', apiKey);
-
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    throw new Error('Address lookup failed. Please try again.');
-  }
-
-  const data = (await response.json()) as {
-    status: string;
-    results?: Array<{
-      formatted_address?: string;
-      geometry?: { location?: { lat?: number; lng?: number } };
-      address_components?: Array<{ long_name: string; types: string[] }>;
-    }>;
-  };
-
-  if (data.status !== 'OK' || !data.results?.length) {
-    throw new Error('Address not found. Try a more specific address or set coordinates manually.');
-  }
-
-  const top = data.results[0];
-  if (!top) {
-    throw new Error('Address not found. Try a more specific address or set coordinates manually.');
-  }
-  const location = top.geometry?.location;
-  if (location?.lat == null || location?.lng == null) {
-    throw new Error('Address not found. Try a more specific address or set coordinates manually.');
-  }
-
-  let city: string | undefined;
-  let state: string | undefined;
-  for (const component of top.address_components ?? []) {
-    if (component.types.includes('locality')) city = component.long_name;
-    if (component.types.includes('administrative_area_level_1')) state = component.long_name;
-  }
-
-  return {
-    latitude: location.lat,
-    longitude: location.lng,
-    formattedAddress: top.formatted_address,
-    city,
-    state,
-  };
 }
 
 async function geocodeWithNominatim(query: string): Promise<GeocodeResult> {
@@ -139,57 +78,6 @@ async function geocodeWithNominatim(query: string): Promise<GeocodeResult> {
   };
 }
 
-async function reverseGeocodeWithGoogle(latitude: number, longitude: number): Promise<ReverseGeocodeResult> {
-  const apiKey = getGoogleMapsApiKey();
-  if (!apiKey) {
-    throw new Error('Google Maps API key is not configured');
-  }
-
-  const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
-  url.searchParams.set('latlng', `${latitude},${longitude}`);
-  url.searchParams.set('key', apiKey);
-
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    throw new Error('Could not resolve address for this location.');
-  }
-
-  const data = (await response.json()) as {
-    status: string;
-    results?: Array<{
-      formatted_address?: string;
-      address_components?: Array<{ long_name: string; types: string[] }>;
-    }>;
-  };
-
-  if (data.status !== 'OK' || !data.results?.length) {
-    throw new Error('Could not resolve address for this location.');
-  }
-
-  const top = data.results[0];
-  if (!top) {
-    throw new Error('Could not resolve address for this location.');
-  }
-  let address: string | undefined;
-  let city: string | undefined;
-  let state: string | undefined;
-
-  for (const component of top.address_components ?? []) {
-    if (component.types.includes('route') || component.types.includes('street_address')) {
-      address = component.long_name;
-    }
-    if (component.types.includes('locality')) city = component.long_name;
-    if (component.types.includes('administrative_area_level_1')) state = component.long_name;
-  }
-
-  return {
-    formattedAddress: top.formatted_address,
-    address,
-    city,
-    state,
-  };
-}
-
 async function reverseGeocodeWithNominatim(
   latitude: number,
   longitude: number,
@@ -228,6 +116,7 @@ async function reverseGeocodeWithNominatim(
   };
 }
 
+/** Geocode an address using free OpenStreetMap Nominatim (no API key). */
 export async function geocodeAddress(parts: {
   address?: string;
   city?: string;
@@ -238,22 +127,13 @@ export async function geocodeAddress(parts: {
     throw new Error('Enter an address before searching on the map.');
   }
 
-  if (getGoogleMapsApiKey()) {
-    return geocodeWithGoogle(query);
-  }
   return geocodeWithNominatim(query);
 }
 
+/** Reverse geocode coordinates using free OpenStreetMap Nominatim (no API key). */
 export async function reverseGeocode(
   latitude: number,
   longitude: number,
 ): Promise<ReverseGeocodeResult> {
-  if (getGoogleMapsApiKey()) {
-    return reverseGeocodeWithGoogle(latitude, longitude);
-  }
   return reverseGeocodeWithNominatim(latitude, longitude);
-}
-
-export function hasGoogleMapsApiKey(): boolean {
-  return Boolean(getGoogleMapsApiKey());
 }

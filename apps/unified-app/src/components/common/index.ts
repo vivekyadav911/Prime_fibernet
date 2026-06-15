@@ -6,4 +6,5 @@ export { SkeletonLoader } from './SkeletonLoader';
 export { StatusChip } from './StatusChip';
 export { OfflineBanner } from './OfflineBanner';
 export { KeyboardDismissView } from './KeyboardDismissView';
+export { MarkdownText } from './MarkdownText';
 export { DateField, DateRangePicker, TimeField } from './pickers';

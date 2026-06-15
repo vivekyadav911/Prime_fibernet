@@ -8,8 +8,10 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import MapView, { Circle, Marker, Polygon } from 'react-native-maps';
+import { Circle, Marker, Polygon } from 'react-native-maps';
 import { Button } from '@prime/ui';
+
+import { FreeMapView } from '@/components/map';
 
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
@@ -73,7 +75,7 @@ export const CheckInSheet = forwardRef<BottomSheetModal, Props>(function CheckIn
             </Text>
           ) : null}
 
-          <MapView style={styles.map} region={mapRegion}>
+          <FreeMapView style={styles.map} region={mapRegion}>
             <Marker coordinate={coords} />
             {geofence?.geometry.shape === 'circle' ? (
               <Circle
@@ -89,7 +91,7 @@ export const CheckInSheet = forwardRef<BottomSheetModal, Props>(function CheckIn
                 fillColor="rgba(27,58,107,0.15)"
               />
             ) : null}
-          </MapView>
+          </FreeMapView>
 
           {mode === 'check_in' ? (
             <TextInput

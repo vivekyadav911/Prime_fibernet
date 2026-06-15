@@ -187,6 +187,9 @@ export const AuditLogSchema = z.object({
   action: z.string(),
   targetEntity: z.string().nullable(),
   status: z.string().nullable(),
+  category: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 export type AuditLog = z.infer<typeof AuditLogSchema>;

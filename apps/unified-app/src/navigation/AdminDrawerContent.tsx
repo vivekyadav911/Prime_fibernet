@@ -9,6 +9,7 @@ import { useUnassignedRequestCount } from '@/hooks/useAdminRequests';
 import { usePlansSidebarBadge } from '@/hooks/usePlans';
 import { useNotificationsSidebarBadge } from '@/hooks/useNotificationHub';
 import { useTicketPortalBadge } from '@/hooks/useTickets';
+import { useChatSession } from '@/hooks/useChatSession';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -57,7 +58,6 @@ const SECTIONS: DrawerSection[] = [
     label: 'Operations',
     items: [
       { route: 'Requests', label: 'Requests', icon: '📋', showBadge: true },
-      { route: 'TicketPortal', label: 'Ticket Portal', icon: '🎫', showBadge: true },
       { route: 'Plans', label: 'Plans', icon: '📶', showBadge: true },
       { route: 'Notifications', label: 'Notifications', icon: '🔔', showBadge: true },
     ],
@@ -90,10 +90,9 @@ const SECTIONS: DrawerSection[] = [
     id: 'system',
     label: 'System',
     items: [
-      { route: 'Support', label: 'Support', icon: '💬' },
+      { route: 'Support', label: 'Customer Support', icon: '💬', showBadge: true },
       { route: 'Settings', label: 'Settings', icon: '⚙️' },
       { route: 'Map', label: 'Map', icon: '🗺️' },
-      { route: 'Audit', label: 'Audit Logs', icon: '📜' },
     ],
   },
 ];
@@ -129,6 +128,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
   const user = useAppSelector((s) => s.auth.user);
   const unassignedCount = useUnassignedRequestCount();
   const ticketBadge = useTicketPortalBadge();
+  const { waitingCount } = useChatSession();
   const plansBadge = usePlansSidebarBadge();
   const notificationsBadge = useNotificationsSidebarBadge();
   const { state, navigation } = props;
@@ -141,22 +141,24 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
       switch (route) {
         case 'Requests':
           return unassignedCount > 0 ? { kind: 'count', value: unassignedCount } : null;
-        case 'TicketPortal':
-          if (ticketBadge.breachedCount > 0) {
+        case 'Support': {
+          const total = ticketBadge.breachedCount + waitingCount;
+          if (total > 0) {
             return {
               kind: 'pill',
-              label: `${formatNavCount(ticketBadge.breachedCount)} urgent`,
-              tone: 'danger',
+              label: `${formatNavCount(total)} alert`,
+              tone: ticketBadge.breachedCount > 0 ? 'danger' : 'warning',
             };
           }
           if (ticketBadge.openCount > 0) {
             return {
               kind: 'pill',
-              label: `${formatNavCount(ticketBadge.openCount)} new`,
+              label: `${formatNavCount(ticketBadge.openCount)} open`,
               tone: 'primary',
             };
           }
           return null;
+        }
         case 'Plans':
           if (plansBadge.count > 0) {
             return {

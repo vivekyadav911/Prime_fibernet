@@ -4,6 +4,10 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useCustomerRequestBadge } from '@/hooks/useCustomerRequestBadge';
 import { DashboardScreen } from '@/screens/customer/dashboard/DashboardScreen';
 import { ChatbotScreen } from '@/screens/customer/ChatbotScreen';
+import { CustomerSupportHubScreen } from '@/screens/customer/support/CustomerSupportHubScreen';
+import { CustomerLiveChatScreen } from '@/screens/customer/support/CustomerLiveChatScreen';
+import { CustomerFaqListScreen } from '@/screens/customer/support/CustomerFaqListScreen';
+import { CustomerFaqDetailScreen } from '@/screens/customer/support/CustomerFaqDetailScreen';
 import { PaymentsScreen } from '@/screens/customer/payments/PaymentsScreen';
 import { PlansScreen } from '@/screens/customer/plans/PlansScreen';
 import { ProfileScreen } from '@/screens/customer/profile/ProfileScreen';
@@ -77,7 +81,7 @@ function CustomerTabs() {
       />
       <Tab.Screen
         name="Support"
-        component={ChatbotScreen}
+        component={CustomerSupportHubScreen}
         options={{
           title: 'Support',
           tabBarIcon: ({ focused }) => <TabIcon label="💬" focused={focused} />,
@@ -121,6 +125,11 @@ export function CustomerNavigator() {
       <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms' }} />
       <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ title: 'Privacy' }} />
       <Stack.Screen name="Refund" component={RefundScreen} options={{ title: 'Refund policy' }} />
+      <Stack.Screen name="CustomerLiveChat" component={CustomerLiveChatScreen} options={{ title: 'Live Chat' }} />
+      <Stack.Screen name="CustomerFaqList" component={CustomerFaqListScreen} options={{ title: 'FAQs' }} />
+      <Stack.Screen name="CustomerFaqDetail" component={CustomerFaqDetailScreen} options={{ title: 'FAQ' }} />
+      <Stack.Screen name="CustomerSupportHub" component={CustomerSupportHubScreen as never} options={{ title: 'Support' }} />
+      <Stack.Screen name="SupportScreen" component={ChatbotScreen} options={{ title: 'AI Assistant' }} />
     </Stack.Navigator>
   );
 }

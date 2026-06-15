@@ -1,7 +1,7 @@
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import MapView, { Circle, Marker } from 'react-native-maps';
+import { Circle, Marker } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
@@ -9,6 +9,7 @@ import { CheckInSheet } from '@/components/attendance/CheckInSheet';
 import { InfoRow } from '@/components/attendance/InfoRow';
 import { LocationPermissionGate } from '@/components/attendance/LocationPermissionGate';
 import { ErrorState, SkeletonLoader } from '@/components/common';
+import { FreeMapView } from '@/components/map';
 import {
   useCheckIn,
   useCheckOut,
@@ -172,7 +173,7 @@ export function OfficerAttendanceDashboard({ navigation }: Props) {
           </View>
         </View>
 
-        <MapView
+        <FreeMapView
           style={styles.map}
           region={{
             latitude: coords.latitude,
@@ -190,7 +191,7 @@ export function OfficerAttendanceDashboard({ navigation }: Props) {
               fillColor="rgba(13,115,119,0.15)"
             />
           ) : null}
-        </MapView>
+        </FreeMapView>
 
         <View style={styles.links}>
           <Button label="History" variant="ghost" onPress={() => navigation.navigate('AttendanceHistory')} />

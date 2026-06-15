@@ -107,7 +107,37 @@ export const linking: LinkingOptions<RootStackParamList> = {
                   NotificationDetail: 'notifications/:notificationId',
                 },
               },
-              Settings: 'settings',
+              Support: {
+                screens: {
+                  SupportDashboard: 'support',
+                  Tickets: 'support/tickets',
+                  FaqList: 'support/faqs',
+                  LiveChat: 'support/chat',
+                  SupportAnalytics: 'support/analytics',
+                },
+              },
+              Settings: {
+                screens: {
+                  SettingsHub: 'settings',
+                  AdminAccount: 'settings/account',
+                  General: 'settings/general',
+                  Security: 'settings/security',
+                  Officers: 'settings/officers',
+                  OfficerSalary: 'settings/officer-salary',
+                  Notifications: 'settings/notifications',
+                  Integrations: 'settings/integrations',
+                  Appearance: 'settings/appearance',
+                  System: 'settings/system',
+                  BackupExport: 'settings/backup',
+                  AuditLogs: 'settings/audit',
+                },
+              },
+              Map: {
+                screens: {
+                  MapMain: 'map',
+                  TrailReplay: 'map/trail/:officerId',
+                },
+              },
             },
           },
           AdminAuth: 'login',

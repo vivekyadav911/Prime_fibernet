@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Battery from 'expo-battery';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
@@ -13,6 +14,8 @@ import type { Coordinates, Geofence, LocationSyncEntry } from '@/types/attendanc
 import { checkGeofenceStatus } from '@/utils/geofenceUtils';
 
 import { attendanceApi } from '@/services/api/attendanceApi';
+import { officerTrackingApi } from '@/services/api/officerTrackingApi';
+import { getSupabase } from '@/services/api/supabase';
 import { notificationService } from '@/services/NotificationService';
 
 export const LOCATION_TASK_NAME = 'PRIME_FIBERNET_LOCATION_TASK';
@@ -31,10 +34,65 @@ type LocationTaskData = {
       accuracy: number;
       altitude: number | null;
       speed: number | null;
+      heading: number | null;
     };
     timestamp: number;
   }>;
 };
+
+const TRACKING_SETTINGS_CACHE_KEY = 'location_tracking_settings_cache';
+const TRACKING_SETTINGS_TTL_MS = 5 * 60 * 1000;
+
+async function getBatteryLevel(): Promise<number | undefined> {
+  try {
+    const level = await Battery.getBatteryLevelAsync();
+    return Math.round(level * 100);
+  } catch {
+    return undefined;
+  }
+}
+
+async function isLocationTrackingAllowed(): Promise<boolean> {
+  const cached = await AsyncStorage.getItem(TRACKING_SETTINGS_CACHE_KEY);
+  if (cached) {
+    const parsed = JSON.parse(cached) as { fetchedAt: number; allowed: boolean };
+    if (Date.now() - parsed.fetchedAt < TRACKING_SETTINGS_TTL_MS) {
+      return parsed.allowed;
+    }
+  }
+
+  try {
+    const client = getSupabase();
+    const { data: session } = await client.auth.getSession();
+    const userId = session.session?.user?.id;
+    if (!userId) return false;
+
+    const { data: settings } = await client
+      .from('general_settings')
+      .select('location_tracking_enabled')
+      .limit(1)
+      .maybeSingle();
+
+    const globalEnabled = Boolean(settings?.location_tracking_enabled ?? true);
+
+    const { data: officer } = await client
+      .from('officers')
+      .select('is_location_tracking_enabled')
+      .or(`user_id.eq.${userId},auth_user_id.eq.${userId}`)
+      .maybeSingle();
+
+    const officerEnabled = Boolean(officer?.is_location_tracking_enabled ?? true);
+    const allowed = globalEnabled && officerEnabled;
+
+    await AsyncStorage.setItem(
+      TRACKING_SETTINGS_CACHE_KEY,
+      JSON.stringify({ fetchedAt: Date.now(), allowed }),
+    );
+    return allowed;
+  } catch {
+    return true;
+  }
+}
 
 let foregroundSubscription: Location.LocationSubscription | null = null;
 let prevStatus: { isInside: boolean; geofenceId?: string } = { isInside: false };
@@ -94,6 +152,20 @@ async function handleGeofenceTransition(
       body: `You're inside ${geofenceName}. Tap to check in.`,
       data: { type: 'geofence_entered', geofenceId: next.geofenceId },
     });
+    if (next.geofenceId) {
+      try {
+        await store.dispatch(
+          officerTrackingApi.endpoints.insertGeofenceEvent.initiate({
+            geofenceId: next.geofenceId,
+            eventType: 'enter',
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+          }),
+        ).unwrap();
+      } catch {
+        /* queue handles retry via location sync */
+      }
+    }
     await enqueueLocationEntry({
       coords,
       timestamp: new Date().toISOString(),
@@ -108,6 +180,20 @@ async function handleGeofenceTransition(
       body: `You've left ${geofenceName}.`,
       data: { type: 'geofence_exited', geofenceId: prev.geofenceId },
     });
+    if (prev.geofenceId) {
+      try {
+        await store.dispatch(
+          officerTrackingApi.endpoints.insertGeofenceEvent.initiate({
+            geofenceId: prev.geofenceId,
+            eventType: 'exit',
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+          }),
+        ).unwrap();
+      } catch {
+        /* best effort */
+      }
+    }
     await enqueueLocationEntry({
       coords,
       timestamp: new Date().toISOString(),
@@ -118,6 +204,9 @@ async function handleGeofenceTransition(
 }
 
 export async function processBackgroundLocation(data: LocationTaskData): Promise<void> {
+  const allowed = await isLocationTrackingAllowed();
+  if (!allowed) return;
+
   const latest = data.locations[data.locations.length - 1];
   if (!latest) return;
 
@@ -144,6 +233,8 @@ export async function processBackgroundLocation(data: LocationTaskData): Promise
   );
   prevStatus = nextStatus;
 
+  const batteryLevel = await getBatteryLevel();
+
   try {
     await store
       .dispatch(
@@ -151,6 +242,10 @@ export async function processBackgroundLocation(data: LocationTaskData): Promise
           coords,
           accuracy: latest.coords.accuracy,
           timestamp: new Date(latest.timestamp).toISOString(),
+          batteryLevel,
+          heading: latest.coords.heading,
+          speed: latest.coords.speed,
+          altitude: latest.coords.altitude,
         }),
       )
       .unwrap();
@@ -244,6 +339,11 @@ class LocationService {
   }
 
   async startBackgroundTracking(): Promise<void> {
+    const allowed = await isLocationTrackingAllowed();
+    if (!allowed) {
+      throw new Error('Location tracking is disabled for this officer or organization');
+    }
+
     const { background } = await this.checkPermissions();
     if (!background) {
       const requested = await this.requestPermissions();

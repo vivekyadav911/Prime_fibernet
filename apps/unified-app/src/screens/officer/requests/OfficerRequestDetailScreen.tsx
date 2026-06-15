@@ -12,11 +12,12 @@ import {
   Text,
   View,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { Marker } from 'react-native-maps';
 import { Button, Screen } from '@prime/ui';
 import { colors } from '@/theme/colors';
 
 import { ErrorState, LoadingOverlay, PriorityBadge, SkeletonLoader, StatusChip } from '@/components/common';
+import { FreeMapView } from '@/components/map';
 import { useCamera } from '@/hooks/useCamera';
 import {
   useAddActivityNoteMutation,
@@ -207,7 +208,7 @@ export function OfficerRequestDetailScreen({ route }: Props) {
             ) : null}
           </View>
           {hasLocation ? (
-            <MapView
+            <FreeMapView
               style={styles.map}
               initialRegion={{
                 latitude: request.latitude!,
@@ -221,7 +222,7 @@ export function OfficerRequestDetailScreen({ route }: Props) {
                 title={request.userName ?? 'Customer'}
                 description={request.address}
               />
-            </MapView>
+            </FreeMapView>
           ) : (
             <Text style={styles.meta}>Location not available</Text>
           )}

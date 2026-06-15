@@ -9,14 +9,18 @@ export const adminMapApi = baseApi.injectEndpoints({
         handler: async (client) => {
           const { data, error } = await client
             .from('officers')
-            .select('id, name, availability_status, last_lat, last_lng, users(name)')
-            .not('last_lat', 'is', null);
+            .select('id, full_name, availability_status, current_latitude, current_longitude, users(name)')
+            .not('current_latitude', 'is', null)
+            .not('current_longitude', 'is', null);
           if (error) throw error;
-          return (data ?? []).map((row, i) => ({
+          return (data ?? []).map((row) => ({
             officerId: row.id as string,
-            name: (row.users as { name?: string })?.name ?? String(row.name ?? 'Officer'),
-            lat: Number(row.last_lat ?? 28.6139 + i * 0.01),
-            lng: Number(row.last_lng ?? 77.209 + i * 0.01),
+            name:
+              (row.full_name as string | null) ??
+              (row.users as { name?: string })?.name ??
+              'Officer',
+            lat: Number(row.current_latitude),
+            lng: Number(row.current_longitude),
             status: String(row.availability_status ?? 'offline'),
           }));
         },

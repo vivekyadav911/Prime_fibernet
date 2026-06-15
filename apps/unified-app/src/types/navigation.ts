@@ -1,5 +1,7 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
+import type { TimeRange } from '@/types/map';
+
 /**
  * Auth stack — Flutter `AdminAuthScreen`, customer/officer login, shared auth package.
  */
@@ -82,6 +84,10 @@ export type CustomerStackParamList = {
   Privacy: undefined;
   Refund: undefined;
   SupportScreen: undefined;
+  CustomerLiveChat: { sessionId?: string } | undefined;
+  CustomerFaqList: undefined;
+  CustomerFaqDetail: { faqId: string };
+  CustomerSupportHub: undefined;
 };
 
 /**
@@ -175,9 +181,27 @@ export type AdminRequestsStackParamList = {
 };
 
 export type AdminTicketsStackParamList = {
-  TicketPortal: { linkedRequestId?: string; linkedRequestNumber?: string } | undefined;
+  TicketPortalHome: { linkedRequestId?: string; linkedRequestNumber?: string } | undefined;
   TicketList: undefined;
   TicketDetail: { ticketId: string };
+};
+
+export type AdminSupportStackParamList = {
+  SupportDashboard: undefined;
+  Tickets: undefined;
+  TicketDetail: { ticketId: string };
+  CreateTicket: { linkedRequestId?: string; linkedRequestNumber?: string } | undefined;
+  LiveChat: undefined;
+  ChatConversation: { sessionId: string };
+  FaqList: undefined;
+  FaqEditor: { faqId?: string };
+  FaqCategories: undefined;
+  CustomerSupportProfile: { customerId: string };
+  Complaints: undefined;
+  ComplaintDetail: { complaintId: string };
+  SlaConfig: undefined;
+  CannedResponses: undefined;
+  SupportAnalytics: undefined;
 };
 
 export type AdminPlansStackParamList = {
@@ -217,6 +241,31 @@ export type AdminInventoryStackParamList = {
   EditItem: { itemId: string };
 };
 
+export type AdminSettingsStackParamList = {
+  SettingsHub: undefined;
+  AdminAccount: undefined;
+  General: undefined;
+  Security: undefined;
+  Officers: undefined;
+  OfficerSalary: undefined;
+  Notifications: undefined;
+  Integrations: undefined;
+  Appearance: undefined;
+  System: undefined;
+  BackupExport: undefined;
+  AuditLogs: undefined;
+};
+
+export type AdminMapStackParamList = {
+  MapMain: undefined;
+  TrailReplay: {
+    officerId: string;
+    officerName: string;
+    date: string;
+    timeRange: TimeRange;
+  };
+};
+
 /**
  * Admin drawer / shell — Flutter `AdminShell` indexed destinations + go_router `/`.
  */
@@ -247,7 +296,6 @@ export type AdminDrawerParamList = {
   PayRunReview: { payRunId: string };
   RoleManagement: undefined;
   Requests: NavigatorScreenParams<AdminRequestsStackParamList> | undefined;
-  TicketPortal: NavigatorScreenParams<AdminTicketsStackParamList> | undefined;
   Plans: NavigatorScreenParams<AdminPlansStackParamList> | undefined;
   EnhancedPlans: undefined;
   Notifications: NavigatorScreenParams<AdminNotificationsStackParamList> | undefined;
@@ -272,14 +320,16 @@ export type AdminDrawerParamList = {
   /** Unified app drawer label for Flutter `ReportsScreen` */
   Analytics: undefined;
   Audit: undefined;
-  Map: undefined;
+  Map: NavigatorScreenParams<AdminMapStackParamList> | undefined;
   /** @deprecated Use Map */
   OfficerMap: undefined;
   BillingInvoices: undefined;
-  Support: undefined;
+  Support: NavigatorScreenParams<AdminSupportStackParamList> | undefined;
+  /** @deprecated Use Support stack Tickets */
+  TicketPortal: NavigatorScreenParams<AdminTicketsStackParamList> | undefined;
   /** @deprecated Use Support */
   FaqSupport: undefined;
-  Settings: undefined;
+  Settings: NavigatorScreenParams<AdminSettingsStackParamList> | undefined;
   OnboardingApplications: undefined;
   ReviewApplication: { applicationId: string };
   LeaveManagement: undefined;

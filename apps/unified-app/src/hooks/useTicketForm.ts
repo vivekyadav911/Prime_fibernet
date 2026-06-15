@@ -43,6 +43,8 @@ const DEFAULT_FORM: TicketFormData = {
   linkedRequestNumber: null,
   customerId: null,
   tags: [],
+  subCategory: null,
+  accountNumber: null,
 };
 
 export function useTicketForm(initialLinkedRequest?: {

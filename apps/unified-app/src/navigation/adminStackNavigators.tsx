@@ -48,8 +48,38 @@ import { TicketListScreen } from '@/screens/admin/ticketPortal/TicketListScreen'
 import { TicketPortalScreen } from '@/screens/admin/ticketPortal/TicketPortalScreen';
 import { ReportsScreen } from '@/screens/admin/ReportsScreen';
 import { AdminMapScreen } from '@/screens/admin/system/MapScreen';
-import { AdminSettingsScreenFull } from '@/screens/admin/system/SettingsScreen';
+import {
+  AdminAccountScreen,
+  AppearanceSettingsScreen,
+  AuditLogsScreen,
+  BackupExportScreen,
+  GeneralSettingsScreen,
+  IntegrationsSettingsScreen,
+  NotificationsSettingsScreen,
+  OfficerSalaryScreen,
+  OfficersSettingsScreen,
+  SecurityScreen,
+  SettingsHubScreen,
+  SystemSettingsScreen,
+} from '@/screens/admin/settings';
 import { AdminSupportScreen } from '@/screens/admin/system/SupportScreen';
+import {
+  CannedResponsesScreen,
+  ChatConversationScreen,
+  ComplaintDetailScreen,
+  ComplaintsScreen,
+  CreateTicketScreen,
+  CustomerSupportProfileScreen,
+  FaqCategoriesScreen,
+  FaqEditorScreen,
+  FaqListScreen,
+  LiveChatScreen,
+  SlaConfigScreen,
+  SupportAnalyticsScreen,
+  SupportDashboardScreen,
+  SupportTicketDetailScreen,
+  SupportTicketsScreen,
+} from '@/screens/admin/support';
 import { AddUserScreen } from '@/screens/admin/users/AddUserScreen';
 import { UserDetailScreen } from '@/screens/admin/users/UserDetailScreen';
 import { UserEditScreen } from '@/screens/admin/users/UserEditScreen';
@@ -66,6 +96,8 @@ import type {
   AdminPlansStackParamList,
   AdminNotificationsStackParamList,
   AdminRequestsStackParamList,
+  AdminSupportStackParamList,
+  AdminSettingsStackParamList,
   AdminTicketsStackParamList,
   AdminUsersStackParamList,
 } from '@/types/navigation';
@@ -85,6 +117,8 @@ const NotificationsStack = createNativeStackNavigator<AdminNotificationsStackPar
 const PaymentsStack = createNativeStackNavigator<AdminPaymentsStackParamList>();
 const InvoicesStack = createNativeStackNavigator<AdminInvoicesStackParamList>();
 const InventoryStack = createNativeStackNavigator<AdminInventoryStackParamList>();
+const SettingsStack = createNativeStackNavigator<AdminSettingsStackParamList>();
+const SupportStack = createNativeStackNavigator<AdminSupportStackParamList>();
 
 const stackScreenOptions = {
   headerStyle: { backgroundColor: colors.primaryNavy },
@@ -204,7 +238,7 @@ export function AdminRequestsStackNav() {
 export function AdminTicketPortalStackNav() {
   return (
     <TicketsStack.Navigator screenOptions={stackScreenOptions}>
-      <TicketsStack.Screen name="TicketPortal" component={TicketPortalScreen} options={{ title: 'Ticket Portal' }} />
+      <TicketsStack.Screen name="TicketPortalHome" component={TicketPortalScreen} options={{ title: 'Ticket Portal' }} />
       <TicketsStack.Screen name="TicketList" component={TicketListScreen} options={{ title: 'All Tickets' }} />
       <TicketsStack.Screen name="TicketDetail" component={TicketDetailScreen} options={{ title: 'Ticket Detail' }} />
     </TicketsStack.Navigator>
@@ -262,6 +296,47 @@ export function AdminInvoicesStackNav() {
   );
 }
 
+export function AdminSupportStackNav() {
+  return (
+    <SupportStack.Navigator screenOptions={stackScreenOptions} initialRouteName="SupportDashboard">
+      <SupportStack.Screen name="SupportDashboard" component={SupportDashboardScreen} options={{ title: 'Customer Support' }} />
+      <SupportStack.Screen name="Tickets" component={SupportTicketsScreen} options={{ title: 'Support Tickets' }} />
+      <SupportStack.Screen name="TicketDetail" component={SupportTicketDetailScreen} options={{ title: 'Ticket Detail' }} />
+      <SupportStack.Screen name="CreateTicket" component={CreateTicketScreen} options={{ title: 'New Ticket' }} />
+      <SupportStack.Screen name="LiveChat" component={LiveChatScreen} options={{ title: 'Live Chat' }} />
+      <SupportStack.Screen name="ChatConversation" component={ChatConversationScreen} options={{ title: 'Conversation' }} />
+      <SupportStack.Screen name="FaqList" component={FaqListScreen} options={{ title: 'FAQs' }} />
+      <SupportStack.Screen name="FaqEditor" component={FaqEditorScreen} options={{ title: 'Edit FAQ' }} />
+      <SupportStack.Screen name="FaqCategories" component={FaqCategoriesScreen} options={{ title: 'FAQ Categories' }} />
+      <SupportStack.Screen name="CustomerSupportProfile" component={CustomerSupportProfileScreen} options={{ title: 'Customer 360' }} />
+      <SupportStack.Screen name="Complaints" component={ComplaintsScreen} options={{ title: 'Complaints' }} />
+      <SupportStack.Screen name="ComplaintDetail" component={ComplaintDetailScreen} options={{ title: 'Complaint' }} />
+      <SupportStack.Screen name="SlaConfig" component={SlaConfigScreen} options={{ title: 'SLA Config' }} />
+      <SupportStack.Screen name="CannedResponses" component={CannedResponsesScreen} options={{ title: 'Canned Responses' }} />
+      <SupportStack.Screen name="SupportAnalytics" component={SupportAnalyticsScreen} options={{ title: 'Support Analytics' }} />
+    </SupportStack.Navigator>
+  );
+}
+
+export function AdminSettingsStackNav() {
+  return (
+    <SettingsStack.Navigator screenOptions={stackScreenOptions} initialRouteName="SettingsHub">
+      <SettingsStack.Screen name="SettingsHub" component={SettingsHubScreen} options={{ title: 'Settings' }} />
+      <SettingsStack.Screen name="AdminAccount" component={AdminAccountScreen} options={{ title: 'Admin Account' }} />
+      <SettingsStack.Screen name="General" component={GeneralSettingsScreen} options={{ title: 'General' }} />
+      <SettingsStack.Screen name="Security" component={SecurityScreen} options={{ title: 'Security' }} />
+      <SettingsStack.Screen name="Officers" component={OfficersSettingsScreen} options={{ title: 'Officers' }} />
+      <SettingsStack.Screen name="OfficerSalary" component={OfficerSalaryScreen} options={{ title: 'Officer Salary' }} />
+      <SettingsStack.Screen name="Notifications" component={NotificationsSettingsScreen} options={{ title: 'Notifications' }} />
+      <SettingsStack.Screen name="Integrations" component={IntegrationsSettingsScreen} options={{ title: 'Integrations' }} />
+      <SettingsStack.Screen name="Appearance" component={AppearanceSettingsScreen} options={{ title: 'Appearance' }} />
+      <SettingsStack.Screen name="System" component={SystemSettingsScreen} options={{ title: 'System' }} />
+      <SettingsStack.Screen name="BackupExport" component={BackupExportScreen} options={{ title: 'Backup & Export' }} />
+      <SettingsStack.Screen name="AuditLogs" component={AuditLogsScreen} options={{ title: 'Audit Logs' }} />
+    </SettingsStack.Navigator>
+  );
+}
+
 export function AdminInventoryStackNav() {
   return (
     <InventoryStack.Navigator
@@ -281,4 +356,12 @@ export function AdminInventoryStackNav() {
   );
 }
 
-export { DashboardScreen, NotificationCenterScreen, ReportsScreen, RoleManagementScreen, AdminSettingsScreenFull as AdminSettingsScreen, AdminMapScreen, AdminSupportScreen, AdminAuditScreen };
+export {
+  DashboardScreen,
+  NotificationCenterScreen,
+  ReportsScreen,
+  RoleManagementScreen,
+  AdminMapScreen,
+  AdminSupportScreen,
+  AdminAuditScreen,
+};
