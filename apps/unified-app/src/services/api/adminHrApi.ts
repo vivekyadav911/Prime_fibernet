@@ -1,6 +1,7 @@
 import type { AttendanceRecord, PayrollEntry } from '@/types/api/admin';
 
 import { baseApi } from './baseApi';
+import { OFFICER_USERS_NAME_EMBED } from './mappers';
 
 export const adminHrApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -152,7 +153,9 @@ export const adminHrApi = baseApi.injectEndpoints({
     getPayroll: builder.query<PayrollEntry[], { month?: string; year?: string }>({
       query: ({ month, year }) => ({
         handler: async (client) => {
-          const { data: officers, error } = await client.from('officers').select('*, users(name)');
+          const { data: officers, error } = await client
+            .from('officers')
+            .select(`*, ${OFFICER_USERS_NAME_EMBED}`);
           if (error) throw error;
 
           return (officers ?? []).map((row) => ({

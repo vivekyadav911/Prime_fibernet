@@ -95,6 +95,7 @@ import {
 } from '@/screens/admin/payments';
 import type {
   AdminAttendanceStackParamList,
+  AdminDashboardStackParamList,
   AdminInventoryStackParamList,
   AdminInvoicesStackParamList,
   AdminOfficersStackParamList,
@@ -118,6 +119,7 @@ import {
   adminHeaderRightContainerStyle,
 } from './AdminHeaderButton';
 
+const DashboardStack = createNativeStackNavigator<AdminDashboardStackParamList>();
 const UsersStack = createNativeStackNavigator<AdminUsersStackParamList>();
 const OfficersStack = createNativeStackNavigator<AdminOfficersStackParamList>();
 const AttendanceStack = createNativeStackNavigator<AdminAttendanceStackParamList>();
@@ -165,7 +167,7 @@ const inventoryStackScreenOptions = {
   headerLeft: (props: NativeStackHeaderBackProps) => <InventoryDrawerHeaderLeft {...props} />,
 };
 
-const usersStackScreenOptions = {
+const brandStackScreenOptions = {
   headerStyle: { backgroundColor: '#5B4FE9' },
   headerTintColor: '#FFFFFF',
   headerTitleStyle: { fontSize: 20, fontWeight: '600' as const },
@@ -175,6 +177,20 @@ const usersStackScreenOptions = {
   headerLeftContainerStyle: adminHeaderLeftContainerStyle,
   headerRightContainerStyle: adminHeaderRightContainerStyle,
 };
+
+const usersStackScreenOptions = brandStackScreenOptions;
+
+export function AdminDashboardStackNav() {
+  return (
+    <DashboardStack.Navigator screenOptions={brandStackScreenOptions}>
+      <DashboardStack.Screen
+        name="DashboardHome"
+        component={DashboardScreen}
+        options={{ title: 'Dashboard' }}
+      />
+    </DashboardStack.Navigator>
+  );
+}
 
 export function AdminUsersStackNav() {
   return (

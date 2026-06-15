@@ -22,6 +22,7 @@ import {
 } from '@/types/api/officer';
 
 import { baseApi } from './baseApi';
+import { OFFICER_ADMIN_SELECT } from './mappers';
 
 type OfficerRow = {
   id: string;
@@ -298,8 +299,7 @@ function mapDocuments(rows: Array<{ id: string; document_type: string; file_url?
   });
 }
 
-const OFFICER_SELECT =
-  '*, users(name, email, phone), officer_roles(name)';
+const OFFICER_SELECT = OFFICER_ADMIN_SELECT;
 
 export const adminOfficersApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({

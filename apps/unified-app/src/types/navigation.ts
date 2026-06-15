@@ -198,6 +198,10 @@ export type OfficerStackParamList = {
 };
 
 /** Nested admin stack param lists */
+export type AdminDashboardStackParamList = {
+  DashboardHome: undefined;
+};
+
 export type AdminUsersStackParamList = {
   UserList: { planId?: string } | undefined;
   UserDetail: { userId: string };

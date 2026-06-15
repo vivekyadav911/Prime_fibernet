@@ -2,6 +2,11 @@ import type { Plan, RequestActivity, ServiceRequest } from '@prime/types';
 
 import type { TypedSupabaseClient } from './supabase';
 
+/** officers.user_id and officers.auth_user_id both reference users — hint PostgREST which FK to use. */
+export const OFFICER_USERS_EMBED = 'users!user_id(name, email, phone)';
+export const OFFICER_USERS_NAME_EMBED = 'users!user_id(name)';
+export const OFFICER_ADMIN_SELECT = `*, ${OFFICER_USERS_EMBED}, officer_roles(name)`;
+
 export function mapPlan(row: Record<string, unknown>): Plan {
   const speedFromLegacy =
     row.speed_mbps != null

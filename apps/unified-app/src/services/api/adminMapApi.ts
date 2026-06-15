@@ -1,6 +1,7 @@
 import type { MapOfficerPin, MapRequestPin } from '@/types/api/admin';
 
 import { baseApi } from './baseApi';
+import { OFFICER_USERS_NAME_EMBED } from './mappers';
 
 export const adminMapApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -9,7 +10,9 @@ export const adminMapApi = baseApi.injectEndpoints({
         handler: async (client) => {
           const { data, error } = await client
             .from('officers')
-            .select('id, full_name, availability_status, current_latitude, current_longitude, users(name)')
+            .select(
+              `id, full_name, availability_status, current_latitude, current_longitude, ${OFFICER_USERS_NAME_EMBED}`,
+            )
             .not('current_latitude', 'is', null)
             .not('current_longitude', 'is', null);
           if (error) throw error;

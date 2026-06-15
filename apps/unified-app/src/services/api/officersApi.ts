@@ -9,7 +9,12 @@ import type {
 } from '@prime/types';
 
 import { baseApi } from './baseApi';
-import { getOfficerIdForUser, mapRequest, mapRequestActivity } from './mappers';
+import {
+  getOfficerIdForUser,
+  mapRequest,
+  mapRequestActivity,
+  OFFICER_USERS_EMBED,
+} from './mappers';
 
 export type OfficerRequestDetail = ServiceRequest & {
   userName?: string | null;
@@ -129,7 +134,7 @@ export const officersApi = baseApi.injectEndpoints({
     getOfficers: builder.query<Officer[], void>({
       query: () => ({
         handler: async (client) => {
-          const { data, error } = await client.from('officers').select('*, users(name, email)');
+          const { data, error } = await client.from('officers').select(`*, ${OFFICER_USERS_EMBED}`);
           if (error) throw error;
           return (data ?? []).map((row) => ({
             id: row.id as string,

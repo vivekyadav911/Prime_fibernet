@@ -1,4 +1,5 @@
 import { baseApi } from './baseApi';
+import { OFFICER_USERS_NAME_EMBED } from './mappers';
 
 export type ReportKpis = {
   totalRevenueMtd: number;
@@ -78,7 +79,9 @@ export const adminReportsApi = baseApi.injectEndpoints({
     >({
       query: () => ({
         handler: async (client) => {
-          const { data, error } = await client.from('officers').select('*, users(name)');
+          const { data, error } = await client
+            .from('officers')
+            .select(`*, ${OFFICER_USERS_NAME_EMBED}`);
           if (error) throw error;
           return (data ?? []).map((row) => ({
             officerName: (row.users as { name?: string })?.name ?? 'Officer',

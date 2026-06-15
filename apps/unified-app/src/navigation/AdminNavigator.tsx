@@ -17,6 +17,7 @@ import {
 } from './AdminHeaderButton';
 import {
   AdminAttendanceStackNav,
+  AdminDashboardStackNav,
   AdminInventoryStackNav,
   AdminInvoicesStackNav,
   AdminOfficersStackNav,
@@ -29,7 +30,6 @@ import {
   AdminSupportStackNav,
   AdminTicketPortalStackNav,
   AdminUsersStackNav,
-  DashboardScreen,
   ReportsScreen,
   RoleManagementScreen,
 } from './adminStackNavigators';
@@ -65,14 +65,8 @@ function AdminDrawerNav() {
     >
       <Drawer.Screen
         name="Dashboard"
-        component={DashboardScreen}
-        options={{
-          title: 'Dashboard',
-          headerStyle: { backgroundColor: '#5B4FE9' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontSize: 20, fontWeight: '600' },
-          headerShadowVisible: false,
-        }}
+        component={AdminDashboardStackNav}
+        options={{ headerShown: false, title: 'Dashboard' }}
       />
       <Drawer.Screen name="Users" component={AdminUsersStackNav} options={{ headerShown: false, title: 'Users' }} />
       <Drawer.Screen name="Officers" component={AdminOfficersStackNav} options={{ headerShown: false, title: 'Officers' }} />
