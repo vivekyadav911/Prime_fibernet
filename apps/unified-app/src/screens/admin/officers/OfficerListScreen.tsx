@@ -5,23 +5,20 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
 import {
   AdminEmptyState,
-  AdminKPICard,
   ConfirmModal,
-  FilterChips,
   OfficerActionMenu,
   OfficerCard,
   RoleGuard,
-  SearchBar,
   useAdminPermission,
   type OfficerMenuAction,
 } from '@/components/admin';
@@ -36,14 +33,19 @@ import {
 } from '@/store/api/endpoints';
 import type { AdminOfficerDetail, OfficerAccountStatus } from '@/types/api/admin';
 import type { AdminOfficersStackParamList } from '@/types/navigation';
-import { adminColors } from '@/theme/admin';
-import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
+
+import { OfficerKpiCarousel } from './components/OfficerKpiCarousel';
+import { OfficerSearchFilters } from './components/OfficerSearchFilters';
+import { FAB_SIZE, OFFICER_CARD_GAP, ui } from './officersUi';
 
 type Props = NativeStackScreenProps<AdminOfficersStackParamList, 'OfficerList'>;
 
 type AccountFilter = 'all' | OfficerAccountStatus;
+
+function ListSeparator() {
+  return <View style={styles.listSeparator} />;
+}
 
 export function OfficerListScreen({ navigation }: Props) {
   const [search, setSearch] = useState('');
@@ -173,72 +175,82 @@ export function OfficerListScreen({ navigation }: Props) {
     [canEdit, canDelete, navigation],
   );
 
-  if (isLoading) return <Screen><SkeletonLoader rows={6} showAvatar /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  const listHeader = useMemo(
+    () => (
+      <View style={styles.headerBlock}>
+        <OfficerKpiCarousel stats={stats} />
+        <OfficerSearchFilters
+          search={search}
+          onSearchChange={setSearch}
+          accountStatus={accountStatus}
+          onAccountStatusChange={setAccountStatus}
+        />
+        {officers.length > 0 ? (
+          <Text style={styles.listEyebrow}>
+            {officers.length} officer{officers.length === 1 ? '' : 's'}
+          </Text>
+        ) : null}
+      </View>
+    ),
+    [stats, search, accountStatus, officers.length],
+  );
+
+  if (isLoading) {
+    return (
+      <Screen padded={false} style={styles.screen}>
+        <SkeletonLoader rows={6} showAvatar />
+      </Screen>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Screen padded={false} style={styles.screen}>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
+  }
 
   return (
     <RoleGuard requiredPermission="officers.view">
-      <Screen padded={false} style={styles.screen}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.kpiRow}
-        >
-          <AdminKPICard label={officerStrings.kpi.totalForce} value={stats?.total ?? 0} icon="👥" />
-          <AdminKPICard label={officerStrings.kpi.activeStatus} value={stats?.active ?? 0} icon="⚡" />
-          <AdminKPICard label={officerStrings.kpi.available} value={stats?.available ?? 0} icon="📅" />
-          <AdminKPICard label={officerStrings.kpi.restricted} value={stats?.restricted ?? 0} icon="🚫" />
-        </ScrollView>
-
-        <View style={styles.toolbar}>
-          <SearchBar
-            value={search}
-            onChangeText={setSearch}
-            placeholder={officerStrings.list.searchPlaceholder}
-            debounceMs={400}
-          />
-          <FilterChips
-            options={[
-              { value: 'all', label: officerStrings.filters.all },
-              { value: 'active', label: officerStrings.filters.active },
-              { value: 'inactive', label: officerStrings.filters.inactive },
-              { value: 'blocked', label: officerStrings.filters.blocked },
-            ]}
-            selected={accountStatus}
-            onSelect={(v) => setAccountStatus(v as AccountFilter)}
-          />
-        </View>
-
+      <Screen padded={false} safeAreaTop={false} style={styles.screen}>
         {!officers.length ? (
-          <AdminEmptyState
-            title={officerStrings.list.emptyTitle}
-            subtitle={officerStrings.list.emptySubtitle}
-            icon="🛡️"
-            actionLabel={canCreate ? officerStrings.list.addOfficer : undefined}
-            onAction={canCreate ? () => navigation.navigate('AddOfficer') : undefined}
-          />
+          <View style={styles.emptyWrap}>
+            <View style={styles.pageInset}>{listHeader}</View>
+            <AdminEmptyState
+              title={officerStrings.list.emptyTitle}
+              subtitle={officerStrings.list.emptySubtitle}
+              icon="🛡️"
+              actionLabel={canCreate ? officerStrings.list.addOfficer : undefined}
+              onAction={canCreate ? () => navigation.navigate('AddOfficer') : undefined}
+            />
+          </View>
         ) : (
           <FlatList
             data={officers}
             keyExtractor={(o) => o.id}
             renderItem={renderItem}
+            ListHeaderComponent={listHeader}
+            ItemSeparatorComponent={ListSeparator}
             contentContainerStyle={styles.list}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
             }
             onScroll={(e) => handleScroll(e.nativeEvent.contentOffset.y)}
             scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           />
         )}
 
         {canCreate ? (
           <Animated.View style={[styles.fabWrap, { opacity: fabOpacity }]}>
             <Pressable
-              style={styles.fab}
+              style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
               onPress={() => navigation.navigate('AddOfficer')}
               accessibilityLabel={officerStrings.list.addOfficer}
             >
-              <Text style={styles.fabText}>+</Text>
+              <Ionicons name="add" size={30} color="#FFFFFF" />
             </Pressable>
           </Animated.View>
         ) : null}
@@ -272,31 +284,56 @@ export function OfficerListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
-  kpiRow: {
-    paddingHorizontal: spacing.sm,
-    paddingTop: spacing.sm,
-    gap: spacing.sm,
+  screen: {
+    backgroundColor: ui.bg,
+    flex: 1,
   },
-  toolbar: { padding: spacing.sm, gap: spacing.sm },
-  list: { paddingBottom: 96 },
+  headerBlock: {
+    gap: ui.sectionGap,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  listEyebrow: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: ui.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+  },
+  list: {
+    paddingHorizontal: ui.pagePad,
+    paddingBottom: 104,
+  },
+  listSeparator: {
+    height: OFFICER_CARD_GAP,
+  },
+  emptyWrap: {
+    flex: 1,
+    gap: ui.sectionGap,
+  },
+  pageInset: {
+    paddingHorizontal: ui.pagePad,
+  },
   fabWrap: {
     position: 'absolute',
-    right: spacing.lg,
-    bottom: spacing.lg,
+    right: ui.pagePad,
+    bottom: 24,
   },
   fab: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.full,
-    backgroundColor: adminColors.primary,
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
+    backgroundColor: ui.brand,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowColor: ui.brand,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  fabText: { fontSize: 28, color: colors.surfaceWhite, fontWeight: '300', marginTop: -2 },
+  fabPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.97 }],
+  },
 });

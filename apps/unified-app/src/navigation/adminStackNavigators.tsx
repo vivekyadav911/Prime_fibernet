@@ -221,11 +221,21 @@ export function AdminUsersStackNav() {
 
 export function AdminOfficersStackNav() {
   return (
-    <OfficersStack.Navigator screenOptions={stackScreenOptions}>
+    <OfficersStack.Navigator screenOptions={brandStackScreenOptions}>
       <OfficersStack.Screen name="OfficerList" component={OfficerListScreen} options={{ title: 'Officers' }} />
       <OfficersStack.Screen name="OfficerDetail" component={OfficerDetailScreen} options={{ headerShown: false }} />
       <OfficersStack.Screen name="OfficerEdit" component={EditOfficerScreen} options={{ title: 'Edit officer' }} />
-      <OfficersStack.Screen name="AddOfficer" component={AddOfficerScreen} options={{ title: 'Add officer' }} />
+      <OfficersStack.Screen
+        name="AddOfficer"
+        component={AddOfficerScreen}
+        options={{
+          title: 'Add Officer',
+          headerStyle: { backgroundColor: '#5B4FE9' },
+          headerTintColor: '#FFFFFF',
+          headerTitleStyle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
+          headerShadowVisible: false,
+        }}
+      />
     </OfficersStack.Navigator>
   );
 }

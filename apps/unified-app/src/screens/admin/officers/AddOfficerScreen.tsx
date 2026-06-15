@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import {
@@ -10,24 +11,17 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import { Screen } from '@prime/ui';
 
 import {
   DateField,
-  DocumentUploadCard,
-  FormField,
-  FormStepper,
   RoleGuard,
   SalaryTotalDisplay,
-  SectionLabel,
   SelectField,
 } from '@/components/admin';
-import { KeyboardDismissView } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
-import { useKeyboardBottomInset } from '@/hooks/useKeyboardBottomInset';
 import {
   AdminCreateOfficerSchema,
   BLOOD_GROUP_OPTIONS,
@@ -45,9 +39,6 @@ import {
   useGetOfficerRolesQuery,
 } from '@/store/api/endpoints';
 import type { AdminOfficersStackParamList } from '@/types/navigation';
-import { adminColors } from '@/theme/admin';
-import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 import {
   pickOfficerDocument,
@@ -55,6 +46,13 @@ import {
   uploadOfficerDocumentFile,
   type OfficerDocumentType,
 } from '@/utils/uploadOfficerDocument';
+
+import { BTN_H, formStyles } from './addOfficerFormStyles';
+import { AddOfficerFormField } from './components/AddOfficerFormField';
+import { AddOfficerHorizontalStepper } from './components/AddOfficerHorizontalStepper';
+import { AddOfficerSectionCard } from './components/AddOfficerSectionCard';
+import { AddOfficerUploadCard } from './components/AddOfficerUploadCard';
+import { ui } from './officersUi';
 
 type Props = NativeStackScreenProps<AdminOfficersStackParamList, 'AddOfficer'>;
 
@@ -74,15 +72,19 @@ const DOC_FIELDS: {
   { key: 'resume', formKey: 'resumeUrl', label: 'Resume/CV', required: false },
 ];
 
+const pickerProps = {
+  containerStyle: formStyles.fieldWrap,
+  triggerStyle: formStyles.trigger,
+  triggerTextStyle: formStyles.triggerText,
+  accentColor: ui.brand,
+  accentTint: 'rgba(91, 79, 233, 0.08)',
+} as const;
+
 function randomSessionId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export function AddOfficerScreen({ navigation }: Props) {
-  const keyboardInset = useKeyboardBottomInset(spacing.lg);
-  const { width } = useWindowDimensions();
-  const isWide = width >= 768;
-
   const [step, setStep] = useState(1);
   const [uploadSessionId] = useState(randomSessionId);
   const [uploadingDoc, setUploadingDoc] = useState<OfficerDocumentType | null>(null);
@@ -311,217 +313,600 @@ export function AddOfficerScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="officers.create">
-      <Screen padded={false} style={styles.screen}>
+      <Screen padded={false} safeAreaTop={false} style={styles.canvas}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={keyboardInset}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
         >
-          <KeyboardDismissView style={styles.flex}>
-            <View style={[styles.layout, isWide && styles.layoutWide]}>
-              <FormStepper steps={OFFICER_WIZARD_STEPS} currentStep={step} />
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+          >
+              <View style={styles.introCard}>
+                <Text style={styles.introTitle}>Add Officer</Text>
+                <Text style={styles.introSubtitle}>
+                  Create a new officer profile, role, and service details.
+                </Text>
+                <AddOfficerHorizontalStepper steps={OFFICER_WIZARD_STEPS} currentStep={step} />
+              </View>
 
-              <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
-                {step === 1 ? (
-                  <>
-                    <SectionLabel title="Personal Information" />
-                    <Controller control={control} name="fullName" render={({ field }) => (
-                      <FormField label="Full Name*" value={field.value} onChangeText={field.onChange} onBlur={field.onBlur} error={errMsg(errors.fullName)} />
-                    )} />
-                    <Controller control={control} name="dateOfBirth" render={({ field }) => (
-                      <DateField label="Date of Birth*" value={field.value} onChange={field.onChange} error={errMsg(errors.dateOfBirth)} />
-                    )} />
-                    <Controller control={control} name="gender" render={({ field }) => (
-                      <SelectField label="Gender*" options={GENDER_OPTIONS} value={field.value} onSelect={field.onChange} error={errMsg(errors.gender)} />
-                    )} />
-                    <Controller control={control} name="bloodGroup" render={({ field }) => (
-                      <SelectField label="Blood Group" options={[{ value: '', label: 'Select' }, ...BLOOD_GROUP_OPTIONS]} value={field.value ?? ''} onSelect={field.onChange} />
-                    )} />
-                    <Controller control={control} name="maritalStatus" render={({ field }) => (
-                      <SelectField label="Marital Status" options={MARITAL_STATUS_OPTIONS} value={field.value ?? 'Single'} onSelect={field.onChange} />
-                    )} />
-                    <DocumentUploadCard
-                      label="Profile Photo"
-                      fileName={docNames.profile_photo}
-                      uploading={uploadingDoc === 'profile_photo'}
-                      onUpload={() => void handleDocUpload('profile_photo', 'profilePhotoUrl')}
+              {step === 1 ? (
+                <AddOfficerSectionCard
+                  title="Personal Information"
+                  subtitle={OFFICER_WIZARD_STEPS[0].subtitle}
+                >
+                  <Controller
+                    control={control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <AddOfficerFormField
+                        label="Full Name*"
+                        value={field.value}
+                        onChangeText={field.onChange}
+                        onBlur={field.onBlur}
+                        error={errMsg(errors.fullName)}
+                        placeholder="Officer full name"
+                      />
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name="dateOfBirth"
+                    render={({ field }) => (
+                      <DateField
+                        label="Date of Birth*"
+                        value={field.value}
+                        onChange={field.onChange}
+                        error={errMsg(errors.dateOfBirth)}
+                        placeholder="Select date"
+                        {...pickerProps}
+                      />
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name="gender"
+                    render={({ field }) => (
+                      <SelectField
+                        label="Gender*"
+                        options={GENDER_OPTIONS}
+                        value={field.value}
+                        onSelect={field.onChange}
+                        error={errMsg(errors.gender)}
+                        {...pickerProps}
+                      />
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name="bloodGroup"
+                    render={({ field }) => (
+                      <SelectField
+                        label="Blood Group"
+                        options={[{ value: '', label: 'Select' }, ...BLOOD_GROUP_OPTIONS]}
+                        value={field.value ?? ''}
+                        onSelect={field.onChange}
+                        {...pickerProps}
+                      />
+                    )}
+                  />
+                  <Controller
+                    control={control}
+                    name="maritalStatus"
+                    render={({ field }) => (
+                      <SelectField
+                        label="Marital Status"
+                        options={MARITAL_STATUS_OPTIONS}
+                        value={field.value ?? 'Single'}
+                        onSelect={field.onChange}
+                        {...pickerProps}
+                      />
+                    )}
+                  />
+                  <AddOfficerUploadCard
+                    label="Profile Photo"
+                    fileName={docNames.profile_photo}
+                    uploading={uploadingDoc === 'profile_photo'}
+                    onUpload={() => void handleDocUpload('profile_photo', 'profilePhotoUrl')}
+                  />
+                </AddOfficerSectionCard>
+              ) : null}
+
+              {step === 2 ? (
+                <>
+                  <AddOfficerSectionCard title="Contact" subtitle="Email, phone, and address details.">
+                    <Controller
+                      control={control}
+                      name="email"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="Email*"
+                          value={field.value}
+                          onChangeText={field.onChange}
+                          onBlur={field.onBlur}
+                          autoCapitalize="none"
+                          keyboardType="email-address"
+                          error={errMsg(errors.email)}
+                          placeholder="officer@example.com"
+                        />
+                      )}
                     />
-                  </>
-                ) : null}
+                    <Controller
+                      control={control}
+                      name="phone"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="Phone*"
+                          value={field.value}
+                          onChangeText={field.onChange}
+                          onBlur={field.onBlur}
+                          keyboardType="phone-pad"
+                          error={errMsg(errors.phone)}
+                          placeholder="10-digit mobile"
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="alternatePhone"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="Alternate Phone"
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          keyboardType="phone-pad"
+                          placeholder="Optional"
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="currentAddress"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="Current Address"
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          multiline
+                          style={formStyles.textArea}
+                          placeholder="Street, area, landmark"
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="copyToPermanent"
+                      render={({ field }) => (
+                        <Pressable
+                          style={styles.checkRow}
+                          onPress={() => {
+                            const next = !field.value;
+                            field.onChange(next);
+                            if (next) setValue('permanentAddress', getValues('currentAddress'));
+                          }}
+                        >
+                          <Ionicons
+                            name={field.value ? 'checkbox' : 'square-outline'}
+                            size={22}
+                            color={field.value ? ui.brand : ui.textSecondary}
+                          />
+                          <Text style={styles.checkLabel}>{officerStrings.form.copyToPermanent}</Text>
+                        </Pressable>
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="permanentAddress"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="Permanent Address"
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          multiline
+                          style={formStyles.textArea}
+                          placeholder="Permanent address"
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="city"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="City*"
+                          value={field.value}
+                          onChangeText={field.onChange}
+                          error={errMsg(errors.city)}
+                          placeholder="City"
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="state"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="State*"
+                          value={field.value}
+                          onChangeText={field.onChange}
+                          error={errMsg(errors.state)}
+                          placeholder="State"
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="pincode"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="Pincode*"
+                          value={field.value}
+                          onChangeText={field.onChange}
+                          keyboardType="number-pad"
+                          error={errMsg(errors.pincode)}
+                          placeholder="Pincode"
+                        />
+                      )}
+                    />
+                  </AddOfficerSectionCard>
 
-                {step === 2 ? (
-                  <>
-                    <SectionLabel title="Contact" />
-                    <Controller control={control} name="email" render={({ field }) => (
-                      <FormField label="Email*" value={field.value} onChangeText={field.onChange} onBlur={field.onBlur} autoCapitalize="none" keyboardType="email-address" error={errMsg(errors.email)} />
-                    )} />
-                    <Controller control={control} name="phone" render={({ field }) => (
-                      <FormField label="Phone*" value={field.value} onChangeText={field.onChange} onBlur={field.onBlur} keyboardType="phone-pad" error={errMsg(errors.phone)} />
-                    )} />
-                    <Controller control={control} name="alternatePhone" render={({ field }) => (
-                      <FormField label="Alternate Phone" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="phone-pad" />
-                    )} />
-                    <Controller control={control} name="currentAddress" render={({ field }) => (
-                      <FormField label="Current Address" value={field.value ?? ''} onChangeText={field.onChange} multiline />
-                    )} />
-                    <Controller control={control} name="copyToPermanent" render={({ field }) => (
-                      <Pressable style={styles.checkRow} onPress={() => {
-                        const next = !field.value;
-                        field.onChange(next);
-                        if (next) setValue('permanentAddress', getValues('currentAddress'));
-                      }}>
-                        <Text style={styles.checkBox}>{field.value ? '☑' : '☐'}</Text>
-                        <Text style={styles.checkLabel}>{officerStrings.form.copyToPermanent}</Text>
-                      </Pressable>
-                    )} />
-                    <Controller control={control} name="permanentAddress" render={({ field }) => (
-                      <FormField label="Permanent Address" value={field.value ?? ''} onChangeText={field.onChange} multiline />
-                    )} />
-                    <Controller control={control} name="city" render={({ field }) => (
-                      <FormField label="City*" value={field.value} onChangeText={field.onChange} error={errMsg(errors.city)} />
-                    )} />
-                    <Controller control={control} name="state" render={({ field }) => (
-                      <FormField label="State*" value={field.value} onChangeText={field.onChange} error={errMsg(errors.state)} />
-                    )} />
-                    <Controller control={control} name="pincode" render={({ field }) => (
-                      <FormField label="Pincode*" value={field.value} onChangeText={field.onChange} keyboardType="number-pad" error={errMsg(errors.pincode)} />
-                    )} />
-                    <SectionLabel title="Bank Details" />
-                    <Controller control={control} name="bankName" render={({ field }) => (
-                      <FormField label="Bank Name" value={field.value ?? ''} onChangeText={field.onChange} />
-                    )} />
-                    <Controller control={control} name="accountHolderName" render={({ field }) => (
-                      <FormField label="Account Holder Name" value={field.value ?? ''} onChangeText={field.onChange} />
-                    )} />
-                    <Controller control={control} name="accountNumber" render={({ field }) => (
-                      <FormField label="Account Number" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="number-pad" />
-                    )} />
-                    <Controller control={control} name="ifscCode" render={({ field }) => (
-                      <FormField label="IFSC Code" value={field.value ?? ''} onChangeText={field.onChange} autoCapitalize="characters" error={errMsg(errors.ifscCode)} />
-                    )} />
-                    <SectionLabel title="Emergency Contact 1" />
-                    <Controller control={control} name="emergencyContact1.name" render={({ field }) => (
-                      <FormField label="Name" value={field.value ?? ''} onChangeText={field.onChange} />
-                    )} />
-                    <Controller control={control} name="emergencyContact1.relationship" render={({ field }) => (
-                      <FormField label="Relationship" value={field.value ?? ''} onChangeText={field.onChange} />
-                    )} />
-                    <Controller control={control} name="emergencyContact1.phone" render={({ field }) => (
-                      <FormField label="Phone" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="phone-pad" />
-                    )} />
-                    <Controller control={control} name="emergencyContact1.address" render={({ field }) => (
-                      <FormField label="Address" value={field.value ?? ''} onChangeText={field.onChange} multiline />
-                    )} />
-                    <SectionLabel title="Emergency Contact 2 (optional)" />
-                    <Controller control={control} name="emergencyContact2.name" render={({ field }) => (
-                      <FormField label="Name" value={field.value ?? ''} onChangeText={field.onChange} />
-                    )} />
-                    <Controller control={control} name="emergencyContact2.phone" render={({ field }) => (
-                      <FormField label="Phone" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="phone-pad" />
-                    )} />
-                  </>
-                ) : null}
+                  <AddOfficerSectionCard title="Bank Details" subtitle="Payout account information.">
+                    <Controller
+                      control={control}
+                      name="bankName"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="Bank Name"
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          placeholder="Bank name"
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="accountHolderName"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="Account Holder Name"
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          placeholder="As per bank records"
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="accountNumber"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="Account Number"
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          keyboardType="number-pad"
+                          placeholder="Account number"
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="ifscCode"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="IFSC Code"
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          autoCapitalize="characters"
+                          error={errMsg(errors.ifscCode)}
+                          placeholder="e.g. SBIN0001234"
+                        />
+                      )}
+                    />
+                  </AddOfficerSectionCard>
 
-                {step === 3 ? (
-                  <>
-                    <SectionLabel title="Role & Contract" />
-                    <Controller control={control} name="roleId" render={({ field }) => (
-                      <SelectField label="Assigned Role*" options={roleOptions} value={field.value} onSelect={field.onChange} error={errMsg(errors.roleId)} />
-                    )} />
-                    <Controller control={control} name="positionApplied" render={({ field }) => (
-                      <FormField label="Position Applied" value={field.value ?? ''} onChangeText={field.onChange} />
-                    )} />
-                    <Controller control={control} name="designation" render={({ field }) => (
-                      <FormField label="Designation" value={field.value ?? ''} onChangeText={field.onChange} />
-                    )} />
-                    <Controller control={control} name="department" render={({ field }) => (
-                      <FormField label="Department" value={field.value ?? ''} onChangeText={field.onChange} />
-                    )} />
-                    <Controller control={control} name="contractType" render={({ field }) => (
-                      <SelectField label="Contract Type" options={CONTRACT_TYPE_OPTIONS} value={field.value ?? 'Permanent'} onSelect={field.onChange} />
-                    )} />
-                    <Controller control={control} name="contractStartDate" render={({ field }) => (
-                      <DateField label="Start Date" value={field.value ?? ''} onChange={field.onChange} />
-                    )} />
-                    <Controller control={control} name="basicSalary" render={({ field }) => (
-                      <FormField label="Basic Salary*" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="decimal-pad" error={errMsg(errors.basicSalary)} />
-                    )} />
-                    <Controller control={control} name="hra" render={({ field }) => (
-                      <FormField label="HRA" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="decimal-pad" />
-                    )} />
-                    <Controller control={control} name="transportAllowance" render={({ field }) => (
-                      <FormField label="Transport Allowance" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="decimal-pad" />
-                    )} />
-                    <Controller control={control} name="otherAllowances" render={({ field }) => (
-                      <FormField label="Other Allowances" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="decimal-pad" />
-                    )} />
+                  <AddOfficerSectionCard title="Emergency Contact 1" subtitle="Primary emergency contact.">
+                    <Controller
+                      control={control}
+                      name="emergencyContact1.name"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="Name" value={field.value ?? ''} onChangeText={field.onChange} placeholder="Contact name" />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="emergencyContact1.relationship"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="Relationship" value={field.value ?? ''} onChangeText={field.onChange} placeholder="e.g. Spouse" />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="emergencyContact1.phone"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="Phone" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="phone-pad" placeholder="Phone number" />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="emergencyContact1.address"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="Address" value={field.value ?? ''} onChangeText={field.onChange} multiline style={formStyles.textArea} placeholder="Address" />
+                      )}
+                    />
+                  </AddOfficerSectionCard>
+
+                  <AddOfficerSectionCard title="Emergency Contact 2 (optional)" subtitle="Secondary emergency contact.">
+                    <Controller
+                      control={control}
+                      name="emergencyContact2.name"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="Name" value={field.value ?? ''} onChangeText={field.onChange} placeholder="Contact name" />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="emergencyContact2.phone"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="Phone" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="phone-pad" placeholder="Phone number" />
+                      )}
+                    />
+                  </AddOfficerSectionCard>
+                </>
+              ) : null}
+
+              {step === 3 ? (
+                <>
+                  <AddOfficerSectionCard title="Role & Contract" subtitle={OFFICER_WIZARD_STEPS[2].subtitle}>
+                    <Controller
+                      control={control}
+                      name="roleId"
+                      render={({ field }) => (
+                        <SelectField
+                          label="Assigned Role*"
+                          options={roleOptions}
+                          value={field.value}
+                          onSelect={field.onChange}
+                          error={errMsg(errors.roleId)}
+                          {...pickerProps}
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="positionApplied"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="Position Applied" value={field.value ?? ''} onChangeText={field.onChange} placeholder="Position title" />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="designation"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="Designation" value={field.value ?? ''} onChangeText={field.onChange} placeholder="Designation" />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="department"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="Department" value={field.value ?? ''} onChangeText={field.onChange} placeholder="Department" />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="contractType"
+                      render={({ field }) => (
+                        <SelectField
+                          label="Contract Type"
+                          options={CONTRACT_TYPE_OPTIONS}
+                          value={field.value ?? 'Permanent'}
+                          onSelect={field.onChange}
+                          {...pickerProps}
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="contractStartDate"
+                      render={({ field }) => (
+                        <DateField
+                          label="Start Date"
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          placeholder="Select date"
+                          {...pickerProps}
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="basicSalary"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label="Basic Salary*"
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          keyboardType="decimal-pad"
+                          error={errMsg(errors.basicSalary)}
+                          placeholder="0"
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="hra"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="HRA" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="decimal-pad" placeholder="0" />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="transportAllowance"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="Transport Allowance" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="decimal-pad" placeholder="0" />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="otherAllowances"
+                      render={({ field }) => (
+                        <AddOfficerFormField label="Other Allowances" value={field.value ?? ''} onChangeText={field.onChange} keyboardType="decimal-pad" placeholder="0" />
+                      )}
+                    />
                     <SalaryTotalDisplay total={salaryTotal} />
-                    <SectionLabel title={officerStrings.form.credentials.title} />
-                    <Controller control={control} name="passwordMode" render={({ field }) => (
-                      <View style={styles.modeRow}>
-                        <Pressable style={[styles.modeBtn, field.value === 'auto' && styles.modeBtnActive]} onPress={() => field.onChange('auto')}>
-                          <Text style={styles.modeText}>{officerStrings.form.credentials.modeAuto}</Text>
-                        </Pressable>
-                        <Pressable style={[styles.modeBtn, field.value === 'manual' && styles.modeBtnActive]} onPress={() => field.onChange('manual')}>
-                          <Text style={styles.modeText}>{officerStrings.form.credentials.modeManual}</Text>
-                        </Pressable>
-                      </View>
-                    )} />
+                  </AddOfficerSectionCard>
+
+                  <AddOfficerSectionCard title={officerStrings.form.credentials.title} subtitle="Login credentials for the officer app.">
+                    <Controller
+                      control={control}
+                      name="passwordMode"
+                      render={({ field }) => (
+                        <View style={styles.modeRow}>
+                          <Pressable
+                            style={[styles.modeBtn, field.value === 'auto' && styles.modeBtnActive]}
+                            onPress={() => field.onChange('auto')}
+                          >
+                            <Text style={[styles.modeText, field.value === 'auto' && styles.modeTextActive]}>
+                              {officerStrings.form.credentials.modeAuto}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[styles.modeBtn, field.value === 'manual' && styles.modeBtnActive]}
+                            onPress={() => field.onChange('manual')}
+                          >
+                            <Text style={[styles.modeText, field.value === 'manual' && styles.modeTextActive]}>
+                              {officerStrings.form.credentials.modeManual}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      )}
+                    />
                     {passwordMode === 'manual' ? (
                       <>
-                        <Controller control={control} name="password" render={({ field }) => (
-                          <FormField label={officerStrings.form.credentials.password} value={field.value ?? ''} onChangeText={field.onChange} secureTextEntry error={errMsg(errors.password)} />
-                        )} />
-                        <Controller control={control} name="confirmPassword" render={({ field }) => (
-                          <FormField label={officerStrings.form.credentials.confirmPassword} value={field.value ?? ''} onChangeText={field.onChange} secureTextEntry error={errMsg(errors.confirmPassword)} />
-                        )} />
+                        <Controller
+                          control={control}
+                          name="password"
+                          render={({ field }) => (
+                            <AddOfficerFormField
+                              label={officerStrings.form.credentials.password}
+                              value={field.value ?? ''}
+                              onChangeText={field.onChange}
+                              secureTextEntry
+                              error={errMsg(errors.password)}
+                              placeholder="Min. 8 characters"
+                            />
+                          )}
+                        />
+                        <Controller
+                          control={control}
+                          name="confirmPassword"
+                          render={({ field }) => (
+                            <AddOfficerFormField
+                              label={officerStrings.form.credentials.confirmPassword}
+                              value={field.value ?? ''}
+                              onChangeText={field.onChange}
+                              secureTextEntry
+                              error={errMsg(errors.confirmPassword)}
+                              placeholder="Re-enter password"
+                            />
+                          )}
+                        />
                       </>
                     ) : null}
-                    <Controller control={control} name="credentialsEmail" render={({ field }) => (
-                      <FormField label={officerStrings.form.credentials.credentialsEmail} value={field.value ?? ''} onChangeText={field.onChange} autoCapitalize="none" keyboardType="email-address" />
-                    )} />
-                    <Controller control={control} name="allowAdminViewPassword" render={({ field }) => (
-                      <Pressable style={styles.checkRow} onPress={() => field.onChange(!field.value)}>
-                        <Text style={styles.checkBox}>{field.value ? '☑' : '☐'}</Text>
-                        <Text style={styles.checkLabel}>{officerStrings.form.credentials.allowAdminView}</Text>
-                      </Pressable>
-                    )} />
-                  </>
-                ) : null}
-
-                {step === 4 ? (
-                  <>
-                    <SectionLabel title="Required Documents" />
-                    {DOC_FIELDS.map((doc) => (
-                      <Controller
-                        key={doc.key}
-                        control={control}
-                        name={doc.formKey}
-                        render={() => (
-                          <DocumentUploadCard
-                            label={doc.label}
-                            fileName={docNames[doc.key]}
-                            uploading={uploadingDoc === doc.key}
-                            error={errMsg(errors[doc.formKey])}
-                            onUpload={() => void handleDocUpload(doc.key, doc.formKey)}
+                    <Controller
+                      control={control}
+                      name="credentialsEmail"
+                      render={({ field }) => (
+                        <AddOfficerFormField
+                          label={officerStrings.form.credentials.credentialsEmail}
+                          value={field.value ?? ''}
+                          onChangeText={field.onChange}
+                          autoCapitalize="none"
+                          keyboardType="email-address"
+                          placeholder="Login email (optional)"
+                        />
+                      )}
+                    />
+                    <Controller
+                      control={control}
+                      name="allowAdminViewPassword"
+                      render={({ field }) => (
+                        <Pressable style={styles.checkRow} onPress={() => field.onChange(!field.value)}>
+                          <Ionicons
+                            name={field.value ? 'checkbox' : 'square-outline'}
+                            size={22}
+                            color={field.value ? ui.brand : ui.textSecondary}
                           />
-                        )}
-                      />
-                    ))}
-                  </>
-                ) : null}
+                          <Text style={styles.checkLabel}>{officerStrings.form.credentials.allowAdminView}</Text>
+                        </Pressable>
+                      )}
+                    />
+                  </AddOfficerSectionCard>
+                </>
+              ) : null}
 
-                <View style={styles.navRow}>
-                  <Button label={step === 1 ? officerStrings.form.cancel : officerStrings.form.back} variant="ghost" onPress={onBack} />
-                  {step < 4 ? (
-                    <Button label={officerStrings.form.next} onPress={() => void onNext()} />
-                  ) : (
-                    <Button label={saving ? 'Submitting…' : officerStrings.form.submit} onPress={() => void onSubmit()} />
-                  )}
-                </View>
-              </ScrollView>
-            </View>
-          </KeyboardDismissView>
+              {step === 4 ? (
+                <AddOfficerSectionCard title="Required Documents" subtitle={OFFICER_WIZARD_STEPS[3].subtitle}>
+                  {DOC_FIELDS.map((doc) => (
+                    <Controller
+                      key={doc.key}
+                      control={control}
+                      name={doc.formKey}
+                      render={() => (
+                        <AddOfficerUploadCard
+                          label={doc.label}
+                          fileName={docNames[doc.key]}
+                          uploading={uploadingDoc === doc.key}
+                          error={errMsg(errors[doc.formKey])}
+                          onUpload={() => void handleDocUpload(doc.key, doc.formKey)}
+                        />
+                      )}
+                    />
+                  ))}
+                </AddOfficerSectionCard>
+              ) : null}
+
+              <View style={styles.footer}>
+                <Pressable
+                  onPress={onBack}
+                  style={({ pressed }) => [styles.secondaryBtn, pressed && styles.btnPressed]}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.secondaryBtnText}>
+                    {step === 1 ? officerStrings.form.cancel : officerStrings.form.back}
+                  </Text>
+                </Pressable>
+                {step < 4 ? (
+                  <Pressable
+                    onPress={() => void onNext()}
+                    style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.primaryBtnText}>{officerStrings.form.next}</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    onPress={() => void onSubmit()}
+                    disabled={saving}
+                    style={({ pressed }) => [
+                      styles.primaryBtn,
+                      saving && styles.primaryBtnDisabled,
+                      pressed && !saving && styles.btnPressed,
+                    ]}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.primaryBtnText}>
+                      {saving ? 'Submitting…' : officerStrings.form.submit}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            </ScrollView>
         </KeyboardAvoidingView>
       </Screen>
     </RoleGuard>
@@ -529,24 +914,112 @@ export function AddOfficerScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: adminColors.canvasBg },
   flex: { flex: 1 },
-  layout: { flex: 1, padding: spacing.md },
-  layoutWide: { flexDirection: 'row', gap: spacing.lg },
-  form: { paddingBottom: spacing.xxl },
-  navRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.lg, gap: spacing.sm },
-  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginVertical: spacing.sm },
-  checkBox: { fontSize: 18, color: adminColors.primary },
-  checkLabel: { fontSize: 14, color: colors.textPrimary, flex: 1 },
-  modeRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  canvas: { backgroundColor: ui.bg, flex: 1 },
+  scroll: {
+    paddingHorizontal: ui.pagePad,
+    paddingTop: 12,
+    paddingBottom: 24,
+    gap: ui.sectionGap,
+  },
+  introCard: {
+    backgroundColor: ui.card,
+    borderRadius: ui.radiusHero,
+    padding: ui.cardPad,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: ui.border,
+    ...ui.shadow,
+  },
+  introTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: ui.text,
+    letterSpacing: -0.3,
+  },
+  introSubtitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: ui.textSecondary,
+    marginTop: 6,
+    lineHeight: 20,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 10,
+    paddingTop: 4,
+  },
+  secondaryBtn: {
+    minHeight: BTN_H,
+    paddingHorizontal: 18,
+    borderRadius: ui.btnRadius,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: ui.touch,
+  },
+  secondaryBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: ui.textSecondary,
+  },
+  primaryBtn: {
+    minHeight: BTN_H,
+    paddingHorizontal: 22,
+    borderRadius: ui.btnRadius,
+    backgroundColor: ui.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 120,
+  },
+  primaryBtnDisabled: { opacity: 0.55 },
+  primaryBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  btnPressed: { opacity: 0.92 },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: ui.touch,
+    marginBottom: 14,
+  },
+  checkLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: ui.text,
+    flex: 1,
+    lineHeight: 19,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
   modeBtn: {
     flex: 1,
-    padding: spacing.sm,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: ui.radiusSm,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: ui.border,
+    backgroundColor: ui.searchFill,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  modeBtnActive: { borderColor: adminColors.primary, backgroundColor: adminColors.primaryTint },
-  modeText: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  modeBtnActive: {
+    borderColor: '#D8D2F8',
+    backgroundColor: '#ECE9FD',
+  },
+  modeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: ui.textSecondary,
+    textAlign: 'center',
+  },
+  modeTextActive: {
+    color: ui.brand,
+  },
 });
