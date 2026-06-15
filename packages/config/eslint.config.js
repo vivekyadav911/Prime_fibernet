@@ -45,6 +45,8 @@ export default [
       'ios/',
       'babel.config.js',
       'metro.config.js',
+      'app.config.js',
+      '__tests__/**',
     ],
   },
 ];

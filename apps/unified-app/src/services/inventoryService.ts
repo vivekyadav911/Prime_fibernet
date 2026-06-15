@@ -344,7 +344,7 @@ export async function performQuickAction(
   const before = item.availableQuantity;
   let updates: Partial<InventoryItem> = {};
   let quantityDelta = 0;
-  let actionType = action.actionType;
+  const actionType = action.actionType;
 
   switch (action.actionType) {
     case 'sold': {
