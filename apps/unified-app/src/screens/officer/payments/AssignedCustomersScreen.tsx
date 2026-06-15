@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 
 import { AmountDisplay } from '@/components/payments';
 import { EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
-import { useOfficerCollectionsSync } from '@/hooks/officer/useOfficerCollectionsSync';
 import { useGetOfficerAssignedCustomersQuery } from '@/services/api/paymentCollectionApi';
 import type { OfficerCollectionsStackParamList } from '@/types/navigation';
 import type { OfficerAssignedCustomer } from '@/types/payments';
@@ -15,8 +14,6 @@ import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 
 export function AssignedCustomersScreen() {
-  useOfficerCollectionsSync();
-
   const navigation = useNavigation<NativeStackNavigationProp<OfficerCollectionsStackParamList>>();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -28,26 +25,6 @@ export function AssignedCustomersScreen() {
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useGetOfficerAssignedCustomersQuery(debouncedQuery);
-
-  const sections = useMemo(() => {
-    const assigned = (data ?? []).filter((c) => c.assignmentType === 'assigned');
-    const openPool = (data ?? []).filter((c) => c.assignmentType === 'open_pool');
-    return { assigned, openPool };
-  }, [data]);
-
-  const listData = useMemo(() => {
-    const rows: Array<{ type: 'header'; title: string } | { type: 'customer'; customer: OfficerAssignedCustomer }> =
-      [];
-    if (sections.assigned.length) {
-      rows.push({ type: 'header', title: 'My assignments' });
-      sections.assigned.forEach((customer) => rows.push({ type: 'customer', customer }));
-    }
-    if (sections.openPool.length) {
-      rows.push({ type: 'header', title: 'Open pool (any officer)' });
-      sections.openPool.forEach((customer) => rows.push({ type: 'customer', customer }));
-    }
-    return rows;
-  }, [sections]);
 
   const onCollect = useCallback(
     (customer: OfficerAssignedCustomer) => {
@@ -76,11 +53,11 @@ export function AssignedCustomersScreen() {
     <ScreenWrapper scrollable={false}>
       <View style={styles.banner}>
         <Text style={styles.bannerText}>
-          My assignments are yours only. Open pool customers can be collected by any officer.
+          Showing customers assigned to you by admin. Search is limited to your assigned list only.
         </Text>
       </View>
 
-      <Text style={styles.label}>SEARCH CUSTOMERS</Text>
+      <Text style={styles.label}>SEARCH ASSIGNED CUSTOMERS</Text>
       <View style={styles.searchRow}>
         <TextInput
           style={styles.input}
@@ -100,61 +77,45 @@ export function AssignedCustomersScreen() {
 
       {!isLoading && !isError ? (
         <FlatList
-          data={listData}
-          keyExtractor={(item, index) =>
-            item.type === 'header' ? `header-${item.title}` : item.customer.id
-          }
+          data={data ?? []}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <EmptyState
-              title="No customers to collect"
+              title="No assigned customers"
               subtitle={
                 debouncedQuery
-                  ? 'No matches in your collection list.'
-                  : 'Ask admin to assign customers or add them to the open pool.'
+                  ? 'No matches in your assigned list. Try another search.'
+                  : 'Ask admin to assign customers for collection.'
               }
             />
           }
-          renderItem={({ item }) => {
-            if (item.type === 'header') {
-              return <Text style={styles.sectionTitle}>{item.title}</Text>;
-            }
-
-            const customer = item.customer;
-            return (
-              <View style={styles.card}>
-                <Pressable onPress={() => onCollect(customer)}>
-                  <View style={styles.cardTop}>
-                    <Text style={styles.name}>{customer.name}</Text>
-                    {customer.assignmentType === 'open_pool' ? (
-                      <View style={styles.poolBadge}>
-                        <Text style={styles.poolBadgeText}>Open pool</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <Text style={styles.meta}>
-                    {customer.customer_id}
-                    {customer.phone ? ` · ${customer.phone}` : ''}
-                  </Text>
-                  <AmountDisplay amount={customer.outstanding_amount} />
-                  {customer.next_due_date ? (
-                    <Text style={styles.due}>Due: {customer.next_due_date}</Text>
-                  ) : null}
-                  {customer.payment_status ? (
-                    <Text style={styles.status}>{customer.payment_status}</Text>
-                  ) : null}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Pressable onPress={() => onCollect(item)}>
+                <Text style={styles.name}>{item.name}</Text>
+                <Text style={styles.meta}>
+                  {item.customer_id}
+                  {item.phone ? ` · ${item.phone}` : ''}
+                </Text>
+                <AmountDisplay amount={item.outstanding_amount} />
+                {item.next_due_date ? (
+                  <Text style={styles.due}>Due: {item.next_due_date}</Text>
+                ) : null}
+                {item.payment_status ? (
+                  <Text style={styles.status}>{item.payment_status}</Text>
+                ) : null}
+              </Pressable>
+              <View style={styles.actions}>
+                <Pressable style={styles.historyBtn} onPress={() => onViewHistory(item)}>
+                  <Text style={styles.historyBtnText}>History</Text>
                 </Pressable>
-                <View style={styles.actions}>
-                  <Pressable style={styles.historyBtn} onPress={() => onViewHistory(customer)}>
-                    <Text style={styles.historyBtnText}>History</Text>
-                  </Pressable>
-                  <Pressable style={styles.collectBtn} onPress={() => onCollect(customer)}>
-                    <Text style={styles.collectBtnText}>Collect</Text>
-                  </Pressable>
-                </View>
+                <Pressable style={styles.collectBtn} onPress={() => onCollect(item)}>
+                  <Text style={styles.collectBtnText}>Collect</Text>
+                </Pressable>
               </View>
-            );
-          }}
+            </View>
+          )}
         />
       ) : null}
     </ScreenWrapper>
@@ -190,14 +151,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   list: { paddingBottom: spacing.lg },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
-  },
   card: {
     backgroundColor: colors.surfaceWhite,
     borderRadius: radius.lg,
@@ -206,22 +159,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderDefault,
   },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  name: { fontSize: 16, fontWeight: '700', color: colors.textPrimary, flex: 1 },
-  poolBadge: {
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    backgroundColor: adminColors.primaryTint,
-    borderWidth: 1,
-    borderColor: adminColors.permissionBoxBorder,
-  },
-  poolBadgeText: { fontSize: 11, fontWeight: '600', color: adminColors.primary },
+  name: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
   meta: { fontSize: 13, color: colors.textSecondary, marginTop: spacing.xxs },
   due: { fontSize: 12, color: colors.textSecondary, marginTop: spacing.xs },
   status: {

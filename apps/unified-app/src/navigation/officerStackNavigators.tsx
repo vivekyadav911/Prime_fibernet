@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
+import { useOfficerCollectionsSync } from '@/hooks/officer/useOfficerCollectionsSync';
 import {
   AssignedCustomersScreen,
   CashCollectionScreen,
@@ -47,6 +48,8 @@ export function OfficerRequestsStackNav() {
 }
 
 export function OfficerCollectionsStackNav() {
+  useOfficerCollectionsSync();
+
   return (
     <CollectionsStack.Navigator screenOptions={stackScreenOptions}>
       <CollectionsStack.Screen

@@ -58,7 +58,7 @@ export function CollectionAssignmentsScreen() {
   const officerFilterOptions = useMemo(() => {
     const base = [
       { value: 'all', label: 'All customers' },
-      { value: 'unassigned', label: 'Any officer' },
+      { value: 'unassigned', label: 'Unassigned' },
     ];
     const officerOpts = (officers ?? []).map((o) => ({ value: o.id, label: o.name }));
     return [...base, ...officerOpts];
@@ -76,7 +76,7 @@ export function CollectionAssignmentsScreen() {
 
   const openSingleAssign = useCallback((row: CollectionAssignmentRow) => {
     setSingleTarget(row);
-    setPickedOfficerId(row.assignedOfficerId ?? 'open_pool');
+    setPickedOfficerId(row.assignedOfficerId ?? 'unassigned');
     setAssignModal(true);
   }, []);
 
@@ -87,7 +87,7 @@ export function CollectionAssignmentsScreen() {
   }, []);
 
   const confirmAssign = useCallback(async () => {
-    const officerId = pickedOfficerId === 'open_pool' ? null : pickedOfficerId;
+    const officerId = pickedOfficerId === 'unassigned' ? null : pickedOfficerId;
     try {
       if (singleTarget) {
         await assignOne({ customerId: singleTarget.id, officerId }).unwrap();
@@ -116,7 +116,7 @@ export function CollectionAssignmentsScreen() {
   const renderItem = useCallback(
     ({ item }: { item: CollectionAssignmentRow }) => {
       const isSelected = selected.includes(item.id);
-      const assignmentLabel = item.assignedOfficerName ?? 'Any officer';
+      const assignmentLabel = item.assignedOfficerName ?? 'Unassigned';
 
       return (
         <View style={styles.card}>
@@ -177,8 +177,8 @@ export function CollectionAssignmentsScreen() {
       <Screen padded={false}>
         <View style={styles.banner}>
           <Text style={styles.bannerText}>
-            Unassigned customers appear in every officer&apos;s open pool. Assigned customers are
-            visible only to that officer.
+            Unassigned customers are not visible to officers until you assign them to a specific
+            officer. Assigned customers are visible only to that officer.
           </Text>
         </View>
 
@@ -234,10 +234,10 @@ export function CollectionAssignmentsScreen() {
                 {singleTarget ? `Assign ${singleTarget.name}` : `Assign ${selected.length} customers`}
               </Text>
               <Pressable
-                style={[styles.officerOption, pickedOfficerId === 'open_pool' && styles.officerOptionActive]}
-                onPress={() => setPickedOfficerId('open_pool')}
+                style={[styles.officerOption, pickedOfficerId === 'unassigned' && styles.officerOptionActive]}
+                onPress={() => setPickedOfficerId('unassigned')}
               >
-                <Text style={styles.officerOptionText}>Any officer (open pool)</Text>
+                <Text style={styles.officerOptionText}>Unassigned</Text>
               </Pressable>
               {(officers ?? []).map((o) => (
                 <Pressable
