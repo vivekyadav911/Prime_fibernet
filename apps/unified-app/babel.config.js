@@ -15,6 +15,17 @@ module.exports = function (api) {
           alias: {
             '@': path.join(appRoot, 'src'),
           },
+          extensions: [
+            '.ios.ts',
+            '.android.ts',
+            '.ts',
+            '.ios.tsx',
+            '.android.tsx',
+            '.tsx',
+            '.js',
+            '.jsx',
+            '.json',
+          ],
         },
       ],
     ],

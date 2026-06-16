@@ -2,13 +2,16 @@ import { useMemo } from 'react';
 
 import {
   useCreatePaymentOrderV2Mutation,
+  useGetCollectionDashboardKpisQuery,
   useGetCustomerBillQuery,
+  useGetCustomerCollectionHistoryQuery,
   useGetCustomerPaymentHistoryV2Query,
   useGetGatewaysQuery,
   useGetOfficerCollectionsQuery,
   useGetPaymentAnalyticsV2Query,
   useGetPaymentDetailQuery,
   useGetPaymentsQuery,
+  useGetRecentOfficerCollectionsQuery,
   useSaveGatewayCredentialsMutation,
 } from '@/services/api/paymentCollectionApi';
 import type { PaymentFilters } from '@/types/payments';
@@ -43,4 +46,16 @@ export function useCustomerPayments(customerId: string) {
 
 export function useOfficerCollections() {
   return useGetOfficerCollectionsQuery();
+}
+
+export function useCollectionDashboardKpis() {
+  return useGetCollectionDashboardKpisQuery();
+}
+
+export function useCustomerCollectionHistory(customerId: string) {
+  return useGetCustomerCollectionHistoryQuery(customerId, { skip: !customerId });
+}
+
+export function useRecentOfficerCollections(limit = 10) {
+  return useGetRecentOfficerCollectionsQuery(limit);
 }

@@ -76,6 +76,47 @@ export interface PaymentRecord {
   gateway?: PaymentGatewayRecord;
 }
 
+export type CollectionStatus = 'inactive' | 'open' | 'assigned' | 'claimed' | 'collected' | 'failed';
+
+export type PortalNotificationType =
+  | 'assignment'
+  | 'claim'
+  | 'payment_success'
+  | 'payment_failed';
+
+export type PortalNotification = {
+  id: string;
+  recipient_auth_id: string;
+  recipient_officer_id: string | null;
+  type: PortalNotificationType;
+  title: string;
+  body: string | null;
+  data: Record<string, unknown>;
+  is_read: boolean;
+  created_at: string;
+};
+
+export type CollectionAssignmentEvent = {
+  id: string;
+  customer_id: string;
+  assigned_officer_id: string | null;
+  claimed_by_officer_id: string | null;
+  status: string;
+  actor_id: string | null;
+  actor_role: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type CollectionDashboardKpis = {
+  total_outstanding: number;
+  collected_today: number;
+  pending_review: number;
+  failed_today: number;
+  open_pool_count: number;
+  active_officers: number;
+};
+
 export type OfficerAssignedCustomer = {
   id: string;
   name: string;
@@ -84,7 +125,8 @@ export type OfficerAssignedCustomer = {
   outstanding_amount: number;
   next_due_date: string | null;
   payment_status: string | null;
-  assignmentType: 'assigned' | 'open_pool';
+  assignmentType: 'assigned' | 'open_pool' | 'claimed';
+  collectionStatus: CollectionStatus | null;
 };
 
 export interface PaymentGatewayRecord {
@@ -187,6 +229,8 @@ export interface CashCollectionPayload {
   accountNumber: string;
   planName?: string;
   amount: number;
+  method?: 'cash' | 'card' | 'upi';
+  paymentReference?: string;
   notes?: string;
   denominations?: Record<string, number>;
   dueDate?: string;

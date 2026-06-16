@@ -2,6 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type {
   CashCollectionPayload,
+  CollectionAssignmentEvent,
+  CollectionDashboardKpis,
+  CollectionStatus,
   ConfirmPaymentPayload,
   CreateOrderPayload,
   CustomerBill,
@@ -116,6 +119,12 @@ async function resolveCustomerUserId(client: SupabaseClient, authUserId?: string
 
 function mapAssignedCustomerRow(row: Record<string, unknown>): OfficerAssignedCustomer {
   const assignmentRaw = row.assignment_type != null ? String(row.assignment_type) : 'assigned';
+  const assignmentType: OfficerAssignedCustomer['assignmentType'] =
+    assignmentRaw === 'open_pool'
+      ? 'open_pool'
+      : assignmentRaw === 'claimed'
+        ? 'claimed'
+        : 'assigned';
   return {
     id: String(row.id),
     name: String(row.name ?? ''),
@@ -124,7 +133,9 @@ function mapAssignedCustomerRow(row: Record<string, unknown>): OfficerAssignedCu
     outstanding_amount: Number(row.outstanding_amount ?? 0),
     next_due_date: row.next_due_date != null ? String(row.next_due_date) : null,
     payment_status: row.payment_status != null ? String(row.payment_status) : null,
-    assignmentType: assignmentRaw === 'open_pool' ? 'open_pool' : 'assigned',
+    assignmentType,
+    collectionStatus:
+      row.collection_status != null ? (String(row.collection_status) as CollectionStatus) : null,
   };
 }
 
@@ -385,6 +396,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
       query: (body) => ({
         handler: async (client) => {
           const officerId = await client.rpc('current_officer_id');
+          const method = body.method ?? 'cash';
           const { data, error } = await client
             .from('payments')
             .insert({
@@ -394,11 +406,16 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
               plan_name: body.planName,
               amount: body.amount,
               total_amount: body.amount,
-              method: 'cash',
+              method,
               channel: 'officer_cash',
               collected_by: officerId.data as string,
               cash_collection_notes: body.notes,
               cash_denominations: body.denominations,
+              receipt_number:
+                method === 'card' && body.paymentReference
+                  ? `CARD-${body.paymentReference}`
+                  : null,
+              gateway_payment_id: method === 'upi' ? body.paymentReference : null,
               status: 'cash_collected',
               paid_at: new Date().toISOString(),
               due_date: body.dueDate,
@@ -540,6 +557,8 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
 
     getOfficerCollections: builder.query<
       {
+        myWork: OfficerAssignedCustomer[];
+        openPool: OfficerAssignedCustomer[];
         assigned: OfficerAssignedCustomer[];
         pending: OfficerAssignedCustomer[];
         todayTotal: number;
@@ -550,7 +569,11 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
       query: () => ({
         handler: async (client) => {
           const today = new Date().toISOString().slice(0, 10);
-          const assigned = await fetchOfficerCollectibleCustomers(client);
+          const all = await fetchOfficerCollectibleCustomers(client);
+          const myWork = all.filter(
+            (c) => c.assignmentType === 'assigned' || c.assignmentType === 'claimed',
+          );
+          const openPool = all.filter((c) => c.assignmentType === 'open_pool');
 
           const { data: officerId } = await client.rpc('current_officer_id');
           const { data: collections } = await client
@@ -563,9 +586,84 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
           const rows = collections ?? [];
           const todayTotal = rows.reduce((s, p) => s + Number(p.total_amount ?? 0), 0);
           const confirmedToday = rows.filter((p) => p.status === 'confirmed').length;
-          const pending = assigned.filter((c) => c.outstanding_amount > 0);
+          const pending = myWork.filter((c) => c.outstanding_amount > 0);
 
-          return { assigned, pending, todayTotal, confirmedToday };
+          return { myWork, openPool, assigned: myWork, pending, todayTotal, confirmedToday };
+        },
+      }),
+      providesTags: ['Payments'],
+    }),
+
+    claimCollectionCustomer: builder.mutation<{ customerId: string; claimed: boolean }, string>({
+      query: (customerId) => ({
+        handler: async (client) => {
+          const { data, error } = await client.rpc('claim_collection_customer', {
+            p_customer_id: customerId,
+          });
+          if (error) throw error;
+          const result = data as { customer_id?: string; claimed?: boolean; already_claimed?: boolean };
+          return {
+            customerId: String(result.customer_id ?? customerId),
+            claimed: Boolean(result.claimed ?? result.already_claimed),
+          };
+        },
+      }),
+      invalidatesTags: ['Payments', 'CollectionAssignments'],
+    }),
+
+    getCollectionDashboardKpis: builder.query<CollectionDashboardKpis, void>({
+      query: () => ({
+        handler: async (client) => {
+          const { data, error } = await client.rpc('get_collection_dashboard_kpis');
+          if (error) throw error;
+          const row = data as Record<string, unknown>;
+          return {
+            total_outstanding: Number(row.total_outstanding ?? 0),
+            collected_today: Number(row.collected_today ?? 0),
+            pending_review: Number(row.pending_review ?? 0),
+            failed_today: Number(row.failed_today ?? 0),
+            open_pool_count: Number(row.open_pool_count ?? 0),
+            active_officers: Number(row.active_officers ?? 0),
+          };
+        },
+      }),
+      providesTags: ['Analytics', 'Payments'],
+    }),
+
+    getCustomerCollectionHistory: builder.query<CollectionAssignmentEvent[], string>({
+      query: (customerId) => ({
+        handler: async (client) => {
+          const { data, error } = await client.rpc('get_customer_collection_history', {
+            p_customer_id: customerId,
+          });
+          if (error) throw error;
+          return (data ?? []).map((row: Record<string, unknown>) => ({
+            id: String(row.id),
+            customer_id: String(row.customer_id),
+            assigned_officer_id: (row.assigned_officer_id as string) ?? null,
+            claimed_by_officer_id: (row.claimed_by_officer_id as string) ?? null,
+            status: String(row.status),
+            actor_id: (row.actor_id as string) ?? null,
+            actor_role: (row.actor_role as string) ?? null,
+            notes: (row.notes as string) ?? null,
+            created_at: String(row.created_at),
+          }));
+        },
+      }),
+      providesTags: ['CollectionAssignments'],
+    }),
+
+    getRecentOfficerCollections: builder.query<PaymentRecord[], number | void>({
+      query: (limit = 10) => ({
+        handler: async (client) => {
+          const { data, error } = await client
+            .from('payments')
+            .select('*')
+            .in('channel', ['officer_cash', 'office_cash'])
+            .order('created_at', { ascending: false })
+            .limit(limit ?? 10);
+          if (error) throw error;
+          return (data ?? []).map((row) => mapPayment(row as Record<string, unknown>));
         },
       }),
       providesTags: ['Payments'],
@@ -649,6 +747,10 @@ export const {
   useGetOfficerCustomerPaymentHistoryQuery,
   useSearchOfficerCustomersQuery,
   useLazySearchOfficerCustomersQuery,
+  useClaimCollectionCustomerMutation,
+  useGetCollectionDashboardKpisQuery,
+  useGetCustomerCollectionHistoryQuery,
+  useGetRecentOfficerCollectionsQuery,
   useGetPaymentReceiptQuery,
   useLazyGetPaymentReceiptQuery,
   useInitiateRefundV2Mutation,

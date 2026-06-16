@@ -22,6 +22,7 @@ import {
   AdminEmptyState,
   AdminWebLayout,
   AvatarIcon,
+  Pagination,
   RoleGuard,
   SearchBar,
   StatusBadge,
@@ -45,8 +46,6 @@ type BlockFilter = 'all' | 'blocked' | 'unblocked';
 
 const PAGE_SIZE = 50;
 const ADD_BTN_H = 48;
-const PAGE_BTN_SIZE = 36;
-const PAGE_BTN_GAP = 6;
 const FILTER_LIST_GAP = ui.sectionGap;
 const FILTER_TUCK_UNDER = ui.sectionGap;
 
@@ -121,78 +120,6 @@ function FilterDropdown<T extends string>({
           </View>
         </>
       ) : null}
-    </View>
-  );
-}
-
-function Pagination({
-  page,
-  totalPages,
-  onPageChange,
-}: {
-  page: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-}) {
-  const scrollRef = useRef<ScrollView>(null);
-  const pageStep = PAGE_BTN_SIZE + PAGE_BTN_GAP;
-
-  const allPages = useMemo(
-    () => Array.from({ length: totalPages }, (_, index) => index + 1),
-    [totalPages],
-  );
-
-  useEffect(() => {
-    if (totalPages <= 1) return;
-    const targetX = Math.max(0, (page - 1) * pageStep - pageStep * 2);
-    scrollRef.current?.scrollTo({ x: targetX, animated: true });
-  }, [page, pageStep, totalPages]);
-
-  if (totalPages <= 1) return null;
-
-  return (
-    <View style={styles.pagination}>
-      <Pressable
-        style={[styles.pageBtn, styles.pageNavBtn, page <= 1 && styles.pageBtnDisabled]}
-        disabled={page <= 1}
-        onPress={() => onPageChange(page - 1)}
-        hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-      >
-        <Ionicons name="chevron-back" size={16} color={page <= 1 ? ui.textSecondary : ui.text} />
-      </Pressable>
-
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.pageScroll}
-        contentContainerStyle={styles.pageScrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        {allPages.map((p) => (
-          <Pressable
-            key={p}
-            style={[styles.pageBtn, page === p && styles.pageBtnActive]}
-            onPress={() => onPageChange(p)}
-            hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
-          >
-            <Text style={[styles.pageBtnText, page === p && styles.pageBtnTextActive]}>{p}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-
-      <Pressable
-        style={[styles.pageBtn, styles.pageNavBtn, page >= totalPages && styles.pageBtnDisabled]}
-        disabled={page >= totalPages}
-        onPress={() => onPageChange(page + 1)}
-        hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-      >
-        <Ionicons
-          name="chevron-forward"
-          size={16}
-          color={page >= totalPages ? ui.textSecondary : ui.text}
-        />
-      </Pressable>
     </View>
   );
 }
@@ -1068,39 +995,4 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     width: '100%',
   },
-  pagination: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: PAGE_BTN_GAP,
-    width: '100%',
-    maxWidth: '100%',
-  },
-  pageNavBtn: {
-    flexShrink: 0,
-  },
-  pageScroll: {
-    flex: 1,
-    minWidth: 0,
-  },
-  pageScrollContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: PAGE_BTN_GAP,
-    paddingHorizontal: 2,
-  },
-  pageBtn: {
-    width: PAGE_BTN_SIZE,
-    height: PAGE_BTN_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: ui.radiusSm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: ui.border,
-    backgroundColor: ui.card,
-    flexShrink: 0,
-  },
-  pageBtnActive: { backgroundColor: ui.brand, borderColor: ui.brand },
-  pageBtnDisabled: { opacity: 0.4 },
-  pageBtnText: { fontSize: 13, color: ui.text, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  pageBtnTextActive: { color: '#FFFFFF' },
 });

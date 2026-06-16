@@ -3,17 +3,17 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
-export type PaymentMethodOption = 'cash' | 'upi' | 'link';
+export type PaymentMethodOption = 'cash' | 'card' | 'upi';
 
 type PaymentMethodSelectorProps = {
   value: PaymentMethodOption;
   onChange: (method: PaymentMethodOption) => void;
 };
 
-const METHODS: { key: PaymentMethodOption; label: string; icon: string; disabled?: boolean }[] = [
+const METHODS: { key: PaymentMethodOption; label: string; icon: string }[] = [
   { key: 'cash', label: 'Cash', icon: '💵' },
-  { key: 'upi', label: 'UPI', icon: '📱', disabled: true },
-  { key: 'link', label: 'Link', icon: '🔗', disabled: true },
+  { key: 'card', label: 'Card', icon: '💳' },
+  { key: 'upi', label: 'UPI', icon: '📱' },
 ];
 
 export function PaymentMethodSelector({ value, onChange }: PaymentMethodSelectorProps) {
@@ -22,17 +22,11 @@ export function PaymentMethodSelector({ value, onChange }: PaymentMethodSelector
       {METHODS.map((m) => (
         <Pressable
           key={m.key}
-          style={[
-            styles.option,
-            value === m.key && styles.optionActive,
-            m.disabled && styles.optionDisabled,
-          ]}
-          onPress={() => !m.disabled && onChange(m.key)}
-          disabled={m.disabled}
+          style={[styles.option, value === m.key && styles.optionActive]}
+          onPress={() => onChange(m.key)}
         >
           <Text style={styles.icon}>{m.icon}</Text>
           <Text style={[styles.label, value === m.key && styles.labelActive]}>{m.label}</Text>
-          {m.disabled ? <Text style={styles.soon}>Soon</Text> : null}
         </Pressable>
       ))}
     </View>
@@ -53,9 +47,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   optionActive: { borderColor: colors.accentTeal, backgroundColor: colors.emeraldLight },
-  optionDisabled: { opacity: 0.55 },
   icon: { fontSize: 22 },
   label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, marginTop: spacing.xxs },
   labelActive: { color: colors.primaryNavy },
-  soon: { fontSize: 9, color: colors.textSecondary, marginTop: 2 },
 });

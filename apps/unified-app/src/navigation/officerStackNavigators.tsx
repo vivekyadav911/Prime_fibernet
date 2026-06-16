@@ -1,6 +1,8 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useOfficerCollectionsSync } from '@/hooks/officer/useOfficerCollectionsSync';
+import { usePortalNotificationsSync } from '@/hooks/usePortalNotificationsSync';
+import { OfficerNotificationBell } from '@/components/navigation/officer/OfficerNotificationBell';
 import {
   AssignedCustomersScreen,
   CashCollectionScreen,
@@ -8,6 +10,7 @@ import {
   OfficerCollectionHistoryScreen,
   OfficerCollectionScreen,
 } from '@/screens/officer/payments';
+import { OfficerPortalNotificationsScreen } from '@/screens/officer/notifications/OfficerPortalNotificationsScreen';
 import { ApplyLeaveScreen } from '@/screens/officer/leave/ApplyLeaveScreen';
 import { OfficerLeaveScreen } from '@/screens/officer/OfficerLeaveScreen';
 import { OfficerRequestsScreen } from '@/screens/officer/OfficerRequestsScreen';
@@ -35,6 +38,10 @@ const stackScreenOptions = {
   headerShadowVisible: false,
 };
 
+function CollectionsHeaderRight() {
+  return <OfficerNotificationBell />;
+}
+
 export function OfficerRequestsStackNav() {
   return (
     <RequestsStack.Navigator screenOptions={stackScreenOptions}>
@@ -49,9 +56,15 @@ export function OfficerRequestsStackNav() {
 
 export function OfficerCollectionsStackNav() {
   useOfficerCollectionsSync();
+  usePortalNotificationsSync();
 
   return (
-    <CollectionsStack.Navigator screenOptions={stackScreenOptions}>
+    <CollectionsStack.Navigator
+      screenOptions={{
+        ...stackScreenOptions,
+        headerRight: CollectionsHeaderRight,
+      }}
+    >
       <CollectionsStack.Screen
         name="CollectionsList"
         component={OfficerCollectionScreen}
@@ -76,6 +89,11 @@ export function OfficerCollectionsStackNav() {
         name="CollectionHistory"
         component={OfficerCollectionHistoryScreen}
         options={{ title: 'Collection history' }}
+      />
+      <CollectionsStack.Screen
+        name="PortalNotifications"
+        component={OfficerPortalNotificationsScreen}
+        options={{ title: 'Notifications' }}
       />
     </CollectionsStack.Navigator>
   );

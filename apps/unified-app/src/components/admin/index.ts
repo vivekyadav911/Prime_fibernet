@@ -20,5 +20,6 @@ export { SectionCard } from './SectionCard';
 export { StatusBadge } from './StatusBadge';
 export { FormStepper, type FormStep } from './FormStepper';
 export { OfficerCard } from './OfficerCard';
+export { Pagination } from './Pagination';
 export { DocumentUploadCard } from './DocumentUploadCard';
 export * from './officers';

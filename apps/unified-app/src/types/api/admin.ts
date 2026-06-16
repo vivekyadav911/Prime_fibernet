@@ -80,8 +80,11 @@ export type CollectionAssignmentRow = {
   outstandingAmount: number;
   nextDueDate: string | null;
   paymentStatus: string | null;
+  collectionStatus: string | null;
   assignedOfficerId: string | null;
   assignedOfficerName: string | null;
+  claimedByOfficerId: string | null;
+  claimedByOfficerName: string | null;
 };
 
 export type CollectionAssignmentsParams = {
@@ -91,7 +94,62 @@ export type CollectionAssignmentsParams = {
   officerFilter?: 'all' | 'unassigned' | string;
   paymentStatus?: 'all' | 'paid' | 'pending' | 'overdue' | 'suspended';
   outstandingOnly?: boolean;
+  collectionStatus?: 'all' | 'inactive' | 'open' | 'assigned' | 'claimed' | 'collected';
+  claimFilter?: 'all' | 'claimed' | 'unclaimed';
+  sortBy?: 'due_date' | 'name' | 'outstanding' | 'collection_status';
+  sortDir?: 'asc' | 'desc';
 };
+
+export type CollectionAssignmentsFilters = {
+  officerFilter: 'all' | 'unassigned' | string;
+  paymentStatus: 'all' | 'paid' | 'pending' | 'overdue' | 'suspended';
+  collectionStatus: 'all' | 'inactive' | 'open' | 'assigned' | 'claimed' | 'collected';
+  outstandingOnly: boolean;
+  claimFilter: 'all' | 'claimed' | 'unclaimed';
+};
+
+export const DEFAULT_COLLECTION_ASSIGNMENTS_FILTERS: CollectionAssignmentsFilters = {
+  officerFilter: 'all',
+  paymentStatus: 'all',
+  collectionStatus: 'all',
+  outstandingOnly: false,
+  claimFilter: 'all',
+};
+
+export type CollectionSortKey =
+  | 'due_date_asc'
+  | 'due_date_desc'
+  | 'name_asc'
+  | 'name_desc'
+  | 'outstanding_desc'
+  | 'outstanding_asc'
+  | 'collection_status_asc'
+  | 'collection_status_desc';
+
+export function parseCollectionSortKey(key: CollectionSortKey): {
+  sortBy: NonNullable<CollectionAssignmentsParams['sortBy']>;
+  sortDir: NonNullable<CollectionAssignmentsParams['sortDir']>;
+} {
+  switch (key) {
+    case 'due_date_desc':
+      return { sortBy: 'due_date', sortDir: 'desc' };
+    case 'name_asc':
+      return { sortBy: 'name', sortDir: 'asc' };
+    case 'name_desc':
+      return { sortBy: 'name', sortDir: 'desc' };
+    case 'outstanding_desc':
+      return { sortBy: 'outstanding', sortDir: 'desc' };
+    case 'outstanding_asc':
+      return { sortBy: 'outstanding', sortDir: 'asc' };
+    case 'collection_status_asc':
+      return { sortBy: 'collection_status', sortDir: 'asc' };
+    case 'collection_status_desc':
+      return { sortBy: 'collection_status', sortDir: 'desc' };
+    case 'due_date_asc':
+    default:
+      return { sortBy: 'due_date', sortDir: 'asc' };
+  }
+}
 
 export type CollectionAssignmentsResponse = {
   items: CollectionAssignmentRow[];

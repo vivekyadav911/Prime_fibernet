@@ -86,6 +86,7 @@ import { UserListScreen } from '@/screens/admin/users/UserListScreen';
 import { AdminAuditScreen } from '@/screens/admin/AdminAuditScreen';
 import {
   CollectionAssignmentsScreen,
+  CustomerCollectionDetailScreen,
   GatewayConfigScreen,
   PaymentAnalyticsScreen,
   PaymentDetailScreen,
@@ -330,6 +331,11 @@ export function AdminPaymentsStackNav() {
         name="CollectionAssignments"
         component={CollectionAssignmentsScreen}
         options={{ title: 'Collection assignments' }}
+      />
+      <PaymentsStack.Screen
+        name="CustomerCollectionDetail"
+        component={CustomerCollectionDetailScreen}
+        options={{ title: 'Customer detail' }}
       />
       <PaymentsStack.Screen name="PaymentDetail" component={PaymentDetailScreen} options={{ title: 'Payment detail' }} />
       <PaymentsStack.Screen name="PaymentReview" component={PaymentReviewScreen} options={{ title: 'Review payment' }} />

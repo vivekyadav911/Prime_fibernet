@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
+import { Button } from '@prime/ui';
 
-import { AmountDisplay } from '@/components/payments';
+import { AmountDisplay, CollectionStatusBadge } from '@/components/payments';
 import { EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import { useClaimCollection } from '@/hooks/officer/useClaimCollection';
 import { useGetOfficerAssignedCustomersQuery } from '@/services/api/paymentCollectionApi';
+import { formatINR } from '@/utils/currencyFormat';
 import type { OfficerCollectionsStackParamList } from '@/types/navigation';
 import type { OfficerAssignedCustomer } from '@/types/payments';
 import { adminColors } from '@/theme/admin';
@@ -25,18 +28,19 @@ export function AssignedCustomersScreen() {
 
   const { data, isLoading, isFetching, isError, error, refetch } =
     useGetOfficerAssignedCustomersQuery(debouncedQuery);
+  const { claim, isLoading: claiming } = useClaimCollection();
 
-  const onCollect = useCallback(
-    (customer: OfficerAssignedCustomer) => {
-      navigation.navigate('CashCollection', {
-        customerId: customer.id,
-        customerName: customer.name,
-        accountNumber: customer.customer_id,
-        amount: customer.outstanding_amount,
-        dueDate: customer.next_due_date ?? undefined,
-      });
-    },
-    [navigation],
+  const openPool = useMemo(
+    () =>
+      (data ?? []).filter(
+        (c) => c.assignmentType === 'open_pool' && c.collectionStatus === 'open',
+      ),
+    [data],
+  );
+
+  const outstandingTotal = useMemo(
+    () => openPool.reduce((sum, c) => sum + c.outstanding_amount, 0),
+    [openPool],
   );
 
   const onViewHistory = useCallback(
@@ -49,15 +53,29 @@ export function AssignedCustomersScreen() {
     [navigation],
   );
 
+  const onClaim = useCallback(
+    async (customer: OfficerAssignedCustomer) => {
+      try {
+        await claim(customer.id).unwrap();
+        Alert.alert('Claimed', `${customer.name} is now in My Work under Collections.`);
+        refetch();
+      } catch (e) {
+        Alert.alert('Cannot claim', e instanceof Error ? e.message : 'Try again.');
+      }
+    },
+    [claim, refetch],
+  );
+
   return (
     <ScreenWrapper scrollable={false}>
       <View style={styles.banner}>
         <Text style={styles.bannerText}>
-          Showing customers assigned to you by admin. Search is limited to your assigned list only.
+          Customers admin placed in the open pool. Search and claim to add them to My Work under
+          Collections.
         </Text>
       </View>
 
-      <Text style={styles.label}>SEARCH ASSIGNED CUSTOMERS</Text>
+      <Text style={styles.label}>Search open pool</Text>
       <View style={styles.searchRow}>
         <TextInput
           style={styles.input}
@@ -71,48 +89,52 @@ export function AssignedCustomersScreen() {
         />
       </View>
 
+      {!isLoading && !isError ? (
+        <Text style={styles.summaryLine}>
+          {openPool.length} customers · {formatINR(outstandingTotal)} outstanding
+        </Text>
+      ) : null}
+
       {isLoading || (isFetching && !data) ? <SkeletonLoader rows={4} /> : null}
 
       {isError ? <ErrorState message={queryErrorMessage(error)} onRetry={refetch} /> : null}
 
       {!isLoading && !isError ? (
         <FlatList
-          data={data ?? []}
+          data={openPool}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <EmptyState
-              title="No assigned customers"
+              title="Open pool is empty"
               subtitle={
                 debouncedQuery
-                  ? 'No matches in your assigned list. Try another search.'
-                  : 'Ask admin to assign customers for collection.'
+                  ? 'No matches in the open pool. Try another search.'
+                  : 'No customers in the open pool. Admin must release customers to the pool first.'
               }
             />
           }
           renderItem={({ item }) => (
             <View style={styles.card}>
-              <Pressable onPress={() => onCollect(item)}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.meta}>
-                  {item.customer_id}
-                  {item.phone ? ` · ${item.phone}` : ''}
+              <View style={styles.cardHeader}>
+                <Text style={styles.name}>
+                  {item.name} · {item.customer_id}
                 </Text>
-                <AmountDisplay amount={item.outstanding_amount} />
-                {item.next_due_date ? (
-                  <Text style={styles.due}>Due: {item.next_due_date}</Text>
-                ) : null}
-                {item.payment_status ? (
-                  <Text style={styles.status}>{item.payment_status}</Text>
-                ) : null}
-              </Pressable>
+                <CollectionStatusBadge status={item.collectionStatus ?? item.assignmentType} />
+              </View>
+              {item.phone ? <Text style={styles.meta}>{item.phone}</Text> : null}
+              <AmountDisplay amount={item.outstanding_amount} />
+              {item.next_due_date ? <Text style={styles.due}>Due: {item.next_due_date}</Text> : null}
+              {item.payment_status ? (
+                <Text style={styles.status}>{item.payment_status}</Text>
+              ) : null}
               <View style={styles.actions}>
-                <Pressable style={styles.historyBtn} onPress={() => onViewHistory(item)}>
-                  <Text style={styles.historyBtnText}>History</Text>
-                </Pressable>
-                <Pressable style={styles.collectBtn} onPress={() => onCollect(item)}>
-                  <Text style={styles.collectBtnText}>Collect</Text>
-                </Pressable>
+                <Button label="History" variant="secondary" onPress={() => onViewHistory(item)} />
+                <Button
+                  label="Claim"
+                  onPress={() => void onClaim(item)}
+                  disabled={claiming}
+                />
               </View>
             </View>
           )}
@@ -139,7 +161,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: spacing.xs,
   },
-  searchRow: { marginBottom: spacing.md },
+  searchRow: { marginBottom: spacing.sm },
+  summaryLine: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
   input: {
     borderWidth: 1,
     borderColor: colors.borderDefault,
@@ -158,38 +186,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderDefault,
+    gap: spacing.xs,
   },
-  name: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
-  meta: { fontSize: 13, color: colors.textSecondary, marginTop: spacing.xxs },
-  due: { fontSize: 12, color: colors.textSecondary, marginTop: spacing.xs },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  name: { fontSize: 16, fontWeight: '700', color: colors.textPrimary, flex: 1 },
+  meta: { fontSize: 13, color: colors.textSecondary },
+  due: { fontSize: 12, color: colors.textSecondary },
   status: {
     fontSize: 12,
     color: adminColors.primary,
-    marginTop: spacing.xxs,
     textTransform: 'capitalize',
   },
   actions: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
-  historyBtn: {
-    flex: 1,
-    minHeight: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-  },
-  historyBtnText: { fontWeight: '600', color: colors.textSecondary },
-  collectBtn: {
-    flex: 1,
-    minHeight: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.sm,
-    backgroundColor: adminColors.primary,
-  },
-  collectBtnText: { fontWeight: '600', color: colors.white },
 });

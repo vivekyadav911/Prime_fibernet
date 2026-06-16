@@ -71,6 +71,29 @@ export async function getCustomerIdForUser(client: TypedSupabaseClient, userId: 
   return data?.id ?? userId;
 }
 
+export async function fetchOfficerNameMap(
+  client: TypedSupabaseClient,
+  officerIds: string[],
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (officerIds.length === 0) return map;
+
+  const { data, error } = await client
+    .from('officers')
+    .select(`id, full_name, email, ${OFFICER_USERS_NAME_EMBED}`)
+    .in('id', officerIds);
+  if (error) throw error;
+
+  for (const officer of data ?? []) {
+    const userName = (officer.users as { name?: string } | null)?.name;
+    map.set(
+      officer.id as string,
+      (officer.full_name as string) ?? userName ?? (officer.email as string) ?? 'Officer',
+    );
+  }
+  return map;
+}
+
 export function parseGeographyPoint(value: unknown): { latitude: number; longitude: number } | null {
   if (!value) return null;
   if (typeof value === 'object' && value !== null) {

@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback } from 'react';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '@prime/ui';
 
-import { AmountDisplay } from '@/components/payments';
+import { AmountDisplay, CollectionStatusBadge } from '@/components/payments';
 import { EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
 import { useOfficerCollections } from '@/hooks/usePayments';
 import { formatINR } from '@/utils/currencyFormat';
@@ -15,18 +15,12 @@ import { colors } from '@/theme/colors';
 import { radius, shadow, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 
-import { OfficerCollectionHistoryScreen } from './OfficerCollectionHistoryScreen';
-
-type TabKey = 'assigned' | 'history';
-
 export function OfficerCollectionScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<OfficerCollectionsStackParamList>>();
-  const [tab, setTab] = useState<TabKey>('assigned');
   const { data, isLoading, isError, error, refetch } = useOfficerCollections();
 
-  const onSearchCollect = useCallback(() => {
-    navigation.navigate('AssignedCustomers');
-  }, [navigation]);
+  const myWork = data?.myWork ?? [];
+  const outstandingTotal = myWork.reduce((sum, c) => sum + c.outstanding_amount, 0);
 
   const onCollect = useCallback(
     (customer: OfficerAssignedCustomer) => {
@@ -51,6 +45,10 @@ export function OfficerCollectionScreen() {
     [navigation],
   );
 
+  const onOpenHistory = useCallback(() => {
+    navigation.navigate('CollectionHistory');
+  }, [navigation]);
+
   if (isLoading) {
     return (
       <ScreenWrapper scrollable={false}>
@@ -67,71 +65,40 @@ export function OfficerCollectionScreen() {
     );
   }
 
-  const assigned = data?.assigned ?? [];
-  const outstandingTotal = assigned.reduce((sum, c) => sum + c.outstanding_amount, 0);
-
-  const tabs = (
-    <View style={styles.tabs}>
-      {(['assigned', 'history'] as TabKey[]).map((key) => (
-        <Pressable
-          key={key}
-          style={[styles.tab, tab === key && styles.tabActive]}
-          onPress={() => setTab(key)}
-        >
-          <Text style={[styles.tabText, tab === key && styles.tabTextActive]}>
-            {key === 'assigned' ? 'Collect' : 'History'}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-
-  if (tab === 'history') {
-    return (
-      <ScreenWrapper scrollable={false} padded={false}>
-        {tabs}
-        <OfficerCollectionHistoryScreen embedded />
-      </ScreenWrapper>
-    );
-  }
-
   return (
     <ScreenWrapper scrollable={false} padded={false}>
-      {tabs}
       <View style={styles.summaryBar}>
-        <Text style={styles.summaryTitle}>Assigned customers</Text>
+        <Text style={styles.summaryTitle}>My assignments</Text>
         <Text style={styles.summaryLine}>
-          {assigned.length} customers · {formatINR(outstandingTotal)} outstanding
+          {myWork.length} customers · {formatINR(outstandingTotal)} outstanding
         </Text>
         <Text style={styles.summaryLine}>
           Collected today: {formatINR(data?.todayTotal ?? 0)} · Confirmed: {data?.confirmedToday ?? 0}
         </Text>
         <View style={styles.collectCta}>
-          <Button label="Collect payment" onPress={onSearchCollect} />
+          <Button label="View collection history" variant="secondary" onPress={onOpenHistory} />
         </View>
       </View>
       <FlatList
-        data={assigned}
+        data={myWork}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <EmptyState
-            title="No assigned customers"
-            subtitle="Ask admin to assign customers to you for collection."
-            actionLabel="Open collect list"
-            onAction={onSearchCollect}
+            title="No assigned work"
+            subtitle="Use Collect Payment in the menu to search and claim customers from the open pool."
           />
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.name}>
-              {item.name} · {item.customer_id}
-            </Text>
+            <View style={styles.cardHeader}>
+              <Text style={styles.name}>
+                {item.name} · {item.customer_id}
+              </Text>
+              <CollectionStatusBadge status={item.collectionStatus ?? item.assignmentType} />
+            </View>
             <AmountDisplay amount={item.outstanding_amount} />
             {item.next_due_date ? <Text style={styles.due}>Due: {item.next_due_date}</Text> : null}
-            {item.payment_status ? (
-              <Text style={styles.status}>{item.payment_status}</Text>
-            ) : null}
             <View style={styles.row}>
               <Button label="History" variant="secondary" onPress={() => onViewHistory(item)} />
               <Button label="Collect →" onPress={() => onCollect(item)} />
@@ -144,26 +111,9 @@ export function OfficerCollectionScreen() {
 }
 
 const styles = StyleSheet.create({
-  tabs: {
-    flexDirection: 'row',
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  tab: {
-    flex: 1,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceWhite,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-  },
-  tabActive: { backgroundColor: adminColors.primary, borderColor: adminColors.primary },
-  tabText: { fontWeight: '600', color: colors.textSecondary },
-  tabTextActive: { color: colors.white },
   summaryBar: {
     marginHorizontal: spacing.md,
+    marginTop: spacing.md,
     marginBottom: spacing.sm,
     padding: spacing.md,
     backgroundColor: colors.surfaceWhite,
@@ -184,8 +134,13 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     ...shadow.card,
   },
-  name: { fontWeight: '600', color: colors.textPrimary },
-  status: { fontSize: 12, color: colors.textSecondary, textTransform: 'capitalize' },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  name: { fontWeight: '600', color: colors.textPrimary, flex: 1 },
   due: { fontSize: 12, color: colors.amber },
   row: {
     flexDirection: 'row',

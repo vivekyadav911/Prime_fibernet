@@ -2,7 +2,7 @@ import { createApi } from '@reduxjs/toolkit/query/react';
 
 import { supabaseBaseQuery } from './supabase';
 
-export const baseApi = createApi({
+const api = createApi({
   reducerPath: 'api',
   baseQuery: supabaseBaseQuery,
   tagTypes: [
@@ -33,6 +33,18 @@ export const baseApi = createApi({
     'ShiftDefinitions',
     'Support',
     'CollectionAssignments',
+    'PortalNotifications',
   ],
   endpoints: () => ({}),
 });
+
+const injectEndpoints = api.injectEndpoints.bind(api);
+
+api.injectEndpoints = ((definition) =>
+  injectEndpoints({
+    ...definition,
+    overrideExisting:
+      definition.overrideExisting ?? process.env.NODE_ENV !== 'production',
+  })) as typeof api.injectEndpoints;
+
+export const baseApi = api;

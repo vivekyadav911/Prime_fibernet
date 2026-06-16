@@ -11,6 +11,7 @@ export function buildUserSearchOrFilter(search: string): string {
     `email.ilike."${pattern}"`,
     `phone.ilike."${pattern}"`,
     `username.ilike."${pattern}"`,
+    `customer_id.ilike."${pattern}"`,
   ];
 
   if (/^\d+$/.test(trimmed)) {

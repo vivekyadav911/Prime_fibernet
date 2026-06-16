@@ -4,15 +4,56 @@ import type {
   CollectionAssignmentsResponse,
 } from '@/types/api/admin';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { buildUserSearchOrFilter } from '@/utils/searchQuery';
 
 import { baseApi } from './baseApi';
+import { fetchOfficerNameMap } from './mappers';
+
+async function persistCollectionAssignments(
+  client: SupabaseClient,
+  customerIds: string[],
+  officerId: string | null,
+): Promise<{ updatedCount: number }> {
+  const { data, error } = await client.rpc('bulk_assign_collection_officer', {
+    p_customer_ids: customerIds,
+    p_officer_id: officerId,
+  });
+
+  if (!error) {
+    const result = data as { updated_count?: number };
+    const updatedCount = Number(result?.updated_count ?? 0);
+    if (updatedCount > 0) {
+      return { updatedCount };
+    }
+  } else if (!error.message?.includes('Admin access required')) {
+    throw error;
+  }
+
+  const { data: rows, error: updateError } = await client
+    .from('users')
+    .update({
+      assigned_officer_id: officerId,
+      claimed_by_officer_id: null,
+      claimed_at: null,
+      collection_status: officerId ? 'assigned' : 'open',
+      collection_updated_at: new Date().toISOString(),
+    })
+    .eq('role', 'customer')
+    .in('id', customerIds)
+    .select('id');
+
+  if (updateError) throw updateError;
+  return { updatedCount: rows?.length ?? 0 };
+}
 
 function mapAssignmentRow(
   row: Record<string, unknown>,
   officerNameById: Map<string, string>,
 ): CollectionAssignmentRow {
   const officerId = (row.assigned_officer_id as string) ?? null;
+  const claimedId = (row.claimed_by_officer_id as string) ?? null;
   return {
     id: row.id as string,
     name: row.name as string,
@@ -21,8 +62,11 @@ function mapAssignmentRow(
     outstandingAmount: Number(row.outstanding_amount ?? 0),
     nextDueDate: row.next_due_date != null ? String(row.next_due_date) : null,
     paymentStatus: (row.payment_status as string) ?? null,
+    collectionStatus: (row.collection_status as string) ?? null,
     assignedOfficerId: officerId,
     assignedOfficerName: officerId ? officerNameById.get(officerId) ?? null : null,
+    claimedByOfficerId: claimedId,
+    claimedByOfficerName: claimedId ? officerNameById.get(claimedId) ?? null : null,
   };
 }
 
@@ -32,18 +76,16 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
       query: (filters) => ({
         handler: async (client) => {
           const page = filters.page ?? 1;
-          const limit = filters.limit ?? 50;
+          const limit = filters.limit ?? 25;
           const offset = (page - 1) * limit;
 
           let query = client
             .from('users')
             .select(
-              'id, name, customer_id, phone, outstanding_amount, next_due_date, payment_status, assigned_officer_id',
+              'id, name, customer_id, phone, outstanding_amount, next_due_date, payment_status, assigned_officer_id, collection_status, claimed_by_officer_id',
               { count: 'exact' },
             )
-            .or('role.eq.customer,role.is.null')
-            .not('role', 'eq', 'admin')
-            .not('role', 'eq', 'officer');
+            .eq('role', 'customer');
 
           const search = filters.search?.trim();
           if (search) {
@@ -60,13 +102,34 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
             query = query.eq('payment_status', filters.paymentStatus);
           }
 
+          if (filters.collectionStatus && filters.collectionStatus !== 'all') {
+            query = query.eq('collection_status', filters.collectionStatus);
+          }
+
+          if (filters.claimFilter === 'claimed') {
+            query = query.not('claimed_by_officer_id', 'is', null);
+          } else if (filters.claimFilter === 'unclaimed') {
+            query = query.is('claimed_by_officer_id', null);
+          }
+
           if (filters.outstandingOnly) {
             query = query.gt('outstanding_amount', 0);
           }
 
-          query = query
-            .order('next_due_date', { ascending: true, nullsFirst: false })
-            .order('name', { ascending: true });
+          const sortBy = filters.sortBy ?? 'due_date';
+          const ascending = (filters.sortDir ?? 'asc') === 'asc';
+
+          if (sortBy === 'name') {
+            query = query.order('name', { ascending }).order('id', { ascending: true });
+          } else if (sortBy === 'outstanding') {
+            query = query.order('outstanding_amount', { ascending }).order('id', { ascending: true });
+          } else if (sortBy === 'collection_status') {
+            query = query.order('collection_status', { ascending }).order('name', { ascending: true });
+          } else {
+            query = query
+              .order('next_due_date', { ascending, nullsFirst: false })
+              .order('name', { ascending: true });
+          }
 
           const { data, error, count } = await query.range(offset, offset + limit - 1);
           if (error) throw error;
@@ -74,22 +137,15 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
           const officerIds = [
             ...new Set(
               (data ?? [])
-                .map((row) => row.assigned_officer_id as string | null)
+                .flatMap((row) => [
+                  row.assigned_officer_id as string | null,
+                  row.claimed_by_officer_id as string | null,
+                ])
                 .filter((id): id is string => Boolean(id)),
             ),
           ];
 
-          const officerNameById = new Map<string, string>();
-          if (officerIds.length > 0) {
-            const { data: officers, error: officersError } = await client
-              .from('officers')
-              .select('id, full_name')
-              .in('id', officerIds);
-            if (officersError) throw officersError;
-            for (const officer of officers ?? []) {
-              officerNameById.set(officer.id as string, (officer.full_name as string) ?? 'Officer');
-            }
-          }
+          const officerNameById = await fetchOfficerNameMap(client, officerIds);
 
           return {
             items: (data ?? []).map((row) => mapAssignmentRow(row, officerNameById)),
@@ -102,20 +158,37 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
       providesTags: ['CollectionAssignments'],
     }),
 
+    getCustomerCollectionDetail: builder.query<CollectionAssignmentRow, string>({
+      query: (customerId) => ({
+        handler: async (client) => {
+          const { data, error } = await client
+            .from('users')
+            .select(
+              'id, name, customer_id, phone, outstanding_amount, next_due_date, payment_status, assigned_officer_id, collection_status, claimed_by_officer_id',
+            )
+            .eq('id', customerId)
+            .single();
+          if (error) throw error;
+
+          const officerIds = [
+            data.assigned_officer_id as string | null,
+            data.claimed_by_officer_id as string | null,
+          ].filter((id): id is string => Boolean(id));
+
+          const officerNameById = await fetchOfficerNameMap(client, officerIds);
+
+          return mapAssignmentRow(data as Record<string, unknown>, officerNameById);
+        },
+      }),
+      providesTags: (_r, _e, id) => [{ type: 'CollectionAssignments', id }],
+    }),
+
     bulkAssignCollectionOfficer: builder.mutation<
       { updatedCount: number },
       { customerIds: string[]; officerId: string | null }
     >({
       query: ({ customerIds, officerId }) => ({
-        handler: async (client) => {
-          const { data, error } = await client.rpc('bulk_assign_collection_officer', {
-            p_customer_ids: customerIds,
-            p_officer_id: officerId,
-          });
-          if (error) throw error;
-          const result = data as { updated_count?: number };
-          return { updatedCount: Number(result?.updated_count ?? 0) };
-        },
+        handler: async (client) => persistCollectionAssignments(client, customerIds, officerId),
       }),
       invalidatesTags: ['CollectionAssignments', 'Users', 'Payments'],
     }),
@@ -125,14 +198,24 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
       { customerId: string; officerId: string | null }
     >({
       query: ({ customerId, officerId }) => ({
+        handler: async (client) =>
+          persistCollectionAssignments(client, [customerId], officerId),
+      }),
+      invalidatesTags: ['CollectionAssignments', 'Users', 'Payments'],
+    }),
+
+    releaseCollectionClaim: builder.mutation<{ customerId: string; released: boolean }, string>({
+      query: (customerId) => ({
         handler: async (client) => {
-          const { data, error } = await client.rpc('bulk_assign_collection_officer', {
-            p_customer_ids: [customerId],
-            p_officer_id: officerId,
+          const { data, error } = await client.rpc('release_collection_claim', {
+            p_customer_id: customerId,
           });
           if (error) throw error;
-          const result = data as { updated_count?: number };
-          return { updatedCount: Number(result?.updated_count ?? 0) };
+          const result = data as { customer_id?: string; released?: boolean };
+          return {
+            customerId: String(result.customer_id ?? customerId),
+            released: Boolean(result.released),
+          };
         },
       }),
       invalidatesTags: ['CollectionAssignments', 'Users', 'Payments'],
@@ -142,6 +225,8 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
 
 export const {
   useGetCollectionAssignmentsQuery,
+  useGetCustomerCollectionDetailQuery,
   useBulkAssignCollectionOfficerMutation,
   useAssignCollectionOfficerMutation,
+  useReleaseCollectionClaimMutation,
 } = collectionAssignmentsApi;

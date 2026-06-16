@@ -32,6 +32,7 @@ export function CashCollectionScreen({ navigation, route }: Props) {
 
   const [method, setMethod] = useState<PaymentMethodOption>('cash');
   const [amount, setAmount] = useState(String(defaultAmount));
+  const [paymentReference, setPaymentReference] = useState('');
   const [notes, setNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | undefined>();
   const [denominations, setDenominations] = useState<Record<string, number>>({
@@ -56,12 +57,22 @@ export function CashCollectionScreen({ navigation, route }: Props) {
       Alert.alert('Invalid amount', 'Enter a valid collection amount.');
       return;
     }
+    if (method === 'card' && !/^\d{4}$/.test(paymentReference.trim())) {
+      Alert.alert('Invalid card', 'Enter last 4 digits of the card.');
+      return;
+    }
+    if (method === 'upi' && paymentReference.trim().length < 4) {
+      Alert.alert('Invalid UPI reference', 'Enter the UPI transaction ID.');
+      return;
+    }
     const payload = {
       customerId,
       customerName,
       accountNumber,
       planName,
       amount: parsed,
+      method,
+      paymentReference: paymentReference.trim() || undefined,
       notes: notes.trim() || undefined,
       denominations,
       dueDate,
@@ -71,7 +82,7 @@ export function CashCollectionScreen({ navigation, route }: Props) {
     };
     try {
       await recordCollection(payload).unwrap();
-      Alert.alert('Recorded', 'Cash collection recorded. Pending admin confirmation.');
+      Alert.alert('Recorded', 'Collection recorded successfully.');
       navigation.goBack();
     } catch (err) {
       const message =
@@ -110,8 +121,10 @@ export function CashCollectionScreen({ navigation, route }: Props) {
     denominations,
     dispatch,
     dueDate,
+    method,
     navigation,
     notes,
+    paymentReference,
     photoUri,
     planName,
     recordCollection,
@@ -148,7 +161,30 @@ export function CashCollectionScreen({ navigation, route }: Props) {
               onChange={setDenominations}
             />
           </>
-        ) : null}
+        ) : (
+          <>
+            <Text style={styles.label}>AMOUNT COLLECTED</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="decimal-pad"
+              value={amount}
+              onChangeText={setAmount}
+              placeholderTextColor={colors.textSecondary}
+            />
+            <Text style={styles.label}>
+              {method === 'card' ? 'CARD LAST 4 DIGITS' : 'UPI TRANSACTION ID'}
+            </Text>
+            <TextInput
+              style={styles.input}
+              keyboardType={method === 'card' ? 'number-pad' : 'default'}
+              value={paymentReference}
+              onChangeText={setPaymentReference}
+              maxLength={method === 'card' ? 4 : 64}
+              placeholder={method === 'card' ? '1234' : 'UPI reference'}
+              placeholderTextColor={colors.textSecondary}
+            />
+          </>
+        )}
 
         <Text style={styles.label}>NOTES</Text>
         <TextInput

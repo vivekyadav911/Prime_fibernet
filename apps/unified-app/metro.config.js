@@ -13,5 +13,8 @@ config.resolver.nodeModulesPaths = [
   path.join(monorepoRoot, 'node_modules'),
 ];
 config.resolver.disableHierarchicalLookup = true;
+config.resolver.alias = {
+  '@': path.join(appRoot, 'src'),
+};
 
 module.exports = config;

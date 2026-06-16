@@ -12,6 +12,7 @@ import {
   type PaymentFilterState,
 } from '@/components/payments';
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
+import { useCollectionAssignmentsSync } from '@/hooks/admin/useCollectionAssignmentsSync';
 import { usePayments } from '@/hooks/usePayments';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
@@ -19,8 +20,11 @@ import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 
+import { PaymentsCollectionPortalSection } from './PaymentsCollectionPortalSection';
+
 export function PaymentsListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AdminPaymentsStackParamList>>();
+  useCollectionAssignmentsSync();
   const [filters, setFilters] = useState<PaymentFilterState>({
     status: 'all',
     method: 'all',
@@ -54,8 +58,9 @@ export function PaymentsListScreen() {
 
   const listHeader = (
     <>
+      <PaymentsCollectionPortalSection />
       <View style={styles.toolbar}>
-        <Text style={styles.title}>Payments</Text>
+        <Text style={styles.title}>Transactions</Text>
         <View style={styles.toolbarRight}>
           <Pressable onPress={() => navigation.navigate('CollectionAssignments')}>
             <Text style={styles.link}>Assignments</Text>

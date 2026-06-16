@@ -127,6 +127,7 @@ export type OfficerCollectionsStackParamList = {
     planName?: string;
   };
   CollectionHistory: undefined;
+  PortalNotifications: undefined;
 };
 
 /**
@@ -283,6 +284,7 @@ export type AdminNotificationsStackParamList = {
 export type AdminPaymentsStackParamList = {
   PaymentList: undefined;
   CollectionAssignments: undefined;
+  CustomerCollectionDetail: { customerId: string };
   PaymentDetail: { paymentId: string };
   PaymentReview: { paymentId: string };
   GatewayConfig: undefined;
