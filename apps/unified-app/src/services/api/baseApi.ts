@@ -34,6 +34,9 @@ const api = createApi({
     'Support',
     'CollectionAssignments',
     'PortalNotifications',
+    'CustomerTickets',
+    'PlanChangeRequests',
+    'CustomerDashboard',
   ],
   endpoints: () => ({}),
 });

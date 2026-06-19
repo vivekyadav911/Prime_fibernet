@@ -5,7 +5,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { useCustomerRequestBadge } from '@/hooks/useCustomerRequestBadge';
+import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
+import { useRealtimeCustomer } from '@/hooks/useRealtimeCustomer';
 import { DashboardScreen } from '@/screens/customer/dashboard/DashboardScreen';
 import { ChatbotScreen } from '@/screens/customer/ChatbotScreen';
 import { CustomerSupportHubScreen } from '@/screens/customer/support/CustomerSupportHubScreen';
@@ -18,26 +19,26 @@ import { GatewayWebViewScreen } from '@/screens/customer/payments/GatewayWebView
 import { PaymentHistoryScreenV2 } from '@/screens/customer/payments/PaymentHistoryScreenV2';
 import { ReceiptScreen } from '@/screens/customer/payments/ReceiptScreen';
 import { PlansScreen } from '@/screens/customer/plans/PlansScreen';
+import { PlanChangeRequestScreen } from '@/screens/customer/plans/PlanChangeRequestScreen';
 import { ProfileScreen } from '@/screens/customer/profile/ProfileScreen';
-import { RequestsScreen } from '@/screens/customer/requests/RequestsScreen';
+import { CustomerNotificationsScreen } from '@/screens/customer/notifications/CustomerNotificationsScreen';
+import { CustomerTicketListScreen } from '@/screens/customer/tickets/CustomerTicketListScreen';
+import { CustomerTicketDetailScreen } from '@/screens/customer/tickets/CustomerTicketDetailScreen';
+import { CreateCustomerTicketScreen } from '@/screens/customer/tickets/CreateCustomerTicketScreen';
 import type { CustomerStackParamList, CustomerTabParamList } from '@/types/navigation';
 import { MyBillsScreen } from '@/screens/customer/bills/MyBillsScreen';
 import { InvoiceScreen } from '@/screens/officer/InvoiceScreen';
-import { colors } from '@/theme/colors';
+import { signalGlass } from '@/theme/customer/signalGlass';
 
 import {
   AboutScreen,
   CheckoutScreen,
-  CreateRequestScreen,
-  CustomerNotificationsScreen,
   MakePaymentScreen,
   PaymentGatewayScreen,
-  PaymentSelectionScreen,
   PaymentSuccessScreen,
   PlanDetailsScreen,
   PrivacyScreen,
   RefundScreen,
-  RequestDetailsScreen,
   TermsScreen,
 } from './customerStackScreens';
 import { TabIcon } from './TabIcon';
@@ -57,15 +58,19 @@ const Tab = createBottomTabNavigator<CustomerTabParamList>();
 const Stack = createNativeStackNavigator<CustomerStackParamList>();
 
 function CustomerTabs() {
-  const unresolvedCount = useCustomerRequestBadge();
+  useRealtimeCustomer();
 
   return (
     <Tab.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.primaryNavy },
-        headerTintColor: colors.white,
-        tabBarActiveTintColor: colors.accentTeal,
-        tabBarInactiveTintColor: colors.textSecondary,
+        headerStyle: { backgroundColor: signalGlass.colors.bgSurface },
+        headerTintColor: signalGlass.colors.textPrimary,
+        tabBarStyle: {
+          backgroundColor: signalGlass.colors.bgSurface,
+          borderTopColor: signalGlass.colors.borderSubtle,
+        },
+        tabBarActiveTintColor: signalGlass.colors.accentPrimary,
+        tabBarInactiveTintColor: signalGlass.colors.textMuted,
       }}
     >
       <Tab.Screen
@@ -73,6 +78,7 @@ function CustomerTabs() {
         component={DashboardScreen}
         options={{
           title: 'Dashboard',
+          headerShown: false,
           tabBarIcon: ({ focused }) => <TabIcon label="⌂" focused={focused} />,
         }}
       />
@@ -87,14 +93,6 @@ function CustomerTabs() {
         options={{
           title: 'Pay',
           tabBarIcon: ({ focused }) => <TabIcon label="₹" focused={focused} />,
-        }}
-      />
-      <Tab.Screen
-        name="Requests"
-        component={RequestsScreen}
-        options={{
-          tabBarBadge: unresolvedCount > 0 ? unresolvedCount : undefined,
-          tabBarIcon: ({ focused }) => <TabIcon label="☰" focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -142,44 +140,44 @@ function CustomerTabsWithDeepLinks() {
   return <CustomerTabs />;
 }
 
-/**
- * Flutter `RootShell` (bottom tabs) + `MaterialApp.routes` pushed screens.
- * Tab bar auto-hides when a stack detail screen is focused.
- */
 export function CustomerNavigator() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.primaryNavy },
-        headerTintColor: colors.white,
-      }}
-    >
-      <Stack.Screen name="CustomerTabs" component={CustomerTabsWithDeepLinks} options={{ headerShown: false }} />
-      <Stack.Screen name="PlanDetails" component={PlanDetailsScreen} options={{ title: 'Plan details' }} />
-      <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
-      <Stack.Screen name="PaymentSelection" component={PaymentSelectionScreen} options={{ title: 'Payment' }} />
-      <Stack.Screen name="PaymentGateway" component={PaymentGatewayScreen} options={{ title: 'Payment gateway' }} />
-      <Stack.Screen name="GatewayWebView" component={GatewayWebViewScreen} options={{ title: 'Payment' }} />
-      <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} options={{ title: 'Payment method' }} />
-      <Stack.Screen name="CustomerBill" component={CustomerBillScreen} options={{ title: 'My bill' }} />
-      <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt' }} />
-      <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ title: 'Success', headerShown: false }} />
-      <Stack.Screen name="MakePayment" component={MakePaymentScreen} options={{ title: 'Make payment' }} />
-      <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreenV2} options={{ title: 'Payment history' }} />
-      <Stack.Screen name="MyBills" component={MyBillsScreen} options={{ title: 'My bills' }} />
-      <Stack.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Invoice' }} />
-      <Stack.Screen name="CreateRequest" component={CreateRequestScreen} options={{ title: 'New request' }} />
-      <Stack.Screen name="RequestDetails" component={RequestDetailsScreen} options={{ title: 'Request' }} />
-      <Stack.Screen name="Notifications" component={CustomerNotificationsScreen} options={{ title: 'Notifications' }} />
-      <Stack.Screen name="About" component={AboutScreen} options={{ title: 'About' }} />
-      <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms' }} />
-      <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ title: 'Privacy' }} />
-      <Stack.Screen name="Refund" component={RefundScreen} options={{ title: 'Refund policy' }} />
-      <Stack.Screen name="CustomerLiveChat" component={CustomerLiveChatScreen} options={{ title: 'Live Chat' }} />
-      <Stack.Screen name="CustomerFaqList" component={CustomerFaqListScreen} options={{ title: 'FAQs' }} />
-      <Stack.Screen name="CustomerFaqDetail" component={CustomerFaqDetailScreen} options={{ title: 'FAQ' }} />
-      <Stack.Screen name="CustomerSupportHub" component={CustomerSupportHubScreen as never} options={{ title: 'Support' }} />
-      <Stack.Screen name="SupportScreen" component={ChatbotScreen} options={{ title: 'AI Assistant' }} />
-    </Stack.Navigator>
+    <CustomerFontProvider>
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: signalGlass.colors.bgSurface },
+          headerTintColor: signalGlass.colors.textPrimary,
+          contentStyle: { backgroundColor: signalGlass.colors.bgDeep },
+        }}
+      >
+        <Stack.Screen name="CustomerTabs" component={CustomerTabsWithDeepLinks} options={{ headerShown: false }} />
+        <Stack.Screen name="PlanDetails" component={PlanDetailsScreen} options={{ title: 'Plan details' }} />
+        <Stack.Screen name="PlanChangeRequest" component={PlanChangeRequestScreen} options={{ title: 'Plan change' }} />
+        <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
+        <Stack.Screen name="PaymentGateway" component={PaymentGatewayScreen} options={{ title: 'Payment gateway' }} />
+        <Stack.Screen name="GatewayWebView" component={GatewayWebViewScreen} options={{ title: 'Payment' }} />
+        <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} options={{ title: 'Payment method' }} />
+        <Stack.Screen name="CustomerBill" component={CustomerBillScreen} options={{ title: 'My bill' }} />
+        <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt' }} />
+        <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ title: 'Success', headerShown: false }} />
+        <Stack.Screen name="MakePayment" component={MakePaymentScreen} options={{ title: 'Make payment' }} />
+        <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreenV2} options={{ title: 'Payment history' }} />
+        <Stack.Screen name="MyBills" component={MyBillsScreen} options={{ title: 'My bills' }} />
+        <Stack.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Invoice' }} />
+        <Stack.Screen name="Notifications" component={CustomerNotificationsScreen} options={{ title: 'Notifications' }} />
+        <Stack.Screen name="About" component={AboutScreen} options={{ title: 'About' }} />
+        <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms' }} />
+        <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ title: 'Privacy' }} />
+        <Stack.Screen name="Refund" component={RefundScreen} options={{ title: 'Refund policy' }} />
+        <Stack.Screen name="CustomerLiveChat" component={CustomerLiveChatScreen} options={{ title: 'Live Chat' }} />
+        <Stack.Screen name="CustomerFaqList" component={CustomerFaqListScreen} options={{ title: 'FAQs' }} />
+        <Stack.Screen name="CustomerFaqDetail" component={CustomerFaqDetailScreen} options={{ title: 'FAQ' }} />
+        <Stack.Screen name="CustomerSupportHub" component={CustomerSupportHubScreen as never} options={{ title: 'Support' }} />
+        <Stack.Screen name="SupportScreen" component={ChatbotScreen} options={{ title: 'Prima AI' }} />
+        <Stack.Screen name="CustomerTicketList" component={CustomerTicketListScreen} options={{ title: 'My tickets' }} />
+        <Stack.Screen name="CustomerTicketDetail" component={CustomerTicketDetailScreen} options={{ title: 'Ticket' }} />
+        <Stack.Screen name="CreateCustomerTicket" component={CreateCustomerTicketScreen} options={{ title: 'New ticket' }} />
+      </Stack.Navigator>
+    </CustomerFontProvider>
   );
 }

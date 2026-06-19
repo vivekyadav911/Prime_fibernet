@@ -128,6 +128,7 @@ export const paymentsApi = baseApi.injectEndpoints({
         planId: string;
         planName: string;
         amount: number;
+        billingCycle?: 'monthly' | 'quarterly' | 'annual';
       }
     >({
       query: (body) => ({
@@ -141,6 +142,7 @@ export const paymentsApi = baseApi.injectEndpoints({
               planId: body.planId,
               planName: body.planName,
               amount: body.amount,
+              billingCycle: body.billingCycle ?? 'monthly',
               paymentMethod: 'gateway',
             },
           });

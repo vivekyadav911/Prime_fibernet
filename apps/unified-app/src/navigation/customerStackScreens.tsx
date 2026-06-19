@@ -46,29 +46,10 @@ export function MakePaymentScreen({ route }: ScreenProps<'MakePayment'>) {
 }
 
 /** Flutter: `/payment-history` */
-export function PaymentHistoryScreen(_props: ScreenProps<'PaymentHistory'>) {
-  return <PendingScreen title="Payment history" />;
-}
-
-/** Flutter: `CreateRequestScreen` (MaterialPageRoute push) */
-export function CreateRequestScreen({ route }: ScreenProps<'CreateRequest'>) {
-  return (
-    <PendingScreen
-      title="Create request"
-      detail={route.params?.planId ? `Plan: ${route.params.planId}` : undefined}
-    />
-  );
-}
-
-/** Flutter: `RequestDetailsScreen` push */
-export function RequestDetailsScreen({ route }: ScreenProps<'RequestDetails'>) {
-  return <PendingScreen title="Request details" detail={`Request ID: ${route.params.requestId}`} />;
-}
+export { PaymentHistoryScreenV2 as PaymentHistoryScreen } from '@/screens/customer/payments/PaymentHistoryScreenV2';
 
 /** Flutter: `/notifications` */
-export function CustomerNotificationsScreen(_props: ScreenProps<'Notifications'>) {
-  return <PendingScreen title="Notifications" />;
-}
+export { CustomerNotificationsScreen } from '@/screens/customer/notifications/CustomerNotificationsScreen';
 
 /** Flutter: `/about` */
 export function AboutScreen(_props: ScreenProps<'About'>) {

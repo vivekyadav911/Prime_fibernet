@@ -33,7 +33,7 @@ type Props = NativeStackScreenProps<AdminUsersStackParamList, 'AddUser'>;
 
 const STATUS_OPTIONS = [
   { value: 'active' as const, label: 'Active' },
-  { value: 'blocked' as const, label: 'Blocked' },
+  { value: 'inactive' as const, label: 'Inactive' },
 ];
 
 const ADDRESS_HELPER = 'Enter complete address with city, district, pincode, and state';

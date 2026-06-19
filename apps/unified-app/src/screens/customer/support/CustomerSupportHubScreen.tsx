@@ -2,60 +2,100 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { GlassCard } from '@/components/customer/ui';
+import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList, CustomerTabParamList } from '@/types/navigation';
 
 type Props = BottomTabScreenProps<CustomerTabParamList, 'Support'>;
 
 const OPTIONS = [
-  { title: 'AI Assistant', subtitle: 'Instant answers from our knowledge base', route: 'SupportScreen' as const, icon: '🤖' },
-  { title: 'Talk to Agent', subtitle: 'Chat with a support agent in real time', route: 'CustomerLiveChat' as const, icon: '💬' },
-  { title: 'Browse FAQs', subtitle: 'Find answers to common questions', route: 'CustomerFaqList' as const, icon: '📋' },
+  {
+    title: 'Ask Prima',
+    subtitle: 'AI assistant for instant answers',
+    route: 'SupportScreen' as const,
+    icon: '🤖',
+  },
+  {
+    title: 'Chat with agent',
+    subtitle: 'Talk to support in real time',
+    route: 'CustomerLiveChat' as const,
+    icon: '💬',
+  },
+  {
+    title: 'My tickets',
+    subtitle: 'Track complaints and requests',
+    route: 'CustomerTicketList' as const,
+    icon: '🎫',
+  },
+  {
+    title: 'Browse FAQs',
+    subtitle: 'Common questions answered',
+    route: 'CustomerFaqList' as const,
+    icon: '📋',
+  },
 ];
 
 export function CustomerSupportHubScreen({}: Props) {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
+
   return (
-    <Screen style={styles.screen}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>How can we help?</Text>
-      <ScrollView contentContainerStyle={styles.list}>
-        {OPTIONS.map((opt) => (
-          <Pressable
-            key={opt.route}
-            style={styles.card}
-            onPress={() => navigation.navigate(opt.route)}
-          >
-            <Text style={styles.icon}>{opt.icon}</Text>
-            <View style={styles.cardBody}>
-              <Text style={styles.cardTitle}>{opt.title}</Text>
-              <Text style={styles.cardSub}>{opt.subtitle}</Text>
+      {OPTIONS.map((opt) => (
+        <Pressable key={opt.route} onPress={() => navigation.navigate(opt.route)}>
+          <GlassCard style={styles.card}>
+            <View style={styles.cardRow}>
+              <Text style={styles.icon}>{opt.icon}</Text>
+              <View style={styles.cardBody}>
+                <Text style={styles.cardTitle}>{opt.title}</Text>
+                <Text style={styles.cardSub}>{opt.subtitle}</Text>
+              </View>
             </View>
-          </Pressable>
-        ))}
-      </ScrollView>
-    </Screen>
+          </GlassCard>
+        </Pressable>
+      ))}
+      <Pressable onPress={() => navigation.navigate('CreateCustomerTicket')}>
+        <View style={styles.raiseCta}>
+          <Text style={styles.raiseText}>Didn't find your answer? Raise a ticket</Text>
+        </View>
+      </Pressable>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.background },
-  heading: { fontSize: 22, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.lg },
-  list: { gap: spacing.md },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: 12,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
+  screen: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
+  content: { padding: signalGlass.spacing.lg, gap: signalGlass.spacing.md },
+  heading: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: signalGlass.colors.textPrimary,
+    fontFamily: signalGlass.fonts.display,
+    marginBottom: signalGlass.spacing.sm,
   },
+  card: { marginBottom: 0 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: signalGlass.spacing.md },
   icon: { fontSize: 32 },
   cardBody: { flex: 1, minWidth: 0 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
-  cardSub: { fontSize: 13, color: colors.textSecondary, marginTop: 4, flexShrink: 1 },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: signalGlass.colors.textPrimary,
+    fontFamily: signalGlass.fonts.bodyMedium,
+  },
+  cardSub: {
+    fontSize: 13,
+    color: signalGlass.colors.textSecondary,
+    marginTop: 4,
+  },
+  raiseCta: {
+    marginTop: signalGlass.spacing.lg,
+    padding: signalGlass.spacing.lg,
+    borderRadius: signalGlass.radius.md,
+    borderWidth: 1,
+    borderColor: signalGlass.colors.accentPrimary,
+    alignItems: 'center',
+  },
+  raiseText: { color: signalGlass.colors.accentGlow, fontWeight: '600' },
 });

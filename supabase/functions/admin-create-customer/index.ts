@@ -14,7 +14,7 @@ type CreateCustomerBody = {
   phone: string;
   username: string;
   planId: string;
-  status: 'active' | 'blocked';
+  status: 'active' | 'inactive' | 'blocked';
   address: string;
   city: string;
   district: string;
@@ -155,7 +155,7 @@ serve(async (req) => {
           pincode: pincode.trim(),
           state: state.trim(),
           expiry_date: expiryDate,
-          is_blocked: status === 'blocked',
+          is_blocked: status === 'inactive' || status === 'blocked',
           auth_user_id: authUid,
           role: 'customer',
         })

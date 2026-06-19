@@ -1,58 +1,82 @@
 import React from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Plan } from '@prime/types';
 
-import { colors, speedTierGradients } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
-import { getSpeedTier } from '@/utils/planTier';
+import { CustomerBadge } from '@/components/customer/ui';
+import { signalGlass } from '@/theme/customer/signalGlass';
 
 type PlanCardProps = {
   plan: Plan;
+  priceLabel: string;
   isCurrentPlan?: boolean;
+  isFeatured?: boolean;
   onPress: (plan: Plan) => void;
 };
 
-export const PlanCard = React.memo(function PlanCard({ plan, isCurrentPlan, onPress }: PlanCardProps) {
-  const tier = getSpeedTier(plan.speedMbps);
-  const gradient = speedTierGradients[tier];
-
+export const PlanCard = React.memo(function PlanCard({
+  plan,
+  priceLabel,
+  isCurrentPlan,
+  isFeatured,
+  onPress,
+}: PlanCardProps) {
   return (
     <Pressable style={styles.wrapper} onPress={() => onPress(plan)}>
-      <LinearGradient colors={[...gradient]} style={styles.card}>
-        {isCurrentPlan ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>Your plan</Text>
-          </View>
+      <View style={[styles.card, isCurrentPlan && styles.current]}>
+        {isFeatured ? (
+          <CustomerBadge label="Featured" tone="info" style={styles.featured} />
         ) : null}
+        {isCurrentPlan ? <CustomerBadge label="Current Plan" tone="success" style={styles.featured} /> : null}
+        <Text style={styles.speed}>{plan.speedMbps}</Text>
+        <Text style={styles.unit}>Mbps</Text>
+        <Text style={styles.limit}>
+          {plan.isUnlimited ? 'UNLIMITED' : plan.dataLimitGb ? `${plan.dataLimitGb} GB` : 'Unlimited'}
+        </Text>
+        <Text style={styles.price}>{priceLabel}</Text>
         <Text style={styles.name}>{plan.name}</Text>
-        <Text style={styles.speed}>{plan.speedMbps} Mbps</Text>
-        <Text style={styles.price}>₹{plan.price}</Text>
-        <Text style={styles.validity}>{plan.validityDays} days</Text>
-      </LinearGradient>
+      </View>
     </Pressable>
   );
 });
 
 const styles = StyleSheet.create({
-  wrapper: { flex: 1, minWidth: '46%', maxWidth: '48%' },
+  wrapper: { flex: 1, minWidth: '46%', maxWidth: '48%', marginBottom: signalGlass.spacing.sm },
   card: {
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    minHeight: 140,
-    gap: spacing.xxs,
+    borderRadius: signalGlass.radius.md,
+    padding: signalGlass.spacing.md,
+    minHeight: 150,
+    backgroundColor: signalGlass.colors.bgSurface,
+    borderWidth: 1,
+    borderColor: signalGlass.colors.borderSubtle,
   },
-  badge: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.white,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    marginBottom: spacing.xs,
+  current: { borderColor: signalGlass.colors.accentPrimary },
+  featured: { marginBottom: signalGlass.spacing.xs },
+  speed: {
+    color: signalGlass.colors.textPrimary,
+    fontFamily: signalGlass.fonts.monoBold,
+    fontSize: 28,
+    fontWeight: '700',
   },
-  badgeText: { color: colors.primaryNavy, fontSize: 10, fontWeight: '700' },
-  name: { color: colors.white, fontWeight: '700', fontSize: 16 },
-  speed: { color: colors.white, opacity: 0.9, fontSize: 13 },
-  price: { color: colors.white, fontSize: 20, fontWeight: '700', marginTop: spacing.xs },
-  validity: { color: colors.white, opacity: 0.85, fontSize: 12 },
+  unit: {
+    color: signalGlass.colors.accentGlow,
+    fontFamily: signalGlass.fonts.mono,
+    fontSize: 12,
+  },
+  limit: {
+    color: signalGlass.colors.textSecondary,
+    fontSize: 11,
+    marginTop: signalGlass.spacing.xs,
+    textTransform: 'uppercase',
+  },
+  price: {
+    color: signalGlass.colors.accentPrimary,
+    fontFamily: signalGlass.fonts.mono,
+    fontSize: 16,
+    marginTop: signalGlass.spacing.sm,
+  },
+  name: {
+    color: signalGlass.colors.textSecondary,
+    fontSize: 13,
+    marginTop: signalGlass.spacing.xs,
+  },
 });

@@ -37,9 +37,7 @@ export type CustomerTabParamList = {
   Plans: undefined;
   /** Flutter tab 2: `PaymentsScreen` (label "Pay") */
   Payments: undefined;
-  /** Flutter tab 3: `RequestsScreen` */
-  Requests: undefined;
-  /** Flutter tab 4: support chatbot */
+  /** Support hub (tickets, chat, FAQs) */
   Support: undefined;
   /** Flutter tab 5 / `MoreScreen` — unified app uses Profile */
   Profile: undefined;
@@ -98,6 +96,10 @@ export type CustomerStackParamList = {
   CustomerFaqList: undefined;
   CustomerFaqDetail: { faqId: string };
   CustomerSupportHub: undefined;
+  CustomerTicketList: undefined;
+  CustomerTicketDetail: { ticketId: string };
+  CreateCustomerTicket: undefined;
+  PlanChangeRequest: { planId: string };
 };
 
 export type OfficerLeaveStackParamList = {

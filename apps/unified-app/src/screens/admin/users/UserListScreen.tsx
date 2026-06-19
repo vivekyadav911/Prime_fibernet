@@ -41,8 +41,7 @@ type Props = NativeStackScreenProps<AdminUsersStackParamList, 'UserList'>;
 
 type ViewMode = 'list' | 'grid';
 type CityFilter = 'all' | string;
-type StatusFilter = 'all' | 'active' | 'blocked' | 'expired';
-type BlockFilter = 'all' | 'blocked' | 'unblocked';
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 const PAGE_SIZE = 50;
 const ADD_BTN_H = 48;
@@ -174,7 +173,6 @@ export function UserListScreen({ navigation, route }: Props) {
   const [search, setSearch] = useState('');
   const [city, setCity] = useState<CityFilter>('all');
   const [status, setStatus] = useState<StatusFilter>('all');
-  const [blockFilter, setBlockFilter] = useState<BlockFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [page, setPage] = useState(1);
   const [filterPlanName, setFilterPlanName] = useState<string | null>(null);
@@ -305,21 +303,25 @@ export function UserListScreen({ navigation, route }: Props) {
     search,
     city: city === 'all' ? undefined : city,
     status,
-    blockFilter,
   });
 
   const users = useMemo(() => {
-    const items = data?.items ?? [];
-    if (!filterPlanName) return items;
-    return items.filter((u) => u.planName.toLowerCase() === filterPlanName.toLowerCase());
-  }, [data?.items, filterPlanName]);
+    let items = data?.items ?? [];
+    if (filterPlanName) {
+      items = items.filter((u) => u.planName.toLowerCase() === filterPlanName.toLowerCase());
+    }
+    if (status !== 'all') {
+      items = items.filter((u) => u.status === status);
+    }
+    return items;
+  }, [data?.items, filterPlanName, status]);
 
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const cities = data?.cities ?? [];
 
-  const blockedInView = useMemo(
-    () => users.filter((u) => u.status === 'blocked' || u.isBlocked).length,
+  const inactiveInView = useMemo(
+    () => users.filter((u) => u.status === 'inactive' || u.isBlocked).length,
     [users],
   );
 
@@ -331,8 +333,7 @@ export function UserListScreen({ navigation, route }: Props) {
   const statusOptions: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: 'All' },
     { value: 'active', label: 'Active' },
-    { value: 'blocked', label: 'Blocked' },
-    { value: 'expired', label: 'Expired' },
+    { value: 'inactive', label: 'Inactive' },
   ];
 
   const resetPage = useCallback(() => setPage(1), []);
@@ -357,15 +358,6 @@ export function UserListScreen({ navigation, route }: Props) {
   const handleStatus = useCallback(
     (value: StatusFilter) => {
       setStatus(value);
-      resetPage();
-      closeDropdown();
-    },
-    [resetPage, closeDropdown],
-  );
-
-  const handleBlockFilter = useCallback(
-    (value: BlockFilter) => {
-      setBlockFilter((prev) => (prev === value ? 'all' : value));
       resetPage();
       closeDropdown();
     },
@@ -473,8 +465,8 @@ export function UserListScreen({ navigation, route }: Props) {
                         {users.length}
                         <Text style={styles.summaryValueMuted}> / {total.toLocaleString('en-IN')}</Text>
                       </Text>
-                      {blockedInView > 0 ? (
-                        <Text style={styles.summaryInsight}>{blockedInView} blocked in view</Text>
+                      {inactiveInView > 0 ? (
+                        <Text style={styles.summaryInsight}>{inactiveInView} inactive in view</Text>
                       ) : null}
                       {isFetching ? <Text style={styles.summaryInsight}>Updating…</Text> : null}
                     </View>
@@ -523,28 +515,6 @@ export function UserListScreen({ navigation, route }: Props) {
                           options={statusOptions}
                           onSelect={handleStatus}
                         />
-                        <Pressable
-                          style={[styles.filterChip, blockFilter === 'blocked' && styles.filterChipActive]}
-                          onPress={() => handleBlockFilter('blocked')}
-                          hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
-                        >
-                          <Text
-                            style={[styles.filterChipText, blockFilter === 'blocked' && styles.filterChipTextActive]}
-                          >
-                            Blocked
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          style={[styles.filterChip, blockFilter === 'unblocked' && styles.filterChipActive]}
-                          onPress={() => handleBlockFilter('unblocked')}
-                          hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
-                        >
-                          <Text
-                            style={[styles.filterChipText, blockFilter === 'unblocked' && styles.filterChipTextActive]}
-                          >
-                            Unblocked
-                          </Text>
-                        </Pressable>
                       </View>
 
                       <View style={styles.viewToggle}>

@@ -1,21 +1,21 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
 
+import { CustomerButton } from '@/components/customer/ui';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { signOut } from '@/hooks/useAuth';
 import { useAppDispatch } from '@/store/hooks';
-import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { useCustomerUiStore } from '@/store/customerUiStore';
+import { signalGlass } from '@/theme/customer/signalGlass';
+import type { CustomerStackParamList } from '@/types/navigation';
 
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { DeleteAccountModal } from './components/DeleteAccountModal';
 import { NotificationToggles } from './components/NotificationToggles';
 import { ProfileForm } from './components/ProfileForm';
 import { ProfileHeader } from './components/ProfileHeader';
-import type { CustomerStackParamList } from '@/types/navigation';
 
 import { useProfile } from './hooks/useProfile';
 
@@ -49,20 +49,22 @@ export function ProfileScreen() {
 
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const darkMode = useCustomerUiStore((s) => s.darkMode);
+  const setDarkMode = useCustomerUiStore((s) => s.setDarkMode);
 
   if (error) {
     return (
-      <Screen>
+      <View style={styles.screen}>
         <ErrorState message="Failed to load profile" onRetry={refetch} />
-      </Screen>
+      </View>
     );
   }
 
   if (isLoading || !authUser) {
     return (
-      <Screen>
+      <View style={styles.screen}>
         <SkeletonLoader rows={6} rowHeight={48} shape="card" />
-      </Screen>
+      </View>
     );
   }
 
@@ -104,7 +106,7 @@ export function ProfileScreen() {
   };
 
   return (
-    <Screen padded={false} style={styles.screen}>
+    <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <ProfileHeader
           name={defaultValues.name || authUser.name}
@@ -126,11 +128,17 @@ export function ProfileScreen() {
           onSmsChange={setSmsEnabled}
         />
 
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>Dark mode (Signal Glass)</Text>
+          <Switch value={darkMode} onValueChange={setDarkMode} />
+        </View>
+
         <View style={styles.actions}>
-          <Button label="My bills" variant="secondary" onPress={() => navigation.navigate('MyBills')} />
-          <Button label="Change password" variant="secondary" onPress={() => setPasswordModalVisible(true)} />
-          <Button label="Delete account" variant="secondary" onPress={() => setDeleteModalVisible(true)} />
-          <Button label="Sign out" onPress={() => signOut(dispatch)} />
+          <CustomerButton label="Billing & payments" variant="ghost" onPress={() => navigation.navigate('CustomerTabs', { screen: 'Payments' })} />
+          <CustomerButton label="Notifications" variant="ghost" onPress={() => navigation.navigate('Notifications')} />
+          <CustomerButton label="Change password" variant="ghost" onPress={() => setPasswordModalVisible(true)} />
+          <CustomerButton label="Sign out" onPress={() => signOut(dispatch)} />
+          <CustomerButton label="Delete account" variant="danger" onPress={() => setDeleteModalVisible(true)} />
         </View>
       </ScrollView>
 
@@ -146,12 +154,23 @@ export function ProfileScreen() {
         onClose={() => setDeleteModalVisible(false)}
         onConfirm={onDelete}
       />
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.background, flex: 1 },
-  content: { padding: spacing.md, gap: spacing.lg, paddingBottom: spacing.xxxl },
-  actions: { gap: spacing.sm },
+  screen: { backgroundColor: signalGlass.colors.bgDeep, flex: 1 },
+  content: { padding: signalGlass.spacing.lg, gap: signalGlass.spacing.lg, paddingBottom: signalGlass.spacing.xxxl },
+  actions: { gap: signalGlass.spacing.sm },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: signalGlass.spacing.md,
+    backgroundColor: signalGlass.colors.bgSurface,
+    borderRadius: signalGlass.radius.sm,
+    borderWidth: 1,
+    borderColor: signalGlass.colors.borderSubtle,
+  },
+  toggleLabel: { color: signalGlass.colors.textPrimary, fontWeight: '600' },
 });

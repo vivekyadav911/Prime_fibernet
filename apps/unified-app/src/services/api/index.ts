@@ -26,6 +26,9 @@ import './adminSupportApi';
 import './officerTrackingApi';
 import './collectionAssignmentsApi';
 import './portalNotificationsApi';
+import './customerPlansApi';
+import './customerTicketsApi';
+import './customerDashboardApi';
 
 export * from './authApi';
 export * from './plansApi';
@@ -51,3 +54,6 @@ export * from './adminSupportApi';
 export * from './officerTrackingApi';
 export * from './collectionAssignmentsApi';
 export * from './portalNotificationsApi';
+export * from './customerPlansApi';
+export * from './customerTicketsApi';
+export * from './customerDashboardApi';

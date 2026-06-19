@@ -23,9 +23,14 @@ export function mapPlan(row: Record<string, unknown>): Plan {
     name: row.name as string,
     speedMbps: speedFromLegacy,
     price: Number(row.price),
+    priceQuarterly: row.price_quarterly != null ? Number(row.price_quarterly) : null,
+    priceAnnual: row.price_annual != null ? Number(row.price_annual) : null,
     validityDays: Number(row.validity_days ?? 30),
     features,
     isActive: row.is_active as boolean,
+    isFeatured: Boolean(row.is_featured),
+    isUnlimited: Boolean(row.is_unlimited),
+    dataLimitGb: row.data_limit_gb != null ? Number(row.data_limit_gb) : null,
   };
 }
 

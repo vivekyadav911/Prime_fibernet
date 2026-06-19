@@ -82,15 +82,29 @@ export type PortalNotificationType =
   | 'assignment'
   | 'claim'
   | 'payment_success'
-  | 'payment_failed';
+  | 'payment_failed'
+  | 'ticket'
+  | 'plan_change'
+  | 'payment'
+  | 'system';
+
+export type NotificationCategory =
+  | 'payment'
+  | 'plan'
+  | 'ticket'
+  | 'outage'
+  | 'promo'
+  | 'system';
 
 export type PortalNotification = {
   id: string;
   recipient_auth_id: string;
   recipient_officer_id: string | null;
   type: PortalNotificationType;
+  category: NotificationCategory | null;
   title: string;
   body: string | null;
+  action_url: string | null;
   data: Record<string, unknown>;
   is_read: boolean;
   created_at: string;

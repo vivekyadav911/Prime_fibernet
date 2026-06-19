@@ -51,7 +51,7 @@ export type AdminUserListItem = {
   phone: string | null;
   city: string | null;
   planName: string;
-  status: 'active' | 'blocked' | 'expired';
+  status: 'active' | 'inactive';
   isBlocked: boolean;
 };
 
@@ -60,8 +60,7 @@ export type AdminUsersListParams = {
   limit?: number;
   search?: string;
   city?: string;
-  status?: 'all' | 'active' | 'blocked' | 'expired';
-  blockFilter?: 'all' | 'blocked' | 'unblocked';
+  status?: 'all' | 'active' | 'inactive';
 };
 
 export type AdminUsersListResponse = {
@@ -166,7 +165,7 @@ export type CreateAdminUserInput = {
   phone: string;
   username: string;
   planId: string;
-  status: 'active' | 'blocked';
+  status: 'active' | 'inactive';
   address: string;
   city: string;
   district: string;

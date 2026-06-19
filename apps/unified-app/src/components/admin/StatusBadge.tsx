@@ -6,6 +6,7 @@ const STATUS_COLORS: Record<string, string> = {
   pending: adminColors.badgePending,
   active: adminColors.badgeActive,
   blocked: adminColors.badgeBlocked,
+  inactive: adminColors.badgeBlocked,
   success: adminColors.badgeActive,
   failed: adminColors.badgeBlocked,
   refunded: '#6B7280',

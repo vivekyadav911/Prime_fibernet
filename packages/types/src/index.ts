@@ -54,14 +54,22 @@ export const RequestStatusSchema = z.enum([
 ]);
 export type RequestStatus = z.infer<typeof RequestStatusSchema>;
 
+export const BillingCycleSchema = z.enum(['monthly', 'quarterly', 'annual']);
+export type BillingCycle = z.infer<typeof BillingCycleSchema>;
+
 export const PlanSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   speedMbps: z.number(),
   price: z.number(),
+  priceQuarterly: z.number().nullable().optional(),
+  priceAnnual: z.number().nullable().optional(),
   validityDays: z.number(),
   features: z.array(z.string()),
   isActive: z.boolean(),
+  isFeatured: z.boolean().optional(),
+  isUnlimited: z.boolean().optional(),
+  dataLimitGb: z.number().nullable().optional(),
 });
 
 export type Plan = z.infer<typeof PlanSchema>;
@@ -109,15 +117,30 @@ export type PaymentGateway = z.infer<typeof PaymentGatewaySchema>;
 export const PaymentStatusSchema = z.enum(['pending', 'success', 'failed', 'refunded']);
 export type PaymentStatus = z.infer<typeof PaymentStatusSchema>;
 
+export const SubscriptionStatusSchema = z.enum([
+  'active',
+  'expired',
+  'cancelled',
+  'suspended',
+  'pending',
+]);
+export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;
+
 export const SubscriptionSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
   planId: z.string().uuid(),
   planName: z.string().optional(),
+  speedMbps: z.number().optional(),
+  amountPaid: z.number().optional(),
+  billingCycle: BillingCycleSchema.nullable().optional(),
+  autoRenew: z.boolean().optional(),
   startAt: z.string(),
   endAt: z.string(),
-  status: z.enum(['active', 'expired', 'cancelled']),
+  status: SubscriptionStatusSchema,
   daysUntilExpiry: z.number().optional(),
+  isExpiringSoon: z.boolean().optional(),
+  isOverdue: z.boolean().optional(),
 });
 
 export type Subscription = z.infer<typeof SubscriptionSchema>;

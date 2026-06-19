@@ -32,7 +32,7 @@ export function UserDetailScreen({ route, navigation }: Props) {
           <AvatarIcon name={user.name} size={64} />
           <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.meta}>{user.email} · {user.phone ?? '—'}</Text>
-          <StatusBadge status={user.isBlocked ? 'blocked' : 'active'} />
+          <StatusBadge status={user.isBlocked ? 'inactive' : 'active'} />
           <Button label="Edit profile" onPress={() => navigation.navigate('UserEdit', { userId })} />
         </View>
 

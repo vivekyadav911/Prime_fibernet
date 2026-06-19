@@ -41,7 +41,7 @@ export function CustomerSupportProfileScreen({ route, navigation }: Props) {
             <Text style={styles.name}>{user.name}</Text>
             <Text style={styles.meta}>Account: {(user as { customerId?: string }).customerId ?? user.id.slice(0, 8)}</Text>
             <Text style={styles.meta}>Plan: {user.planName ?? '—'}</Text>
-            <StatusBadge status={user.isBlocked ? 'blocked' : 'active'} />
+            <StatusBadge status={user.isBlocked ? 'inactive' : 'active'} />
           </SectionCard>
 
           <SectionCard title="Contact">

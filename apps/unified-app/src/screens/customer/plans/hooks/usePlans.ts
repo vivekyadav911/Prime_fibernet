@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import type { BillingCycle, Plan, PaymentGateway } from '@prime/types';
 
-import type { Plan } from '@prime/types';
-
+import { getPriceForCycle } from '@/services/api/customerDashboardApi';
 import {
   useCreatePaymentOrderMutation,
   useGetActiveSubscriptionQuery,
@@ -29,6 +29,7 @@ export function usePlans() {
   const [category, setCategory] = useState<PlanFilterCategory>('All');
   const [sortBy, setSortBy] = useState<PlanSortKey>('price');
   const [search, setSearch] = useState('');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
 
   const filteredPlans = useMemo(() => {
     let list = [...(plansQuery.data ?? [])];
@@ -53,23 +54,25 @@ export function usePlans() {
         break;
       case 'price':
       default:
-        list.sort((a, b) => a.price - b.price);
+        list.sort((a, b) => getPriceForCycle(a, billingCycle) - getPriceForCycle(b, billingCycle));
     }
 
     return list;
-  }, [plansQuery.data, category, sortBy, search]);
+  }, [plansQuery.data, category, sortBy, search, billingCycle]);
 
   const currentPlanId = subscriptionQuery.data?.planId ?? null;
 
   const subscribeToPlan = async (plan: Plan) => {
     if (!user) throw new Error('Sign in to subscribe');
+    const amount = getPriceForCycle(plan, billingCycle);
     return createOrder({
       userId: user.id,
       userName: user.name,
       userEmail: user.email,
       planId: plan.id,
       planName: plan.name,
-      amount: plan.price,
+      amount,
+      billingCycle,
     }).unwrap();
   };
 
@@ -83,10 +86,13 @@ export function usePlans() {
     setSortBy,
     search,
     setSearch,
+    billingCycle,
+    setBillingCycle,
+    getPriceForCycle: (plan: Plan) => getPriceForCycle(plan, billingCycle),
     currentPlanId,
-    paymentGateway: (settingsQuery.data?.payment_gateway as string) ?? 'easybuzz',
-    isLoading: plansQuery.isLoading,
-    error: plansQuery.error,
+    paymentGateway: (settingsQuery.data?.payment_gateway as PaymentGateway) ?? 'razorpay',
+    isLoading: plansQuery.isLoading || settingsQuery.isLoading,
+    error: plansQuery.error ?? settingsQuery.error,
     refetch: plansQuery.refetch,
     subscribeToPlan,
     verifyPayment,
