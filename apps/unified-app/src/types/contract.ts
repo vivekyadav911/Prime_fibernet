@@ -90,9 +90,11 @@ export type EmploymentContractRow = {
   generated_pdf_url: string | null;
   version: number;
   employee_signature_path: string | null;
+  employee_signature_base64: string | null;
   employee_signed_at: string | null;
   employee_signed_by: string | null;
   employer_signature_path: string | null;
+  employer_signature_base64: string | null;
   employer_signed_at: string | null;
   employer_signed_by: string | null;
   signature_request_sent_at: string | null;
@@ -156,9 +158,11 @@ export type EmploymentContract = {
   generatedPdfUrl: string | null;
   version: number;
   employeeSignaturePath: string | null;
+  employeeSignatureBase64: string | null;
   employeeSignedAt: string | null;
   employeeSignedBy: string | null;
   employerSignaturePath: string | null;
+  employerSignatureBase64: string | null;
   employerSignedAt: string | null;
   employerSignedBy: string | null;
   signatureRequestSentAt: string | null;
@@ -316,9 +320,11 @@ export function mapEmploymentContractRow(row: EmploymentContractRow): Employment
     generatedPdfUrl: row.generated_pdf_url,
     version: row.version,
     employeeSignaturePath: row.employee_signature_path ?? null,
+    employeeSignatureBase64: row.employee_signature_base64 ?? null,
     employeeSignedAt: row.employee_signed_at ?? null,
     employeeSignedBy: row.employee_signed_by ?? null,
     employerSignaturePath: row.employer_signature_path ?? null,
+    employerSignatureBase64: row.employer_signature_base64 ?? null,
     employerSignedAt: row.employer_signed_at ?? null,
     employerSignedBy: row.employer_signed_by ?? null,
     signatureRequestSentAt: row.signature_request_sent_at ?? null,
@@ -433,9 +439,11 @@ export function formValuesToContractRow(
   | 'generated_pdf_url'
   | 'version'
   | 'employee_signature_path'
+  | 'employee_signature_base64'
   | 'employee_signed_at'
   | 'employee_signed_by'
   | 'employer_signature_path'
+  | 'employer_signature_base64'
   | 'employer_signed_at'
   | 'employer_signed_by'
   | 'signature_request_sent_at'
@@ -556,9 +564,11 @@ export function employmentContractToRow(contract: EmploymentContract): Employmen
     generated_pdf_url: contract.generatedPdfUrl,
     version: contract.version,
     employee_signature_path: contract.employeeSignaturePath,
+    employee_signature_base64: contract.employeeSignatureBase64,
     employee_signed_at: contract.employeeSignedAt,
     employee_signed_by: contract.employeeSignedBy,
     employer_signature_path: contract.employerSignaturePath,
+    employer_signature_base64: contract.employerSignatureBase64,
     employer_signed_at: contract.employerSignedAt,
     employer_signed_by: contract.employerSignedBy,
     signature_request_sent_at: contract.signatureRequestSentAt,

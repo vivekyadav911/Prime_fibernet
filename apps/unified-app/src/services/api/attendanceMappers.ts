@@ -135,6 +135,16 @@ export function mapLeaveRow(row: DbLeaveRow): LeaveRequestRecord {
 }
 
 export function mapLiveOfficerRow(row: Record<string, unknown>): OfficerLiveLocation {
+  const activeStatus = row.active_shift_status as string | null | undefined;
+  const activeCheckIn = row.active_shift_check_in as string | null | undefined;
+  const activeCheckOut = row.active_shift_check_out as string | null | undefined;
+  const attendanceStatus: OfficerLiveLocation['attendanceStatus'] =
+    activeStatus === 'active' && activeCheckIn && !activeCheckOut
+      ? 'checked_in'
+      : activeCheckOut
+        ? 'checked_out'
+        : 'not_started';
+
   return {
     officerId: row.id as string,
     officerName: (row.full_name as string) ?? 'Officer',
@@ -146,7 +156,7 @@ export function mapLiveOfficerRow(row: Record<string, unknown>): OfficerLiveLoca
     accuracy: 0,
     isInsideGeofence: false,
     lastUpdated: (row.last_location_update as string) ?? new Date().toISOString(),
-    attendanceStatus: 'not_started',
+    attendanceStatus,
   };
 }
 

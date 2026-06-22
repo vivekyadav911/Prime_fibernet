@@ -1,72 +1,99 @@
-import { useCallback, useEffect, useState } from 'react';
-import * as Location from 'expo-location';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert } from 'react-native';
 import type { Shift } from '@prime/types';
 
-import {
-  useClockInMutation,
-  useClockOutMutation,
-  useGetActiveShiftQuery,
-} from '@/services/api/officersApi';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useCheckIn, useCheckOut, useTodayAttendance } from '@/hooks/attendance/useAttendance';
+import type { AttendanceRecord } from '@/types/attendance';
+import { useAppDispatch } from '@/store/hooks';
 import { setCurrentShift } from '@/store/slices/officeSlice';
 import { formatElapsed } from '@/utils/formatElapsed';
 
+function attendanceToShift(record: AttendanceRecord | null | undefined): Shift | null {
+  if (!record?.checkInTime) return null;
+  const isActive = !record.checkOutTime;
+  return {
+    id: record.id,
+    officerId: record.officerId,
+    shiftDate: record.date,
+    status: isActive ? 'active' : 'completed',
+    checkInTime: record.checkInTime,
+    checkOutTime: record.checkOutTime ?? null,
+  };
+}
+
 export function useActiveShift() {
-  const user = useAppSelector((s) => s.auth.user);
   const dispatch = useAppDispatch();
-  const userId = user?.id ?? '';
-
-  const { data: shift, isLoading, refetch } = useGetActiveShiftQuery(userId, {
-    skip: !userId,
-    pollingInterval: 60_000,
-  });
-
-  const [clockInMut, { isLoading: clockingIn }] = useClockInMutation();
-  const [clockOutMut, { isLoading: clockingOut }] = useClockOutMutation();
+  const { data: today, isLoading, refetch } = useTodayAttendance();
+  const [checkIn, { isLoading: clockingIn }] = useCheckIn();
+  const [checkOut, { isLoading: clockingOut }] = useCheckOut();
   const [elapsed, setElapsed] = useState(0);
 
+  const shift = useMemo(() => attendanceToShift(today), [today]);
+  const isActive = Boolean(today?.checkInTime && !today?.checkOutTime);
+
   useEffect(() => {
-    dispatch(setCurrentShift(shift ?? null));
+    dispatch(setCurrentShift(shift));
   }, [dispatch, shift]);
 
   useEffect(() => {
-    if (!shift?.checkInTime) {
+    if (!today?.checkInTime || today.checkOutTime) {
       setElapsed(0);
       return;
     }
-    const start = new Date(shift.checkInTime).getTime();
+    const start = new Date(today.checkInTime).getTime();
     const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [shift?.checkInTime, shift?.id]);
+  }, [today?.checkInTime, today?.checkOutTime, today?.id]);
 
   const handleClockIn = useCallback(async () => {
-    if (!user) return;
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    const coords =
-      status === 'granted'
-        ? await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
-        : { coords: { latitude: 0, longitude: 0 } };
-    await clockInMut({
-      userId: user.id,
-      latitude: coords.coords.latitude,
-      longitude: coords.coords.longitude,
-    }).unwrap();
-    await refetch();
-  }, [clockInMut, refetch, user]);
+    const result = await checkIn();
+    if (result.action === 'needs_approval') {
+      Alert.alert(
+        'Outside assigned zone',
+        'Open the Attendance screen to request approval or move closer to your zone.',
+      );
+      return;
+    }
+    if (result.action === 'offline_queued') {
+      Alert.alert('Queued offline', 'Check-in will sync when you are back online.');
+      return;
+    }
+    if (result.action === 'already_checked_in') {
+      await refetch();
+      return;
+    }
+    if (result.action === 'checked_in') {
+      await refetch();
+    }
+  }, [checkIn, refetch]);
 
   const handleClockOut = useCallback(async () => {
-    if (!user) return;
-    await clockOutMut({ userId: user.id, shiftId: shift?.id }).unwrap();
-    dispatch(setCurrentShift(null));
-    await refetch();
-  }, [clockOutMut, dispatch, refetch, shift?.id, user]);
-
-  const isActive = shift?.status === 'active';
+    const result = await checkOut();
+    if (result.action === 'needs_approval') {
+      Alert.alert(
+        'Outside assigned zone',
+        'Open the Attendance screen to request check-out approval or move closer.',
+      );
+      return;
+    }
+    if (result.action === 'offline_queued') {
+      Alert.alert('Queued offline', 'Check-out will sync when you are back online.');
+      return;
+    }
+    if (result.action === 'not_checked_in') {
+      Alert.alert('Not checked in', 'Check in before checking out.');
+      return;
+    }
+    if (result.action === 'checked_out') {
+      dispatch(setCurrentShift(null));
+      await refetch();
+    }
+  }, [checkOut, dispatch, refetch]);
 
   return {
-    shift: shift as Shift | null | undefined,
+    shift,
     isActive,
     isLoading,
     elapsed,

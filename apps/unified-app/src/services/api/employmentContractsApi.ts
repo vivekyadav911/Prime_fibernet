@@ -286,15 +286,17 @@ export const employmentContractsApi = baseApi.injectEndpoints({
         officerId: string;
         role: ContractSignerRole;
         signaturePath: string;
+        signatureBase64: string;
         userId: string;
       }
     >({
-      query: ({ contractId, role, signaturePath, userId }) => ({
+      query: ({ contractId, role, signaturePath, signatureBase64, userId }) => ({
         handler: async (client) => {
           const { data, error } = await client.rpc('submit_employment_contract_signature', {
             p_contract_id: contractId,
             p_role: role,
             p_signature_path: signaturePath,
+            p_signature_base64: signatureBase64,
             p_signed_by: userId,
           });
           if (error) throw error;

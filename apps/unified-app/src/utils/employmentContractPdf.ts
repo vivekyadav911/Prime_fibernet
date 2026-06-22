@@ -102,24 +102,30 @@ function buildExecutionSection(contract: EmploymentContract): string {
 }
 
 type SignatureImages = {
+  /** Local file URI (file://) for expo-print embedding. */
   employee?: string;
   employer?: string;
 };
 
+function signatureImageHtml(fileUri: string | undefined): string {
+  if (!fileUri) {
+    return '<div style="height:56px;border-bottom:1px solid #222;margin-bottom:8px;"></div>';
+  }
+  const safeSrc = fileUri.replace(/"/g, '&quot;');
+  return `<img src="${safeSrc}" alt="Signature" width="180" height="56" style="max-height:56px;max-width:180px;display:block;margin-bottom:8px;object-fit:contain;" />`;
+}
+
 function signatureBlock(
   label: string,
-  imageDataUri: string | undefined,
+  fileUri: string | undefined,
   name: string,
   designation: string,
   signedAt: string | null | undefined,
 ): string {
-  const imageHtml = imageDataUri
-    ? `<img src="${imageDataUri}" alt="Signature" style="max-height:56px;max-width:180px;display:block;margin-bottom:8px;" />`
-    : '<div style="height:56px;border-bottom:1px solid #222;margin-bottom:8px;"></div>';
   const dateLine = signedAt ? fmtDate(signedAt) : '_______________';
   return `
     <p><strong>${escapeHtml(label)}</strong></p>
-    ${imageHtml}
+    ${signatureImageHtml(fileUri)}
     <p style="font-size:10pt;margin:0;">
       ${escapeHtml(name)}<br/>
       ${escapeHtml(designation)}<br/>
@@ -261,7 +267,7 @@ export function generateContractHTML(
 <head>
   <meta charset="utf-8" />
   <style>
-    @page { size: A4; margin: 72px 72px 80px 72px; }
+    @page { size: A4; margin: 72px; }
     body {
       font-family: Georgia, 'Times New Roman', Times, serif;
       font-size: 11pt;
@@ -283,7 +289,6 @@ export function generateContractHTML(
     .signatures { margin-top: 48px; display: table; width: 100%; }
     .sig-col { display: table-cell; width: 50%; vertical-align: top; padding-right: 16px; }
     .sig-line { border-top: 1px solid #222; margin-top: 48px; padding-top: 6px; font-size: 10pt; }
-    .footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 9pt; color: #666; }
   </style>
 </head>
 <body>
@@ -327,7 +332,6 @@ export function generateContractHTML(
       )}
     </div>
   </div>
-  <div class="footer">Employment Contract v${contract.version} · ${escapeHtml(refNo)} · ${escapeHtml(contract.companyName)}</div>
 </body>
 </html>`;
 }

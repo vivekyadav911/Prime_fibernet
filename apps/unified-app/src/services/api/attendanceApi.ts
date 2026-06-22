@@ -300,23 +300,23 @@ export const attendanceApi = baseApi.injectEndpoints({
     >({
       query: ({ id, action, notes, reason }) => ({
         handler: async (client) => {
-          const { data: session } = await client.auth.getSession();
+          const { error: rpcError } = await client.rpc('review_attendance_approval', {
+            p_request_id: id,
+            p_action: action,
+            p_review_notes: action === 'approve' ? notes ?? null : reason ?? null,
+          });
+          if (rpcError) throw rpcError;
+
           const { data, error } = await client
             .from('attendance_approval_requests')
-            .update({
-              status: action === 'approve' ? 'approved' : 'rejected',
-              reviewed_by: session.session?.user?.id,
-              reviewed_at: new Date().toISOString(),
-              review_notes: action === 'approve' ? notes : reason,
-            })
-            .eq('id', id)
             .select(APPROVAL_SELECT)
+            .eq('id', id)
             .single();
           if (error) throw error;
           return mapApprovalRow(data as never);
         },
       }),
-      invalidatesTags: ['Approvals', 'Attendance'],
+      invalidatesTags: ['Approvals', 'Attendance', 'Shifts', 'Map', 'Analytics'],
     }),
 
     // ─── Shifts (Admin) ──────────────────────────────────────────────────────
@@ -466,12 +466,36 @@ export const attendanceApi = baseApi.injectEndpoints({
     getLiveOfficerLocations: builder.query<OfficerLiveLocation[], void>({
       query: () => ({
         handler: async (client) => {
-          const { data, error } = await client
-            .from('officers')
-            .select('id, full_name, profile_photo_url, current_latitude, current_longitude, last_location_update')
-            .not('current_latitude', 'is', null);
-          if (error) throw error;
-          return (data ?? []).map((row) => mapLiveOfficerRow(row as Record<string, unknown>));
+          const today = new Date().toISOString().slice(0, 10);
+          const [officersRes, shiftsRes] = await Promise.all([
+            client
+              .from('officers')
+              .select(
+                'id, full_name, profile_photo_url, current_latitude, current_longitude, last_location_update',
+              )
+              .not('current_latitude', 'is', null),
+            client
+              .from('shifts')
+              .select('officer_id, status, check_in_time, check_out_time')
+              .eq('shift_date', today)
+              .eq('status', 'active'),
+          ]);
+          if (officersRes.error) throw officersRes.error;
+          if (shiftsRes.error) throw shiftsRes.error;
+
+          const activeByOfficer = new Map(
+            (shiftsRes.data ?? []).map((shift) => [shift.officer_id as string, shift]),
+          );
+
+          return (officersRes.data ?? []).map((row) => {
+            const active = activeByOfficer.get(row.id as string);
+            return mapLiveOfficerRow({
+              ...(row as Record<string, unknown>),
+              active_shift_status: active?.status ?? null,
+              active_shift_check_in: active?.check_in_time ?? null,
+              active_shift_check_out: active?.check_out_time ?? null,
+            });
+          });
         },
       }),
       providesTags: ['Map'],
@@ -619,7 +643,7 @@ export const attendanceApi = baseApi.injectEndpoints({
           return mapAttendanceRow(data as never);
         },
       }),
-      invalidatesTags: ['Attendance', 'Shifts'],
+      invalidatesTags: ['Attendance', 'Shifts', 'Map', 'Analytics'],
     }),
 
     checkOut: builder.mutation<
@@ -664,7 +688,7 @@ export const attendanceApi = baseApi.injectEndpoints({
           return mapAttendanceRow(data as never);
         },
       }),
-      invalidatesTags: ['Attendance', 'Shifts'],
+      invalidatesTags: ['Attendance', 'Shifts', 'Map', 'Analytics'],
     }),
 
     requestApproval: builder.mutation<

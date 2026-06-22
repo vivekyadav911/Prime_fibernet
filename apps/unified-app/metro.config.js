@@ -24,4 +24,20 @@ config.resolver.alias = {
   '@': path.join(appRoot, 'src'),
 };
 
+const mapsShimPath = path.join(appRoot, 'src/shims/react-native-maps.tsx');
+const defaultResolveRequest = config.resolver.resolveRequest;
+
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (platform === 'web' && moduleName === 'react-native-maps') {
+    return {
+      filePath: mapsShimPath,
+      type: 'sourceFile',
+    };
+  }
+  if (defaultResolveRequest) {
+    return defaultResolveRequest(context, moduleName, platform);
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = config;

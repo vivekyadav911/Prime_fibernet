@@ -57,7 +57,14 @@ class AttendanceService {
         id: `checkin-${Date.now()}`,
         operation: 'attendanceCheckIn',
         endpoint: 'attendanceCheckIn',
-        payload: { coords, notes: options?.notes, method: 'manual_inside' },
+        payload: {
+          coords,
+          notes: options?.notes,
+          method: 'manual_inside',
+          geofenceId: status.geofence!.id,
+          distanceFromFence: status.distance,
+          locationMocked: coords.mocked,
+        },
       });
       return { action: 'offline_queued' };
     }
@@ -108,7 +115,11 @@ class AttendanceService {
         id: `checkout-${Date.now()}`,
         operation: 'attendanceCheckOut',
         endpoint: 'attendanceCheckOut',
-        payload: { coords, notes: options?.notes },
+        payload: {
+          coords,
+          notes: options?.notes,
+          distanceFromFence: status.distance,
+        },
       });
       return { action: 'offline_queued' };
     }

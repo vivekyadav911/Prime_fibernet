@@ -12,10 +12,14 @@ import type { CompanyDefaults, ContractSignerRole, EmploymentContract } from '@/
 import { generateContractPDF } from '@/utils/employmentContractPdf';
 import { readUriAsArrayBuffer } from '@/utils/fileUploadBody';
 import {
+  normalizeSignatureBase64,
+  resolveSignatureImageForPdf,
+  writeSignatureBase64ToCache,
+} from '@/utils/signatureImage';
+import {
   downloadStoragePdfToCache,
   normalizeStoragePath,
   prepareStoragePdfView,
-  readLocalPdfBase64,
   shareLocalPdf,
   type PdfViewContent,
 } from '@/utils/storagePdf';
@@ -27,10 +31,11 @@ async function uploadBytesToContractStorage(
   storagePath: string,
   localUri: string,
   contentType: string,
+  minBytes = 100,
 ): Promise<void> {
   const body = await readUriAsArrayBuffer(localUri);
-  if (body.byteLength < 100) {
-    throw new Error('Generated file is empty — PDF could not be created. Try again.');
+  if (body.byteLength < minBytes) {
+    throw new Error('Generated file is empty — could not be uploaded. Try again.');
   }
 
   const supabase = getSupabase();
@@ -77,15 +82,15 @@ export function useContractPDF() {
       officerId: string,
       role: ContractSignerRole,
       base64Png: string,
-    ): Promise<string> => {
+    ): Promise<{ storagePath: string; signatureBase64: string }> => {
       const storagePath = buildContractSignaturePath(officerId, contractId, role);
-      const clean = base64Png.replace(/^data:image\/png;base64,/, '');
-      const localUri = `${FileSystem.cacheDirectory}signature_${role}_${Date.now()}.png`;
-      await FileSystem.writeAsStringAsync(localUri, clean, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      await uploadBytesToContractStorage(storagePath, localUri, 'image/png');
-      return storagePath;
+      const signatureBase64 = normalizeSignatureBase64(base64Png);
+      const localUri = await writeSignatureBase64ToCache(
+        signatureBase64,
+        `signature_upload_${role}_${Date.now()}.png`,
+      );
+      await uploadBytesToContractStorage(storagePath, localUri, 'image/png', 20);
+      return { storagePath, signatureBase64 };
     },
     [],
   );
@@ -111,20 +116,36 @@ export function useContractPDF() {
     [getSignedUrl],
   );
 
-  const readSignatureAsDataUri = useCallback(
-    async (storagePath: string | null) => {
-      if (!storagePath) return undefined;
-      const normalizedPath = normalizeStoragePath(storagePath, EMPLOYMENT_CONTRACTS_BUCKET);
-      const signedUrl = await getSignedUrl(normalizedPath, 3600);
-      const localUri = `${FileSystem.cacheDirectory}sig_${Date.now()}.png`;
-      const result = await FileSystem.downloadAsync(signedUrl, localUri);
-      if (result.status !== 200) {
-        throw new Error(`Could not download signature (path: ${normalizedPath})`);
-      }
-      const base64 = await readLocalPdfBase64(localUri);
-      return `data:image/png;base64,${base64}`;
+  const loadSignatureImages = useCallback(
+    async (
+      contract: EmploymentContract,
+      freshSignatures?: Partial<{ employee: string; employer: string }>,
+    ) => {
+      const [employee, employer] = await Promise.all([
+        freshSignatures?.employee
+          ? writeSignatureBase64ToCache(
+              freshSignatures.employee,
+              `contract_sig_employee_${contract.id}_${Date.now()}.png`,
+            ).catch(() => undefined)
+          : resolveSignatureImageForPdf({
+              storagePath: contract.employeeSignaturePath,
+              base64: contract.employeeSignatureBase64,
+              cacheFileName: `contract_sig_employee_${contract.id}.png`,
+            }),
+        freshSignatures?.employer
+          ? writeSignatureBase64ToCache(
+              freshSignatures.employer,
+              `contract_sig_employer_${contract.id}_${Date.now()}.png`,
+            ).catch(() => undefined)
+          : resolveSignatureImageForPdf({
+              storagePath: contract.employerSignaturePath,
+              base64: contract.employerSignatureBase64,
+              cacheFileName: `contract_sig_employer_${contract.id}.png`,
+            }),
+      ]);
+      return { employee, employer };
     },
-    [getSignedUrl],
+    [],
   );
 
   const shareContract = useCallback(
@@ -167,7 +188,7 @@ export function useContractPDF() {
     uploadSignature,
     getSignedUrl,
     prepareLocalPdfView,
-    readSignatureAsDataUri,
+    loadSignatureImages,
     shareContract,
     shareFromStoragePath,
     copySignedLink,

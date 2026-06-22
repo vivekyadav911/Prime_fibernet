@@ -27,11 +27,14 @@ import {
   mapEmploymentContractRow,
 } from '@/types/contract';
 
-async function regenerateIfFullySigned(
+async function regeneratePdfWithSignatures(
   updated: EmploymentContract,
   companyDefaults: CompanyDefaults | null,
   deps: {
-    readSignatureAsDataUri: (path: string | null) => Promise<string | undefined>;
+    loadSignatureImages: (
+      contract: EmploymentContract,
+      freshSignatures?: Partial<{ employee: string; employer: string }>,
+    ) => Promise<{ employee?: string; employer?: string }>;
     generatePDF: (
       contract: EmploymentContract,
       defaults: CompanyDefaults | null,
@@ -57,23 +60,20 @@ async function regenerateIfFullySigned(
     }) => Promise<EmploymentContract>;
     userId: string | null;
   },
+  freshSignatures?: Partial<{ employee: string; employer: string }>,
 ): Promise<EmploymentContract> {
-  if (updated.signatureStatus !== 'fully_signed' || !updated.generatedPdfUrl) {
+  if (!updated.generatedPdfUrl) {
     return updated;
   }
 
-  const employeeSig = await deps.readSignatureAsDataUri(updated.employeeSignaturePath);
-  const employerSig = await deps.readSignatureAsDataUri(updated.employerSignaturePath);
+  const signatureImages = await deps.loadSignatureImages(updated, freshSignatures);
   const archivedVersion = {
     versionNumber: updated.version,
     snapshot: employmentContractToRow(updated),
     pdfUrl: updated.generatedPdfUrl,
   };
   const newVersion = updated.version + 1;
-  const localPdfPath = await deps.generatePDF(updated, companyDefaults, {
-    employee: employeeSig,
-    employer: employerSig,
-  });
+  const localPdfPath = await deps.generatePDF(updated, companyDefaults, signatureImages);
   const storagePath = await deps.uploadToStorage(
     localPdfPath,
     updated.officerId,
@@ -104,7 +104,7 @@ export function useEmploymentContract(officerId: string, options?: { skip?: bool
     useSubmitContractSignatureMutation();
   const [regeneratePdfMutation, { isLoading: regeneratingPdf }] =
     useRegenerateSignedContractPdfMutation();
-  const { generatePDF, uploadToStorage, uploadSignature, readSignatureAsDataUri } = useContractPDF();
+  const { generatePDF, uploadToStorage, uploadSignature, loadSignatureImages } = useContractPDF();
 
   const saveDraft = useCallback(
     async (values: ContractFormValues) => {
@@ -141,16 +141,26 @@ export function useEmploymentContract(officerId: string, options?: { skip?: bool
         'generated',
         userId,
       );
-      const contractForPdf = mapEmploymentContractRow({
-        ...(rowPayload as Parameters<typeof mapEmploymentContractRow>[0]),
-        id: contractId,
-        version: newVersion,
-        generated_pdf_url: null,
-        created_at: draftSaved.createdAt,
-        updated_at: new Date().toISOString(),
-      });
+      const contractForPdf: EmploymentContract = {
+        ...mapEmploymentContractRow({
+          ...(rowPayload as Parameters<typeof mapEmploymentContractRow>[0]),
+          id: contractId,
+          version: newVersion,
+          generated_pdf_url: null,
+          created_at: draftSaved.createdAt,
+          updated_at: new Date().toISOString(),
+        }),
+        employeeSignaturePath: draftSaved.employeeSignaturePath,
+        employeeSignatureBase64: draftSaved.employeeSignatureBase64,
+        employerSignaturePath: draftSaved.employerSignaturePath,
+        employerSignatureBase64: draftSaved.employerSignatureBase64,
+        employeeSignedAt: draftSaved.employeeSignedAt,
+        employerSignedAt: draftSaved.employerSignedAt,
+        signatureStatus: draftSaved.signatureStatus,
+      };
 
-      const localPdfPath = await generatePDF(contractForPdf, companyDefaults);
+      const signatureImages = await loadSignatureImages(contractForPdf);
+      const localPdfPath = await generatePDF(contractForPdf, companyDefaults, signatureImages);
       const storagePath = await uploadToStorage(
         localPdfPath,
         values.officerId,
@@ -166,7 +176,7 @@ export function useEmploymentContract(officerId: string, options?: { skip?: bool
         newVersion,
       }).unwrap();
     },
-    [upsertDraft, userId, generatePDF, uploadToStorage, finalizeContract],
+    [upsertDraft, userId, generatePDF, uploadToStorage, finalizeContract, loadSignatureImages],
   );
 
   const submitContractSignature = useCallback(
@@ -178,7 +188,7 @@ export function useEmploymentContract(officerId: string, options?: { skip?: bool
     ) => {
       if (!userId) throw new Error('You must be signed in to submit a signature');
 
-      const signaturePath = await uploadSignature(
+      const { storagePath, signatureBase64: normalizedBase64 } = await uploadSignature(
         current.id,
         current.officerId,
         role,
@@ -189,23 +199,29 @@ export function useEmploymentContract(officerId: string, options?: { skip?: bool
         contractId: current.id,
         officerId: current.officerId,
         role,
-        signaturePath,
+        signaturePath: storagePath,
+        signatureBase64: normalizedBase64,
         userId,
       }).unwrap();
 
-      return regenerateIfFullySigned(updated, companyDefaults, {
-        readSignatureAsDataUri,
-        generatePDF,
-        uploadToStorage,
-        regeneratePdfMutation: (args) => regeneratePdfMutation(args).unwrap(),
-        userId,
-      });
+      return regeneratePdfWithSignatures(
+        updated,
+        companyDefaults,
+        {
+          loadSignatureImages,
+          generatePDF,
+          uploadToStorage,
+          regeneratePdfMutation: (args) => regeneratePdfMutation(args).unwrap(),
+          userId,
+        },
+        { [role]: normalizedBase64 },
+      );
     },
     [
       userId,
       uploadSignature,
       submitSignatureMutation,
-      readSignatureAsDataUri,
+      loadSignatureImages,
       generatePDF,
       uploadToStorage,
       regeneratePdfMutation,
@@ -244,13 +260,13 @@ export function useMyEmploymentContract() {
     useSubmitContractSignatureMutation();
   const [regeneratePdfMutation, { isLoading: regeneratingPdf }] =
     useRegenerateSignedContractPdfMutation();
-  const { generatePDF, uploadToStorage, uploadSignature, readSignatureAsDataUri } = useContractPDF();
+  const { generatePDF, uploadToStorage, uploadSignature, loadSignatureImages } = useContractPDF();
 
   const submitMySignature = useCallback(
     async (current: EmploymentContract, signatureBase64: string, companyDefaults: CompanyDefaults | null) => {
       if (!userId) throw new Error('You must be signed in to submit a signature');
 
-      const signaturePath = await uploadSignature(
+      const { storagePath, signatureBase64: normalizedBase64 } = await uploadSignature(
         current.id,
         current.officerId,
         'employee',
@@ -261,17 +277,23 @@ export function useMyEmploymentContract() {
         contractId: current.id,
         officerId: current.officerId,
         role: 'employee',
-        signaturePath,
+        signaturePath: storagePath,
+        signatureBase64: normalizedBase64,
         userId,
       }).unwrap();
 
-      const result = await regenerateIfFullySigned(updated, companyDefaults, {
-        readSignatureAsDataUri,
-        generatePDF,
-        uploadToStorage,
-        regeneratePdfMutation: (args) => regeneratePdfMutation(args).unwrap(),
-        userId,
-      });
+      const result = await regeneratePdfWithSignatures(
+        updated,
+        companyDefaults,
+        {
+          loadSignatureImages,
+          generatePDF,
+          uploadToStorage,
+          regeneratePdfMutation: (args) => regeneratePdfMutation(args).unwrap(),
+          userId,
+        },
+        { employee: normalizedBase64 },
+      );
       await refetch();
       return result;
     },
@@ -279,7 +301,7 @@ export function useMyEmploymentContract() {
       userId,
       uploadSignature,
       submitSignatureMutation,
-      readSignatureAsDataUri,
+      loadSignatureImages,
       generatePDF,
       uploadToStorage,
       regeneratePdfMutation,

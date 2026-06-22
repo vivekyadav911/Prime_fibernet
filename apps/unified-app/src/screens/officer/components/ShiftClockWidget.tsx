@@ -20,7 +20,7 @@ export function ShiftClockWidget() {
       {!isActive ? (
         <>
           <Text style={styles.stateLabel}>NOT CLOCKED IN</Text>
-          <Text style={styles.hint}>Tap to start your shift and begin tracking</Text>
+          <Text style={styles.hint}>Geofence-verified check-in via your assigned zone</Text>
           <Button
             label={clockingIn ? 'Clocking in…' : 'Clock In'}
             onPress={() => void handleClockIn()}
