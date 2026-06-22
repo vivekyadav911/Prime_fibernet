@@ -56,6 +56,7 @@ export function OfficerEmploymentContractScreen({ route, navigation }: Props) {
     navigation.navigate('ContractPdfViewer', {
       storagePath: contract.generatedPdfUrl,
       title: 'Employment Contract',
+      contractSnapshot: contract,
     });
   }, [contract, navigation]);
 

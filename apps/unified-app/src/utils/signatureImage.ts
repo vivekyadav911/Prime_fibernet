@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
 
 import { downloadStorageObjectAuthenticated } from '@/utils/storagePdf';
 
@@ -23,6 +24,10 @@ export async function writeSignatureBase64ToCache(
   const base64 = normalizeSignatureBase64(base64Input);
   if (base64.length < 20) {
     throw new Error('Signature image data is empty');
+  }
+
+  if (Platform.OS === 'web') {
+    return `data:image/png;base64,${base64}`;
   }
 
   const safeName = cacheFileName.replace(/[^\w.-]+/g, '_');

@@ -56,6 +56,35 @@ export function useOfficerDocumentAccess() {
         );
       } catch (authError) {
         const signedUrl = await resolveSignedUrl(normalizedPath);
+        if (Platform.OS === 'web') {
+          const response = await fetch(signedUrl);
+          if (!response.ok) {
+            throw authError;
+          }
+          const blob = await response.blob();
+          if (blob.size === 0) {
+            throw authError;
+          }
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const result = reader.result;
+              if (typeof result !== 'string') {
+                reject(new Error('Could not read file data'));
+                return;
+              }
+              resolve(result.includes(',') ? result.split(',')[1] ?? '' : result);
+            };
+            reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'));
+            reader.readAsDataURL(blob);
+          });
+          return {
+            localUri: URL.createObjectURL(blob),
+            base64,
+            normalizedPath,
+          };
+        }
+
         const localUri = `${FileSystem.cacheDirectory}${cacheFileName.replace(/[^\w.-]+/g, '_')}`;
         const result = await FileSystem.downloadAsync(signedUrl, localUri);
         if (result.status !== 200) {

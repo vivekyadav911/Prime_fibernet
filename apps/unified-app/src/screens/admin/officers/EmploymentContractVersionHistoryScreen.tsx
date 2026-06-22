@@ -39,6 +39,7 @@ export function EmploymentContractVersionHistoryScreen({ route }: Props) {
       navigation.navigate('ContractPdfViewer', {
         storagePath: version.pdfUrl,
         title: `Contract v${version.versionNumber}`,
+        contractSnapshot: version.snapshot,
       });
     },
     [navigation],
@@ -46,7 +47,7 @@ export function EmploymentContractVersionHistoryScreen({ route }: Props) {
 
   const handleDownload = useCallback(
     (version: ContractVersion) => {
-      void downloadVersion(version.pdfUrl).catch((e) => {
+      void downloadVersion(version).catch((e) => {
         Alert.alert('Download failed', queryErrorMessage(e));
       });
     },

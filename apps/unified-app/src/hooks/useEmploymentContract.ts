@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 
+import { useCompanyDefaults } from '@/hooks/useCompanyDefaults';
 import { useContractPDF } from '@/hooks/useContractPDF';
 import {
   useFinalizeEmploymentContractMutation,
@@ -17,6 +18,7 @@ import type {
   CompanyDefaults,
   ContractFormValues,
   ContractSignerRole,
+  ContractVersion,
   EmploymentContract,
   EmploymentContractRow,
 } from '@/types/contract';
@@ -329,14 +331,28 @@ export function useContractVersionHistory(
     skip: options?.skip ?? !contractId,
   });
   const [deleteVersionMutation, { isLoading: deletingVersion }] = useDeleteContractVersionMutation();
-  const { shareFromStoragePath } = useContractPDF();
+  const { shareFromStoragePath, generatePDF, loadSignatureImages, shareContract } = useContractPDF();
+  const { savedDefaults } = useCompanyDefaults();
 
   const downloadVersion = useCallback(
-    async (pdfUrl: string | null) => {
-      if (!pdfUrl) throw new Error('PDF not available for this version');
-      await shareFromStoragePath(pdfUrl);
+    async (version: ContractVersion) => {
+      if (!version.pdfUrl) throw new Error('PDF not available for this version');
+      try {
+        await shareFromStoragePath(version.pdfUrl, `Contract v${version.versionNumber}`);
+      } catch (storageError) {
+        const message = storageError instanceof Error ? storageError.message : String(storageError);
+        const isEmpty =
+          message.includes('empty on the server') ||
+          message.includes('empty') ||
+          message.includes('Download failed');
+        if (!isEmpty) throw storageError;
+
+        const signatureImages = await loadSignatureImages(version.snapshot);
+        const localUri = await generatePDF(version.snapshot, savedDefaults ?? null, signatureImages);
+        await shareContract(localUri, `Contract v${version.versionNumber}`);
+      }
     },
-    [shareFromStoragePath],
+    [generatePDF, loadSignatureImages, savedDefaults, shareContract, shareFromStoragePath],
   );
 
   const deleteVersion = useCallback(

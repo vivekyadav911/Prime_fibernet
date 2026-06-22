@@ -1,5 +1,6 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
+import type { EmploymentContract } from '@/types/contract';
 import type { TimeRange } from '@/types/map';
 import type { PaymentMethod } from '@/types/payments';
 
@@ -115,7 +116,12 @@ export type OfficerProfileStackParamList = {
   ProfileHome: undefined;
   ChangePassword: undefined;
   EmploymentContract: { highlightSign?: boolean } | undefined;
-  ContractPdfViewer: { storagePath: string; title?: string; bucket?: string };
+  ContractPdfViewer: {
+    storagePath: string;
+    title?: string;
+    bucket?: string;
+    contractSnapshot?: EmploymentContract;
+  };
 };
 
 export type OfficerRequestsStackParamList = {
@@ -225,7 +231,12 @@ export type AdminOfficersStackParamList = {
   AddOfficer: undefined;
   EmploymentContractForm: { officerId: string; contractId?: string };
   EmploymentContractVersionHistory: { contractId: string; officerId: string };
-  ContractPdfViewer: { storagePath: string; title?: string; bucket?: string };
+  ContractPdfViewer: {
+    storagePath: string;
+    title?: string;
+    bucket?: string;
+    contractSnapshot?: EmploymentContract;
+  };
   EmploymentContractSign: { contractId: string; officerId: string; role: 'employer' };
 };
 

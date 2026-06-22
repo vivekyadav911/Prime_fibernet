@@ -191,6 +191,61 @@ async function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+function isWebReadableUri(uri: string): boolean {
+  return (
+    Platform.OS === 'web' ||
+    uri.startsWith('blob:') ||
+    uri.startsWith('data:') ||
+    uri.startsWith('http://') ||
+    uri.startsWith('https://')
+  );
+}
+
+async function fetchUrlToBlob(url: string): Promise<Blob> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Download failed with status ${response.status}`);
+  }
+  const blob = await response.blob();
+  if (blob.size === 0) {
+    throw new Error('Downloaded file is empty');
+  }
+  return blob;
+}
+
+async function downloadStoragePdfWeb(
+  bucket: string,
+  normalizedPath: string,
+  resolveSignedUrl: (path: string) => Promise<string>,
+): Promise<{ localUri: string; signedUrl: string; normalizedPath: string }> {
+  try {
+    const auth = await downloadStorageObjectAuthenticated(
+      bucket,
+      normalizedPath,
+      `web_${Date.now()}.pdf`,
+    );
+    let signedUrl = auth.localUri;
+    try {
+      signedUrl = await resolveSignedUrl(normalizedPath);
+    } catch {
+      // View/share still works from the blob URL.
+    }
+    return { localUri: auth.localUri, signedUrl, normalizedPath: auth.normalizedPath };
+  } catch (authError) {
+    if (authError instanceof Error && authError.message.includes('empty on the server')) {
+      throw authError;
+    }
+  }
+
+  const signedUrl = await resolveSignedUrl(normalizedPath);
+  const blob = await fetchUrlToBlob(signedUrl);
+  return {
+    localUri: URL.createObjectURL(blob),
+    signedUrl,
+    normalizedPath,
+  };
+}
+
 /** Download via authenticated Supabase client (uses session JWT + RLS). */
 export async function downloadStorageObjectAuthenticated(
   bucket: string,
@@ -223,6 +278,11 @@ export async function downloadStorageObjectAuthenticated(
   }
 
   const base64 = await blobToBase64(data);
+
+  if (Platform.OS === 'web') {
+    return { localUri: URL.createObjectURL(data), base64, normalizedPath };
+  }
+
   const safeName = cacheFileName.replace(/[^\w.-]+/g, '_');
   const localUri = `${FileSystem.cacheDirectory}${safeName}`;
   await FileSystem.writeAsStringAsync(localUri, base64, {
@@ -238,6 +298,15 @@ export async function downloadStorageObjectAuthenticated(
 }
 
 export async function readLocalPdfBase64(localUri: string): Promise<string> {
+  if (isWebReadableUri(localUri)) {
+    const blob = await fetchUrlToBlob(localUri);
+    const base64 = await blobToBase64(blob);
+    if (!base64 || base64.length < 50) {
+      throw new Error('Could not read PDF content');
+    }
+    return base64;
+  }
+
   const info = await FileSystem.getInfoAsync(localUri);
   if (!info.exists) {
     throw new Error('PDF file not found');
@@ -264,6 +333,10 @@ export async function downloadStoragePdfToCache(
   }
 
   const cacheFileName = ensurePdfFileName(options.cacheFileName);
+
+  if (Platform.OS === 'web') {
+    return downloadStoragePdfWeb(options.bucket, normalizedPath, options.resolveSignedUrl);
+  }
 
   try {
     const auth = await downloadStorageObjectAuthenticated(

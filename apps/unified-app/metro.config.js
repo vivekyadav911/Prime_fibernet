@@ -19,6 +19,8 @@ config.resolver.extraNodeModules = {
     monorepoRoot,
     'node_modules/react-native-signature-canvas',
   ),
+  jspdf: path.join(monorepoRoot, 'node_modules/jspdf'),
+  html2canvas: path.join(monorepoRoot, 'node_modules/html2canvas'),
 };
 config.resolver.alias = {
   '@': path.join(appRoot, 'src'),

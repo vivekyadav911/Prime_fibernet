@@ -4,11 +4,9 @@
  *
  * LEGAL NOTE: Template language is not legal advice — review with counsel before use.
  */
-import * as Print from 'expo-print';
-import * as FileSystem from 'expo-file-system/legacy';
-
 import type { CompanyDefaults, EmploymentContract } from '@/types/contract';
 import { formatCurrencyInrPrecise } from '@/utils/formatCurrency';
+import { generatePdfFromHtml } from '@/utils/htmlToPdf';
 
 const EMPLOYMENT_TYPE_LABELS: Record<EmploymentContract['employmentType'], string> = {
   full_time: 'Full-time',
@@ -348,20 +346,7 @@ export async function generateContractPDF(
   signatureImages?: SignatureImages,
 ): Promise<string> {
   const html = generateContractHTML(contract, companyDefaults, signatureImages);
-  const { uri } = await Print.printToFileAsync({
-    html,
-    base64: false,
-  });
-
-  const info = await FileSystem.getInfoAsync(uri);
-  if (!info.exists) {
-    throw new Error('PDF generation failed — file was not created');
-  }
-  if ('size' in info && typeof info.size === 'number' && info.size < 100) {
-    throw new Error('PDF generation failed — output file is empty');
-  }
-
-  return uri;
+  return generatePdfFromHtml(html);
 }
 
 export function contractPdfFileName(contract: EmploymentContract): string {

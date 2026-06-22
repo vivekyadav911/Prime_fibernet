@@ -75,6 +75,7 @@ export function EmploymentContractTab({ officerId, profile }: Props) {
     navigation.navigate('ContractPdfViewer', {
       storagePath: contract.generatedPdfUrl,
       title: 'Employment Contract',
+      contractSnapshot: contract,
     });
   }, [contract, navigation]);
 
