@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useActiveShift, usePendingCollections, useRequestCounts } from '@/hooks/officer';
 import { signOut } from '@/hooks/useAuth';
+import { useGetPortalUnreadCountQuery } from '@/services/api/portalNotificationsApi';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -70,6 +71,7 @@ const SECTIONS: DrawerSection[] = [
     id: 'account',
     label: 'Account',
     items: [
+      { route: 'NotificationsStack', label: 'Notifications', icon: '🔔', showBadge: true },
       { route: 'Support', label: 'Support', icon: '💬' },
       { route: 'ProfileStack', label: 'Profile', icon: '👤' },
     ],
@@ -87,6 +89,7 @@ export function OfficerDrawerContent(props: DrawerContentComponentProps) {
   const { isActive, elapsedLabel } = useActiveShift();
   const { newRequests } = useRequestCounts();
   const { pendingCount } = usePendingCollections();
+  const { data: unreadNotifications = 0 } = useGetPortalUnreadCountQuery();
   const { navigation, state } = props;
   const activeRoute = state.routes[state.index]?.name;
 
@@ -95,9 +98,10 @@ export function OfficerDrawerContent(props: DrawerContentComponentProps) {
       if (!showBadge) return null;
       if (route === 'RequestsStack' && newRequests > 0) return newRequests;
       if (route === 'CollectionsStack' && pendingCount > 0) return pendingCount;
+      if (route === 'NotificationsStack' && unreadNotifications > 0) return unreadNotifications;
       return null;
     },
-    [newRequests, pendingCount],
+    [newRequests, pendingCount, unreadNotifications],
   );
 
   const navigate = useCallback(

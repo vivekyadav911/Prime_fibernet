@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,6 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
 import {
+  DocumentLabelModal,
   DocumentRow,
   DocumentViewerModal,
   InfoRow,
@@ -18,23 +20,25 @@ import {
   PermissionPills,
   RoleGuard,
   SectionHeader,
-  StatusBadge,
-  openDocumentUrl,
 } from '@/components/admin';
+import { EmploymentContractTab } from '@/components/admin/employment/EmploymentContractTab';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
+import type { OfficerDocumentViewContent } from '@/hooks/useOfficerDocumentAccess';
+import { useOfficerDocumentAccess } from '@/hooks/useOfficerDocumentAccess';
 import {
   useDeleteOfficerDocumentMutation,
   useGetAdminOfficerDetailQuery,
-  useGetOfficerContractQuery,
   useGetOfficerDocumentsQuery,
   useGetOfficerProfileQuery,
   useGetOfficerRolePermissionsQuery,
   useRevealOfficerPasswordMutation,
   useResetOfficerPasswordMutation,
+  useUploadAdditionalOfficerDocumentMutation,
   useUploadOfficerDocumentMutation,
 } from '@/store/api/endpoints';
 import type { AdminOfficersStackParamList } from '@/types/navigation';
+import type { OfficerDocument } from '@/types/api/officer';
 import {
   OFFICER_DOCUMENT_DEFINITIONS,
   maskAccountNumber,
@@ -45,9 +49,12 @@ import { radius, spacing } from '@/theme/spacing';
 import {
   pickOfficerDocument,
   pickOfficerImage,
+  uploadAdditionalOfficerDocument,
   uploadOfficerDocumentForOfficer,
+  OFFICER_DOCUMENTS_BUCKET,
   type OfficerDocumentType,
 } from '@/utils/uploadOfficerDocument';
+import { isPdfPath } from '@/utils/storagePdf';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminOfficersStackParamList, 'OfficerDetail'>;
@@ -66,25 +73,43 @@ function formatCurrency(n: number | null | undefined): string {
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
+function isStandardPlaceholderId(id: string): boolean {
+  return OFFICER_DOCUMENT_DEFINITIONS.some((d) => d.type === id);
+}
+
 export function OfficerDetailScreen({ route, navigation }: Props) {
   const { officerId } = route.params;
   const [tab, setTab] = useState<DetailTab>('onboarding');
-  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerTitle, setViewerTitle] = useState('');
-  const [viewerMime, setViewerMime] = useState<string | null>(null);
+  const [viewerContent, setViewerContent] = useState<OfficerDocumentViewContent | null>(null);
+  const [loadingViewId, setLoadingViewId] = useState<string | null>(null);
+  const [loadingDownloadId, setLoadingDownloadId] = useState<string | null>(null);
+  const [labelModalVisible, setLabelModalVisible] = useState(false);
+  const [pendingAdditionalLabel, setPendingAdditionalLabel] = useState<string | null>(null);
 
   const { data: summary, isLoading, isError, error, refetch } = useGetAdminOfficerDetailQuery(officerId);
   const { data: profile } = useGetOfficerProfileQuery(officerId);
-  const { data: contract } = useGetOfficerContractQuery(officerId, { skip: tab !== 'contract' });
   const { data: documents } = useGetOfficerDocumentsQuery(officerId, { skip: tab !== 'documents' });
   const { data: permissions = [] } = useGetOfficerRolePermissionsQuery(profile?.roleId ?? '', {
     skip: !profile?.roleId,
   });
 
+  const { prepareView, downloadDocument } = useOfficerDocumentAccess();
   const [revealPassword, { isLoading: revealing }] = useRevealOfficerPasswordMutation();
   const [resetPassword, { isLoading: resetting }] = useResetOfficerPasswordMutation();
   const [uploadDoc] = useUploadOfficerDocumentMutation();
+  const [uploadAdditionalDoc] = useUploadAdditionalOfficerDocumentMutation();
   const [deleteDoc] = useDeleteOfficerDocumentMutation();
+
+  const standardDocuments = useMemo(
+    () => (documents ?? []).filter((d) => !d.isAdditional),
+    [documents],
+  );
+  const additionalDocuments = useMemo(
+    () => (documents ?? []).filter((d) => d.isAdditional),
+    [documents],
+  );
 
   const tabs = useMemo(
     () =>
@@ -120,13 +145,56 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
     }
   }, [officerId, resetPassword]);
 
+  const handleViewDocument = useCallback(
+    async (doc: OfficerDocument) => {
+      if (!doc.storagePath) return;
+      try {
+        setLoadingViewId(doc.id);
+
+        if (isPdfPath(doc.storagePath, doc.mimeType)) {
+          navigation.navigate('ContractPdfViewer', {
+            storagePath: doc.storagePath,
+            title: doc.label,
+            bucket: OFFICER_DOCUMENTS_BUCKET,
+          });
+          return;
+        }
+
+        const content = await prepareView(doc.storagePath, doc.mimeType);
+        setViewerTitle(doc.label);
+        setViewerContent(content);
+        setViewerVisible(true);
+      } catch (e) {
+        Alert.alert('Could not open document', queryErrorMessage(e));
+      } finally {
+        setLoadingViewId(null);
+      }
+    },
+    [navigation, prepareView],
+  );
+
+  const handleDownloadDocument = useCallback(
+    async (doc: OfficerDocument) => {
+      if (!doc.storagePath) return;
+      try {
+        setLoadingDownloadId(doc.id);
+        await downloadDocument(doc.storagePath, doc.label, doc.mimeType);
+      } catch (e) {
+        Alert.alert('Download failed', queryErrorMessage(e));
+      } finally {
+        setLoadingDownloadId(null);
+      }
+    },
+    [downloadDocument],
+  );
+
   const handleReplaceDoc = useCallback(
     async (dbType: string, label: string) => {
       try {
         const isPhoto = dbType.includes('photo') || dbType === 'profile_photo';
         const picked = isPhoto ? await pickOfficerImage() : await pickOfficerDocument();
         if (!picked) return;
-        const url = await uploadOfficerDocumentForOfficer(
+        const uploaded = await uploadOfficerDocumentForOfficer(
           officerId,
           dbType as OfficerDocumentType,
           picked,
@@ -134,8 +202,9 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
         await uploadDoc({
           officerId,
           documentType: dbType,
-          fileUrl: url,
+          storagePath: uploaded.storagePath,
           mimeType: picked.mimeType,
+          displayName: label,
         }).unwrap();
         Alert.alert('Uploaded', `${label} updated.`);
       } catch (e) {
@@ -144,6 +213,93 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
     },
     [officerId, uploadDoc],
   );
+
+  const handleDeleteDoc = useCallback(
+    async (doc: OfficerDocument) => {
+      if (isStandardPlaceholderId(doc.id)) return;
+      try {
+        await deleteDoc({
+          officerId,
+          documentId: doc.id,
+          storagePath: doc.storagePath,
+        }).unwrap();
+      } catch (e) {
+        Alert.alert('Error', queryErrorMessage(e));
+      }
+    },
+    [deleteDoc, officerId],
+  );
+
+  const uploadAdditionalWithLabel = useCallback(
+    async (label: string) => {
+      try {
+        const picked = await pickOfficerDocument();
+        if (!picked) return;
+        const uploaded = await uploadAdditionalOfficerDocument(officerId, picked);
+        await uploadAdditionalDoc({
+          officerId,
+          storagePath: uploaded.storagePath,
+          displayName: label,
+          mimeType: picked.mimeType,
+        }).unwrap();
+        Alert.alert('Uploaded', `${label} added.`);
+      } catch (e) {
+        Alert.alert('Upload failed', queryErrorMessage(e));
+      }
+    },
+    [officerId, uploadAdditionalDoc],
+  );
+
+  const promptAdditionalLabel = useCallback(() => {
+    if (Platform.OS === 'ios' && Alert.prompt) {
+      Alert.prompt(
+        'Document label',
+        'Enter a name for this document',
+        async (label) => {
+          if (!label?.trim()) return;
+          await uploadAdditionalWithLabel(label.trim());
+        },
+      );
+      return;
+    }
+    setLabelModalVisible(true);
+  }, [uploadAdditionalWithLabel]);
+
+  const handleLabelModalSubmit = useCallback(
+    async (label: string) => {
+      setLabelModalVisible(false);
+      setPendingAdditionalLabel(label);
+      await uploadAdditionalWithLabel(label);
+      setPendingAdditionalLabel(null);
+    },
+    [uploadAdditionalWithLabel],
+  );
+
+  const closeViewer = useCallback(() => {
+    setViewerVisible(false);
+    setViewerContent(null);
+  }, []);
+
+  const renderDocumentRow = (doc: OfficerDocument) => {
+    const def = OFFICER_DOCUMENT_DEFINITIONS.find((d) => d.type === doc.type);
+    const dbType = def?.dbType ?? doc.type.toLowerCase();
+    const hasFile = doc.status === 'uploaded' && !!doc.storagePath;
+    const canDelete = hasFile && doc.id && !isStandardPlaceholderId(doc.id)
+      && (doc.isAdditional || !doc.required);
+
+    return (
+      <DocumentRow
+        key={doc.id}
+        document={doc}
+        loadingView={loadingViewId === doc.id}
+        loadingDownload={loadingDownloadId === doc.id}
+        onView={hasFile ? () => void handleViewDocument(doc) : undefined}
+        onDownload={hasFile ? () => void handleDownloadDocument(doc) : undefined}
+        onReplace={!doc.isAdditional ? () => void handleReplaceDoc(dbType, doc.label) : undefined}
+        onDelete={canDelete ? () => void handleDeleteDoc(doc) : undefined}
+      />
+    );
+  };
 
   if (isLoading) return <Screen><SkeletonLoader rows={8} showAvatar /></Screen>;
   if (isError || !summary) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
@@ -265,103 +421,47 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
             </>
           ) : null}
 
-          {tab === 'contract' ? (
-            contract ? (
-              <View style={styles.card}>
-                <SectionHeader
-                  icon="📄"
-                  title={officerStrings.detail.sections.contractDetails}
-                  onEdit={() => navigation.navigate('OfficerEdit', { officerId, section: 'contract' })}
-                />
-                <SectionHeader icon="📃" title={officerStrings.detail.sections.contractInfo} iconColor={adminColors.sectionIconBlue} />
-                <InfoRow label={officerStrings.detail.labels.contractNumber} value={contract.contractNumber ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.contractType} value={contract.contractType} />
-                <View style={styles.statusRow}>
-                  <Text style={styles.rowLabel}>STATUS</Text>
-                  <StatusBadge status={contract.status.toLowerCase()} />
-                </View>
-                <InfoRow label={officerStrings.detail.labels.startDate} value={formatDate(contract.startDate)} />
-
-                <SectionHeader icon="💼" title={officerStrings.detail.sections.employmentDetails} iconColor={adminColors.sectionIconBlue} />
-                <InfoRow label={officerStrings.detail.labels.position} value={contract.position ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.designation} value={contract.designation ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.department} value={contract.department ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.reportingTo} value={contract.reportingTo ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.workLocation} value={contract.workLocation ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.workingHours} value={contract.workingHoursPerDay?.toString() ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.weeklyOff} value={contract.weeklyOffDays?.toString() ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.leaveEntitlement} value={contract.leaveEntitlementPerYear?.toString() ?? officerStrings.detail.na} />
-
-                <SectionHeader icon="₹" title={officerStrings.detail.sections.salaryBreakdown} iconColor={adminColors.sectionIconTeal} />
-                <InfoRow label={officerStrings.detail.labels.basicSalary} value={formatCurrency(contract.salary.basic)} />
-                <InfoRow label={officerStrings.detail.labels.hra} value={formatCurrency(contract.salary.hra)} />
-                <InfoRow label={officerStrings.detail.labels.transport} value={formatCurrency(contract.salary.transportAllowance)} />
-                <InfoRow label={officerStrings.detail.labels.otherAllowances} value={formatCurrency(contract.salary.otherAllowances)} />
-                <Text style={styles.totalSalary}>
-                  {formatCurrency(contract.salary.total)}{officerStrings.detail.labels.perMonth}
-                </Text>
-
-                <SectionHeader icon="🏦" title={officerStrings.detail.sections.bankPayout} iconColor={adminColors.sectionIconBlue} />
-                <InfoRow label={officerStrings.detail.labels.bankName} value={contract.bankDetails.bankName ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.accountHolder} value={contract.bankDetails.accountHolderName ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.accountNumber} value={contract.bankDetails.accountNumber ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.ifsc} value={contract.bankDetails.ifscCode ?? officerStrings.detail.na} />
-
-                <SectionHeader icon="🎁" title={officerStrings.detail.sections.benefits} iconColor={adminColors.sectionIconBlue} />
-                <InfoRow label={officerStrings.detail.labels.healthInsurance} value={contract.benefits.healthInsurance ? officerStrings.detail.yes : officerStrings.detail.no} />
-                <InfoRow label={officerStrings.detail.labels.pfApplicable} value={contract.benefits.pfApplicable ? officerStrings.detail.yes : officerStrings.detail.no} />
-                <InfoRow label={officerStrings.detail.labels.esicApplicable} value={contract.benefits.esicApplicable ? officerStrings.detail.yes : officerStrings.detail.no} />
-              </View>
-            ) : (
-              <View style={styles.card}>
-                <Text style={styles.emptyTab}>No contract on file.</Text>
-                <Pressable onPress={() => navigation.navigate('OfficerEdit', { officerId, section: 'contract' })}>
-                  <Text style={styles.link}>Add contract details</Text>
-                </Pressable>
-              </View>
-            )
-          ) : null}
+          {tab === 'contract' ? <EmploymentContractTab officerId={officerId} profile={p ?? profile} /> : null}
 
           {tab === 'documents' ? (
-            <View style={styles.card}>
-              {(documents ?? []).map((doc) => {
-                const def = OFFICER_DOCUMENT_DEFINITIONS.find((d) => d.type === doc.type);
-                const dbType = def?.dbType ?? doc.type.toLowerCase();
-                return (
-                  <DocumentRow
-                    key={doc.type}
-                    document={doc}
-                    onView={
-                      doc.url
-                        ? () => {
-                            setViewerUrl(doc.url ?? null);
-                            setViewerTitle(doc.label);
-                            setViewerMime(doc.mimeType ?? null);
-                          }
-                        : undefined
-                    }
-                    onDownload={doc.url ? () => void openDocumentUrl(doc.url!) : undefined}
-                    onReplace={() => void handleReplaceDoc(dbType, doc.label)}
-                    onDelete={
-                      doc.status === 'uploaded' && doc.id && !doc.id.startsWith('PHOTO')
-                        ? () => void deleteDoc({ officerId, documentId: doc.id }).unwrap().catch((e) =>
-                            Alert.alert('Error', queryErrorMessage(e)),
-                          )
-                        : undefined
-                    }
-                  />
-                );
-              })}
-            </View>
+            <>
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>Required Documents</Text>
+                {standardDocuments.map(renderDocumentRow)}
+              </View>
+
+              <View style={styles.card}>
+                <View style={styles.additionalHeader}>
+                  <Text style={styles.sectionTitle}>Additional Documents</Text>
+                  <Pressable
+                    style={styles.addBtn}
+                    onPress={() => promptAdditionalLabel()}
+                    disabled={!!pendingAdditionalLabel}
+                  >
+                    <Text style={styles.addBtnText}>+ Add Document</Text>
+                  </Pressable>
+                </View>
+                {additionalDocuments.length === 0 ? (
+                  <Text style={styles.emptyAdditional}>No additional documents yet.</Text>
+                ) : (
+                  additionalDocuments.map(renderDocumentRow)
+                )}
+              </View>
+            </>
           ) : null}
         </ScrollView>
 
         <DocumentViewerModal
-          visible={!!viewerUrl}
-          url={viewerUrl}
+          visible={viewerVisible}
           title={viewerTitle}
-          mimeType={viewerMime}
-          onClose={() => setViewerUrl(null)}
+          content={viewerContent}
+          onClose={closeViewer}
+        />
+
+        <DocumentLabelModal
+          visible={labelModalVisible}
+          onCancel={() => setLabelModalVisible(false)}
+          onSubmit={(label) => void handleLabelModalSubmit(label)}
         />
       </Screen>
     </RoleGuard>
@@ -407,17 +507,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderDefault,
   },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  additionalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+  },
+  addBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.sm,
+    backgroundColor: adminColors.primary,
+  },
+  addBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.surfaceWhite,
+  },
+  emptyAdditional: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
   ecBlock: { marginBottom: spacing.sm },
   ecTitle: { fontSize: 13, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xxs },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxs },
-  rowLabel: { width: 120, fontSize: 12, fontWeight: '600', color: colors.textSecondary },
-  totalSalary: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: adminColors.salaryTotal,
-    marginTop: spacing.sm,
-    textAlign: 'right',
-  },
   emptyTab: { color: colors.textSecondary, marginBottom: spacing.sm },
-  link: { color: adminColors.primary, fontWeight: '600' },
 });

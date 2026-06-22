@@ -37,6 +37,8 @@ const api = createApi({
     'CustomerTickets',
     'PlanChangeRequests',
     'CustomerDashboard',
+    'EmploymentContracts',
+    'EmploymentContractVersions',
   ],
   endpoints: () => ({}),
 });

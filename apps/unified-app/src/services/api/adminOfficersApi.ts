@@ -20,6 +20,7 @@ import {
   mapFieldStatus,
   OFFICER_DOCUMENT_DEFINITIONS,
 } from '@/types/api/officer';
+import { parseOfficerDocumentStoragePath } from '@/utils/uploadOfficerDocument';
 
 import { baseApi } from './baseApi';
 import { OFFICER_ADMIN_SELECT } from './mappers';
@@ -281,22 +282,67 @@ function mapContractRow(
   };
 }
 
-function mapDocuments(rows: Array<{ id: string; document_type: string; file_url?: string; mime_type?: string | null; uploaded_at?: string }>): OfficerDocument[] {
-  const byType = new Map(rows.map((r) => [r.document_type, r]));
+type OfficerDocumentRow = {
+  id: string;
+  document_type: string;
+  file_url?: string | null;
+  storage_path?: string | null;
+  display_name?: string | null;
+  mime_type?: string | null;
+  uploaded_at?: string;
+};
 
-  return OFFICER_DOCUMENT_DEFINITIONS.map((def) => {
-    const row = byType.get(def.dbType) ?? byType.get(def.dbType === 'photo_id_front' ? 'id_proof' : def.dbType === 'photo_id_back' ? 'address_proof' : def.dbType);
+function resolveDocumentStoragePath(row: OfficerDocumentRow): string | undefined {
+  if (row.storage_path?.trim()) return row.storage_path.trim();
+  if (row.file_url?.trim()) {
+    return parseOfficerDocumentStoragePath(row.file_url) ?? undefined;
+  }
+  return undefined;
+}
+
+function mapDocuments(rows: OfficerDocumentRow[]): OfficerDocument[] {
+  const standardRows = rows.filter((r) => r.document_type !== 'additional');
+  const additionalRows = rows.filter((r) => r.document_type === 'additional');
+  const byType = new Map(standardRows.map((r) => [r.document_type, r]));
+
+  const standardDocs = OFFICER_DOCUMENT_DEFINITIONS.map((def) => {
+    const row = byType.get(def.dbType) ?? byType.get(
+      def.dbType === 'photo_id_front' ? 'id_proof' : def.dbType === 'photo_id_back' ? 'address_proof' : def.dbType,
+    );
+    const storagePath = row ? resolveDocumentStoragePath(row) : undefined;
     return {
       id: row?.id ?? def.type,
       type: def.type,
-      label: def.label,
+      label: row?.display_name?.trim() || def.label,
       required: def.required,
-      status: row?.file_url ? 'uploaded' : 'not_uploaded',
-      url: row?.file_url,
+      status: storagePath ? 'uploaded' as const : 'not_uploaded' as const,
+      url: row?.file_url ?? undefined,
+      storagePath,
+      displayName: row?.display_name ?? def.label,
+      isAdditional: false,
       mimeType: row?.mime_type,
       uploadedAt: row?.uploaded_at,
     };
   });
+
+  const additionalDocs = additionalRows.map((row) => {
+    const storagePath = resolveDocumentStoragePath(row);
+    return {
+      id: row.id,
+      type: 'ADDITIONAL' as const,
+      label: row.display_name?.trim() || 'Additional Document',
+      required: false,
+      status: storagePath ? 'uploaded' as const : 'not_uploaded' as const,
+      url: row.file_url ?? undefined,
+      storagePath,
+      displayName: row.display_name ?? 'Additional Document',
+      isAdditional: true,
+      mimeType: row.mime_type,
+      uploadedAt: row.uploaded_at,
+    };
+  });
+
+  return [...standardDocs, ...additionalDocs];
 }
 
 const OFFICER_SELECT = OFFICER_ADMIN_SELECT;
@@ -431,13 +477,27 @@ export const adminOfficersApi = baseApi.injectEndpoints({
         handler: async (client) => {
           const { data, error } = await client
             .from('officer_documents')
-            .select('id, document_type, file_url, mime_type, uploaded_at')
-            .eq('officer_id', officerId);
+            .select('id, document_type, file_url, storage_path, display_name, mime_type, uploaded_at')
+            .eq('officer_id', officerId)
+            .order('uploaded_at', { ascending: true });
           if (error) throw error;
-          return mapDocuments((data ?? []) as Parameters<typeof mapDocuments>[0]);
+          return mapDocuments((data ?? []) as OfficerDocumentRow[]);
         },
       }),
       providesTags: (_r, _e, id) => [{ type: 'Officers', id: `${id}-documents` }],
+    }),
+
+    getOfficerDocumentSignedUrl: builder.query<string, { storagePath: string; expirySeconds?: number }>({
+      query: ({ storagePath, expirySeconds = 3600 }) => ({
+        handler: async (client) => {
+          const { data, error } = await client.storage
+            .from('officer-documents')
+            .createSignedUrl(storagePath, expirySeconds);
+          if (error) throw error;
+          if (!data?.signedUrl) throw new Error('Could not create signed URL');
+          return data.signedUrl;
+        },
+      }),
     }),
 
     getOfficerRolePermissions: builder.query<string[], string>({
@@ -754,39 +814,110 @@ export const adminOfficersApi = baseApi.injectEndpoints({
 
     uploadOfficerDocument: builder.mutation<
       void,
-      { officerId: string; documentType: string; fileUrl: string; mimeType?: string | null }
+      {
+        officerId: string;
+        documentType: string;
+        storagePath: string;
+        mimeType?: string | null;
+        displayName?: string;
+      }
     >({
-      query: ({ officerId, documentType, fileUrl, mimeType }) => ({
+      query: ({ officerId, documentType, storagePath, mimeType, displayName }) => ({
         handler: async (client) => {
+          const def = OFFICER_DOCUMENT_DEFINITIONS.find((d) => d.dbType === documentType);
+          const label = displayName ?? def?.label ?? documentType;
+
           const { data: existing } = await client
             .from('officer_documents')
-            .select('id')
+            .select('id, storage_path')
             .eq('officer_id', officerId)
             .eq('document_type', documentType)
             .maybeSingle();
 
           if (existing?.id) {
-            await client.from('officer_documents').update({
-              file_url: fileUrl,
+            const { error } = await client.from('officer_documents').update({
+              storage_path: storagePath,
               mime_type: mimeType ?? null,
+              display_name: label,
               uploaded_at: new Date().toISOString(),
             }).eq('id', existing.id);
+            if (error) throw error;
           } else {
-            await client.from('officer_documents').insert({
+            const { error } = await client.from('officer_documents').insert({
               officer_id: officerId,
               document_type: documentType,
-              file_url: fileUrl,
+              storage_path: storagePath,
               mime_type: mimeType ?? null,
+              display_name: label,
             });
+            if (error) throw error;
+          }
+
+          if (documentType === 'profile_photo') {
+            const { data: signed } = await client.storage
+              .from('officer-documents')
+              .createSignedUrl(storagePath, 604800);
+            await client
+              .from('officers')
+              .update({ profile_photo_url: signed?.signedUrl ?? storagePath })
+              .eq('id', officerId);
           }
         },
       }),
       invalidatesTags: (_r, _e, { officerId }) => [{ type: 'Officers', id: `${officerId}-documents` }],
     }),
 
-    deleteOfficerDocument: builder.mutation<void, { officerId: string; documentId: string }>({
-      query: ({ documentId }) => ({
+    uploadAdditionalOfficerDocument: builder.mutation<
+      { documentId: string },
+      {
+        officerId: string;
+        storagePath: string;
+        displayName: string;
+        mimeType?: string | null;
+      }
+    >({
+      query: ({ officerId, storagePath, displayName, mimeType }) => ({
         handler: async (client) => {
+          const { data, error } = await client
+            .from('officer_documents')
+            .insert({
+              officer_id: officerId,
+              document_type: 'additional',
+              storage_path: storagePath,
+              display_name: displayName.trim(),
+              mime_type: mimeType ?? null,
+            })
+            .select('id')
+            .single();
+          if (error) throw error;
+          return { documentId: data.id as string };
+        },
+      }),
+      invalidatesTags: (_r, _e, { officerId }) => [{ type: 'Officers', id: `${officerId}-documents` }],
+    }),
+
+    deleteOfficerDocument: builder.mutation<void, { officerId: string; documentId: string; storagePath?: string }>({
+      query: ({ documentId, storagePath }) => ({
+        handler: async (client) => {
+          let pathToDelete = storagePath;
+          if (!pathToDelete) {
+            const { data: row } = await client
+              .from('officer_documents')
+              .select('storage_path, file_url')
+              .eq('id', documentId)
+              .maybeSingle();
+            if (row) {
+              pathToDelete = resolveDocumentStoragePath(row as OfficerDocumentRow);
+            }
+          }
+
+          if (pathToDelete) {
+            const { error: storageError } = await client.storage
+              .from('officer-documents')
+              .remove([pathToDelete]);
+            if (storageError) throw storageError;
+          }
+
           const { error } = await client.from('officer_documents').delete().eq('id', documentId);
           if (error) throw error;
         },
@@ -907,6 +1038,7 @@ export const {
   useGetOfficerProfileQuery,
   useGetOfficerContractQuery,
   useGetOfficerDocumentsQuery,
+  useLazyGetOfficerDocumentSignedUrlQuery,
   useGetOfficerRolePermissionsQuery,
   useGetOfficerRolesQuery,
   useCreateAdminOfficerMutation,
@@ -919,6 +1051,7 @@ export const {
   useUnblockOfficerMutation,
   useDeleteOfficerMutation,
   useUploadOfficerDocumentMutation,
+  useUploadAdditionalOfficerDocumentMutation,
   useDeleteOfficerDocumentMutation,
   useRevealOfficerPasswordMutation,
   useResetOfficerPasswordMutation,

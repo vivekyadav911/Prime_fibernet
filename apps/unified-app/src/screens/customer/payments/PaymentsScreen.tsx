@@ -55,7 +55,11 @@ export function PaymentsScreen() {
       if (await Sharing.isAvailableAsync()) {
         const filename = `${FileSystem.cacheDirectory}invoice-${payment.id}.pdf`;
         const result = await FileSystem.downloadAsync(url, filename);
-        await Sharing.shareAsync(result.uri);
+        await Sharing.shareAsync(result.uri, {
+          mimeType: 'application/pdf',
+          UTI: 'com.adobe.pdf',
+          dialogTitle: 'Invoice',
+        });
       } else {
         await Share.share({ url, message: 'Your Prime Fibernet invoice' });
       }

@@ -4,25 +4,35 @@ globs: apps/unified-app/**/*.{ts,tsx}
 alwaysApply: false
 ---
 
-# Unified App — Code Rules
+# Code Standards
 
 See also: `date-time-pickers.mdc` (picker UX) and `ui-theme.mdc` (theme tokens & UI consistency).
 
-- All components are functional (no class components)
-- All API calls go through RTK Query — never raw fetch in components
-- All forms use React Hook Form + Zod validation
-- All lists use FlatList with keyExtractor and memoized renderItem
-- Use React.memo on all list item components
-- Never use inline styles — use StyleSheet.create or Nativewind classes
-- Supabase calls always go through RTK Query baseQuery, not directly
-- Every screen must handle: loading state, error state, empty state
-- Use expo-secure-store for JWT, AsyncStorage for non-sensitive data
+- Functional components only. No class components.
+- RTK Query for all API calls. No raw fetch/axios anywhere in screens
+  or components — if a call doesn't fit RTK Query's pattern, build a
+  custom base query, don't bypass the layer.
+- React Hook Form + Zod for all forms, no exceptions, including
+  single-field forms (search bars with validation, etc.)
+- FlatList (or FlashList if already adopted) with stable, unique keys.
+  Never use array index as key. List items must be memoized
+  (`React.memo` or equivalent) when the list can exceed ~20 items.
+- Every screen with async data: loading, error, AND empty states.
+  A screen with only a happy path is incomplete, not "good enough for now."
+- `expo-secure-store` for JWT and any credential-like value. Never
+  AsyncStorage for tokens.
+- Hard bans: `any` type, class components, inline style objects,
+  index-as-key, hardcoded color/spacing values, raw fetch for API data.
+- Soft rule: comments explain *why*, not *what* — if a comment just
+  restates the code, remove it.
+- Tests: write them where they catch a real regression risk (payment
+  flows, RLS-sensitive queries, role-gating logic). Don't write tests
+  for trivial render-only components just to hit a coverage number.
 
-## What NOT to do
+## Self-check before presenting any change as complete
 
-- Never use class components
-- Never use `any` type
-- Never put API calls directly in components (always RTK Query)
-- Never use inline StyleSheet objects (define outside component)
-- Never use index as FlatList keyExtractor
-- Never hardcode colors — use theme/colors.ts tokens
+- Does this introduce a new pattern instead of using an existing one?
+  If yes, flag it explicitly and explain why, don't silently diverge.
+- Did I touch a file outside the scope of what was asked? If yes,
+  call it out separately rather than bundling it into the same diff
+  silently.

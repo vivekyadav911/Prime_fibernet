@@ -1,7 +1,7 @@
+import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useOfficerCollectionsSync } from '@/hooks/officer/useOfficerCollectionsSync';
-import { usePortalNotificationsSync } from '@/hooks/usePortalNotificationsSync';
 import { OfficerNotificationBell } from '@/components/navigation/officer/OfficerNotificationBell';
 import {
   AssignedCustomersScreen,
@@ -15,19 +15,24 @@ import { ApplyLeaveScreen } from '@/screens/officer/leave/ApplyLeaveScreen';
 import { OfficerLeaveScreen } from '@/screens/officer/OfficerLeaveScreen';
 import { OfficerRequestsScreen } from '@/screens/officer/OfficerRequestsScreen';
 import { OfficerChangePasswordScreen } from '@/screens/officer/profile/OfficerChangePasswordScreen';
+import { OfficerEmploymentContractScreen } from '@/screens/officer/profile/OfficerEmploymentContractScreen';
 import { OfficerProfileScreen } from '@/screens/officer/profile/OfficerProfileScreen';
+import { ContractPdfViewerScreen } from '@/screens/common/ContractPdfViewerScreen';
 import type {
   OfficerCollectionsStackParamList,
   OfficerLeaveStackParamList,
+  OfficerNotificationsStackParamList,
   OfficerProfileStackParamList,
   OfficerRequestsStackParamList,
 } from '@/types/navigation';
 import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 
 const RequestsStack = createNativeStackNavigator<OfficerRequestsStackParamList>();
 const CollectionsStack = createNativeStackNavigator<OfficerCollectionsStackParamList>();
 const ProfileStack = createNativeStackNavigator<OfficerProfileStackParamList>();
 const LeaveStack = createNativeStackNavigator<OfficerLeaveStackParamList>();
+const NotificationsStack = createNativeStackNavigator<OfficerNotificationsStackParamList>();
 
 const OFFICER_HEADER_PURPLE = '#5B4FE9';
 
@@ -56,7 +61,6 @@ export function OfficerRequestsStackNav() {
 
 export function OfficerCollectionsStackNav() {
   useOfficerCollectionsSync();
-  usePortalNotificationsSync();
 
   return (
     <CollectionsStack.Navigator
@@ -90,12 +94,19 @@ export function OfficerCollectionsStackNav() {
         component={OfficerCollectionHistoryScreen}
         options={{ title: 'Collection history' }}
       />
-      <CollectionsStack.Screen
-        name="PortalNotifications"
+    </CollectionsStack.Navigator>
+  );
+}
+
+export function OfficerNotificationsStackNav() {
+  return (
+    <NotificationsStack.Navigator screenOptions={stackScreenOptions}>
+      <NotificationsStack.Screen
+        name="NotificationsList"
         component={OfficerPortalNotificationsScreen}
         options={{ title: 'Notifications' }}
       />
-    </CollectionsStack.Navigator>
+    </NotificationsStack.Navigator>
   );
 }
 
@@ -129,6 +140,26 @@ export function OfficerProfileStackNav() {
         component={OfficerChangePasswordScreen}
         options={{ title: 'Change Password' }}
       />
+      <ProfileStack.Screen
+        name="EmploymentContract"
+        component={OfficerEmploymentContractScreen}
+        options={{ title: 'Employment Contract' }}
+      />
+      <ProfileStack.Screen
+        name="ContractPdfViewer"
+        component={ContractPdfViewerScreen}
+        options={{ headerShown: false }}
+      />
     </ProfileStack.Navigator>
   );
 }
+
+function DrawerHeaderRight() {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+      <OfficerNotificationBell />
+    </View>
+  );
+}
+
+export { DrawerHeaderRight };

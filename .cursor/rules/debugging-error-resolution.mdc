@@ -1,0 +1,98 @@
+---
+description: Triage, auto-resolve, and reporting rules for errors and debugging
+alwaysApply: true
+---
+
+# Debugging & Error Resolution
+
+## Scope
+
+Applies to ANY error surface: terminal/build output, Metro bundler logs,
+TypeScript compiler errors, ESLint errors, runtime errors in the app
+(crash logs, red screen, console errors), Supabase/RTK Query error
+responses, and CI/test failures.
+
+## Step 1 — Always triage before touching code
+
+For any error encountered, first state:
+
+1. Where it surfaced (terminal, app runtime, test, lint)
+2. The actual error message/stack trace — quote it, don't paraphrase it
+   away, since paraphrasing can hide the real signal
+3. Which file/line is the likely root cause (not just where the error
+   was thrown — a null reference often originates upstream of where it crashes)
+4. Confidence level: certain / likely / uncertain
+
+Never skip straight to a fix without this triage, even for "obvious" errors —
+the triage is what prevents masking symptoms.
+
+## Step 2 — Auto-resolve ONLY these categories, no confirmation needed
+
+- TypeScript type errors with a single unambiguous fix (missing import,
+  wrong prop type matching an existing interface, missing return type)
+- ESLint/Prettier formatting and style violations
+- Missing dependency causing a build failure — install it, but report
+  what was installed and why
+- A test failing due to a snapshot/assertion that's clearly stale
+  relative to an intentional code change made in the same session
+- Known, well-documented library errors with a single standard fix
+  (e.g. a Metro cache issue solved by clearing cache)
+
+After auto-resolving, report: what broke, what was changed, and why —
+every time, even for trivial fixes. Silent fixes are not allowed.
+
+## Step 3 — STOP and ask before resolving these
+
+- Any error inside auth, payment, or RLS/policy logic, regardless of
+  how simple the fix looks
+- Any error where the fix would change existing behavior visible to
+  a user (not just fixing a crash, but altering what the feature does)
+- Any error where two or more plausible root causes exist — present
+  the options and your read on which is more likely, then wait
+- Any error that recurs after a previous "auto-resolve" attempt in
+  this same session — a repeat means the first fix was wrong or
+  incomplete; do not reapply the same category of fix twice without
+  flagging that the approach isn't working
+- Any runtime crash on a screen handling money, customer data, or
+  role-gated access — these get a full root-cause writeup, not a patch
+
+## Step 4 — No symptom-only patches
+
+Banned patterns unless explicitly approved:
+
+- Wrapping a crashing call in try/catch purely to suppress the crash
+  without handling or surfacing the actual error
+- Adding a null/undefined guard (`if (x)`, `x?.y`) as the entire fix
+  without first explaining why x was null/undefined and confirming
+  that's expected, not a symptom of a deeper bug
+- Increasing a timeout to "fix" a race condition without investigating
+  the race itself
+- Catching and swallowing a Supabase/RTK Query error without logging
+  or surfacing it somewhere visible
+
+If a guard or try/catch IS the right fix (sometimes it is), say
+explicitly why this is the correct fix and not a mask.
+
+## Step 5 — Testing tied to the fix
+
+- Any auto-resolved error in payment, auth, or RLS-adjacent code requires
+  a regression test added in the same change, not deferred
+- For other auto-resolved errors, add a test only if the bug could
+  plausibly recur silently (e.g. an edge case in data formatting) —
+  skip tests for pure formatting/lint fixes
+- Never mark a fix "done" if `npm run build`, `tsc --noEmit`, and the
+  existing test suite haven't all been run and passed after the change
+
+## Step 6 — Recurring error tracking
+
+If the same root cause (not just the same error message) appears more
+than twice across a session, stop auto-resolving instances of it and
+instead propose a structural fix — e.g. a missing type, a missing
+shared validator, a missing RLS policy — rather than continuing to
+patch each occurrence individually.
+
+## Reporting format for every resolved error
+
+Always state, in order: what broke → root cause → what changed →
+what was verified (build/test/lint run) → anything still uncertain.
+Never report "fixed" without the verification step actually having run.

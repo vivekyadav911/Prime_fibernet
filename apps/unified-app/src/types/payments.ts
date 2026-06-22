@@ -94,7 +94,8 @@ export type NotificationCategory =
   | 'ticket'
   | 'outage'
   | 'promo'
-  | 'system';
+  | 'system'
+  | 'hr';
 
 export type PortalNotification = {
   id: string;

@@ -1,13 +1,23 @@
 ---
 description: Standard date/time picker UX and component usage
-alwaysApply: true
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
 ---
 
 # Date & Time Pickers
 
-## Required components
+- Always use shared pickers from `@/components/common/pickers`.
+  Never import a third-party picker or an OS-native picker directly into
+  a screen — if the shared picker doesn't support a needed variant
+  (e.g. range select), extend the shared component, don't bypass it.
+- UX: year scroll, month swipe, calendar grid, 24h time, bottom sheets.
+- Storage/transport format: dates as `YYYY-MM-DD`, times as `HH:mm` — always,
+  including in Supabase writes and RTK Query payloads. Never pass a `Date`
+  object across an API boundary; format it at the edge before sending.
+- Display format (what the user sees) is locale/screen-specific and may
+  differ from storage format — don't conflate the two.
 
-Always use shared pickers from `@/components/common/pickers`:
+## Required components
 
 - `DateField` — single date (`YYYY-MM-DD`)
 - `DateRangePicker` — from/to date range
@@ -21,7 +31,7 @@ Admin screens may import from `@/components/admin` (thin wrappers with `adminCol
 - Raw `TextInput` for date or time entry
 - OS-native date/time dialogs
 
-## Required UX
+## Required UX detail
 
 **Date pickers**
 
@@ -35,13 +45,6 @@ Admin screens may import from `@/components/admin` (thin wrappers with `adminCol
 - Hour: scrollable vertical list (`HourScrollPicker`, 00–23)
 - Minutes: left/right buttons **and** horizontal swipe (`MinuteNavigator`)
 - Modal bottom sheet with Cancel / Done
-
-## Props & values
-
-- Dates: ISO `YYYY-MM-DD` strings
-- Times: `HH:mm` (24-hour)
-- Support `minimumDate`, `maximumDate`, `minYear`, `maxYear` where relevant
-- Admin accent: `accentColor={adminColors.primary}`; customer/officer use default navy
 
 ## Extending
 

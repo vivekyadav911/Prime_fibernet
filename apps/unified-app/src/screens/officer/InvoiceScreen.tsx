@@ -35,7 +35,11 @@ export function InvoiceContent({ invoiceId }: { invoiceId: string }) {
       if (await Sharing.isAvailableAsync()) {
         const filename = `${FileSystem.cacheDirectory}invoice-${invoiceId}.pdf`;
         const result = await FileSystem.downloadAsync(url, filename);
-        await Sharing.shareAsync(result.uri);
+        await Sharing.shareAsync(result.uri, {
+          mimeType: 'application/pdf',
+          UTI: 'com.adobe.pdf',
+          dialogTitle: 'Invoice',
+        });
       } else {
         await Share.share({ url, message: 'Prime Fibernet invoice' });
       }

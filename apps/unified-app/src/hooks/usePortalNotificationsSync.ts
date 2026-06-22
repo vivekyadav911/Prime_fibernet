@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { portalNotificationsApi } from '@/services/api/portalNotificationsApi';
+import { employmentContractsApi } from '@/services/api/employmentContractsApi';
 import { getSupabase } from '@/services/supabase';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
@@ -32,6 +33,9 @@ function ensureChannel(
       },
       () => {
         dispatch(portalNotificationsApi.util.invalidateTags(['PortalNotifications']));
+        dispatch(
+          employmentContractsApi.util.invalidateTags([{ type: 'EmploymentContracts', id: 'SELF' }]),
+        );
       },
     )
     .subscribe();

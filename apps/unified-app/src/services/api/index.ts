@@ -29,6 +29,7 @@ import './portalNotificationsApi';
 import './customerPlansApi';
 import './customerTicketsApi';
 import './customerDashboardApi';
+import './employmentContractsApi';
 
 export * from './authApi';
 export * from './plansApi';
@@ -57,3 +58,4 @@ export * from './portalNotificationsApi';
 export * from './customerPlansApi';
 export * from './customerTicketsApi';
 export * from './customerDashboardApi';
+export * from './employmentContractsApi';

@@ -17,6 +17,13 @@ config.resolver.nodeModulesPaths = [
   path.join(monorepoRoot, 'node_modules'),
 ];
 config.resolver.disableHierarchicalLookup = true;
+config.resolver.extraNodeModules = {
+  ...(config.resolver.extraNodeModules ?? {}),
+  'react-native-signature-canvas': path.join(
+    monorepoRoot,
+    'node_modules/react-native-signature-canvas',
+  ),
+};
 config.resolver.alias = {
   '@': path.join(appRoot, 'src'),
 };

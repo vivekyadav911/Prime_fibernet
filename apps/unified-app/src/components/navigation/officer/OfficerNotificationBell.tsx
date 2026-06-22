@@ -1,20 +1,23 @@
+import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { DrawerActions, useNavigation } from '@react-navigation/native';
 
 import { useGetPortalUnreadCountQuery } from '@/services/api/portalNotificationsApi';
-import type { OfficerCollectionsStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
 export function OfficerNotificationBell() {
-  const navigation = useNavigation<NativeStackNavigationProp<OfficerCollectionsStackParamList>>();
+  const navigation = useNavigation();
   const { data: unread = 0 } = useGetPortalUnreadCountQuery();
+
+  const openNotifications = useCallback(() => {
+    navigation.dispatch(DrawerActions.jumpTo('NotificationsStack'));
+  }, [navigation]);
 
   return (
     <Pressable
       style={styles.wrap}
-      onPress={() => navigation.navigate('PortalNotifications')}
+      onPress={openNotifications}
       accessibilityLabel="Notifications"
     >
       <Text style={styles.icon}>🔔</Text>
@@ -28,7 +31,7 @@ export function OfficerNotificationBell() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginRight: spacing.md, padding: spacing.xs },
+  wrap: { marginRight: spacing.sm, padding: spacing.xs },
   icon: { fontSize: 20, color: colors.white },
   badge: {
     position: 'absolute',

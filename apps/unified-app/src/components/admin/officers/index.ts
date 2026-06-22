@@ -5,5 +5,6 @@ export { PermissionPills } from './PermissionPills';
 export { OfficerActionMenu, type OfficerMenuAction } from './OfficerActionMenu';
 export { DocumentRow, openDocumentUrl } from './DocumentRow';
 export { DocumentViewerModal } from './DocumentViewerModal';
+export { DocumentLabelModal } from './DocumentLabelModal';
 export { OfficerCredentialsCard } from './OfficerCredentialsCard';
 export { SalaryTotalDisplay } from './SalaryTotalDisplay';

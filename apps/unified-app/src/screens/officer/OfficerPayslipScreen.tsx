@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
-import { Alert, FlatList, Linking, Platform, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 import type { Payslip } from '@prime/types';
 import { Button } from '@prime/ui';
 
@@ -10,6 +9,7 @@ import { useAppSelector } from '@/store/hooks';
 import { useGetPayslipsQuery } from '@/store/api/endpoints';
 import { formatINR } from '@/utils/currencyFormat';
 import { queryErrorMessage } from '@/utils/queryError';
+import { shareLocalPdf } from '@/utils/storagePdf';
 import { colors } from '@/theme/colors';
 import { radius, shadow, spacing } from '@/theme/spacing';
 
@@ -20,15 +20,15 @@ async function downloadPayslipPdf(payslipId: string, pdfUrl: string | null) {
   }
   const localUri = `${FileSystem.cacheDirectory}payslip_${payslipId}.pdf`;
   const result = await FileSystem.downloadAsync(pdfUrl, localUri);
-  if (Platform.OS === 'web') {
-    await Linking.openURL(result.uri);
-    return;
+  if (result.status !== 200) {
+    throw new Error(`Download failed with status ${result.status}`);
   }
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(result.uri, { mimeType: 'application/pdf' });
-  } else {
-    await Linking.openURL(result.uri);
-  }
+  await shareLocalPdf({
+    localUri: result.uri,
+    title: 'Payslip',
+    fileName: `payslip_${payslipId}.pdf`,
+    webDownloadUrl: pdfUrl,
+  });
 }
 
 function PayslipCard({

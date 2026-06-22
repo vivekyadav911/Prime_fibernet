@@ -38,6 +38,10 @@ import { NotificationDetailScreen } from '@/screens/admin/notifications/Notifica
 import { AddOfficerScreen } from '@/screens/admin/officers/AddOfficerScreen';
 import { EditOfficerScreen } from '@/screens/admin/officers/EditOfficerScreen';
 import { OfficerDetailScreen } from '@/screens/admin/officers/OfficerDetailScreen';
+import { EmploymentContractFormScreen } from '@/screens/admin/officers/EmploymentContractFormScreen';
+import { EmploymentContractSignScreen } from '@/screens/admin/officers/EmploymentContractSignScreen';
+import { EmploymentContractVersionHistoryScreen } from '@/screens/admin/officers/EmploymentContractVersionHistoryScreen';
+import { ContractPdfViewerScreen } from '@/screens/common/ContractPdfViewerScreen';
 import { OfficerListScreen } from '@/screens/admin/officers/OfficerListScreen';
 import { PlanFormScreenV2 } from '@/screens/admin/plans/PlanFormScreenV2';
 import { PlansScreen } from '@/screens/admin/plans/PlansScreen';
@@ -226,6 +230,26 @@ export function AdminOfficersStackNav() {
       <OfficersStack.Screen name="OfficerList" component={OfficerListScreen} options={{ title: 'Officers' }} />
       <OfficersStack.Screen name="OfficerDetail" component={OfficerDetailScreen} options={{ headerShown: false }} />
       <OfficersStack.Screen name="OfficerEdit" component={EditOfficerScreen} options={{ title: 'Edit officer' }} />
+      <OfficersStack.Screen
+        name="EmploymentContractForm"
+        component={EmploymentContractFormScreen}
+        options={{ title: 'Employment contract' }}
+      />
+      <OfficersStack.Screen
+        name="EmploymentContractVersionHistory"
+        component={EmploymentContractVersionHistoryScreen}
+        options={{ title: 'Version history' }}
+      />
+      <OfficersStack.Screen
+        name="ContractPdfViewer"
+        component={ContractPdfViewerScreen}
+        options={{ headerShown: false }}
+      />
+      <OfficersStack.Screen
+        name="EmploymentContractSign"
+        component={EmploymentContractSignScreen}
+        options={{ title: 'Sign contract' }}
+      />
       <OfficersStack.Screen
         name="AddOfficer"
         component={AddOfficerScreen}

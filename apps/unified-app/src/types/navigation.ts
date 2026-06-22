@@ -107,9 +107,15 @@ export type OfficerLeaveStackParamList = {
   ApplyLeave: undefined;
 };
 
+export type OfficerNotificationsStackParamList = {
+  NotificationsList: undefined;
+};
+
 export type OfficerProfileStackParamList = {
   ProfileHome: undefined;
   ChangePassword: undefined;
+  EmploymentContract: { highlightSign?: boolean } | undefined;
+  ContractPdfViewer: { storagePath: string; title?: string; bucket?: string };
 };
 
 export type OfficerRequestsStackParamList = {
@@ -129,7 +135,6 @@ export type OfficerCollectionsStackParamList = {
     planName?: string;
   };
   CollectionHistory: undefined;
-  PortalNotifications: undefined;
 };
 
 /**
@@ -185,7 +190,8 @@ export type OfficerDrawerParamList = {
   Privacy: undefined;
   Support: undefined;
   Profile: undefined;
-  ProfileStack: undefined;
+  ProfileStack: NavigatorScreenParams<OfficerProfileStackParamList> | undefined;
+  NotificationsStack: NavigatorScreenParams<OfficerNotificationsStackParamList> | undefined;
   ChangePassword: undefined;
   /** Flutter: gates app until GPS enabled */
   LocationGate: undefined;
@@ -215,8 +221,12 @@ export type AdminUsersStackParamList = {
 export type AdminOfficersStackParamList = {
   OfficerList: undefined;
   OfficerDetail: { officerId: string };
-  OfficerEdit: { officerId: string; section?: 'personal' | 'contact' | 'role' | 'contract' };
+  OfficerEdit: { officerId: string; section?: 'personal' | 'contact' | 'role' };
   AddOfficer: undefined;
+  EmploymentContractForm: { officerId: string; contractId?: string };
+  EmploymentContractVersionHistory: { contractId: string; officerId: string };
+  ContractPdfViewer: { storagePath: string; title?: string; bucket?: string };
+  EmploymentContractSign: { contractId: string; officerId: string; role: 'employer' };
 };
 
 export type AdminAttendanceStackParamList = {

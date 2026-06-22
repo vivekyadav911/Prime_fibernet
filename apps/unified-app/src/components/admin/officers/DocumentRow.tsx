@@ -11,9 +11,19 @@ type DocumentRowProps = {
   onDownload?: () => void;
   onReplace?: () => void;
   onDelete?: () => void;
+  loadingView?: boolean;
+  loadingDownload?: boolean;
 };
 
-export function DocumentRow({ document, onView, onDownload, onReplace, onDelete }: DocumentRowProps) {
+export function DocumentRow({
+  document,
+  onView,
+  onDownload,
+  onReplace,
+  onDelete,
+  loadingView,
+  loadingDownload,
+}: DocumentRowProps) {
   const uploaded = document.status === 'uploaded';
 
   return (
@@ -31,13 +41,13 @@ export function DocumentRow({ document, onView, onDownload, onReplace, onDelete 
       </View>
       <View style={styles.actions}>
         {uploaded && onView ? (
-          <Pressable onPress={onView} style={styles.actionBtn}>
-            <Text style={styles.viewIcon}>👁</Text>
+          <Pressable onPress={onView} style={styles.actionBtn} disabled={loadingView}>
+            <Text style={styles.viewIcon}>{loadingView ? '…' : '👁'}</Text>
           </Pressable>
         ) : null}
         {uploaded && onDownload ? (
-          <Pressable onPress={onDownload} style={styles.actionBtn}>
-            <Text style={styles.downloadIcon}>↓</Text>
+          <Pressable onPress={onDownload} style={styles.actionBtn} disabled={loadingDownload}>
+            <Text style={styles.downloadIcon}>{loadingDownload ? '…' : '↓'}</Text>
           </Pressable>
         ) : null}
         {onReplace ? (

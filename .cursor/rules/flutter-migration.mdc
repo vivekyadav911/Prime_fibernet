@@ -4,15 +4,30 @@ globs: apps/unified-app/**/*.{ts,tsx}
 alwaysApply: false
 ---
 
-# Flutter Migration Rules
+# Flutter → React Native Migration
 
-- Read the Flutter widget file first, understand intent, then write idiomatic RN
-- Never do a direct line-by-line translation from Dart to TypeScript
-- StatefulWidget + setState → useState hook
-- Provider/Riverpod → Redux slice + useAppSelector
-- Bloc/Cubit → Redux Toolkit createSlice
-- FutureBuilder → RTK Query useXxxQuery hook
-- StreamBuilder → Supabase Realtime + useEffect subscription
-- ListView.builder → FlatList
-- Column/Row → View with flexDirection
-- Navigator.push → navigation.navigate with typed params
+Read Flutter source for intent and behavior, not structure. Write
+idiomatic RN — never translate widget trees line-by-line.
+
+## Mappings
+
+- StatefulWidget + setState → `useState` hook
+- Provider/Riverpod → Redux slice + `useAppSelector`
+- Bloc/Cubit → Redux Toolkit `createSlice`
+- FutureBuilder → RTK Query `useXxxQuery` hook
+- StreamBuilder → RTK Query subscription / Supabase Realtime listener
+- ListView.builder → `FlatList`
+- Column/Row → `View` with `flexDirection`
+- Navigator.push → React Navigation `navigation.navigate` with typed params
+- Flutter Forms + validators → React Hook Form + Zod schema
+
+## Guardrail
+
+After migrating a screen, explicitly diff the resulting behavior against
+the Flutter original for: loading states, error states, and edge cases
+(empty list, network failure, permission denial). Flutter code often
+handles these implicitly via widget defaults that RN does not replicate
+automatically — call out anywhere the RN version is missing a case the
+Flutter version handled.
+
+Do not assume parity just because the migration "compiles and renders."

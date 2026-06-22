@@ -86,6 +86,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
                 },
               },
               LeaveStack: { screens: { LeaveList: 'leave' } },
+              NotificationsStack: { screens: { NotificationsList: 'notifications' } },
               ProfileStack: { screens: { ProfileHome: 'profile' } },
             },
           },

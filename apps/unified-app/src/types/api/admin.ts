@@ -243,7 +243,12 @@ export type CreateAdminOfficerInput = {
   accountHolderName?: string;
   accountNumber?: string;
   ifscCode?: string;
-  profilePhotoUrl: string;
+  profilePhotoStoragePath: string;
+  photoIdFrontStoragePath?: string;
+  photoIdBackStoragePath?: string;
+  resumeStoragePath?: string;
+  /** @deprecated Legacy URL fields — prefer *StoragePath */
+  profilePhotoUrl?: string;
   photoIdFrontUrl?: string;
   photoIdBackUrl?: string;
   resumeUrl?: string;
