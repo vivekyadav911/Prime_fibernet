@@ -52,7 +52,7 @@ export function OtpVerificationScreen({ route }: Props) {
   };
 
   return (
-    <Screen>
+    <Screen safeAreaTop>
       <Text style={styles.title}>Verify OTP</Text>
       <Text style={styles.subtitle}>Code sent to {identifier}</Text>
       <Controller

@@ -40,7 +40,7 @@ export function LocationGateScreen({ navigation }: Props) {
   }
 
   return (
-    <Screen style={styles.screen}>
+    <Screen safeAreaTop style={styles.screen}>
       <View style={styles.card}>
         <Text style={styles.icon}>📍</Text>
         <Text style={styles.title}>Location access required</Text>

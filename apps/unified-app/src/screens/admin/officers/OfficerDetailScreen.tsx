@@ -145,14 +145,14 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
     [officerId, uploadDoc],
   );
 
-  if (isLoading) return <Screen><SkeletonLoader rows={8} showAvatar /></Screen>;
-  if (isError || !summary) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <Screen safeAreaTop><SkeletonLoader rows={8} showAvatar /></Screen>;
+  if (isError || !summary) return <Screen safeAreaTop><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
 
   const p = profile;
 
   return (
     <RoleGuard requiredPermission="officers.view">
-      <Screen padded={false} style={styles.screen}>
+      <Screen padded={false} safeAreaTop style={styles.screen}>
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
             <Text style={styles.back}>←</Text>

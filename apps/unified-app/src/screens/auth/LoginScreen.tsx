@@ -62,7 +62,7 @@ export function LoginScreen() {
   };
 
   return (
-    <Screen>
+    <Screen safeAreaTop>
       <LoadingOverlay visible={loading || !!devLoading} message="Signing in…" />
       <Text style={styles.title}>Prime Fibernet</Text>
       <Controller

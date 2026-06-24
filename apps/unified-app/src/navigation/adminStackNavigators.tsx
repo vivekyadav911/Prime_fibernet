@@ -247,7 +247,7 @@ export function AdminAttendanceStackNav() {
       screenOptions={stackScreenOptions}
       initialRouteName="LiveAttendance"
     >
-      <AttendanceStack.Screen name="LiveAttendance" component={LiveAttendanceScreen} options={{ title: 'Live attendance' }} />
+      <AttendanceStack.Screen name="LiveAttendance" component={LiveAttendanceScreen} options={{ title: 'Live Attendance' }} />
       <AttendanceStack.Screen name="Attendance" component={AttendanceScreen} options={{ title: 'Attendance hub' }} />
       <AttendanceStack.Screen name="GeofenceManagement" component={GeofenceManagementScreen} options={{ title: 'Geofences' }} />
       <AttendanceStack.Screen name="CreateGeofence" component={CreateGeofenceScreen} options={{ title: 'Geofence', presentation: 'modal' }} />

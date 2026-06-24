@@ -25,7 +25,7 @@ export function ForgotPasswordScreen() {
   };
 
   return (
-    <Screen>
+    <Screen safeAreaTop>
       <Text style={styles.title}>Reset password</Text>
       <TextInput
         style={styles.input}

@@ -1,6 +1,10 @@
 export { FreeMapView } from './FreeMapView';
 export type { FreeMapViewProps } from './FreeMapView';
 export { OfficerMarker } from './OfficerMarker';
+export { LiveOfficerMarker } from './LiveOfficerMarker';
+export { SavedPlaceMarker } from './SavedPlaceMarker';
+export { MapSearchBar } from './MapSearchBar';
+export type { MapSearchResult, MapSearchResultKind } from './MapSearchBar';
 export { TrailPolyline } from './TrailPolyline';
 export { DwellCircle } from './DwellCircle';
 export { GeofenceOverlay } from './GeofenceOverlay';

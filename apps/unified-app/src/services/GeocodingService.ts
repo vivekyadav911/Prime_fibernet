@@ -21,11 +21,11 @@ function buildAddressQuery(parts: { address?: string; city?: string; state?: str
   return [parts.address, parts.city, parts.state].filter(Boolean).join(', ').trim();
 }
 
-async function geocodeWithNominatim(query: string): Promise<GeocodeResult> {
+async function geocodeWithNominatim(query: string, limit = 1): Promise<GeocodeResult[]> {
   const url = new URL(`${NOMINATIM_BASE}/search`);
   url.searchParams.set('q', query);
   url.searchParams.set('format', 'json');
-  url.searchParams.set('limit', '1');
+  url.searchParams.set('limit', String(limit));
   url.searchParams.set('addressdetails', '1');
 
   const response = await fetch(url.toString(), {
@@ -50,32 +50,25 @@ async function geocodeWithNominatim(query: string): Promise<GeocodeResult> {
   }>;
 
   if (!data.length) {
-    throw new Error('Address not found. Try a more specific address or set coordinates manually.');
+    return [];
   }
 
-  const top = data[0];
-  if (!top) {
-    throw new Error('Address not found. Try a more specific address or set coordinates manually.');
-  }
-  const latitude = top.lat != null ? Number(top.lat) : NaN;
-  const longitude = top.lon != null ? Number(top.lon) : NaN;
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    throw new Error('Address not found. Try a more specific address or set coordinates manually.');
-  }
+  return data.reduce<GeocodeResult[]>((acc, top) => {
+    const latitude = top.lat != null ? Number(top.lat) : NaN;
+    const longitude = top.lon != null ? Number(top.lon) : NaN;
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return acc;
 
-  const addr = top.address;
-  const city = addr?.city ?? addr?.town ?? addr?.village;
-  const state = addr?.state;
-  const street = addr?.road;
-
-  return {
-    latitude,
-    longitude,
-    formattedAddress: top.display_name,
-    address: street,
-    city,
-    state,
-  };
+    const addr = top.address;
+    acc.push({
+      latitude,
+      longitude,
+      formattedAddress: top.display_name,
+      address: addr?.road,
+      city: addr?.city ?? addr?.town ?? addr?.village,
+      state: addr?.state,
+    });
+    return acc;
+  }, []);
 }
 
 async function reverseGeocodeWithNominatim(
@@ -127,7 +120,21 @@ export async function geocodeAddress(parts: {
     throw new Error('Enter an address before searching on the map.');
   }
 
-  return geocodeWithNominatim(query);
+  const results = await geocodeWithNominatim(query, 1);
+  if (!results.length) {
+    throw new Error('Address not found. Try a more specific address or set coordinates manually.');
+  }
+  return results[0]!;
+}
+
+/** Return multiple address suggestions for map search (OpenStreetMap Nominatim). */
+export async function searchAddressSuggestions(
+  query: string,
+  limit = 5,
+): Promise<GeocodeResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+  return geocodeWithNominatim(trimmed, limit);
 }
 
 /** Reverse geocode coordinates using free OpenStreetMap Nominatim (no API key). */

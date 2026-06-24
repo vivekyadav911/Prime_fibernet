@@ -51,7 +51,7 @@ export function PaymentSuccessScreen({ navigation, route }: Props) {
   });
 
   return (
-    <Screen style={styles.screen}>
+    <Screen safeAreaTop style={styles.screen}>
       <Animated.View style={[styles.checkWrap, { transform: [{ scale }] }]}>
         <Text style={styles.check}>✓</Text>
       </Animated.View>
