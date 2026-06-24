@@ -46,7 +46,8 @@ export type OfficerDocumentType =
   | 'PHOTO_ID_FRONT'
   | 'PHOTO_ID_BACK'
   | 'PROFILE_PHOTO'
-  | 'RESUME';
+  | 'RESUME'
+  | 'ADDITIONAL';
 
 export type OfficerDocument = {
   id: string;
@@ -54,7 +55,11 @@ export type OfficerDocument = {
   label: string;
   required: boolean;
   status: 'uploaded' | 'not_uploaded';
+  /** @deprecated Use storagePath — kept for legacy rows */
   url?: string;
+  storagePath?: string;
+  displayName?: string;
+  isAdditional?: boolean;
   mimeType?: string | null;
   uploadedAt?: string;
 };

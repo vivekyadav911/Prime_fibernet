@@ -1,33 +1,59 @@
 ---
-description: Prime Fibernet project context, stack, and folder structure
+description: Prime Fibernet project context, roles, architecture, and definition of done
 alwaysApply: true
 ---
 
 # Prime Fibernet — Project Context
 
-Migrating from Flutter to React Native (Expo SDK 50, TypeScript 5).
-Single unified app for 3 roles: Customer, Officer, Admin.
-Backend: Supabase (PostgreSQL + Auth + Realtime + Edge Functions).
-State: Redux Toolkit + RTK Query.
-Navigation: React Navigation 6 (tab for customer, drawer for officer/admin).
+## Migration
 
-## Stack
+Flutter → React Native (Expo SDK 50, TypeScript 5, strict mode).
+Read the Flutter source for *intent*, not structure — see `flutter-migration.mdc`
+for translation patterns. Never port Flutter widget trees 1:1.
 
-- React Native 0.73+ / Expo SDK 50+
-- TypeScript (strict mode) — never use `any`
-- Redux Toolkit + RTK Query for all state and API calls
-- Zod for all input validation (client and server)
-- Nativewind (TailwindCSS) for styling
-- Supabase JS SDK 2.38+
-- React Navigation 6.x
-- React Hook Form 7.48+
+## Architecture
 
-## Folder structure
+Single Expo app serving three roles from one codebase: Customer, Officer, Admin.
+
+- Role is resolved once at login from `profiles.role` and drives navigation,
+  not just UI visibility — a screen a role shouldn't see should not be
+  reachable, not just hidden behind a conditional render.
+- Never assume which role is active. Check `useAuth().role` explicitly in
+  any new screen/component that touches role-specific data.
+
+## Backend & State
+
+- Supabase: Postgres + Auth + Realtime + Storage + Edge Functions
+- All schema changes go through Supabase MCP — never hand-edit prod tables
+  outside of a migration file checked into the repo
+- State: Redux Toolkit + RTK Query for ALL server state. No component-level
+  useState holding server data, no parallel fetch logic outside RTK Query slices
+- Local/UI-only state (modals, sheet visibility, form drafts) can use
+  component state or a dedicated UI slice — never mix with API slices
+
+## Stack versions (verify before using any API)
+
+RN 0.73+, TypeScript 5 (strict), Zod, NativeWind, React Navigation 6,
+React Hook Form. If unsure whether a stack API exists at this version,
+check node_modules or the lockfile before using it — do not assume from
+training data. See `stack-docs.mdc`.
+
+## Folder layout (do not deviate without asking)
 
 - Screens: `apps/unified-app/src/screens/<role>/<feature>/`
-- Components: `apps/unified-app/src/components/`
-- API slices: `apps/unified-app/src/services/api/`
-- Redux slices: `apps/unified-app/src/store/slices/`
+- Components: `apps/unified-app/src/components/{shared,admin,officer,customer}/`
+- Store: `apps/unified-app/src/store/{slices,api}/`
 - Types: `apps/unified-app/src/types/`
 - Hooks: `apps/unified-app/src/hooks/`
 - Utils: `apps/unified-app/src/utils/`
+
+## Definition of done for any feature in this codebase
+
+A feature is not complete until it has:
+
+1. Loading, error, and empty states (no exceptions — see `unified-app-standards.mdc`)
+2. RLS policy reviewed/written if it touches a new table or new access pattern
+3. Role-gated correctly (see Architecture above)
+4. No console.log left in — use the existing logger if one exists, otherwise ask
+
+If any of these is skipped, say so explicitly rather than presenting it as done.

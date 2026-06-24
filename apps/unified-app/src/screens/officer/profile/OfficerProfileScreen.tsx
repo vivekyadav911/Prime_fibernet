@@ -7,7 +7,7 @@ import { Button } from '@prime/ui';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ScreenWrapper } from '@/components/common';
-import { useOfficerProfile } from '@/hooks/officer';
+import { useOfficerProfile, usePendingContractSignature } from '@/hooks/officer';
 import { signOut } from '@/hooks/useAuth';
 import { useOfficerId } from '@/hooks/useOfficerId';
 import { getSupabase } from '@/services/supabase';
@@ -22,6 +22,7 @@ export function OfficerProfileScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const { profile, refetch } = useOfficerProfile();
   const officerId = useOfficerId();
+  const { needsSignature, navigateToSign } = usePendingContractSignature();
   const [displayName, setDisplayName] = useState(profile?.name ?? '');
   const [editingName, setEditingName] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -117,6 +118,22 @@ export function OfficerProfileScreen() {
 
       <Pressable
         style={styles.linkRow}
+        onPress={() =>
+          needsSignature ? navigateToSign() : navigation.navigate('EmploymentContract')
+        }
+      >
+        <Ionicons name="document-text-outline" size={20} color={colors.primaryNavy} />
+        <Text style={styles.linkText}>Employment Contract</Text>
+        {needsSignature ? (
+          <View style={styles.signBadge}>
+            <Text style={styles.signBadgeText}>Sign required</Text>
+          </View>
+        ) : null}
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+      </Pressable>
+
+      <Pressable
+        style={styles.linkRow}
         onPress={() => navigation.navigate('ChangePassword')}
       >
         <Ionicons name="lock-closed-outline" size={20} color={colors.primaryNavy} />
@@ -206,6 +223,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   linkText: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.primaryNavy },
+  signBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryNavy,
+    marginRight: spacing.xs,
+  },
+  signBadgeText: { fontSize: 10, fontWeight: '700', color: colors.white, textTransform: 'uppercase' },
   appSection: { marginBottom: spacing.lg },
   version: { color: colors.textSecondary },
 });

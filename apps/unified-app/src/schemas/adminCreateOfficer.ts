@@ -26,7 +26,7 @@ export const AdminCreateOfficerStep1Schema = z.object({
   gender: z.enum(['Male', 'Female', 'Other'], { required_error: 'Gender is required' }),
   bloodGroup: z.string().optional(),
   maritalStatus: z.enum(['Single', 'Married', 'Divorced']).optional(),
-  profilePhotoUrl: z.string().optional(),
+  profilePhotoStoragePath: z.string().optional(),
 });
 
 /** Step 2 — Contact & Bank */
@@ -98,10 +98,10 @@ export const AdminCreateOfficerStep3Schema = AdminCreateOfficerStep3BaseSchema.s
 
 /** Step 4 — Documents */
 export const AdminCreateOfficerStep4Schema = z.object({
-  photoIdFrontUrl: z.string().min(1, 'Photo ID front is required'),
-  photoIdBackUrl: z.string().min(1, 'Photo ID back is required'),
-  profilePhotoUrl: z.string().min(1, 'Profile photo is required'),
-  resumeUrl: z.string().optional(),
+  photoIdFrontStoragePath: z.string().min(1, 'Photo ID front is required'),
+  photoIdBackStoragePath: z.string().min(1, 'Photo ID back is required'),
+  profilePhotoStoragePath: z.string().min(1, 'Profile photo is required'),
+  resumeStoragePath: z.string().optional(),
 });
 
 const AdminCreateOfficerBaseSchema = AdminCreateOfficerStep1Schema.merge(

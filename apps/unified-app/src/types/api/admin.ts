@@ -32,6 +32,7 @@ export type AdminUserDetail = {
   phone: string | null;
   address: string | null;
   city: string | null;
+  accountNumber: string | null;
   joinDate: string;
   isBlocked: boolean;
   assignedOfficerId: string | null;
@@ -51,7 +52,7 @@ export type AdminUserListItem = {
   phone: string | null;
   city: string | null;
   planName: string;
-  status: 'active' | 'blocked' | 'expired';
+  status: 'active' | 'inactive';
   isBlocked: boolean;
 };
 
@@ -60,8 +61,7 @@ export type AdminUsersListParams = {
   limit?: number;
   search?: string;
   city?: string;
-  status?: 'all' | 'active' | 'blocked' | 'expired';
-  blockFilter?: 'all' | 'blocked' | 'unblocked';
+  status?: 'all' | 'active' | 'inactive';
 };
 
 export type AdminUsersListResponse = {
@@ -166,7 +166,7 @@ export type CreateAdminUserInput = {
   phone: string;
   username: string;
   planId: string;
-  status: 'active' | 'blocked';
+  status: 'active' | 'inactive';
   address: string;
   city: string;
   district: string;
@@ -244,7 +244,12 @@ export type CreateAdminOfficerInput = {
   accountHolderName?: string;
   accountNumber?: string;
   ifscCode?: string;
-  profilePhotoUrl: string;
+  profilePhotoStoragePath: string;
+  photoIdFrontStoragePath?: string;
+  photoIdBackStoragePath?: string;
+  resumeStoragePath?: string;
+  /** @deprecated Legacy URL fields — prefer *StoragePath */
+  profilePhotoUrl?: string;
   photoIdFrontUrl?: string;
   photoIdBackUrl?: string;
   resumeUrl?: string;

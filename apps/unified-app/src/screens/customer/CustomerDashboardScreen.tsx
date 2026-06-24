@@ -1,1 +1,1 @@
-export { CustomerDashboardScreen, DashboardScreen } from './dashboard/DashboardScreen';
+export { DashboardScreen as CustomerDashboardScreen } from './dashboard/DashboardScreen';

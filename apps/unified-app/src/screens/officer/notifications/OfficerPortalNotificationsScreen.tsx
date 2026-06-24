@@ -1,25 +1,76 @@
-import { useCallback } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Screen } from '@prime/ui';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { usePortalNotifications } from '@/hooks/usePortalNotifications';
+import type { NotificationCategory, PortalNotification } from '@/types/payments';
+import type { OfficerDrawerParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 
+type FilterId = 'all' | NotificationCategory;
+
+const FILTERS: Array<{ id: FilterId; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'hr', label: 'HR' },
+  { id: 'payment', label: 'Payments' },
+  { id: 'system', label: 'System' },
+];
+
+const CATEGORY_LABELS: Record<NotificationCategory, string> = {
+  payment: 'Payment',
+  plan: 'Plan',
+  ticket: 'Ticket',
+  outage: 'Outage',
+  promo: 'Promo',
+  system: 'System',
+  hr: 'HR',
+};
+
+function isSignContractNotification(item: PortalNotification): boolean {
+  const action = item.data?.action;
+  return action === 'sign_contract' || item.category === 'hr';
+}
+
+function isCollectionNotification(item: PortalNotification): boolean {
+  return item.category === 'payment' || item.type === 'assignment' || item.type === 'claim';
+}
+
 export function OfficerPortalNotificationsScreen() {
+  const navigation = useNavigation<DrawerNavigationProp<OfficerDrawerParamList>>();
+  const [filter, setFilter] = useState<FilterId>('all');
   const { notifications, isLoading, isError, error, refetch, markRead, markAllRead } =
     usePortalNotifications();
 
+  const filtered = useMemo(() => {
+    if (filter === 'all') return notifications;
+    return notifications.filter((n) => n.category === filter);
+  }, [filter, notifications]);
+
   const onPress = useCallback(
-    async (id: string, isRead: boolean) => {
-      if (!isRead) {
-        await markRead(id);
+    async (item: PortalNotification) => {
+      if (!item.is_read) {
+        await markRead(item.id);
+      }
+
+      if (isSignContractNotification(item)) {
+        navigation.navigate('ProfileStack', {
+          screen: 'EmploymentContract',
+          params: { highlightSign: true },
+        });
+        return;
+      }
+
+      if (isCollectionNotification(item)) {
+        navigation.navigate('CollectionsStack', { screen: 'CollectionsList' });
       }
     },
-    [markRead],
+    [markRead, navigation],
   );
 
   if (isLoading) {
@@ -41,23 +92,52 @@ export function OfficerPortalNotificationsScreen() {
   return (
     <Screen padded={false}>
       <View style={styles.toolbar}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {FILTERS.map((f) => (
+            <Pressable
+              key={f.id}
+              onPress={() => setFilter(f.id)}
+              style={[styles.chip, filter === f.id && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, filter === f.id && styles.chipTextActive]}>
+                {f.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
         <Pressable style={styles.markAll} onPress={() => void markAllRead()}>
           <Text style={styles.markAllText}>Mark all read</Text>
         </Pressable>
       </View>
       <FlatList
-        data={notifications}
+        data={filtered}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <EmptyState title="No notifications" subtitle="Assignment and payment alerts appear here." />
+          <EmptyState
+            title="No notifications"
+            subtitle="Employment contract signatures, collection assignments, and payment alerts appear here."
+          />
         }
         renderItem={({ item }) => (
           <Pressable
             style={[styles.card, !item.is_read && styles.cardUnread]}
-            onPress={() => void onPress(item.id, item.is_read)}
+            onPress={() => void onPress(item)}
           >
-            <Text style={styles.title}>{item.title}</Text>
+            <View style={styles.cardHeader}>
+              <Text style={styles.title}>{item.title}</Text>
+              {item.category ? (
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryText}>
+                    {CATEGORY_LABELS[item.category] ?? item.category}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
             {item.body ? <Text style={styles.body}>{item.body}</Text> : null}
             <Text style={styles.time}>{new Date(item.created_at).toLocaleString()}</Text>
           </Pressable>
@@ -69,13 +149,31 @@ export function OfficerPortalNotificationsScreen() {
 
 const styles = StyleSheet.create({
   toolbar: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    alignItems: 'flex-end',
     borderBottomWidth: 1,
     borderBottomColor: colors.borderDefault,
+    paddingBottom: spacing.sm,
   },
-  markAll: { padding: spacing.xs },
+  filterRow: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    gap: spacing.xs,
+    flexDirection: 'row',
+  },
+  chip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    backgroundColor: colors.surfaceWhite,
+  },
+  chipActive: {
+    borderColor: adminColors.primary,
+    backgroundColor: adminColors.primaryTint,
+  },
+  chipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  chipTextActive: { color: adminColors.primary },
+  markAll: { alignSelf: 'flex-end', paddingHorizontal: spacing.md, paddingTop: spacing.xs },
   markAllText: { color: adminColors.primary, fontWeight: '600' },
   list: { padding: spacing.md },
   card: {
@@ -88,7 +186,22 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   cardUnread: { borderColor: adminColors.primary, backgroundColor: colors.background },
-  title: { fontWeight: '700', color: colors.textPrimary },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  title: { flex: 1, fontWeight: '700', color: colors.textPrimary },
+  categoryBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.sm,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+  },
+  categoryText: { fontSize: 10, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase' },
   body: { color: colors.textSecondary },
   time: { fontSize: 12, color: colors.textSecondary },
 });

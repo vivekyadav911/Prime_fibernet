@@ -1,5 +1,6 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
+import type { EmploymentContract } from '@/types/contract';
 import type { TimeRange } from '@/types/map';
 import type { PaymentMethod } from '@/types/payments';
 
@@ -37,9 +38,7 @@ export type CustomerTabParamList = {
   Plans: undefined;
   /** Flutter tab 2: `PaymentsScreen` (label "Pay") */
   Payments: undefined;
-  /** Flutter tab 3: `RequestsScreen` */
-  Requests: undefined;
-  /** Flutter tab 4: support chatbot */
+  /** Support hub (tickets, chat, FAQs) */
   Support: undefined;
   /** Flutter tab 5 / `MoreScreen` — unified app uses Profile */
   Profile: undefined;
@@ -98,6 +97,10 @@ export type CustomerStackParamList = {
   CustomerFaqList: undefined;
   CustomerFaqDetail: { faqId: string };
   CustomerSupportHub: undefined;
+  CustomerTicketList: undefined;
+  CustomerTicketDetail: { ticketId: string };
+  CreateCustomerTicket: undefined;
+  PlanChangeRequest: { planId: string };
 };
 
 export type OfficerLeaveStackParamList = {
@@ -105,9 +108,30 @@ export type OfficerLeaveStackParamList = {
   ApplyLeave: undefined;
 };
 
+export type OfficerNotificationsStackParamList = {
+  NotificationsList: undefined;
+};
+
+export type OfficerPayslipStackParamList = {
+  PayslipList: undefined;
+  PayslipDetail: { payslipId: string };
+  PayslipPdfViewer: {
+    storagePath: string;
+    title?: string;
+    fileName?: string;
+  };
+};
+
 export type OfficerProfileStackParamList = {
   ProfileHome: undefined;
   ChangePassword: undefined;
+  EmploymentContract: { highlightSign?: boolean } | undefined;
+  ContractPdfViewer: {
+    storagePath: string;
+    title?: string;
+    bucket?: string;
+    contractSnapshot?: EmploymentContract;
+  };
 };
 
 export type OfficerRequestsStackParamList = {
@@ -127,7 +151,6 @@ export type OfficerCollectionsStackParamList = {
     planName?: string;
   };
   CollectionHistory: undefined;
-  PortalNotifications: undefined;
 };
 
 /**
@@ -183,7 +206,8 @@ export type OfficerDrawerParamList = {
   Privacy: undefined;
   Support: undefined;
   Profile: undefined;
-  ProfileStack: undefined;
+  ProfileStack: NavigatorScreenParams<OfficerProfileStackParamList> | undefined;
+  NotificationsStack: NavigatorScreenParams<OfficerNotificationsStackParamList> | undefined;
   ChangePassword: undefined;
   /** Flutter: gates app until GPS enabled */
   LocationGate: undefined;
@@ -213,8 +237,17 @@ export type AdminUsersStackParamList = {
 export type AdminOfficersStackParamList = {
   OfficerList: undefined;
   OfficerDetail: { officerId: string };
-  OfficerEdit: { officerId: string; section?: 'personal' | 'contact' | 'role' | 'contract' };
+  OfficerEdit: { officerId: string; section?: 'personal' | 'contact' | 'role' };
   AddOfficer: undefined;
+  EmploymentContractForm: { officerId: string; contractId?: string };
+  EmploymentContractVersionHistory: { contractId: string; officerId: string };
+  ContractPdfViewer: {
+    storagePath: string;
+    title?: string;
+    bucket?: string;
+    contractSnapshot?: EmploymentContract;
+  };
+  EmploymentContractSign: { contractId: string; officerId: string; role: 'employer' };
 };
 
 export type AdminAttendanceStackParamList = {
@@ -235,6 +268,18 @@ export type AdminAttendanceStackParamList = {
 export type AdminPayrollStackParamList = {
   Payroll: undefined;
   PayslipsManagement: undefined;
+  PayslipReview: {
+    officerId: string;
+    periodStart: string;
+    periodEnd: string;
+    payslipId?: string;
+  };
+  PayslipSettings: undefined;
+  PayslipPdfViewer: {
+    storagePath: string;
+    title?: string;
+    fileName?: string;
+  };
 };
 
 export type AdminRequestsStackParamList = {
@@ -252,7 +297,7 @@ export type AdminSupportStackParamList = {
   SupportDashboard: undefined;
   Tickets: undefined;
   TicketDetail: { ticketId: string };
-  CreateTicket: { linkedRequestId?: string; linkedRequestNumber?: string } | undefined;
+  CreateTicket: { linkedRequestId?: string; linkedRequestNumber?: string; customerId?: string } | undefined;
   LiveChat: undefined;
   ChatConversation: { sessionId: string };
   FaqList: undefined;

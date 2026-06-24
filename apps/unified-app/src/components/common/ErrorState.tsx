@@ -7,15 +7,31 @@ import { spacing } from '@/theme/spacing';
 type ErrorStateProps = {
   message: string;
   onRetry?: () => void;
+  retryLabel?: string;
+  onBack?: () => void;
+  backLabel?: string;
 };
 
-export function ErrorState({ message, onRetry }: ErrorStateProps) {
+export function ErrorState({
+  message,
+  onRetry,
+  retryLabel = 'Try again',
+  onBack,
+  backLabel = 'Go back',
+}: ErrorStateProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.icon}>⚠️</Text>
       <Text style={styles.title}>Something went wrong</Text>
       <Text style={styles.message}>{message}</Text>
-      {onRetry ? <Button label="Try again" onPress={onRetry} style={styles.button} /> : null}
+      {onRetry ? <Button label={retryLabel} onPress={onRetry} style={styles.button} /> : null}
+      {onBack ? (
+        <Button
+          label={backLabel}
+          onPress={onBack}
+          style={[styles.button, onRetry ? styles.secondaryButton : null]}
+        />
+      ) : null}
     </View>
   );
 }
@@ -36,4 +52,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   button: { marginTop: spacing.md, alignSelf: 'stretch' },
+  secondaryButton: { marginTop: spacing.sm },
 });

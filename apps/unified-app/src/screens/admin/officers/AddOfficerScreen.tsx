@@ -62,14 +62,14 @@ function errMsg(error: { message?: string } | undefined): string | undefined {
 
 const DOC_FIELDS: {
   key: OfficerDocumentType;
-  formKey: 'photoIdFrontUrl' | 'photoIdBackUrl' | 'profilePhotoUrl' | 'resumeUrl';
+  formKey: 'photoIdFrontStoragePath' | 'photoIdBackStoragePath' | 'profilePhotoStoragePath' | 'resumeStoragePath';
   label: string;
   required: boolean;
 }[] = [
-  { key: 'photo_id_front', formKey: 'photoIdFrontUrl', label: 'Photo ID - Front Side*', required: true },
-  { key: 'photo_id_back', formKey: 'photoIdBackUrl', label: 'Photo ID - Back Side*', required: true },
-  { key: 'profile_photo', formKey: 'profilePhotoUrl', label: 'Profile Photo*', required: true },
-  { key: 'resume', formKey: 'resumeUrl', label: 'Resume/CV', required: false },
+  { key: 'photo_id_front', formKey: 'photoIdFrontStoragePath', label: 'Photo ID - Front Side*', required: true },
+  { key: 'photo_id_back', formKey: 'photoIdBackStoragePath', label: 'Photo ID - Back Side*', required: true },
+  { key: 'profile_photo', formKey: 'profilePhotoStoragePath', label: 'Profile Photo*', required: true },
+  { key: 'resume', formKey: 'resumeStoragePath', label: 'Resume/CV', required: false },
 ];
 
 const pickerProps = {
@@ -112,7 +112,7 @@ export function AddOfficerScreen({ navigation }: Props) {
       gender: 'Male',
       bloodGroup: '',
       maritalStatus: 'Single',
-      profilePhotoUrl: '',
+      profilePhotoStoragePath: '',
       email: '',
       phone: '',
       alternatePhone: '',
@@ -158,9 +158,9 @@ export function AddOfficerScreen({ navigation }: Props) {
       confirmPassword: '',
       credentialsEmail: '',
       allowAdminViewPassword: false,
-      photoIdFrontUrl: '',
-      photoIdBackUrl: '',
-      resumeUrl: '',
+      photoIdFrontStoragePath: '',
+      photoIdBackStoragePath: '',
+      resumeStoragePath: '',
     },
     mode: 'onBlur',
   });
@@ -205,15 +205,15 @@ export function AddOfficerScreen({ navigation }: Props) {
 
   const handleDocUpload = async (
     docType: OfficerDocumentType,
-    formKey: 'photoIdFrontUrl' | 'photoIdBackUrl' | 'profilePhotoUrl' | 'resumeUrl',
+    formKey: 'photoIdFrontStoragePath' | 'photoIdBackStoragePath' | 'profilePhotoStoragePath' | 'resumeStoragePath',
   ) => {
     try {
       setUploadingDoc(docType);
       const isPhoto = docType.includes('photo') || docType === 'profile_photo';
       const picked = isPhoto ? await pickOfficerImage() : await pickOfficerDocument();
       if (!picked) return;
-      const url = await uploadOfficerDocumentFile(uploadSessionId, docType, picked);
-      setValue(formKey, url, { shouldValidate: true });
+      const uploaded = await uploadOfficerDocumentFile(uploadSessionId, docType, picked);
+      setValue(formKey, uploaded.storagePath, { shouldValidate: true });
       setDocNames((prev) => ({ ...prev, [docType]: picked.name }));
     } catch (e) {
       Alert.alert('Upload failed', queryErrorMessage(e));
@@ -252,10 +252,10 @@ export function AddOfficerScreen({ navigation }: Props) {
         accountHolderName: data.accountHolderName,
         accountNumber: data.accountNumber,
         ifscCode: data.ifscCode,
-        profilePhotoUrl: data.profilePhotoUrl,
-        photoIdFrontUrl: data.photoIdFrontUrl,
-        photoIdBackUrl: data.photoIdBackUrl,
-        resumeUrl: data.resumeUrl,
+        profilePhotoStoragePath: data.profilePhotoStoragePath,
+        photoIdFrontStoragePath: data.photoIdFrontStoragePath,
+        photoIdBackStoragePath: data.photoIdBackStoragePath,
+        resumeStoragePath: data.resumeStoragePath,
         password: data.passwordMode === 'manual' ? data.password : undefined,
         passwordMode: data.passwordMode,
         credentialsEmail: data.credentialsEmail || undefined,
@@ -412,7 +412,7 @@ export function AddOfficerScreen({ navigation }: Props) {
                     label="Profile Photo"
                     fileName={docNames.profile_photo}
                     uploading={uploadingDoc === 'profile_photo'}
-                    onUpload={() => void handleDocUpload('profile_photo', 'profilePhotoUrl')}
+                    onUpload={() => void handleDocUpload('profile_photo', 'profilePhotoStoragePath')}
                   />
                 </AddOfficerSectionCard>
               ) : null}

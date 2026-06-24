@@ -31,21 +31,35 @@ export function SearchBar({
   containerStyle,
 }: SearchBarProps) {
   const [local, setLocal] = useState(value);
+  const [focused, setFocused] = useState(false);
   const onChangeRef = useRef(onChangeText);
+  const latestLocalRef = useRef(local);
+  const latestValueRef = useRef(value);
+
   onChangeRef.current = onChangeText;
+  latestLocalRef.current = local;
+  latestValueRef.current = value;
 
   useEffect(() => {
-    setLocal(value);
-  }, [value]);
+    if (value === '') {
+      setLocal('');
+      return;
+    }
+    if (!focused) {
+      setLocal(value);
+    }
+  }, [value, focused]);
 
   useEffect(() => {
+    if (debounceMs <= 0) return;
     const timer = setTimeout(() => {
-      if (local !== value) {
-        onChangeRef.current(local);
+      const pending = latestLocalRef.current;
+      if (pending !== latestValueRef.current) {
+        onChangeRef.current(pending);
       }
     }, debounceMs);
     return () => clearTimeout(timer);
-  }, [local, value, debounceMs]);
+  }, [local, debounceMs]);
 
   const commitSearch = () => {
     if (local !== value) {
@@ -68,11 +82,17 @@ export function SearchBar({
         placeholderTextColor={colors.textSecondary}
         value={local}
         onChangeText={setLocal}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false);
+          if (local !== value) {
+            onChangeRef.current(local);
+          }
+        }}
         onSubmitEditing={commitSearch}
         returnKeyType="search"
         autoCapitalize="none"
         autoCorrect={false}
-        clearButtonMode="while-editing"
       />
       {local.length > 0 ? (
         <Pressable
@@ -91,7 +111,8 @@ export function SearchBar({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    alignSelf: 'stretch',
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     position: 'relative',

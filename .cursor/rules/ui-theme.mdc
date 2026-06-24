@@ -3,23 +3,25 @@ description: UI styling, theme tokens, and component consistency
 alwaysApply: true
 ---
 
-# UI & Theme Consistency
+# UI & Theme
 
-## Theme tokens (never hardcode hex in screens)
-
-| Token file | Use for |
-|------------|---------|
-| `@/theme/colors` | Shared palette (extends `@prime/ui`) |
-| `@/theme/spacing` | `spacing.*`, `radius.*` |
-| `@/theme/admin` | Admin accent, canvas, cards, badges |
-| `@prime/ui` `typography` | Display, heading, body, label scales |
-
-## Styling rules
-
-- Use `StyleSheet.create` — no inline style objects
-- Form labels: 12px, weight 600, `colors.textSecondary`, uppercase
-- Inputs: 1px `colors.borderDefault` border, `radius.sm`, `spacing.sm` padding, `colors.surfaceWhite` background
-- Error state: `colors.errorRed` border and helper text
+- Always use theme tokens: `@/theme/colors`, `@/theme/spacing`, `@/theme/admin`, `@prime/ui` typography
+- `StyleSheet.create` only. No inline style objects, no NativeWind `className`
+  strings duplicating what a token already covers.
+- If a needed color/spacing value doesn't exist in the current token set:
+  STOP and ask whether to add it to the theme file, rather than hardcoding
+  a one-off value inline. Hardcoded hex values are a rules violation, not
+  a style preference.
+- Admin surfaces use the admin accent; Customer/Officer share the primary
+  accent. Never mix accent sets within a single screen.
+- Every list, sheet, modal, and form must use the shared components in
+  `@prime/ui` where one exists — check there before building a new primitive.
+- Required states on every data-driven screen: loading (skeleton, not
+  spinner-only), error (with retry action), empty (with explanation +
+  next action, not just "No data").
+- Forms: React Hook Form + Zod only. Validation errors render inline,
+  not via Alert/toast, unless the existing pattern in the codebase does
+  otherwise — check an existing form first.
 
 ## Role-specific accents
 
@@ -36,19 +38,14 @@ alwaysApply: true
 - Canvas: `colors.background`
 - Reuse `@/components/common` and `@prime/ui` (`Screen`, `Button`, `EmptyState`)
 
-## Lists & states
+## Lists, sheets & modals
 
 - Lists: `FlatList` with stable `keyExtractor` and memoized `renderItem`
-- Every screen: loading, error, and empty states via `@/components/common`
+- Sheets: surface `colors.surfaceWhite`, top corners `radius.lg`, backdrop `colors.overlay`
+- Sheet header: Cancel / title / Done row with `colors.borderDefault` divider
 
-## Sheets & modals
+## Form field styling
 
-- Surface: `colors.surfaceWhite`
-- Top corners: `radius.lg`
-- Backdrop: `colors.overlay`
-- Header: Cancel / title / Done row with `colors.borderDefault` divider
-
-## Forms
-
-- React Hook Form + Zod for all forms
-- Use shared field components — do not build one-off inputs when a shared component exists
+- Labels: 12px, weight 600, `colors.textSecondary`, uppercase
+- Inputs: 1px `colors.borderDefault` border, `radius.sm`, `spacing.sm` padding, `colors.surfaceWhite` background
+- Error state: `colors.errorRed` border and helper text

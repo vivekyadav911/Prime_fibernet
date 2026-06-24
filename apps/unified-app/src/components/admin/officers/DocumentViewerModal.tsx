@@ -1,21 +1,18 @@
-import { createElement } from 'react';
-import { Image, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Platform, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import { createElement } from 'react';
 import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { spacing } from '@/theme/spacing';
+import { PdfWebView, ViewerScreenHeader } from '@/components/common';
+import type { OfficerDocumentViewContent } from '@/hooks/useOfficerDocumentAccess';
 
 type DocumentViewerModalProps = {
   visible: boolean;
-  url: string | null;
   title?: string;
-  mimeType?: string | null;
+  content?: OfficerDocumentViewContent | null;
   onClose: () => void;
 };
-
-function isPdf(url: string, mimeType?: string | null): boolean {
-  if (mimeType?.includes('pdf')) return true;
-  return url.toLowerCase().includes('.pdf');
-}
 
 function WebDocumentFrame({ url, title }: { url: string; title?: string }) {
   if (Platform.OS !== 'web') return null;
@@ -31,53 +28,66 @@ function WebDocumentFrame({ url, title }: { url: string; title?: string }) {
   );
 }
 
-export function DocumentViewerModal({ visible, url, title, mimeType, onClose }: DocumentViewerModalProps) {
-  const pdf = url ? isPdf(url, mimeType) : false;
+export function DocumentViewerModal({
+  visible,
+  title,
+  content,
+  onClose,
+}: DocumentViewerModalProps) {
+  const insets = useSafeAreaInsets();
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title} numberOfLines={1}>{title ?? 'Document'}</Text>
-          <Pressable onPress={onClose} hitSlop={8}>
-            <Text style={styles.close}>Close</Text>
-          </Pressable>
-        </View>
-        {url ? (
-          pdf ? (
-            Platform.OS === 'web' ? (
-              <WebDocumentFrame url={url} title={title} />
+    <Modal
+      visible={visible}
+      animationType="slide"
+      onRequestClose={onClose}
+      presentationStyle="fullScreen"
+      statusBarTranslucent={false}
+    >
+      <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+        <ViewerScreenHeader title={title ?? 'Document'} onBack={onClose} />
+
+        <View style={styles.body}>
+          {content ? (
+            content.kind === 'pdf' ? (
+              <PdfWebView
+                viewMode={content.viewMode}
+                localUri={content.localUri}
+                viewerHtml={content.viewerHtml}
+              />
+            ) : content.kind === 'image' ? (
+              <Image source={{ uri: content.resolvedUrl }} style={styles.image} resizeMode="contain" />
+            ) : Platform.OS === 'web' ? (
+              <WebDocumentFrame url={content.resolvedUrl} title={title} />
             ) : (
-              <WebView source={{ uri: url }} style={styles.viewer} />
+              <WebView source={{ uri: content.resolvedUrl }} style={styles.viewer} originWhitelist={['*']} />
             )
           ) : (
-            <Image source={{ uri: url }} style={styles.image} resizeMode="contain" />
-          )
-        ) : (
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>No document to display</Text>
-          </View>
-        )}
+            <View style={styles.center}>
+              <Text style={styles.emptyText}>No document to display</Text>
+            </View>
+          )}
+        </View>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.textPrimary },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: spacing.xxl,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
-    backgroundColor: colors.surfaceWhite,
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
   },
-  title: { flex: 1, fontSize: 16, fontWeight: '700', color: colors.textPrimary },
-  close: { fontSize: 16, color: colors.primaryNavy, fontWeight: '600' },
+  body: {
+    flex: 1,
+  },
   viewer: { flex: 1 },
-  image: { flex: 1, backgroundColor: '#000' },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { color: colors.textSecondary },
+  image: { flex: 1, backgroundColor: colors.background },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+  },
+  emptyText: { color: colors.textSecondary, textAlign: 'center' },
 });

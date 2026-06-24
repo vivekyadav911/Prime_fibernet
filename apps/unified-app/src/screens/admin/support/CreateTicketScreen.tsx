@@ -26,6 +26,7 @@ export function CreateTicketScreen({ navigation, route }: Props) {
           <CreateTicketForm
             linkedRequestId={route.params?.linkedRequestId}
             linkedRequestNumber={route.params?.linkedRequestNumber}
+            initialCustomerId={route.params?.customerId}
             onCreated={handleCreated}
           />
         </ScrollView>

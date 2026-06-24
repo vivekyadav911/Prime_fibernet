@@ -25,13 +25,8 @@ function resolvePlanName(subs: SubscriptionEmbed[] | null | undefined): string {
   return name;
 }
 
-function resolveStatus(
-  isBlocked: boolean,
-  expiryDate: string | null | undefined,
-): AdminUserListItem['status'] {
-  if (isBlocked) return 'blocked';
-  if (expiryDate && new Date(expiryDate) < new Date()) return 'expired';
-  return 'active';
+function resolveStatus(isBlocked: boolean): AdminUserListItem['status'] {
+  return isBlocked ? 'inactive' : 'active';
 }
 
 function mapUserRow(row: Record<string, unknown>): AdminUserListItem {
@@ -46,7 +41,7 @@ function mapUserRow(row: Record<string, unknown>): AdminUserListItem {
     phone: (row.phone as string) ?? null,
     city: (row.city as string) ?? null,
     planName: resolvePlanName(subs),
-    status: resolveStatus(isBlocked, row.expiry_date as string | null | undefined),
+    status: resolveStatus(isBlocked),
     isBlocked,
   };
 }
@@ -77,18 +72,12 @@ export const adminUsersApi = baseApi.injectEndpoints({
             query = query.ilike('city', filters.city);
           }
 
-          if (filters.blockFilter === 'blocked') {
-            query = query.eq('is_blocked', true);
-          } else if (filters.blockFilter === 'unblocked') {
-            query = query.eq('is_blocked', false);
-          }
+          const statusFilter = filters.status ?? 'all';
 
-          if (filters.status === 'blocked') {
+          if (statusFilter === 'inactive') {
             query = query.eq('is_blocked', true);
-          } else if (filters.status === 'active') {
+          } else if (statusFilter === 'active') {
             query = query.eq('is_blocked', false);
-          } else if (filters.status === 'expired') {
-            query = query.lt('expiry_date', new Date().toISOString());
           }
 
           query = query.order('legacy_user_id', { ascending: false, nullsFirst: false });
@@ -175,13 +164,15 @@ export const adminUsersApi = baseApi.injectEndpoints({
           }
 
           const plan = sub?.plans as { name?: string; speed_mbps?: number } | null;
+          const legacyAccount = (user.customer_id as string) ?? null;
           return {
-            id: user.id as string,
+            id: userId,
             name: user.name as string,
             email: user.email as string,
             phone: (user.phone as string) ?? null,
             address: (user.address as string) ?? null,
             city: (user.city as string) ?? null,
+            accountNumber: legacyAccount ?? `ACC-${userId.slice(0, 8)}`,
             joinDate: (user.created_at as string) ?? '',
             isBlocked: Boolean(user.is_blocked),
             assignedOfficerId,

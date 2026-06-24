@@ -1,13 +1,18 @@
 import { useCallback, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import BottomSheet from '@gorhom/bottom-sheet';
-import type { Plan, PaymentGateway } from '@prime/types';
-import { Screen } from '@prime/ui';
+import type { Plan, PaymentGateway, BillingCycle } from '@prime/types';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { PaymentCheckoutWebView } from '@/components/PaymentCheckoutWebView';
-import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
-import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { CustomerButton } from '@/components/customer/ui';
+import { EmptyState, ErrorState } from '@/components/common';
+import { CustomerSkeletonLoader } from '@/components/customer/ui';
+import { signalGlass } from '@/theme/customer/signalGlass';
+import type { CustomerStackParamList } from '@/types/navigation';
+import { formatCurrencyInr } from '@/utils/formatCurrency';
 
 import { PlanCard } from './components/PlanCard';
 import { PlanDetailSheet } from './components/PlanDetailSheet';
@@ -15,7 +20,10 @@ import { PlanFilterChips } from './components/PlanFilterChips';
 import { SortBottomSheet } from './components/SortBottomSheet';
 import { usePlans } from './hooks/usePlans';
 
+const CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual'];
+
 export function PlansScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const {
     plans,
     allCategories,
@@ -25,6 +33,9 @@ export function PlansScreen() {
     setSortBy,
     search,
     setSearch,
+    billingCycle,
+    setBillingCycle,
+    getPriceForCycle,
     currentPlanId,
     paymentGateway,
     isLoading,
@@ -67,50 +78,62 @@ export function PlansScreen() {
     }
   };
 
+  const onPlanChange = () => {
+    if (!selectedPlan) return;
+    detailSheetRef.current?.close();
+    navigation.navigate('PlanChangeRequest', { planId: selectedPlan.id });
+  };
+
   const renderItem = useCallback(
     ({ item }: { item: Plan }) => (
       <PlanCard
         plan={item}
+        priceLabel={formatCurrencyInr(getPriceForCycle(item))}
         isCurrentPlan={item.id === currentPlanId}
+        isFeatured={item.isFeatured}
         onPress={openDetail}
       />
     ),
-    [currentPlanId, openDetail],
+    [currentPlanId, getPriceForCycle, openDetail],
   );
-
-  const keyExtractor = useCallback((item: Plan) => item.id, []);
 
   if (error) {
     return (
-      <Screen>
+      <View style={styles.canvas}>
         <ErrorState message="Failed to load plans" onRetry={refetch} />
-      </Screen>
+      </View>
     );
   }
 
   if (isLoading) {
     return (
-      <Screen>
-        <SkeletonLoader rows={6} rowHeight={120} shape="card" />
-      </Screen>
-    );
-  }
-
-  if (!plans.length && !search && category === 'All') {
-    return (
-      <Screen>
-        <EmptyState title="No plans available" subtitle="Check back soon for new offers" icon="📶" />
-      </Screen>
+      <View style={styles.canvas}>
+        <CustomerSkeletonLoader rows={6} rowHeight={120} />
+      </View>
     );
   }
 
   return (
-    <Screen padded={false} style={styles.screen}>
+    <View style={styles.canvas}>
+      <Text style={styles.heading}>Browse Plans</Text>
+      <View style={styles.cycleRow}>
+        {CYCLES.map((cycle) => (
+          <Pressable
+            key={cycle}
+            onPress={() => setBillingCycle(cycle)}
+            style={[styles.cycleChip, billingCycle === cycle && styles.cycleChipActive]}
+          >
+            <Text style={[styles.cycleText, billingCycle === cycle && styles.cycleTextActive]}>
+              {cycle.charAt(0).toUpperCase() + cycle.slice(1)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
       <Text style={styles.gatewayNote}>Payments via {paymentGateway}</Text>
       <TextInput
         style={styles.search}
         placeholder="Search plans…"
-        placeholderTextColor={colors.textSecondary}
+        placeholderTextColor={signalGlass.colors.textMuted}
         value={search}
         onChangeText={setSearch}
       />
@@ -118,11 +141,10 @@ export function PlansScreen() {
       <Pressable style={styles.sortButton} onPress={() => sortSheetRef.current?.expand()}>
         <Text style={styles.sortText}>Sort: {sortBy}</Text>
       </Pressable>
-      <FlatList
+      <FlashList
         data={plans}
-        keyExtractor={keyExtractor}
         numColumns={2}
-        columnWrapperStyle={styles.column}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <EmptyState title="No plans match filters" subtitle="Try another category or search" />
@@ -133,9 +155,12 @@ export function PlansScreen() {
       <PlanDetailSheet
         ref={detailSheetRef}
         plan={selectedPlan}
+        price={selectedPlan ? getPriceForCycle(selectedPlan) : 0}
+        billingCycle={billingCycle}
         isCurrentPlan={selectedPlan?.id === currentPlanId}
         subscribing={subscribing}
         onSubscribe={onSubscribe}
+        onPlanChange={onPlanChange}
       />
       <PaymentCheckoutWebView
         visible={!!checkout}
@@ -147,34 +172,45 @@ export function PlansScreen() {
         onSuccess={() => refetch()}
         onVerify={(p) => verifyPayment(p).unwrap().then(() => undefined)}
       />
-    </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.background },
-  gatewayNote: {
-    padding: spacing.sm,
-    color: colors.textSecondary,
-    fontSize: 12,
-    textAlign: 'center',
+  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep, padding: signalGlass.spacing.lg },
+  heading: {
+    color: signalGlass.colors.textPrimary,
+    fontFamily: signalGlass.fonts.display,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: signalGlass.spacing.md,
   },
-  search: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.xs,
+  cycleRow: { flexDirection: 'row', gap: signalGlass.spacing.xs, marginBottom: signalGlass.spacing.sm },
+  cycleChip: {
+    flex: 1,
+    borderRadius: signalGlass.radius.sm,
     borderWidth: 1,
-    borderColor: colors.borderDefault,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    backgroundColor: colors.surfaceWhite,
-    color: colors.textPrimary,
+    borderColor: signalGlass.colors.borderSubtle,
+    paddingVertical: signalGlass.spacing.sm,
+    alignItems: 'center',
   },
-  sortButton: {
-    alignSelf: 'flex-end',
-    marginRight: spacing.md,
-    marginBottom: spacing.xs,
+  cycleChipActive: {
+    borderColor: signalGlass.colors.accentPrimary,
+    backgroundColor: 'rgba(59,130,246,0.15)',
   },
-  sortText: { color: colors.accentTeal, fontWeight: '600' },
-  list: { padding: spacing.md, gap: spacing.sm },
-  column: { gap: spacing.sm, justifyContent: 'space-between' },
+  cycleText: { color: signalGlass.colors.textSecondary, fontSize: 12, fontWeight: '600' },
+  cycleTextActive: { color: signalGlass.colors.accentGlow },
+  gatewayNote: { color: signalGlass.colors.textMuted, fontSize: 12, marginBottom: signalGlass.spacing.sm },
+  search: {
+    borderWidth: 1,
+    borderColor: signalGlass.colors.borderSubtle,
+    borderRadius: signalGlass.radius.sm,
+    padding: signalGlass.spacing.md,
+    backgroundColor: signalGlass.colors.bgSurface,
+    color: signalGlass.colors.textPrimary,
+    marginBottom: signalGlass.spacing.xs,
+  },
+  sortButton: { alignSelf: 'flex-end', marginBottom: signalGlass.spacing.xs },
+  sortText: { color: signalGlass.colors.accentGlow, fontWeight: '600' },
+  list: { paddingBottom: signalGlass.spacing.xxxl },
 });

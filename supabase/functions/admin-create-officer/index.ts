@@ -75,7 +75,11 @@ type CreateOfficerBody = {
   accountHolderName?: string;
   accountNumber?: string;
   ifscCode?: string;
-  profilePhotoUrl: string;
+  profilePhotoStoragePath?: string;
+  photoIdFrontStoragePath?: string;
+  photoIdBackStoragePath?: string;
+  resumeStoragePath?: string;
+  profilePhotoUrl?: string;
   photoIdFrontUrl?: string;
   photoIdBackUrl?: string;
   resumeUrl?: string;
@@ -95,13 +99,80 @@ type CreateOfficerBody = {
   joiningDatePreference?: string;
 };
 
-function mimeFromUrl(url: string): string | null {
-  const lower = url.toLowerCase();
+function mimeFromPath(path: string): string | null {
+  const lower = path.toLowerCase();
   if (lower.endsWith('.pdf')) return 'application/pdf';
   if (lower.endsWith('.png')) return 'image/png';
   if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
   return null;
 }
+
+function parseStoragePath(fileUrlOrPath: string): string | null {
+  const trimmed = fileUrlOrPath.trim();
+  if (!trimmed) return null;
+
+  const marker = '/officer-documents/';
+  const idx = trimmed.indexOf(marker);
+  if (idx >= 0) {
+    return decodeURIComponent(trimmed.slice(idx + marker.length).split('?')[0] ?? '');
+  }
+
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+
+  return null;
+}
+
+function resolveDocumentPath(
+  storagePath: string | undefined,
+  legacyUrl: string | undefined,
+): string | null {
+  if (storagePath?.trim()) return storagePath.trim();
+  if (legacyUrl?.trim()) return parseStoragePath(legacyUrl);
+  return null;
+}
+
+async function copyDocumentToOfficerFolder(
+  adminClient: ReturnType<typeof createClient>,
+  sourcePath: string,
+  officerId: string,
+  documentType: string,
+): Promise<string> {
+  const ext = sourcePath.split('.').pop() ?? 'jpg';
+  const destPath = `${officerId}/${documentType}.${ext}`;
+
+  if (sourcePath.startsWith(`${officerId}/`)) {
+    return sourcePath;
+  }
+
+  const { data: blob, error: downloadError } = await adminClient.storage
+    .from('officer-documents')
+    .download(sourcePath);
+  if (downloadError) throw downloadError;
+  if (!blob) throw new Error(`Could not read document at ${sourcePath}`);
+
+  const { error: uploadError } = await adminClient.storage
+    .from('officer-documents')
+    .upload(destPath, blob, {
+      upsert: true,
+      contentType: mimeFromPath(destPath) ?? undefined,
+    });
+  if (uploadError) throw uploadError;
+
+  if (sourcePath.startsWith('pending/')) {
+    await adminClient.storage.from('officer-documents').remove([sourcePath]);
+  }
+
+  return destPath;
+}
+
+const DOCUMENT_LABELS: Record<string, string> = {
+  profile_photo: 'Profile Photo',
+  photo_id_front: 'Photo ID - Front Side',
+  photo_id_back: 'Photo ID - Back Side',
+  resume: 'Resume/CV',
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -156,6 +227,10 @@ serve(async (req) => {
       accountHolderName,
       accountNumber,
       ifscCode,
+      profilePhotoStoragePath,
+      photoIdFrontStoragePath,
+      photoIdBackStoragePath,
+      resumeStoragePath,
       profilePhotoUrl,
       photoIdFrontUrl,
       photoIdBackUrl,
@@ -181,10 +256,18 @@ serve(async (req) => {
       throw new Error('fullName, email, and phone are required');
     }
 
-    const frontUrl = photoIdFrontUrl?.trim() || idProofUrl?.trim();
-    const backUrl = photoIdBackUrl?.trim() || addressProofUrl?.trim();
+    const profilePath = resolveDocumentPath(profilePhotoStoragePath, profilePhotoUrl);
+    const frontPath = resolveDocumentPath(
+      photoIdFrontStoragePath,
+      photoIdFrontUrl?.trim() || idProofUrl?.trim(),
+    );
+    const backPath = resolveDocumentPath(
+      photoIdBackStoragePath,
+      photoIdBackUrl?.trim() || addressProofUrl?.trim(),
+    );
+    const resumePath = resolveDocumentPath(resumeStoragePath, resumeUrl);
 
-    if (!profilePhotoUrl?.trim() || !frontUrl || !backUrl) {
+    if (!profilePath || !frontPath || !backPath) {
       throw new Error('Profile photo, photo ID front, and photo ID back are required');
     }
 
@@ -294,7 +377,7 @@ serve(async (req) => {
           joining_date: joiningDate || contractStartDate || null,
           base_salary: basic || null,
           salary_config: salaryConfig,
-          profile_photo_url: profilePhotoUrl.trim(),
+          profile_photo_url: null,
           availability_status: 'offline',
           is_active: true,
           is_blocked: false,
@@ -316,21 +399,56 @@ serve(async (req) => {
         if (bankError) throw bankError;
       }
 
-      const docEntries: { document_type: string; file_url: string }[] = [
-        { document_type: 'profile_photo', file_url: profilePhotoUrl.trim() },
-        { document_type: 'photo_id_front', file_url: frontUrl! },
-        { document_type: 'photo_id_back', file_url: backUrl! },
+      const docSources: { document_type: string; sourcePath: string }[] = [
+        { document_type: 'profile_photo', sourcePath: profilePath },
+        { document_type: 'photo_id_front', sourcePath: frontPath },
+        { document_type: 'photo_id_back', sourcePath: backPath },
       ];
-      if (resumeUrl?.trim()) {
-        docEntries.push({ document_type: 'resume', file_url: resumeUrl.trim() });
+      if (resumePath) {
+        docSources.push({ document_type: 'resume', sourcePath: resumePath });
+      }
+
+      const docEntries: {
+        document_type: string;
+        storage_path: string;
+        display_name: string;
+        mime_type: string | null;
+      }[] = [];
+
+      for (const doc of docSources) {
+        const storagePath = await copyDocumentToOfficerFolder(
+          adminClient,
+          doc.sourcePath,
+          officerId,
+          doc.document_type,
+        );
+        docEntries.push({
+          document_type: doc.document_type,
+          storage_path: storagePath,
+          display_name: DOCUMENT_LABELS[doc.document_type] ?? doc.document_type,
+          mime_type: mimeFromPath(storagePath),
+        });
+      }
+
+      const profileDoc = docEntries.find((d) => d.document_type === 'profile_photo');
+      if (profileDoc) {
+        const { data: signed } = await adminClient.storage
+          .from('officer-documents')
+          .createSignedUrl(profileDoc.storage_path, 604800);
+        await adminClient
+          .from('officers')
+          .update({ profile_photo_url: signed?.signedUrl ?? profileDoc.storage_path })
+          .eq('id', officerId);
       }
 
       const { error: docsError } = await adminClient.from('officer_documents').insert(
         docEntries.map((doc) => ({
           officer_id: officerId,
           document_type: doc.document_type,
-          file_url: doc.file_url,
-          mime_type: mimeFromUrl(doc.file_url),
+          storage_path: doc.storage_path,
+          display_name: doc.display_name,
+          file_url: null,
+          mime_type: doc.mime_type,
         })),
       );
       if (docsError) throw docsError;

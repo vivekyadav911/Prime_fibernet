@@ -6081,6 +6081,33 @@ export type Database = {
         }
         Returns: undefined
       }
+      notify_officer_contract_signature: {
+        Args: {
+          p_contract_id: string
+        }
+        Returns: undefined
+      }
+      submit_employment_contract_signature: {
+        Args: {
+          p_contract_id: string
+          p_role: string
+          p_signature_path: string
+          p_signed_by?: string | null
+        }
+        Returns: Json
+      }
+      publish_signed_employment_contract_pdf: {
+        Args: {
+          p_contract_id: string
+          p_storage_path: string
+          p_new_version: number
+          p_archived_version?: number | null
+          p_archived_snapshot?: Json | null
+          p_archived_pdf_url?: string | null
+          p_created_by?: string | null
+        }
+        Returns: Json
+      }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }

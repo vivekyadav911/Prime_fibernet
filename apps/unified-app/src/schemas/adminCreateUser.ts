@@ -16,7 +16,7 @@ export const AdminCreateUserSchema = z.object({
     .min(3, 'Username must be at least 3 characters')
     .regex(/^[a-zA-Z0-9_.-]+$/, 'Username can only contain letters, numbers, and _.-'),
   planId: uuidSchema,
-  status: z.enum(['active', 'blocked']),
+  status: z.enum(['active', 'inactive']),
   address: z.string().min(5, 'Full address is required'),
   city: z.string().min(1, 'City is required'),
   district: z.string().min(1, 'District is required'),

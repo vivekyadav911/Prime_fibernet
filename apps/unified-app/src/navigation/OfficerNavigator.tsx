@@ -1,8 +1,9 @@
-import { Platform, useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions, View } from 'react-native';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { OfficerDrawerContent, ShiftPulseChip } from '@/components/navigation/officer';
+import { usePortalNotificationsSync } from '@/hooks/usePortalNotificationsSync';
 import { OfficerSupportChatScreen } from '@/screens/officer/support/OfficerSupportChatScreen';
 import { CollectPaymentScreen } from '@/screens/officer/CollectPaymentScreen';
 import { InvoiceScreen } from '@/screens/officer/InvoiceScreen';
@@ -10,16 +11,24 @@ import { LocationGateScreen } from '@/screens/officer/LocationGateScreen';
 import { OfficerDashboardScreen } from '@/screens/officer/OfficerDashboardScreen';
 import { OfficerInventoryScreen } from '@/screens/officer/OfficerInventoryScreen';
 import { OfficerMapScreen } from '@/screens/officer/OfficerMapScreen';
-import { OfficerPayslipScreen } from '@/screens/officer/OfficerPayslipScreen';
+import { OfficerPayslipStackNav } from './OfficerPayslipStackNav';
 import { OfficerAttendanceDashboard } from '@/screens/officer/OfficerAttendanceDashboard';
 import { AttendanceHistoryScreen } from '@/screens/officer/AttendanceHistoryScreen';
 import type { OfficerDrawerParamList, OfficerStackParamList } from '@/types/navigation';
 import { adminColors, getAdminDrawerWidth } from '@/theme/admin';
 import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 
 import { AdminDrawerToggleButton } from './AdminDrawerToggleButton';
-import { OfficerCollectionsStackNav, OfficerLeaveStackNav, OfficerProfileStackNav, OfficerRequestsStackNav } from './officerStackNavigators';
+import {
+  DrawerHeaderRight,
+  OfficerCollectionsStackNav,
+  OfficerLeaveStackNav,
+  OfficerNotificationsStackNav,
+  OfficerProfileStackNav,
+  OfficerRequestsStackNav,
+} from './officerStackNavigators';
 import { OfficerRequestDetailScreen } from './officerStackScreens';
 
 const Drawer = createDrawerNavigator<OfficerDrawerParamList>();
@@ -27,7 +36,18 @@ const Stack = createNativeStackNavigator<OfficerStackParamList>();
 
 const OFFICER_HEADER_PURPLE = '#5B4FE9';
 
+function DrawerHeaderActions() {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+      <DrawerHeaderRight />
+      <ShiftPulseChip />
+    </View>
+  );
+}
+
 function OfficerDrawerNav() {
+  usePortalNotificationsSync();
+
   const { width } = useWindowDimensions();
   const isWebSidebar = Platform.OS === 'web' && width >= 1024;
 
@@ -48,7 +68,7 @@ function OfficerDrawerNav() {
           },
           overlayColor: isWebSidebar ? 'transparent' : undefined,
           headerLeft: isWebSidebar ? () => null : () => <AdminDrawerToggleButton />,
-          headerRight: () => <ShiftPulseChip />,
+          headerRight: () => <DrawerHeaderActions />,
           swipeEnabled: !isWebSidebar,
           drawerItemStyle: { display: 'none' },
         }}
@@ -74,9 +94,18 @@ function OfficerDrawerNav() {
           component={OfficerCollectionsStackNav}
           options={{ title: 'Collections', headerShown: false }}
         />
+        <Drawer.Screen
+          name="NotificationsStack"
+          component={OfficerNotificationsStackNav}
+          options={{ title: 'Notifications', headerShown: false }}
+        />
         <Drawer.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Invoice' }} />
         <Drawer.Screen name="Inventory" component={OfficerInventoryScreen} options={{ title: 'Inventory' }} />
-        <Drawer.Screen name="Payslip" component={OfficerPayslipScreen} options={{ title: 'My Payslip' }} />
+        <Drawer.Screen
+          name="Payslip"
+          component={OfficerPayslipStackNav}
+          options={{ title: 'My Payslips', headerShown: false }}
+        />
         <Drawer.Screen
           name="LeaveStack"
           component={OfficerLeaveStackNav}

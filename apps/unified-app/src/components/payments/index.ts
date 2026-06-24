@@ -7,7 +7,6 @@ export { ExportButton } from './ExportButton';
 export { GatewayCard } from './GatewayCard';
 export { MethodIcon } from './MethodIcon';
 export { PaymentCard } from './PaymentCard';
-export { PaymentSummaryBar } from './PaymentSummaryBar';
 export { PaymentFilterBar } from './PaymentFilterBar';
 export type { PaymentFilterState } from './PaymentFilterBar';
 export { PaymentTimeline } from './PaymentTimeline';

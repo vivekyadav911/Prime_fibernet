@@ -1,5 +1,6 @@
 export { CreateTicketForm } from './CreateTicketForm';
 export { LinkRequestModal } from './LinkRequestModal';
+export { SelectCustomerModal } from './SelectCustomerModal';
 export { SLAIndicator } from './SLAIndicator';
 export { TicketCard } from './TicketCard';
 export { TicketFilterSheet } from './TicketFilterSheet';

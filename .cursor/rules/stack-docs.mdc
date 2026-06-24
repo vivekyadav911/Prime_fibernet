@@ -1,11 +1,13 @@
 ---
-description: Official stack documentation references for Prime Fibernet
-alwaysApply: true
+description: Official stack documentation and API verification before use
+globs: apps/unified-app/**/*.{ts,tsx}
+alwaysApply: false
 ---
 
-# Stack Documentation
+# Official Docs & API Verification
 
-Reference these official docs when implementing features. In chat, use `@Docs` to pull indexed content.
+Reference docs for: Expo, React Navigation, Redux Toolkit, Supabase,
+NativeWind, React Hook Form.
 
 | Library | URL |
 |---------|-----|
@@ -15,3 +17,18 @@ Reference these official docs when implementing features. In chat, use `@Docs` t
 | Supabase | https://supabase.com/docs |
 | NativeWind | https://www.nativewind.dev/overview |
 | React Hook Form | https://react-hook-form.com/get-started |
+
+## Before using any API from these libraries
+
+- Check the installed version in `package.json` / lockfile — do not assume
+  the latest docs match the installed version.
+- If unsure whether a method/hook/prop exists at the installed version,
+  search the actual docs or check `node_modules/.../*.d.ts` — never guess
+  from training data, which may describe a different major version.
+- If a Context7 MCP or equivalent docs-fetch tool is available, prefer it
+  over memory for anything touching Supabase RLS syntax, RTK Query
+  cache invalidation, or Expo SDK-specific APIs — these have changed
+  multiple times across recent versions and are the most common source
+  of subtly broken code.
+- If you cannot verify an API confidently, say so and propose the safer
+  known-working alternative rather than shipping a guess.

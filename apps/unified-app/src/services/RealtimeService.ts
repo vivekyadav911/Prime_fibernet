@@ -16,6 +16,13 @@ class RealtimeService {
       .channel('live-officer-locations')
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'shifts' },
+        () => {
+          void this.fetchLatest();
+        },
+      )
+      .on(
+        'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'officers' },
         () => {
           void this.fetchLatest();
@@ -52,28 +59,51 @@ class RealtimeService {
     if (!this.callback) return;
 
     const client = getSupabase();
-    const { data, error } = await client
-      .from('officers')
-      .select('id, full_name, profile_photo_url, current_latitude, current_longitude, last_location_update, availability_status')
-      .not('current_latitude', 'is', null)
-      .not('current_longitude', 'is', null);
+    const today = new Date().toISOString().slice(0, 10);
+    const [officersRes, shiftsRes] = await Promise.all([
+      client
+        .from('officers')
+        .select(
+          'id, full_name, profile_photo_url, current_latitude, current_longitude, last_location_update',
+        )
+        .not('current_latitude', 'is', null)
+        .not('current_longitude', 'is', null),
+      client
+        .from('shifts')
+        .select('officer_id, status, check_in_time, check_out_time')
+        .eq('shift_date', today)
+        .eq('status', 'active'),
+    ]);
 
-    if (error || !data) return;
+    if (officersRes.error || shiftsRes.error || !officersRes.data) return;
 
-    const locations: OfficerLiveLocation[] = data.map((row) => ({
-      officerId: row.id as string,
-      officerName: (row.full_name as string) ?? 'Officer',
-      officerAvatar: (row.profile_photo_url as string) ?? undefined,
-      coordinates: {
-        latitude: Number(row.current_latitude),
-        longitude: Number(row.current_longitude),
-      },
-      accuracy: 0,
-      isInsideGeofence: false,
-      lastUpdated: (row.last_location_update as string) ?? new Date().toISOString(),
-      attendanceStatus:
-        row.availability_status === 'available' ? 'checked_in' : 'not_started',
-    }));
+    const activeByOfficer = new Map(
+      (shiftsRes.data ?? []).map((shift) => [shift.officer_id as string, shift]),
+    );
+
+    const locations: OfficerLiveLocation[] = officersRes.data.map((row) => {
+      const active = activeByOfficer.get(row.id as string);
+      const attendanceStatus: OfficerLiveLocation['attendanceStatus'] =
+        active?.status === 'active' && active.check_in_time && !active.check_out_time
+          ? 'checked_in'
+          : active?.check_out_time
+            ? 'checked_out'
+            : 'not_started';
+
+      return {
+        officerId: row.id as string,
+        officerName: (row.full_name as string) ?? 'Officer',
+        officerAvatar: (row.profile_photo_url as string) ?? undefined,
+        coordinates: {
+          latitude: Number(row.current_latitude),
+          longitude: Number(row.current_longitude),
+        },
+        accuracy: 0,
+        isInsideGeofence: false,
+        lastUpdated: (row.last_location_update as string) ?? new Date().toISOString(),
+        attendanceStatus,
+      };
+    });
 
     this.callback(locations);
   }

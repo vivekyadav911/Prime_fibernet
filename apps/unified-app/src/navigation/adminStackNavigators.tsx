@@ -31,6 +31,9 @@ import { ShiftManagementScreen } from '@/screens/admin/hr/ShiftManagementScreen'
 import { RoleManagementScreen } from '@/screens/admin/hr/RoleManagementScreen';
 import { PayrollScreen } from '@/screens/admin/hr/payroll/PayrollScreen';
 import { PayslipsManagementScreen } from '@/screens/admin/hr/payroll/PayslipsManagementScreen';
+import { PayslipReviewScreen } from '@/screens/admin/hr/payroll/PayslipReviewScreen';
+import { PayslipSettingsScreen } from '@/screens/admin/hr/payroll/PayslipSettingsScreen';
+import { PayslipPdfViewerScreen } from '@/screens/common/PayslipPdfViewerScreen';
 import { NotificationCenterScreen } from '@/screens/admin/notifications/NotificationCenterScreen';
 import { NotificationsScreen } from '@/screens/admin/notifications/NotificationsScreen';
 import { CreateNotificationScreen } from '@/screens/admin/notifications/CreateNotificationScreen';
@@ -38,6 +41,10 @@ import { NotificationDetailScreen } from '@/screens/admin/notifications/Notifica
 import { AddOfficerScreen } from '@/screens/admin/officers/AddOfficerScreen';
 import { EditOfficerScreen } from '@/screens/admin/officers/EditOfficerScreen';
 import { OfficerDetailScreen } from '@/screens/admin/officers/OfficerDetailScreen';
+import { EmploymentContractFormScreen } from '@/screens/admin/officers/EmploymentContractFormScreen';
+import { EmploymentContractSignScreen } from '@/screens/admin/officers/EmploymentContractSignScreen';
+import { EmploymentContractVersionHistoryScreen } from '@/screens/admin/officers/EmploymentContractVersionHistoryScreen';
+import { ContractPdfViewerScreen } from '@/screens/common/ContractPdfViewerScreen';
 import { OfficerListScreen } from '@/screens/admin/officers/OfficerListScreen';
 import { PlanFormScreenV2 } from '@/screens/admin/plans/PlanFormScreenV2';
 import { PlansScreen } from '@/screens/admin/plans/PlansScreen';
@@ -227,6 +234,26 @@ export function AdminOfficersStackNav() {
       <OfficersStack.Screen name="OfficerDetail" component={OfficerDetailScreen} options={{ headerShown: false }} />
       <OfficersStack.Screen name="OfficerEdit" component={EditOfficerScreen} options={{ title: 'Edit officer' }} />
       <OfficersStack.Screen
+        name="EmploymentContractForm"
+        component={EmploymentContractFormScreen}
+        options={{ title: 'Employment contract' }}
+      />
+      <OfficersStack.Screen
+        name="EmploymentContractVersionHistory"
+        component={EmploymentContractVersionHistoryScreen}
+        options={{ title: 'Version history' }}
+      />
+      <OfficersStack.Screen
+        name="ContractPdfViewer"
+        component={ContractPdfViewerScreen}
+        options={{ headerShown: false }}
+      />
+      <OfficersStack.Screen
+        name="EmploymentContractSign"
+        component={EmploymentContractSignScreen}
+        options={{ title: 'Sign contract' }}
+      />
+      <OfficersStack.Screen
         name="AddOfficer"
         component={AddOfficerScreen}
         options={{
@@ -268,6 +295,9 @@ export function AdminPayrollStackNav() {
     <PayrollStack.Navigator screenOptions={stackScreenOptions}>
       <PayrollStack.Screen name="Payroll" component={PayrollScreen} options={{ title: 'Payroll' }} />
       <PayrollStack.Screen name="PayslipsManagement" component={PayslipsManagementScreen} options={{ title: 'Payslips' }} />
+      <PayrollStack.Screen name="PayslipReview" component={PayslipReviewScreen} options={{ title: 'Review payslip' }} />
+      <PayrollStack.Screen name="PayslipSettings" component={PayslipSettingsScreen} options={{ title: 'Payslip settings' }} />
+      <PayrollStack.Screen name="PayslipPdfViewer" component={PayslipPdfViewerScreen} options={{ headerShown: false, title: 'Payslip PDF' }} />
     </PayrollStack.Navigator>
   );
 }
@@ -325,7 +355,7 @@ export function AdminNotificationsStackNav() {
 
 export function AdminPaymentsStackNav() {
   return (
-    <PaymentsStack.Navigator screenOptions={stackScreenOptions}>
+    <PaymentsStack.Navigator screenOptions={stackScreenOptions} initialRouteName="PaymentList">
       <PaymentsStack.Screen name="PaymentList" component={PaymentsListScreen} options={{ title: 'Payments' }} />
       <PaymentsStack.Screen
         name="CollectionAssignments"

@@ -60,11 +60,12 @@ function Root() {
       }
       if (op === 'attendanceCheckIn') {
         const payload = mutation.payload as {
-          coords: { latitude: number; longitude: number };
+          coords: { latitude: number; longitude: number; mocked?: boolean };
           notes?: string;
           method: string;
           geofenceId?: string;
           distanceFromFence?: number;
+          locationMocked?: boolean;
         };
         await store
           .dispatch(
@@ -74,6 +75,7 @@ function Root() {
               method: payload.method,
               geofenceId: payload.geofenceId ?? '',
               distanceFromFence: payload.distanceFromFence ?? 0,
+              locationMocked: payload.locationMocked ?? payload.coords.mocked,
             }),
           )
           .unwrap();

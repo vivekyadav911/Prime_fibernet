@@ -96,11 +96,13 @@ export function LinkRequestModal({
             </Pressable>
           ) : null}
 
-          <SearchBar
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search by ID or customer name…"
-          />
+          <View style={styles.searchWrap}>
+            <SearchBar
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search by ID or customer name…"
+            />
+          </View>
 
           {loading ? (
             <ActivityIndicator color={adminColors.primary} style={styles.loader} />
@@ -165,6 +167,10 @@ const styles = StyleSheet.create({
     color: adminColors.primary,
     fontWeight: '600',
     fontSize: 13,
+  },
+  searchWrap: {
+    alignSelf: 'stretch',
+    width: '100%',
   },
   loader: {
     marginVertical: spacing.xl,

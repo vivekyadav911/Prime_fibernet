@@ -15,13 +15,11 @@ import { DateField, FormField, RoleGuard, SectionLabel, SelectField } from '@/co
 import { KeyboardDismissView } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
 import { useKeyboardBottomInset } from '@/hooks/useKeyboardBottomInset';
-import { GENDER_OPTIONS, MARITAL_STATUS_OPTIONS, CONTRACT_TYPE_OPTIONS, parseSalary } from '@/schemas/adminCreateOfficer';
+import { GENDER_OPTIONS, MARITAL_STATUS_OPTIONS } from '@/schemas/adminCreateOfficer';
 import {
-  useGetOfficerContractQuery,
   useGetOfficerProfileQuery,
   useGetOfficerRolesQuery,
   useUpdateOfficerContactMutation,
-  useUpdateOfficerContractMutation,
   useUpdateOfficerPersonalMutation,
   useUpdateOfficerRoleMutation,
 } from '@/store/api/endpoints';
@@ -32,22 +30,22 @@ import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminOfficersStackParamList, 'OfficerEdit'>;
 
-type EditSection = 'personal' | 'contact' | 'role' | 'contract';
+type EditSection = 'personal' | 'contact' | 'role';
 
 export function EditOfficerScreen({ route, navigation }: Props) {
   const { officerId, section = 'personal' } = route.params;
   const keyboardInset = useKeyboardBottomInset(spacing.lg);
-  const [activeSection, setActiveSection] = useState<EditSection>(section);
+  const initialSection: EditSection =
+    section === 'personal' || section === 'contact' || section === 'role' ? section : 'personal';
+  const [activeSection, setActiveSection] = useState<EditSection>(initialSection);
   const [dirty, setDirty] = useState(false);
 
   const { data: profile, isLoading } = useGetOfficerProfileQuery(officerId);
-  const { data: contract } = useGetOfficerContractQuery(officerId);
   const { data: roles = [] } = useGetOfficerRolesQuery();
 
   const [updatePersonal, { isLoading: savingPersonal }] = useUpdateOfficerPersonalMutation();
   const [updateContact, { isLoading: savingContact }] = useUpdateOfficerContactMutation();
   const [updateRole, { isLoading: savingRole }] = useUpdateOfficerRoleMutation();
-  const [updateContract, { isLoading: savingContract }] = useUpdateOfficerContractMutation();
 
   const [fullName, setFullName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
@@ -62,9 +60,6 @@ export function EditOfficerScreen({ route, navigation }: Props) {
   const [currentAddress, setCurrentAddress] = useState('');
   const [roleId, setRoleId] = useState('');
   const [joiningDate, setJoiningDate] = useState('');
-  const [contractType, setContractType] = useState('Permanent');
-  const [basicSalary, setBasicSalary] = useState('');
-  const [hra, setHra] = useState('');
 
   useEffect(() => {
     if (!profile) return;
@@ -82,13 +77,6 @@ export function EditOfficerScreen({ route, navigation }: Props) {
     setRoleId(profile.roleId ?? '');
     setJoiningDate(profile.joiningDate ?? '');
   }, [profile]);
-
-  useEffect(() => {
-    if (!contract) return;
-    setContractType(contract.contractType);
-    setBasicSalary(String(contract.salary.basic || ''));
-    setHra(String(contract.salary.hra || ''));
-  }, [contract]);
 
   useEffect(() => {
     const unsub = navigation.addListener('beforeRemove', (e) => {
@@ -149,27 +137,6 @@ export function EditOfficerScreen({ route, navigation }: Props) {
     }
   };
 
-  const saveContract = async () => {
-    try {
-      await updateContract({
-        id: officerId,
-        contractType,
-        terms: {
-          salary: {
-            basic: parseSalary(basicSalary),
-            hra: parseSalary(hra),
-            transportAllowance: contract?.salary.transportAllowance ?? 0,
-            otherAllowances: contract?.salary.otherAllowances ?? 0,
-          },
-        },
-      }).unwrap();
-      setDirty(false);
-      Alert.alert('Saved', 'Contract updated.');
-    } catch (e) {
-      Alert.alert('Error', queryErrorMessage(e));
-    }
-  };
-
   if (isLoading || !profile) {
     return <Screen><Text>Loading…</Text></Screen>;
   }
@@ -183,7 +150,7 @@ export function EditOfficerScreen({ route, navigation }: Props) {
           <KeyboardDismissView>
             <ScrollView contentContainerStyle={styles.scroll}>
               <View style={styles.tabs}>
-                {(['personal', 'contact', 'role', 'contract'] as EditSection[]).map((s) => (
+                {(['personal', 'contact', 'role'] as EditSection[]).map((s) => (
                   <Button
                     key={s}
                     label={s}
@@ -225,16 +192,6 @@ export function EditOfficerScreen({ route, navigation }: Props) {
                   <SelectField label="Assigned Role" options={roleOptions} value={roleId} onSelect={(v) => { setRoleId(v); markDirty(); }} />
                   <DateField label="Joining Date" value={joiningDate} onChange={(v) => { setJoiningDate(v); markDirty(); }} />
                   <Button label={savingRole ? 'Saving…' : officerStrings.form.save} onPress={() => void saveRole()} />
-                </>
-              ) : null}
-
-              {activeSection === 'contract' ? (
-                <>
-                  <SectionLabel title={officerStrings.detail.sections.contractDetails} />
-                  <SelectField label="Contract Type" options={CONTRACT_TYPE_OPTIONS} value={contractType} onSelect={(v) => { setContractType(v); markDirty(); }} />
-                  <FormField label="Basic Salary" value={basicSalary} onChangeText={(v) => { setBasicSalary(v); markDirty(); }} keyboardType="decimal-pad" />
-                  <FormField label="HRA" value={hra} onChangeText={(v) => { setHra(v); markDirty(); }} keyboardType="decimal-pad" />
-                  <Button label={savingContract ? 'Saving…' : officerStrings.form.save} onPress={() => void saveContract()} />
                 </>
               ) : null}
 

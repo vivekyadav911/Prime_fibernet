@@ -379,26 +379,27 @@ export const officersApi = baseApi.injectEndpoints({
       invalidatesTags: ['Inventory'],
     }),
 
-    getPayslips: builder.query<Payslip[], string>({
+    getPayslips: builder.query<
+      { id: string; payPeriodLabel: string; netPay: number; status: string; pdfUrl: string | null }[],
+      string
+    >({
       query: (userId) => ({
         handler: async (client) => {
           const officerId = await getOfficerIdForUser(client, userId);
           if (!officerId) return [];
           const { data, error } = await client
             .from('payslips')
-            .select('*')
+            .select('id, pay_period_label, net_pay, status, generated_pdf_url')
             .eq('officer_id', officerId)
-            .order('month', { ascending: false });
+            .in('status', ['approved', 'paid'])
+            .order('pay_period_start', { ascending: false });
           if (error) throw error;
           return (data ?? []).map((row) => ({
             id: row.id as string,
-            officerId: row.officer_id as string,
-            month: row.month as string,
-            base: Number(row.base),
-            bonuses: Number(row.bonuses),
-            deductions: Number(row.deductions),
+            payPeriodLabel: (row.pay_period_label as string) ?? '',
             netPay: Number(row.net_pay),
-            pdfUrl: (row.pdf_url as string) ?? null,
+            status: row.status as string,
+            pdfUrl: (row.generated_pdf_url as string) ?? null,
           }));
         },
       }),

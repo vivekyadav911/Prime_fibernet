@@ -1,24 +1,38 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Animated, Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import * as Sharing from 'expo-sharing';
-import { Button, Screen, colors } from '@prime/ui';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { CommonActions } from '@react-navigation/native';
 
+import { CustomerButton } from '@/components/customer/ui';
 import { useLazyGetInvoiceUrlQuery } from '@/services/api';
+import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
-import { spacing } from '@/theme/spacing';
+import { formatCurrencyInr } from '@/utils/formatCurrency';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'PaymentSuccess'>;
 
 export function PaymentSuccessScreen({ navigation, route }: Props) {
   const { amount, planName, activationDate, paymentId } = route.params;
-  const scale = useRef(new Animated.Value(0)).current;
+  const scale = useSharedValue(0);
+  const checkOpacity = useSharedValue(0);
   const [fetchInvoice, { isFetching }] = useLazyGetInvoiceUrlQuery();
 
   useEffect(() => {
-    Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: true }).start();
-  }, [scale]);
+    scale.value = withSpring(1, { damping: 12 });
+    checkOpacity.value = withTiming(1, { duration: 400 });
+  }, [checkOpacity, scale]);
+
+  const checkStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: checkOpacity.value,
+  }));
 
   const onDownloadInvoice = async () => {
     try {
@@ -51,18 +65,14 @@ export function PaymentSuccessScreen({ navigation, route }: Props) {
   });
 
   return (
-    <Screen safeAreaTop style={styles.screen}>
-      <Animated.View style={[styles.checkWrap, { transform: [{ scale }] }]}>
+    <View style={styles.screen}>
+      <Animated.View style={[styles.checkWrap, checkStyle]}>
         <Text style={styles.check}>✓</Text>
       </Animated.View>
-      <Text style={styles.title}>Payment successful!</Text>
+      <Text style={styles.title}>{formatCurrencyInr(amount)} paid successfully</Text>
       <Text style={styles.subtitle}>Your plan is being activated</Text>
 
       <View style={styles.card}>
-        <View style={styles.row}>
-          <Text style={styles.label}>Amount paid</Text>
-          <Text style={styles.value}>₹{amount.toLocaleString('en-IN')}</Text>
-        </View>
         <View style={styles.row}>
           <Text style={styles.label}>Plan</Text>
           <Text style={styles.value}>{planName}</Text>
@@ -73,43 +83,61 @@ export function PaymentSuccessScreen({ navigation, route }: Props) {
         </View>
       </View>
 
-      <Button
-        label={isFetching ? 'Preparing invoice…' : 'Download Invoice'}
-        onPress={onDownloadInvoice}
-        disabled={isFetching}
+      <CustomerButton
+        label={isFetching ? 'Preparing invoice…' : 'Download receipt'}
+        onPress={() => void onDownloadInvoice()}
         style={styles.btn}
       />
-      <Button label="Back to Home" variant="ghost" onPress={onBackToHome} />
-    </Screen>
+      <CustomerButton label="Back to Home" variant="ghost" onPress={onBackToHome} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { alignItems: 'center', justifyContent: 'center' },
+  screen: {
+    flex: 1,
+    backgroundColor: signalGlass.colors.bgDeep,
+    padding: signalGlass.spacing.xl,
+    justifyContent: 'center',
+  },
   checkWrap: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: colors.successGreen,
+    backgroundColor: 'rgba(16,185,129,0.2)',
+    borderWidth: 2,
+    borderColor: signalGlass.colors.accentSuccess,
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: signalGlass.spacing.xl,
   },
-  check: { color: colors.white, fontSize: 44, fontWeight: '700' },
-  title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xs },
-  subtitle: { color: colors.textSecondary, marginBottom: spacing.xl },
+  check: { fontSize: 40, color: signalGlass.colors.accentSuccess, fontWeight: '700' },
+  title: {
+    color: signalGlass.colors.textPrimary,
+    fontFamily: signalGlass.fonts.display,
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  subtitle: {
+    color: signalGlass.colors.textSecondary,
+    textAlign: 'center',
+    marginTop: signalGlass.spacing.xs,
+    marginBottom: signalGlass.spacing.xl,
+  },
   card: {
-    width: '100%',
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: 12,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
+    backgroundColor: signalGlass.colors.bgSurface,
+    borderRadius: signalGlass.radius.md,
+    padding: signalGlass.spacing.lg,
+    gap: signalGlass.spacing.md,
+    marginBottom: signalGlass.spacing.xl,
     borderWidth: 1,
-    borderColor: colors.borderDefault,
+    borderColor: signalGlass.colors.borderSubtle,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
-  label: { color: colors.textSecondary },
-  value: { fontWeight: '600', color: colors.textPrimary },
-  btn: { width: '100%', marginBottom: spacing.sm },
+  label: { color: signalGlass.colors.textSecondary, fontSize: 14 },
+  value: { color: signalGlass.colors.textPrimary, fontWeight: '600' },
+  btn: { marginBottom: signalGlass.spacing.sm },
 });
+

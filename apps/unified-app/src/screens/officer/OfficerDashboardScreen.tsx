@@ -1,11 +1,17 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { ServiceRequest } from '@prime/types';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { ContractSignaturePromptCard } from '@/components/officer/ContractSignaturePromptCard';
+import { ContractSignaturePromptModal } from '@/components/officer/ContractSignaturePromptModal';
 import { EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
-import { useOfficerProfile } from '@/hooks/officer';
+import {
+  contractSignaturePromptKey,
+  useOfficerProfile,
+  usePendingContractSignature,
+} from '@/hooks/officer';
 import { useAppSelector } from '@/store/hooks';
 import { useGetAssignedRequestsQuery } from '@/store/api/endpoints';
 import type { OfficerStackParamList } from '@/types/navigation';
@@ -19,6 +25,8 @@ import { EarningsWidget } from './components/EarningsWidget';
 import { ShiftClockWidget } from './components/ShiftClockWidget';
 import { StatsRow } from './components/StatsRow';
 
+const dismissedPromptKeys = new Set<string>();
+
 function greeting(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Good Morning';
@@ -30,10 +38,65 @@ export function OfficerDashboardScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const { profile } = useOfficerProfile();
   const navigation = useNavigation<NativeStackNavigationProp<OfficerStackParamList>>();
+  const {
+    contract,
+    needsSignature,
+    refetch: refetchContract,
+    navigateToSign,
+    navigateToContractPdf,
+  } = usePendingContractSignature();
   const { data: requests, isLoading, isError, error, refetch } = useGetAssignedRequestsQuery(
     user?.id,
     { skip: !user?.id },
   );
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const lastPromptKeyRef = useRef<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refetchContract();
+    }, [refetchContract]),
+  );
+
+  useEffect(() => {
+    if (!needsSignature || !contract) {
+      setModalVisible(false);
+      return;
+    }
+
+    const key = contractSignaturePromptKey(contract);
+    if (dismissedPromptKeys.has(key)) {
+      setModalVisible(false);
+      return;
+    }
+
+    if (lastPromptKeyRef.current !== key) {
+      lastPromptKeyRef.current = key;
+      setModalVisible(true);
+    }
+  }, [needsSignature, contract]);
+
+  const handleRemindLater = useCallback(() => {
+    if (contract) {
+      dismissedPromptKeys.add(contractSignaturePromptKey(contract));
+    }
+    setModalVisible(false);
+  }, [contract]);
+
+  const handleSignNow = useCallback(() => {
+    if (contract) {
+      dismissedPromptKeys.add(contractSignaturePromptKey(contract));
+    }
+    setModalVisible(false);
+    navigateToSign();
+  }, [contract, navigateToSign]);
+
+  const handleViewPdf = useCallback(() => {
+    if (contract) {
+      navigateToContractPdf(contract);
+    }
+  }, [contract, navigateToContractPdf]);
 
   const todayLabel = new Date().toLocaleDateString(undefined, {
     weekday: 'short',
@@ -73,6 +136,14 @@ export function OfficerDashboardScreen() {
         {profile?.zone ? <Text style={styles.zone}>📍 {profile.zone}</Text> : null}
       </View>
 
+      {needsSignature && contract ? (
+        <ContractSignaturePromptCard
+          contract={contract}
+          onSignNow={handleSignNow}
+          onViewPdf={handleViewPdf}
+        />
+      ) : null}
+
       <ShiftClockWidget />
       <StatsRow />
 
@@ -94,6 +165,12 @@ export function OfficerDashboardScreen() {
         <View style={styles.gap} />
         <AttendanceWidget />
       </View>
+
+      <ContractSignaturePromptModal
+        visible={modalVisible}
+        onSignNow={handleSignNow}
+        onRemindLater={handleRemindLater}
+      />
     </ScreenWrapper>
   );
 }

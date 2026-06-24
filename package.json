@@ -15,9 +15,12 @@
   },
   "dependencies": {
     "expo-background-task": "~1.0.10",
+    "expo-clipboard": "^56.0.4",
     "expo-document-picker": "~14.0.7",
     "expo-print": "~15.0.8",
-    "expo-sharing": "^14.0.8"
+    "expo-secure-store": "~15.0.8",
+    "expo-sharing": "^14.0.8",
+    "react-native-signature-canvas": "^5.0.2"
   },
   "devDependencies": {
     "prettier": "^3.5.3",

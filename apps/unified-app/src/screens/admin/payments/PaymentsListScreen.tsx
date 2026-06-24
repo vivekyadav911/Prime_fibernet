@@ -1,16 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
-import {
-  ExportButton,
-  PaymentCard,
-  PaymentFilterBar,
-  PaymentSummaryBar,
-  type PaymentFilterState,
-} from '@/components/payments';
+import { PaymentCard, PaymentFilterBar, type PaymentFilterState } from '@/components/payments';
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useCollectionAssignmentsSync } from '@/hooks/admin/useCollectionAssignmentsSync';
 import { usePayments } from '@/hooks/usePayments';
@@ -20,7 +14,7 @@ import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 
-import { PaymentsCollectionPortalSection } from './PaymentsCollectionPortalSection';
+import { PaymentsOverviewSection } from './PaymentsOverviewSection';
 
 export function PaymentsListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AdminPaymentsStackParamList>>();
@@ -45,6 +39,10 @@ export function PaymentsListScreen() {
 
   const rows = useMemo(() => data?.rows ?? [], [data?.rows]);
 
+  const onFilterPendingReview = useCallback(() => {
+    setFilters((f) => ({ ...f, status: 'pending_review' }));
+  }, []);
+
   const onOpen = useCallback(
     (paymentId: string, status: string) => {
       if (status === 'pending_review' || status === 'cash_collected') {
@@ -58,31 +56,13 @@ export function PaymentsListScreen() {
 
   const listHeader = (
     <>
-      <PaymentsCollectionPortalSection />
-      <View style={styles.toolbar}>
-        <Text style={styles.title}>Transactions</Text>
-        <View style={styles.toolbarRight}>
-          <Pressable onPress={() => navigation.navigate('CollectionAssignments')}>
-            <Text style={styles.link}>Assignments</Text>
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate('GatewayConfig')}>
-            <Text style={styles.link}>Gateways</Text>
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate('PaymentAnalytics')}>
-            <Text style={styles.link}>Analytics</Text>
-          </Pressable>
-          <ExportButton filters={filters} />
-        </View>
-      </View>
+      <PaymentsOverviewSection
+        filters={filters}
+        pendingSum={data?.pendingSum}
+        onFilterPendingReview={onFilterPendingReview}
+      />
+      <Text style={styles.sectionTitle}>Transactions</Text>
       <Text style={styles.subtitle}>Review collections, confirm cash, and track online payments</Text>
-      {data ? (
-        <PaymentSummaryBar
-          total={data.total}
-          confirmedSum={data.confirmedSum}
-          pendingSum={data.pendingSum}
-          reviewCount={data.reviewCount}
-        />
-      ) : null}
       <TextInput
         style={styles.search}
         placeholder="Search payment no., customer, account…"
@@ -136,10 +116,7 @@ export function PaymentsListScreen() {
 const styles = StyleSheet.create({
   screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
   listContent: { padding: spacing.md, paddingTop: 0 },
-  toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs },
-  toolbarRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  link: { fontSize: 13, fontWeight: '600', color: adminColors.primary },
-  title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
+  sectionTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xs },
   subtitle: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.md },
   search: {
     borderWidth: 1,

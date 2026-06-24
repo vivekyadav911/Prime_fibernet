@@ -13,7 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Screen } from '@prime/ui';
 
-import { HistoryCard } from '@/components/Inventory';
+import { HistoryCard, HistoryListRow } from '@/components/Inventory';
 import { AdminEmptyState, RoleGuard } from '@/components/admin';
 import { DateRangePicker } from '@/components/common/pickers';
 import { ErrorState, SkeletonLoader } from '@/components/common';
@@ -44,6 +44,8 @@ type HistorySection = {
   data: InventoryHistoryEntry[];
 };
 
+type HistoryViewMode = 'list' | 'cards';
+
 export function InventoryHistoryScreen({ navigation }: Props) {
   const {
     history,
@@ -62,6 +64,7 @@ export function InventoryHistoryScreen({ navigation }: Props) {
   const [filterModal, setFilterModal] = useState<'item' | 'type' | 'date' | null>(null);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [viewMode, setViewMode] = useState<HistoryViewMode>('list');
 
   useEffect(() => {
     void fetchInventoryItems().then(setItems);
@@ -131,11 +134,37 @@ export function InventoryHistoryScreen({ navigation }: Props) {
           {history.length} {history.length === 1 ? 'entry' : 'entries'}
           {activeFilterCount > 0 ? ` · ${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} active` : ''}
         </Text>
-        {activeFilterCount > 0 ? (
-          <Pressable onPress={clearFilters} hitSlop={8}>
-            <Text style={styles.clearLink}>Clear all</Text>
-          </Pressable>
-        ) : null}
+        <View style={styles.summaryActions}>
+          {activeFilterCount > 0 ? (
+            <Pressable onPress={clearFilters} hitSlop={8}>
+              <Text style={styles.clearLink}>Clear all</Text>
+            </Pressable>
+          ) : null}
+          <View style={styles.viewToggle}>
+            <Pressable
+              style={[styles.toggleBtn, viewMode === 'list' && styles.toggleActive]}
+              onPress={() => setViewMode('list')}
+              accessibilityLabel="List view"
+            >
+              <Ionicons
+                name="list-outline"
+                size={16}
+                color={viewMode === 'list' ? colors.white : colors.textSecondary}
+              />
+            </Pressable>
+            <Pressable
+              style={[styles.toggleBtn, viewMode === 'cards' && styles.toggleActive]}
+              onPress={() => setViewMode('cards')}
+              accessibilityLabel="Card view"
+            >
+              <Ionicons
+                name="grid-outline"
+                size={16}
+                color={viewMode === 'cards' ? colors.white : colors.textSecondary}
+              />
+            </Pressable>
+          </View>
+        </View>
       </View>
 
       <ScrollView
@@ -198,7 +227,24 @@ export function InventoryHistoryScreen({ navigation }: Props) {
               </Text>
             </View>
           )}
-          renderItem={({ item }) => <HistoryCard entry={item} />}
+          renderItem={({ item, index, section }) => {
+            if (viewMode === 'cards') {
+              return <HistoryCard entry={item} />;
+            }
+            const isFirst = index === 0;
+            const isLast = index === section.data.length - 1;
+            return (
+              <View
+                style={[
+                  styles.listGroupItem,
+                  isFirst && styles.listGroupFirst,
+                  isLast && styles.listGroupLast,
+                ]}
+              >
+                <HistoryListRow entry={item} showDivider={!isLast} />
+              </View>
+            );
+          }}
           ListEmptyComponent={
             <AdminEmptyState
               title="No history found"
@@ -368,6 +414,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
+    gap: spacing.sm,
+  },
+  summaryActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexShrink: 0,
+  },
+  viewToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceWhite,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    overflow: 'hidden',
+  },
+  toggleBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  toggleActive: {
+    backgroundColor: adminColors.primary,
   },
   summaryText: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
   clearLink: { fontSize: 13, color: adminColors.primary, fontWeight: '600' },
@@ -415,6 +483,24 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   sectionCount: { fontSize: 11, color: colors.textMuted, fontWeight: '500' },
+  listGroupItem: {
+    backgroundColor: adminColors.cardBg,
+    marginHorizontal: spacing.md,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.borderDefault,
+  },
+  listGroupFirst: {
+    borderTopWidth: 1,
+    borderTopLeftRadius: radius.md,
+    borderTopRightRadius: radius.md,
+  },
+  listGroupLast: {
+    borderBottomWidth: 1,
+    borderBottomLeftRadius: radius.md,
+    borderBottomRightRadius: radius.md,
+    marginBottom: spacing.sm,
+  },
   footerLoader: { paddingVertical: spacing.md },
   endText: {
     textAlign: 'center',

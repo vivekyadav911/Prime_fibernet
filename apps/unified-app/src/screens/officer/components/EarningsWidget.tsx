@@ -12,8 +12,8 @@ export function EarningsWidget() {
 
   const latest = data?.[0];
   const net = latest?.netPay ?? 0;
-  const gross = (latest?.base ?? 0) + (latest?.bonuses ?? 0);
-  const pct = gross > 0 ? Math.min(100, Math.round((net / gross) * 100)) : 0;
+  const gross = net;
+  const pct = gross > 0 ? 100 : 0;
 
   return (
     <View style={styles.card}>

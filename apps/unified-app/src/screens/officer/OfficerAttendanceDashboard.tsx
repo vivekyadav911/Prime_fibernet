@@ -24,6 +24,7 @@ import type { OfficerDrawerParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+import type { ApprovalType } from '@/types/attendance';
 import { queryErrorMessage } from '@/utils/queryError';
 
 import { GeofenceStatusBanner } from './components/GeofenceStatusBanner';
@@ -34,6 +35,7 @@ export function OfficerAttendanceDashboard() {
   const dispatch = useAppDispatch();
   const sheetRef = useRef<BottomSheetModal>(null);
   const [sheetMode, setSheetMode] = useState<'check_in' | 'approval'>('check_in');
+  const [approvalIntent, setApprovalIntent] = useState<'check_in' | 'check_out'>('check_in');
   const [limitedMode, setLimitedMode] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -75,7 +77,8 @@ export function OfficerAttendanceDashboard() {
     sheetRef.current?.present();
   }, []);
 
-  const openApprovalSheet = useCallback(() => {
+  const openApprovalSheet = useCallback((intent: 'check_in' | 'check_out' = 'check_in') => {
+    setApprovalIntent(intent);
     setSheetMode('approval');
     sheetRef.current?.present();
   }, []);
@@ -94,6 +97,7 @@ export function OfficerAttendanceDashboard() {
               'Outside zone',
               `You appear to be ${Math.round(result.distance)}m from ${result.geofenceName ?? 'the assigned zone'}. Request approval or move closer and try again.`,
             );
+            setApprovalIntent('check_in');
             setSheetMode('approval');
             return;
           }
@@ -131,8 +135,10 @@ export function OfficerAttendanceDashboard() {
           }
         } else {
           const coords = geo.currentLocation ?? (await locationService.getCurrentLocation());
+          const approvalType: ApprovalType =
+            approvalIntent === 'check_out' ? 'out_of_zone_checkout' : 'out_of_zone_checkin';
           await requestApproval({
-            type: 'out_of_zone_checkin',
+            type: approvalType,
             reason: payload.reason ?? '',
             coords,
             date: new Date().toISOString().slice(0, 10),
@@ -156,7 +162,7 @@ export function OfficerAttendanceDashboard() {
         setActionLoading(false);
       }
     },
-    [checkIn, dispatch, geo.currentLocation, geo.isInsideGeofence, refetch, requestApproval, sheetMode],
+    [approvalIntent, checkIn, dispatch, geo.currentLocation, geo.isInsideGeofence, refetch, requestApproval, sheetMode],
   );
 
   const handleCheckOut = useCallback(async () => {
@@ -168,6 +174,7 @@ export function OfficerAttendanceDashboard() {
           'Outside zone',
           `You appear to be ${Math.round(result.distance)}m from the zone. Request approval or move closer.`,
         );
+        setApprovalIntent('check_out');
         setSheetMode('approval');
         sheetRef.current?.present();
         return;
@@ -276,7 +283,7 @@ export function OfficerAttendanceDashboard() {
                 <Button
                   label="Request approval"
                   variant="secondary"
-                  onPress={openApprovalSheet}
+                  onPress={() => openApprovalSheet('check_in')}
                   disabled={geo.isInsideGeofence || actionLoading}
                   style={styles.cta}
                 />
