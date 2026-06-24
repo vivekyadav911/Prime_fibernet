@@ -32,6 +32,7 @@ export type AdminUserDetail = {
   phone: string | null;
   address: string | null;
   city: string | null;
+  accountNumber: string | null;
   joinDate: string;
   isBlocked: boolean;
   assignedOfficerId: string | null;

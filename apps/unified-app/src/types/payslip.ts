@@ -161,6 +161,8 @@ export type PayrollDashboardEntry = {
   payslipId: string | null;
   status: PayslipStatus | 'not_started';
   netPayPreview: number | null;
+  generatedPdfUrl: string | null;
+  payPeriodLabel: string | null;
   blocked: boolean;
   blockingDates: string[];
 };

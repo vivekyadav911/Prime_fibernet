@@ -134,6 +134,9 @@ BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'payslips' AND column_name = 'payslip_status'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'payslips' AND column_name = 'status'
   ) THEN
     ALTER TABLE public.payslips RENAME COLUMN payslip_status TO status;
   END IF;

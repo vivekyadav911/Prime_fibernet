@@ -10,11 +10,13 @@ import {
 } from 'react-native';
 import { Button } from '@prime/ui';
 
-import { FormField, FormRow, SelectField } from '@/components/admin';
+import { FilterChips, FormField, FormRow, SelectField } from '@/components/admin';
 import { fetchOfficers } from '@/services/ticketsService';
+import { adminUsersApi } from '@/services/api/adminUsersApi';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import type { AdminUserListItem } from '@/types/api/admin';
 import type { Officer } from '@/types/requests';
 import type { ComplaintType, TicketPriority, TicketSource } from '@/types/tickets';
 import {
@@ -26,16 +28,26 @@ import {
 import { truncateRequestId } from '@/utils/requestViewMappers';
 
 import { LinkRequestModal } from './LinkRequestModal';
+import { SelectCustomerModal } from './SelectCustomerModal';
+
+type ContactMode = 'existing' | 'new';
 
 type CreateTicketFormProps = {
   linkedRequestId?: string;
   linkedRequestNumber?: string;
+  initialCustomerId?: string;
   onCreated?: () => void;
 };
+
+const CONTACT_MODE_OPTIONS: { value: ContactMode; label: string }[] = [
+  { value: 'existing', label: 'Existing Customer' },
+  { value: 'new', label: 'New Contact' },
+];
 
 export function CreateTicketForm({
   linkedRequestId,
   linkedRequestNumber,
+  initialCustomerId,
   onCreated,
 }: CreateTicketFormProps) {
   const {
@@ -47,17 +59,66 @@ export function CreateTicketForm({
     setLinkedRequest,
     addTag,
     removeTag,
+    autoFillFromCustomer,
+    clearCustomer,
   } = useTicketForm(
     linkedRequestId
       ? { linkedRequestId, linkedRequestNumber: linkedRequestNumber ?? linkedRequestId }
       : undefined,
   );
 
+  const [fetchCustomerDetail] = adminUsersApi.useLazyGetAdminUserDetailQuery();
+
+  const [contactMode, setContactMode] = useState<ContactMode>(initialCustomerId ? 'existing' : 'new');
+  const [selectedCustomerLabel, setSelectedCustomerLabel] = useState<string | null>(null);
+  const [customerError, setCustomerError] = useState<string | null>(null);
+  const [loadingCustomer, setLoadingCustomer] = useState(false);
+
   const [officers, setOfficers] = useState<Officer[]>([]);
   const [officersLoading, setOfficersLoading] = useState(false);
   const [officersError, setOfficersError] = useState<string | null>(null);
   const [linkModalVisible, setLinkModalVisible] = useState(false);
+  const [customerModalVisible, setCustomerModalVisible] = useState(false);
   const [tagInput, setTagInput] = useState('');
+
+  const applyCustomer = useCallback(
+    async (customer: AdminUserListItem | null) => {
+      if (!customer) {
+        clearCustomer();
+        setSelectedCustomerLabel(null);
+        setCustomerError(null);
+        return;
+      }
+
+      setLoadingCustomer(true);
+      setCustomerError(null);
+      try {
+        const detail = await fetchCustomerDetail(customer.id).unwrap();
+        autoFillFromCustomer({
+          id: detail.id,
+          name: detail.name,
+          email: detail.email,
+          phone: detail.phone,
+          address: detail.address,
+          city: detail.city,
+          accountNumber: detail.accountNumber,
+        });
+        setSelectedCustomerLabel(customer.name);
+      } catch {
+        autoFillFromCustomer({
+          id: customer.id,
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          city: customer.city,
+        });
+        setSelectedCustomerLabel(customer.name);
+      } finally {
+        setLoadingCustomer(false);
+      }
+    },
+    [autoFillFromCustomer, clearCustomer, fetchCustomerDetail],
+  );
 
   const loadOfficers = useCallback(async () => {
     setOfficersLoading(true);
@@ -81,10 +142,43 @@ export function CreateTicketForm({
     }
   }, [linkedRequestId, linkedRequestNumber, setLinkedRequest]);
 
+  useEffect(() => {
+    if (!initialCustomerId) return;
+    void applyCustomer({
+      id: initialCustomerId,
+      legacyUserId: null,
+      name: 'Customer',
+      username: null,
+      email: '',
+      phone: null,
+      city: null,
+      planName: '',
+      status: 'active',
+      isBlocked: false,
+    });
+  }, [initialCustomerId, applyCustomer]);
+
+  const handleContactModeChange = useCallback(
+    (mode: ContactMode) => {
+      setContactMode(mode);
+      setCustomerError(null);
+      if (mode === 'new') {
+        clearCustomer();
+        setSelectedCustomerLabel(null);
+      }
+    },
+    [clearCustomer],
+  );
+
   const handleSubmit = useCallback(async () => {
+    if (contactMode === 'existing' && !formData.customerId) {
+      setCustomerError('Select an existing customer to continue.');
+      return;
+    }
+    setCustomerError(null);
     const ticket = await submitTicket();
     if (ticket) onCreated?.();
-  }, [onCreated, submitTicket]);
+  }, [contactMode, formData.customerId, onCreated, submitTicket]);
 
   const handleTagSubmit = useCallback(() => {
     if (tagInput.includes(',')) {
@@ -94,6 +188,8 @@ export function CreateTicketForm({
     }
     setTagInput('');
   }, [addTag, tagInput]);
+
+  const contactFieldsLocked = contactMode === 'existing' && Boolean(formData.customerId);
 
   const officerOptions: { value: string; label: string }[] = [
     { value: 'unassigned', label: '— Unassigned (pool)' },
@@ -110,11 +206,38 @@ export function CreateTicketForm({
         <Text style={styles.badge}>NEW REQUEST</Text>
       </View>
 
+      <Text style={styles.sectionLabel}>Customer Type</Text>
+      <FilterChips
+        options={CONTACT_MODE_OPTIONS}
+        selected={contactMode}
+        onSelect={handleContactModeChange}
+      />
+
+      {contactMode === 'existing' ? (
+        <View style={styles.customerSection}>
+          <Pressable style={styles.linkField} onPress={() => setCustomerModalVisible(true)}>
+            <Text style={styles.fieldLabel}>SELECT CUSTOMER</Text>
+            {loadingCustomer ? (
+              <ActivityIndicator color={adminColors.primary} style={styles.customerLoader} />
+            ) : (
+              <Text style={styles.linkValue}>
+                {selectedCustomerLabel ?? 'Tap to search and select a customer…'}
+              </Text>
+            )}
+            {formData.accountNumber ? (
+              <Text style={styles.accountMeta}>Account: {formData.accountNumber}</Text>
+            ) : null}
+          </Pressable>
+          {customerError ? <Text style={styles.customerError}>{customerError}</Text> : null}
+        </View>
+      ) : null}
+
       <FormField
         label="Contact Name"
         value={formData.contactName}
         onChangeText={(v) => updateField('contactName', v)}
         error={errors.contactName}
+        editable={!contactFieldsLocked}
       />
 
       <FormRow>
@@ -125,6 +248,7 @@ export function CreateTicketForm({
             onChangeText={(v) => updateField('contactPhone', v)}
             keyboardType="phone-pad"
             error={errors.contactPhone}
+            editable={!contactFieldsLocked}
           />
         </View>
         <View style={styles.half}>
@@ -135,6 +259,7 @@ export function CreateTicketForm({
             keyboardType="email-address"
             autoCapitalize="none"
             error={errors.contactEmail}
+            editable={!contactFieldsLocked}
           />
         </View>
       </FormRow>
@@ -145,6 +270,7 @@ export function CreateTicketForm({
             label="Address"
             value={formData.address}
             onChangeText={(v) => updateField('address', v)}
+            editable={!contactFieldsLocked}
           />
         </View>
         <View style={styles.narrow}>
@@ -152,6 +278,7 @@ export function CreateTicketForm({
             label="City"
             value={formData.city}
             onChangeText={(v) => updateField('city', v)}
+            editable={!contactFieldsLocked}
           />
         </View>
       </FormRow>
@@ -240,7 +367,7 @@ export function CreateTicketForm({
       <Button
         label={isSubmitting ? 'Submitting…' : 'Submit Ticket'}
         onPress={handleSubmit}
-        disabled={isSubmitting}
+        disabled={isSubmitting || loadingCustomer}
         style={styles.submitBtn}
       />
 
@@ -254,6 +381,13 @@ export function CreateTicketForm({
             request ? truncateRequestId(request.id) : null,
           );
         }}
+      />
+
+      <SelectCustomerModal
+        visible={customerModalVisible}
+        selectedCustomerId={formData.customerId}
+        onClose={() => setCustomerModalVisible(false)}
+        onSelect={(customer) => void applyCustomer(customer)}
       />
     </View>
   );
@@ -279,6 +413,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textSecondary,
     letterSpacing: 0.5,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    marginBottom: -spacing.xxs,
+  },
+  customerSection: {
+    gap: spacing.xxs,
   },
   half: { flex: 1 },
   wide: { flex: 7 },
@@ -324,6 +468,19 @@ const styles = StyleSheet.create({
   linkValue: {
     fontSize: 14,
     color: colors.textPrimary,
+  },
+  accountMeta: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: spacing.xxs,
+  },
+  customerLoader: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+  },
+  customerError: {
+    color: colors.errorRed,
+    fontSize: 12,
   },
   submitBtn: {
     marginTop: spacing.sm,

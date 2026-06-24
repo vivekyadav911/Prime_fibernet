@@ -137,6 +137,7 @@ export function useTicketForm(initialLinkedRequest?: {
       phone?: string | null;
       address?: string | null;
       city?: string | null;
+      accountNumber?: string | null;
     }) => {
       setFormData((prev) => ({
         ...prev,
@@ -146,10 +147,26 @@ export function useTicketForm(initialLinkedRequest?: {
         contactPhone: customer.phone ?? '',
         address: customer.address ?? '',
         city: customer.city ?? '',
+        accountNumber: customer.accountNumber ?? null,
       }));
+      setErrors({});
     },
     [],
   );
+
+  const clearCustomer = useCallback(() => {
+    setFormData((prev) => ({
+      ...prev,
+      customerId: null,
+      accountNumber: null,
+      contactName: '',
+      contactPhone: '',
+      contactEmail: '',
+      address: '',
+      city: '',
+    }));
+    setErrors((prev) => ({ ...prev, customerId: undefined }));
+  }, []);
 
   const setLinkedRequest = useCallback((requestId: string | null, requestNumber: string | null) => {
     setFormData((prev) => ({
@@ -179,6 +196,7 @@ export function useTicketForm(initialLinkedRequest?: {
     resetForm,
     isSubmitting,
     autoFillFromCustomer,
+    clearCustomer,
     setLinkedRequest,
     addTag,
     removeTag,

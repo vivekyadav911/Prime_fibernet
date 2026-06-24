@@ -31,6 +31,9 @@ import { ShiftManagementScreen } from '@/screens/admin/hr/ShiftManagementScreen'
 import { RoleManagementScreen } from '@/screens/admin/hr/RoleManagementScreen';
 import { PayrollScreen } from '@/screens/admin/hr/payroll/PayrollScreen';
 import { PayslipsManagementScreen } from '@/screens/admin/hr/payroll/PayslipsManagementScreen';
+import { PayslipReviewScreen } from '@/screens/admin/hr/payroll/PayslipReviewScreen';
+import { PayslipSettingsScreen } from '@/screens/admin/hr/payroll/PayslipSettingsScreen';
+import { PayslipPdfViewerScreen } from '@/screens/common/PayslipPdfViewerScreen';
 import { NotificationCenterScreen } from '@/screens/admin/notifications/NotificationCenterScreen';
 import { NotificationsScreen } from '@/screens/admin/notifications/NotificationsScreen';
 import { CreateNotificationScreen } from '@/screens/admin/notifications/CreateNotificationScreen';
@@ -292,6 +295,9 @@ export function AdminPayrollStackNav() {
     <PayrollStack.Navigator screenOptions={stackScreenOptions}>
       <PayrollStack.Screen name="Payroll" component={PayrollScreen} options={{ title: 'Payroll' }} />
       <PayrollStack.Screen name="PayslipsManagement" component={PayslipsManagementScreen} options={{ title: 'Payslips' }} />
+      <PayrollStack.Screen name="PayslipReview" component={PayslipReviewScreen} options={{ title: 'Review payslip' }} />
+      <PayrollStack.Screen name="PayslipSettings" component={PayslipSettingsScreen} options={{ title: 'Payslip settings' }} />
+      <PayrollStack.Screen name="PayslipPdfViewer" component={PayslipPdfViewerScreen} options={{ headerShown: false, title: 'Payslip PDF' }} />
     </PayrollStack.Navigator>
   );
 }
@@ -349,7 +355,7 @@ export function AdminNotificationsStackNav() {
 
 export function AdminPaymentsStackNav() {
   return (
-    <PaymentsStack.Navigator screenOptions={stackScreenOptions}>
+    <PaymentsStack.Navigator screenOptions={stackScreenOptions} initialRouteName="PaymentList">
       <PaymentsStack.Screen name="PaymentList" component={PaymentsListScreen} options={{ title: 'Payments' }} />
       <PaymentsStack.Screen
         name="CollectionAssignments"

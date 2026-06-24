@@ -164,13 +164,15 @@ export const adminUsersApi = baseApi.injectEndpoints({
           }
 
           const plan = sub?.plans as { name?: string; speed_mbps?: number } | null;
+          const legacyAccount = (user.customer_id as string) ?? null;
           return {
-            id: user.id as string,
+            id: userId,
             name: user.name as string,
             email: user.email as string,
             phone: (user.phone as string) ?? null,
             address: (user.address as string) ?? null,
             city: (user.city as string) ?? null,
+            accountNumber: legacyAccount ?? `ACC-${userId.slice(0, 8)}`,
             joinDate: (user.created_at as string) ?? '',
             isBlocked: Boolean(user.is_blocked),
             assignedOfficerId,

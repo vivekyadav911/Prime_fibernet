@@ -39,7 +39,7 @@ export function CustomerSupportProfileScreen({ route, navigation }: Props) {
         <ScrollView>
           <SectionCard title="Account Overview">
             <Text style={styles.name}>{user.name}</Text>
-            <Text style={styles.meta}>Account: {(user as { customerId?: string }).customerId ?? user.id.slice(0, 8)}</Text>
+            <Text style={styles.meta}>Account: {user.accountNumber ?? user.id.slice(0, 8)}</Text>
             <Text style={styles.meta}>Plan: {user.planName ?? '—'}</Text>
             <StatusBadge status={user.isBlocked ? 'inactive' : 'active'} />
           </SectionCard>
@@ -50,7 +50,7 @@ export function CustomerSupportProfileScreen({ route, navigation }: Props) {
           </SectionCard>
 
           <View style={styles.quickActions}>
-            <Button label="Raise Ticket" onPress={() => navigation.navigate('CreateTicket')} />
+            <Button label="Raise Ticket" onPress={() => navigation.navigate('CreateTicket', { customerId })} />
             <Button label="Live Chat" variant="ghost" onPress={() => navigation.navigate('LiveChat')} />
             <Button label="Log Call" variant="ghost" onPress={() => void handleLogCall()} />
           </View>

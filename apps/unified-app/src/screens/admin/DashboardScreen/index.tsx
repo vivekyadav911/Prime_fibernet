@@ -234,6 +234,10 @@ export function DashboardScreen() {
 
   const handleQuickAccess = useCallback(
     (route: string) => {
+      if (route === 'Payments') {
+        navigation.navigate('Payments', { screen: 'PaymentList' });
+        return;
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       navigation.navigate(route as any);
     },

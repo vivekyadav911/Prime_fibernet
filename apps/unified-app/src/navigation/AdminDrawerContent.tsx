@@ -72,7 +72,7 @@ const SECTIONS: DrawerSection[] = [
     id: 'finance',
     label: 'Finance',
     items: [
-      { route: 'Payments', label: 'Payments', icon: '💳' },
+      { route: 'Payments', screen: 'PaymentList', label: 'Payments', icon: '💳' },
       { route: 'Payments', screen: 'CollectionAssignments', label: 'Collection assignments', icon: '📋' },
       { route: 'Invoices', label: 'Invoices', icon: '🧾' },
     ],

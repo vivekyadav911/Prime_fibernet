@@ -39,6 +39,7 @@ const api = createApi({
     'CustomerDashboard',
     'EmploymentContracts',
     'EmploymentContractVersions',
+    'PayslipSettings',
   ],
   endpoints: () => ({}),
 });

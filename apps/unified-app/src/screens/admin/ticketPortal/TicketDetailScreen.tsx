@@ -370,6 +370,9 @@ export function TicketDetailScreen({ route, navigation }: Props) {
           </SectionCard>
 
           <SectionCard title="Contact Information">
+            {ticket.accountNumber ? (
+              <InfoRow label="Account" value={ticket.accountNumber} />
+            ) : null}
             <InfoRow label="Name" value={ticket.contactName} />
             <InfoRow label="Phone" value={ticket.contactPhone} />
             <InfoRow label="Email" value={ticket.contactEmail || '—'} />

@@ -112,6 +112,16 @@ export type OfficerNotificationsStackParamList = {
   NotificationsList: undefined;
 };
 
+export type OfficerPayslipStackParamList = {
+  PayslipList: undefined;
+  PayslipDetail: { payslipId: string };
+  PayslipPdfViewer: {
+    storagePath: string;
+    title?: string;
+    fileName?: string;
+  };
+};
+
 export type OfficerProfileStackParamList = {
   ProfileHome: undefined;
   ChangePassword: undefined;
@@ -258,6 +268,18 @@ export type AdminAttendanceStackParamList = {
 export type AdminPayrollStackParamList = {
   Payroll: undefined;
   PayslipsManagement: undefined;
+  PayslipReview: {
+    officerId: string;
+    periodStart: string;
+    periodEnd: string;
+    payslipId?: string;
+  };
+  PayslipSettings: undefined;
+  PayslipPdfViewer: {
+    storagePath: string;
+    title?: string;
+    fileName?: string;
+  };
 };
 
 export type AdminRequestsStackParamList = {
@@ -275,7 +297,7 @@ export type AdminSupportStackParamList = {
   SupportDashboard: undefined;
   Tickets: undefined;
   TicketDetail: { ticketId: string };
-  CreateTicket: { linkedRequestId?: string; linkedRequestNumber?: string } | undefined;
+  CreateTicket: { linkedRequestId?: string; linkedRequestNumber?: string; customerId?: string } | undefined;
   LiveChat: undefined;
   ChatConversation: { sessionId: string };
   FaqList: undefined;

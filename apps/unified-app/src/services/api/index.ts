@@ -30,6 +30,7 @@ import './customerPlansApi';
 import './customerTicketsApi';
 import './customerDashboardApi';
 import './employmentContractsApi';
+import './payrollApi';
 
 export * from './authApi';
 export * from './plansApi';
@@ -59,3 +60,4 @@ export * from './customerPlansApi';
 export * from './customerTicketsApi';
 export * from './customerDashboardApi';
 export * from './employmentContractsApi';
+export * from './payrollApi';

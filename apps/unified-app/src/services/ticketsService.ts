@@ -177,6 +177,7 @@ export async function createTicket(
     linked_request_id: form.linkedRequestId,
     linked_request_number: form.linkedRequestNumber,
     customer_id: form.customerId,
+    account_number: form.accountNumber || null,
     tags: form.tags,
     ...slaFields,
   };

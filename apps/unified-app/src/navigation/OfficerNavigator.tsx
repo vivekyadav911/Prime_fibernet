@@ -11,7 +11,7 @@ import { LocationGateScreen } from '@/screens/officer/LocationGateScreen';
 import { OfficerDashboardScreen } from '@/screens/officer/OfficerDashboardScreen';
 import { OfficerInventoryScreen } from '@/screens/officer/OfficerInventoryScreen';
 import { OfficerMapScreen } from '@/screens/officer/OfficerMapScreen';
-import { OfficerPayslipScreen } from '@/screens/officer/OfficerPayslipScreen';
+import { OfficerPayslipStackNav } from './OfficerPayslipStackNav';
 import { OfficerAttendanceDashboard } from '@/screens/officer/OfficerAttendanceDashboard';
 import { AttendanceHistoryScreen } from '@/screens/officer/AttendanceHistoryScreen';
 import type { OfficerDrawerParamList, OfficerStackParamList } from '@/types/navigation';
@@ -101,7 +101,11 @@ function OfficerDrawerNav() {
         />
         <Drawer.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Invoice' }} />
         <Drawer.Screen name="Inventory" component={OfficerInventoryScreen} options={{ title: 'Inventory' }} />
-        <Drawer.Screen name="Payslip" component={OfficerPayslipScreen} options={{ title: 'My Payslip' }} />
+        <Drawer.Screen
+          name="Payslip"
+          component={OfficerPayslipStackNav}
+          options={{ title: 'My Payslips', headerShown: false }}
+        />
         <Drawer.Screen
           name="LeaveStack"
           component={OfficerLeaveStackNav}
