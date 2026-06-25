@@ -5,8 +5,7 @@ import { getSupabase } from '@/services/supabase';
 import { useAppDispatch } from '@/store/hooks';
 import { DEV_AUTH_CREDENTIALS, type AppRole } from '@prime/types';
 
-import { store } from '@/store/store';
-import { setSession, signInDevUser, logout as logoutAction } from '@/store/slices/authSlice';
+import { setSession, logout as logoutAction } from '@/store/slices/authSlice';
 
 export function useAuthBootstrap() {
   const dispatch = useAppDispatch();
@@ -31,8 +30,6 @@ export function useAuthBootstrap() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session && store.getState().auth.isDevSession) return;
-
       dispatch(
         setSession({
           session,
@@ -68,24 +65,19 @@ export async function resetPassword(email: string) {
   if (error) throw error;
 }
 
-export async function devQuickSignIn(dispatch: ReturnType<typeof useAppDispatch>, role: AppRole) {
+/**
+ * Dev-only convenience: performs a REAL Supabase sign-in with the seeded
+ * credentials for the given role. There is no fake/skipped-session fallback —
+ * if the seeded account is missing or the password is wrong, this throws and
+ * the caller surfaces the error. Gated to development builds at the call site.
+ */
+export async function devQuickSignIn(role: AppRole) {
   const creds = DEV_AUTH_CREDENTIALS[role];
-  const { data, error } = await getSupabase().auth.signInWithPassword({
-    email: creds.email,
-    password: creds.password,
-  });
-  if (!error && data.session && data.user) {
-    dispatch(setSession({ session: data.session, user: data.user }));
-    return data;
-  }
-
-  dispatch(signInDevUser(role));
+  return signInWithPassword(creds.email, creds.password);
 }
 
 export async function signOut(dispatch: ReturnType<typeof useAppDispatch>) {
-  if (!store.getState().auth.isDevSession) {
-    await getSupabase().auth.signOut();
-  }
+  await getSupabase().auth.signOut();
   dispatch(logoutAction());
 }
 
