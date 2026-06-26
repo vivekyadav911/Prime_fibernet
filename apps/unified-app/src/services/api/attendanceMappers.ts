@@ -23,6 +23,77 @@ import type {
 import { getOfficerIdForUser, parseGeographyPoint } from './mappers';
 import type { TypedSupabaseClient } from './supabase';
 
+export const APPROVAL_OFFICER_EMBED = 'full_name, profile_photo_url';
+export const APPROVAL_BASE_SELECT = `*, officers(${APPROVAL_OFFICER_EMBED})`;
+
+async function enrichAndMapApprovalRows(
+  client: TypedSupabaseClient,
+  rows: DbApprovalRow[],
+): Promise<ApprovalRequest[]> {
+  const geofenceIds = [
+    ...new Set(rows.map((r) => r.geofence_id).filter((id): id is string => Boolean(id))),
+  ];
+
+  const geofenceNames = new Map<string, string>();
+  if (geofenceIds.length > 0) {
+    const { data: geofences } = await client
+      .from('geofences')
+      .select('id, name')
+      .in('id', geofenceIds);
+    for (const g of geofences ?? []) {
+      geofenceNames.set(g.id, g.name);
+    }
+  }
+
+  return rows.map((row) =>
+    mapApprovalRow({
+      ...row,
+      geofences: row.geofence_id
+        ? { name: geofenceNames.get(row.geofence_id) ?? '' }
+        : undefined,
+    }),
+  );
+}
+
+export async function fetchApprovalRequests(
+  client: TypedSupabaseClient,
+  options?: { status?: string; officerId?: string },
+): Promise<ApprovalRequest[]> {
+  const runQuery = (orderColumn: string) => {
+    let q = client.from('attendance_approval_requests').select(APPROVAL_BASE_SELECT);
+    if (options?.status && options.status !== 'all') {
+      q = q.eq('status', options.status);
+    }
+    if (options?.officerId) {
+      q = q.eq('officer_id', options.officerId);
+    }
+    return q.order(orderColumn, { ascending: false });
+  };
+
+  let result = await runQuery('requested_at');
+  if (result.error) {
+    result = await runQuery('created_at');
+  }
+  if (result.error) throw result.error;
+
+  return enrichAndMapApprovalRows(client, (result.data ?? []) as DbApprovalRow[]);
+}
+
+export async function fetchApprovalRequestById(
+  client: TypedSupabaseClient,
+  id: string,
+): Promise<ApprovalRequest> {
+  const { data, error } = await client
+    .from('attendance_approval_requests')
+    .select(APPROVAL_BASE_SELECT)
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  const mapped = await enrichAndMapApprovalRows(client, [data as DbApprovalRow]);
+  if (!mapped[0]) throw new Error('Approval request not found');
+  return mapped[0];
+}
+
 export function mapGeofenceRow(row: DbGeofenceRow): Geofence {
   const assignments = row.geofence_officer_assignments ?? [];
   return {
@@ -74,6 +145,10 @@ export function mapAttendanceRow(row: DbAttendanceRow): AttendanceRecord {
 }
 
 export function mapApprovalRow(row: DbApprovalRow): ApprovalRequest {
+  const legacy = row as DbApprovalRow & { created_at?: string; attendance_id?: string };
+  const fallbackDate =
+    legacy.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+
   return {
     id: row.id,
     officerId: row.officer_id,
@@ -81,20 +156,20 @@ export function mapApprovalRow(row: DbApprovalRow): ApprovalRequest {
     officerAvatar: row.officers?.profile_photo_url,
     geofenceId: row.geofence_id ?? '',
     geofenceName: row.geofences?.name ?? '',
-    type: row.type,
-    requestedAt: row.requested_at,
+    type: (row.type ?? 'manual_correction') as ApprovalType,
+    requestedAt: row.requested_at ?? legacy.created_at ?? new Date().toISOString(),
     requestedLocation: {
-      latitude: Number(row.requested_latitude),
-      longitude: Number(row.requested_longitude),
+      latitude: Number(row.requested_latitude ?? 0),
+      longitude: Number(row.requested_longitude ?? 0),
     },
-    distanceFromFence: Number(row.distance_from_fence),
-    reason: row.reason,
+    distanceFromFence: Number(row.distance_from_fence ?? 0),
+    reason: row.reason ?? '',
     photoProof: row.photo_proof_url ?? undefined,
-    status: row.status,
+    status: (row.status ?? 'pending') as ApprovalStatus,
     reviewedBy: row.reviewed_by ?? undefined,
     reviewedAt: row.reviewed_at ?? undefined,
     reviewNotes: row.review_notes ?? undefined,
-    date: row.attendance_date,
+    date: row.attendance_date ?? fallbackDate,
   };
 }
 

@@ -9,6 +9,7 @@ import { useAssignGeofence, useGeofence } from '@/hooks/attendance/useAdminAtten
 import { useGetOfficersQuery } from '@/store/api/endpoints';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
@@ -54,7 +55,7 @@ export function AssignGeofenceScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <Screen style={styles.canvas}>
+      <Screen style={adminScreenStyles.canvas}>
         <Text style={styles.title}>Assign officers — {geofence?.name}</Text>
         <FlatList
           data={filtered}
@@ -77,7 +78,6 @@ export function AssignGeofenceScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: adminColors.canvasBg },
   title: { fontSize: 16, fontWeight: '600', marginBottom: spacing.md, color: colors.textPrimary },
   row: {
     flexDirection: 'row',

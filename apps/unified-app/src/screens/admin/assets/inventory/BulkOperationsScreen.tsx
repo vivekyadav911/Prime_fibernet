@@ -20,6 +20,7 @@ import { bulkAction } from '@/services/inventoryService';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminInventoryStackParamList } from '@/types/navigation';
@@ -120,7 +121,7 @@ export function BulkOperationsScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <Screen padded={false} style={styles.screen}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <Pressable style={styles.selectAll} onPress={toggleAll}>
           <Ionicons
             name={allSelected ? 'checkbox' : 'square-outline'}
@@ -204,7 +205,6 @@ export function BulkOperationsScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
   selectAll: {
     flexDirection: 'row',
     alignItems: 'center',

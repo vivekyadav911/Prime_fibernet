@@ -11,7 +11,7 @@ type RecentActivitiesSectionProps = {
 
 export function RecentActivitiesSection({ activities }: RecentActivitiesSectionProps) {
   if (!activities?.length) {
-    return <AdminEmptyState title="No recent activity" icon="📋" />;
+    return <AdminEmptyState title="No recent activity" iconName="time-outline" />;
   }
 
   return (

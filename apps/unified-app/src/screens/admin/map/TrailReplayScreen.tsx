@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Marker } from 'react-native-maps';
 import type MapView from 'react-native-maps';
@@ -11,6 +11,7 @@ import { getOfficerColor, getOfficerInitials } from '@/constants/mapTheme';
 import { useGetLocationHistoryQuery, useGetOfficerDwellsQuery } from '@/services/api/officerTrackingApi';
 import type { AdminMapStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
@@ -77,18 +78,14 @@ export function TrailReplayScreen({ route, navigation }: Props) {
     setIsPlaying((p) => !p);
   }, [currentIndex, points.length]);
 
-  return (
-    <Screen padded={false}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>← Back</Text>
-        </Pressable>
-        <Text style={styles.title} numberOfLines={1}>
-          Trail Replay — {officerName}
-        </Text>
-        <Text style={styles.date}>{date}</Text>
-      </View>
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: `Trail — ${officerName}`,
+    });
+  }, [navigation, officerName]);
 
+  return (
+    <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
       <FreeMapView ref={mapRef} style={styles.map} initialRegion={initialRegion}>
         <TrailPolyline officerId={officerId} points={replayPoints} />
         {dwells.map((d) => (
@@ -135,18 +132,6 @@ export function TrailReplayScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.sm,
-    backgroundColor: colors.surfaceWhite,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderDefault,
-    gap: spacing.sm,
-  },
-  back: { color: adminColors.primary, fontWeight: '600', fontSize: 14 },
-  title: { flex: 1, fontWeight: '700', fontSize: 14, color: colors.textPrimary },
-  date: { fontSize: 12, color: colors.textSecondary },
   map: { flex: 1 },
   marker: {
     width: 36,

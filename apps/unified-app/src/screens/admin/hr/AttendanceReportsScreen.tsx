@@ -8,6 +8,7 @@ import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAttendanceReports } from '@/hooks/attendance/useAdminAttendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -52,7 +53,7 @@ export function AttendanceReportsScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="reports.view">
-      <Screen padded={false} style={styles.canvas}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <ScrollView contentContainerStyle={styles.scroll}>
           <Text style={styles.sectionTitle}>Daily attendance trend</Text>
           <LineChart
@@ -95,7 +96,6 @@ export function AttendanceReportsScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: adminColors.canvasBg },
   scroll: { padding: spacing.md, gap: spacing.lg },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   axis: { fontSize: 10, color: colors.textSecondary },

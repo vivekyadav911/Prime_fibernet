@@ -9,6 +9,7 @@ import { usePaymentDetail } from '@/hooks/usePayments';
 import { useInitiateRefundV2Mutation } from '@/services/api/paymentCollectionApi';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -44,7 +45,7 @@ export function RefundScreen({ route, navigation }: Props) {
   }
 
   return (
-    <Screen style={styles.screen}>
+    <Screen style={[adminScreenStyles.canvas, styles.screenPadding]}>
       <Text style={styles.title}>Refund — {payment.payment_number}</Text>
       <AmountDisplay amount={payment.total_amount} large />
       <Text style={styles.label}>REFUND AMOUNT</Text>
@@ -68,8 +69,7 @@ export function RefundScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, padding: spacing.md },
+const styles = StyleSheet.create({  screenPadding: { padding: spacing.md },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.md },
   label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', marginTop: spacing.md, marginBottom: spacing.xs },
   input: {

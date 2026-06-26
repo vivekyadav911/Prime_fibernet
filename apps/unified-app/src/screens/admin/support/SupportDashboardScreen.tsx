@@ -19,6 +19,7 @@ import { useTickets } from '@/hooks/useTickets';
 import { useGetSupportDashboardStatsQuery } from '@/services/api/adminSupportApi';
 import { useAppSelector } from '@/store/hooks';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
@@ -68,7 +69,7 @@ export function SupportDashboardScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen style={styles.screen} safeAreaTop={false}>
+      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
         <SkeletonLoader rows={8} />
       </Screen>
     );
@@ -76,7 +77,7 @@ export function SupportDashboardScreen({ navigation }: Props) {
 
   if (isError) {
     return (
-      <Screen style={styles.screen} safeAreaTop={false}>
+      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </Screen>
     );
@@ -84,7 +85,7 @@ export function SupportDashboardScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen} padded={false} safeAreaTop={false}>
+      <Screen style={adminScreenStyles.canvas} padded={false} safeAreaTop={false}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
@@ -155,7 +156,6 @@ export function SupportDashboardScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   scroll: {
     padding: spacing.md,
     paddingBottom: spacing.xxl,

@@ -13,6 +13,7 @@ import {
   useGetRevenueByMonthQuery,
 } from '@/store/api/endpoints';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -32,7 +33,7 @@ export function ReportsScreen() {
 
   return (
     <RoleGuard requiredPermission="reports.view">
-      <Screen style={styles.canvas}>
+      <Screen style={adminScreenStyles.canvas}>
         <ScrollView>
           <Text style={styles.title}>Reports</Text>
           <DateRangePicker from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
@@ -80,7 +81,6 @@ export function ReportsScreen() {
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: adminColors.canvasBg },
   title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.md },
   kpiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginVertical: spacing.md },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },

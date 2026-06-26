@@ -115,6 +115,7 @@ const styles = StyleSheet.create({
   dayCell: {
     width: '14.28%',
     aspectRatio: 1,
+    maxHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.full,

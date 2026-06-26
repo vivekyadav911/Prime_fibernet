@@ -6,6 +6,7 @@ import { Button, Screen } from '@prime/ui';
 import { FormField, RoleGuard, SectionCard } from '@/components/admin';
 import { useCreateManualGstInvoiceMutation, useGetAdminUsersQuery } from '@/store/api/endpoints';
 import type { AdminInvoicesStackParamList } from '@/types/navigation';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import type { ManualGstLineItem } from '@/services/api/adminFinanceApi';
 
 type Props = NativeStackScreenProps<AdminInvoicesStackParamList, 'ManualGstInvoice'>;
@@ -53,7 +54,7 @@ export function ManualGSTInvoiceScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="invoices.create">
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <FormField
           label="Customer ID"
           value={customerId}

@@ -9,6 +9,7 @@ import { useCreateShift, useDeleteShift, useShifts } from '@/hooks/attendance/us
 import type { ShiftDefinition } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -87,7 +88,7 @@ export function ShiftManagementScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <Screen padded={false} style={styles.canvas}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <View style={styles.header}>
           <Text style={styles.title}>Shift management</Text>
           <Button label={creating ? 'Adding…' : 'Add shift'} onPress={() => void handleAdd()} disabled={creating} />
@@ -104,7 +105,6 @@ export function ShiftManagementScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: adminColors.canvasBg },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

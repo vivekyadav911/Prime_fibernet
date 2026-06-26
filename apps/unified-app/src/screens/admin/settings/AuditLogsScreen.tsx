@@ -10,7 +10,7 @@ import {
   useGetAuditLogUsersQuery,
   useGetAuditLogsFilteredQuery,
 } from '@/store/api/endpoints';
-import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AuditLogEntry } from '@/types/settings';
@@ -98,7 +98,7 @@ export function AuditLogsScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <SettingsHubLayout activeRoute="AuditLogs">
           <ScrollView contentContainerStyle={styles.content}>
             <SettingsSection title="Filters">
@@ -125,7 +125,6 @@ export function AuditLogsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   content: { padding: 16 },
   row: {
     paddingVertical: spacing.sm,

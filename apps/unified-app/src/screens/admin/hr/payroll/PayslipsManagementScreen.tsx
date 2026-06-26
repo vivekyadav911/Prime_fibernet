@@ -7,6 +7,7 @@ import { RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetPayrollDashboardQuery } from '@/services/api/payrollApi';
 import { colors } from '@/theme/colors';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { spacing } from '@/theme/spacing';
 import type { AdminPayrollStackParamList } from '@/types/navigation';
 import type { PayrollDashboardEntry } from '@/types/payslip';
@@ -86,7 +87,7 @@ export function PayslipsManagementScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={8} />
       </Screen>
     );
@@ -94,7 +95,7 @@ export function PayslipsManagementScreen({ navigation }: Props) {
 
   if (isError) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </Screen>
     );
@@ -104,7 +105,7 @@ export function PayslipsManagementScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="payroll.view">
-      <Screen padded={false}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <FlatList
           data={withPayslips}
           keyExtractor={(r) => r.payslipId!}

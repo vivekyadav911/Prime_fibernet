@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "pnpm --filter @prime/unified-app dev",
     "start": "node scripts/start-expo.mjs",
+    "start:auto": "node scripts/start-expo-auto.mjs",
     "start:android-usb": "node scripts/start-expo-android-usb.mjs",
+    "start:tunnel": "node scripts/start-expo-tunnel.mjs",
+    "setup:adb": "powershell -ExecutionPolicy Bypass -File scripts/setup-android-adb.ps1",
     "web": "pnpm --filter @prime/unified-app web",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",

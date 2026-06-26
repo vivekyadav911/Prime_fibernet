@@ -72,7 +72,7 @@ export function AssignOfficerModal({ visible, onClose, onSelect, loading }: Assi
             <AdminEmptyState
               title="No officers available"
               subtitle="Please add officers first."
-              icon="🛡️"
+              iconName="shield-outline"
             />
           ) : (
             <FlatList

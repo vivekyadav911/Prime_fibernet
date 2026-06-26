@@ -11,6 +11,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
@@ -92,7 +93,7 @@ export function SelectField<T extends string>({
           <Text style={[styles.triggerText, triggerTextStyle, !selected && styles.placeholder]}>
             {selected ?? placeholder}
           </Text>
-          <Text style={styles.caret}>▾</Text>
+          <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
         </Pressable>
       </View>
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -154,16 +155,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 52,
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     backgroundColor: colors.surfaceWhite,
   },
   triggerError: { borderColor: colors.errorRed },
-  triggerText: { fontSize: 14, color: colors.textPrimary, flex: 1 },
+  triggerText: { fontSize: 15, color: colors.textPrimary, flex: 1 },
   placeholder: { color: colors.textSecondary },
-  caret: { fontSize: 12, color: colors.textSecondary, marginLeft: spacing.xs },
   modalRoot: { flex: 1 },
   backdrop: {
     ...StyleSheet.absoluteFillObject,

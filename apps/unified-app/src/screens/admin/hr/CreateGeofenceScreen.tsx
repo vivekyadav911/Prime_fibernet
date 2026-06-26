@@ -12,6 +12,7 @@ import { reverseGeocode } from '@/services/GeocodingService';
 import type { Coordinates } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { validateGeofence } from '@/utils/geofenceUtils';
@@ -110,7 +111,7 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <Screen style={styles.canvas}>
+      <Screen style={adminScreenStyles.canvas}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.scroll}>
             <Text style={styles.title}>{isEdit ? 'Edit geofence' : 'Add geofence'}</Text>
@@ -155,7 +156,6 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: adminColors.canvasBg },
   scroll: { padding: spacing.md, gap: spacing.sm },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   hint: { fontSize: 13, color: colors.textSecondary },

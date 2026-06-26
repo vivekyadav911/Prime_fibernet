@@ -44,6 +44,7 @@ import { fetchPlans } from '@/services/planService';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { Plan } from '@/types/plans';
@@ -259,7 +260,7 @@ export function TicketDetailScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={10} />
       </Screen>
     );
@@ -267,7 +268,7 @@ export function TicketDetailScreen({ route, navigation }: Props) {
 
   if (error || !ticket) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <ErrorState message={error ?? 'Ticket not found'} onRetry={load} />
       </Screen>
     );
@@ -277,7 +278,7 @@ export function TicketDetailScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen padded={false}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 80 }]}>
           {ticket.escalationLevel > 0 ? (
             <EscalationBanner

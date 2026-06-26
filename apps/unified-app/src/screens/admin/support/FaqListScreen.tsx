@@ -14,6 +14,7 @@ import {
   useUpsertFaqMutation,
 } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
@@ -108,7 +109,7 @@ export function FaqListScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen style={styles.screen} safeAreaTop={false}>
+      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
         <SkeletonLoader rows={6} />
       </Screen>
     );
@@ -116,7 +117,7 @@ export function FaqListScreen({ navigation }: Props) {
 
   if (isError) {
     return (
-      <Screen style={styles.screen} safeAreaTop={false}>
+      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </Screen>
     );
@@ -124,7 +125,7 @@ export function FaqListScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen} padded={false} safeAreaTop={false}>
+      <Screen style={adminScreenStyles.canvas} padded={false} safeAreaTop={false}>
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title} numberOfLines={1}>
@@ -162,7 +163,7 @@ export function FaqListScreen({ navigation }: Props) {
               <AdminEmptyState
                 title="No FAQs"
                 subtitle="Tap + Add to create one."
-                icon="📋"
+                iconName="document-text-outline"
               />
             </View>
           ) : (
@@ -181,7 +182,6 @@ export function FaqListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
   container: { flex: 1 },
   header: {
     flexDirection: 'row',

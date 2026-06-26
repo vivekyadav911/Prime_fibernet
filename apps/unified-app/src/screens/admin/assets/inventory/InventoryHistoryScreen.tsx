@@ -20,6 +20,7 @@ import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useInventoryHistory } from '@/hooks/useInventoryHistory';
 import { fetchInventoryItems } from '@/services/inventoryService';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminInventoryStackParamList } from '@/types/navigation';
@@ -210,7 +211,7 @@ export function InventoryHistoryScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.view">
-      <Screen padded={false} style={styles.screen}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <SectionList
           sections={sections}
           keyExtractor={(entry) => entry.id}
@@ -249,7 +250,7 @@ export function InventoryHistoryScreen({ navigation }: Props) {
             <AdminEmptyState
               title="No history found"
               subtitle={activeFilterCount > 0 ? 'Try changing or clearing your filters' : 'Stock changes will appear here'}
-              icon="🕐"
+              iconName="time-outline"
               actionLabel={activeFilterCount > 0 ? 'Clear Filters' : undefined}
               onAction={activeFilterCount > 0 ? clearFilters : undefined}
             />
@@ -401,7 +402,6 @@ export function InventoryHistoryScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
   headerRefreshBtn: { marginRight: spacing.sm },
   listHeader: {
     backgroundColor: adminColors.canvasBg,

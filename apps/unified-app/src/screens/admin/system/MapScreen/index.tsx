@@ -33,6 +33,7 @@ import { OfficerActivitySheet } from '@/screens/admin/map/OfficerActivitySheet';
 import { useGetOpenRequestPinsQuery } from '@/store/api/endpoints';
 import type { AdminMapStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { spacing } from '@/theme/spacing';
 import type { OfficerLocation } from '@/types/map';
 
@@ -140,7 +141,7 @@ export function AdminMapScreen() {
   if (isLoading && locations.length === 0) {
     return (
       <RoleGuard requiredPermission="map.view">
-        <Screen padded={false} safeAreaTop={false}>
+        <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
           <SkeletonLoader rows={3} tall />
         </Screen>
       </RoleGuard>
@@ -149,20 +150,17 @@ export function AdminMapScreen() {
 
   return (
     <RoleGuard requiredPermission="map.view">
-      <Screen padded={false} safeAreaTop={false}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Officer Tracking</Text>
-          <View style={styles.headerMeta}>
+      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+        {isError || livePaused ? (
+          <View style={styles.statusStrip}>
             {isError ? (
               <Pressable onPress={refetch}>
                 <Text style={styles.errorBanner}>Tap to retry loading officers</Text>
               </Pressable>
             ) : null}
-            {livePaused ? (
-              <Text style={styles.liveBanner}>Live updates paused</Text>
-            ) : null}
+            {livePaused ? <Text style={styles.liveBanner}>Live updates paused</Text> : null}
           </View>
-        </View>
+        ) : null}
 
         <View style={styles.body}>
           <View style={styles.mapWrap}>
@@ -288,18 +286,17 @@ export function AdminMapScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
+  statusStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     backgroundColor: colors.surfaceWhite,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderDefault,
   },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
-  headerMeta: { alignItems: 'flex-end', gap: 2 },
   errorBanner: { fontSize: 12, color: colors.errorRed, fontWeight: '600' },
   liveBanner: { fontSize: 12, color: colors.warningAmber, fontWeight: '600' },
   body: { flex: 1, flexDirection: 'row' },

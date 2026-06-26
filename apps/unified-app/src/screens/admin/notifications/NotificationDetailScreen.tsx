@@ -24,6 +24,7 @@ import {
 } from '@/services/broadcastNotificationService';
 import { useAppSelector } from '@/store/hooks';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminNotificationsStackParamList } from '@/types/navigation';
@@ -115,7 +116,7 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
 
   if (loading) {
     return (
-      <Screen style={styles.canvas}>
+      <Screen style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={8} />
       </Screen>
     );
@@ -123,7 +124,7 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
 
   if (error || !notification) {
     return (
-      <Screen style={styles.canvas}>
+      <Screen style={adminScreenStyles.canvas}>
         <ErrorState message={error ?? 'Not found'} onRetry={load} />
       </Screen>
     );
@@ -141,7 +142,7 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="notifications.view">
-      <Screen style={styles.canvas} padded={false}>
+      <Screen style={adminScreenStyles.canvas} padded={false}>
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={styles.headerCard}>
             <Text style={styles.title}>{notification.title}</Text>
@@ -326,7 +327,6 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: adminColors.canvasBg },
   scroll: { padding: spacing.sm, paddingBottom: spacing.xxl },
   headerCard: {
     backgroundColor: colors.surfaceWhite,

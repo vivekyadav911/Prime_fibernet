@@ -1,10 +1,10 @@
 /** Admin panel design tokens — indigo/purple light theme */
 export const adminColors = {
-  primary: '#5B4FCF',
+  primary: '#5B4FE9',
   primaryLight: '#7B6FE8',
-  primaryTint: 'rgba(91, 79, 207, 0.08)',
+  primaryTint: 'rgba(91, 79, 233, 0.08)',
   sidebarBg: '#FFFFFF',
-  canvasBg: '#F5F6FA',
+  canvasBg: '#F4F5F7',
   cardBg: '#FFFFFF',
   activeBorder: '#5B4FCF',
   sectionLabel: '#9CA3AF',

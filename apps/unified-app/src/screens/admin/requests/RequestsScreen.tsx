@@ -24,6 +24,7 @@ import {
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAdminRequests } from '@/hooks/useAdminRequests';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { Officer, RequestSource, ServiceRequest } from '@/types/requests';
@@ -99,7 +100,7 @@ export function RequestsScreen() {
           </View>
         </View>
         {data.length === 0 ? (
-          <AdminEmptyState title={`No ${variant} requests`} icon="📋" />
+          <AdminEmptyState title={`No ${variant} requests`} iconName="document-text-outline" />
         ) : (
           <FlatList
             data={data}
@@ -140,7 +141,7 @@ export function RequestsScreen() {
 
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen padded={false} style={styles.canvas}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Requests</Text>
         </View>
@@ -231,7 +232,6 @@ export function RequestsScreen() {
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: adminColors.canvasBg, flex: 1 },
   header: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
   pageTitle: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
   toolbar: { padding: spacing.md, gap: spacing.sm },

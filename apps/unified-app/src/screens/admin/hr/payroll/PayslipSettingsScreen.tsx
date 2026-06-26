@@ -7,6 +7,7 @@ import { FormField, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePayslipSettings } from '@/hooks/usePayslipSettings';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminPayrollStackParamList } from '@/types/navigation';
@@ -41,7 +42,7 @@ export function PayslipSettingsScreen(_props: Props) {
 
   if (isLoading) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={8} />
       </Screen>
     );
@@ -49,7 +50,7 @@ export function PayslipSettingsScreen(_props: Props) {
 
   if (isError) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <ErrorState message="Could not load payslip settings" onRetry={refetch} />
       </Screen>
     );
@@ -64,7 +65,7 @@ export function PayslipSettingsScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="payroll.edit">
-      <Screen padded={false}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
           {tabs.map((t) => (
             <Button

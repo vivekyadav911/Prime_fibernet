@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { signOut } from '@/hooks/useAuth';
@@ -26,7 +27,7 @@ type DrawerItem = {
   route: keyof AdminDrawerParamList;
   screen?: DrawerNestedScreen;
   label: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   showBadge?: boolean;
 };
 
@@ -41,65 +42,65 @@ type NavNotification =
   | { kind: 'pill'; label: string; tone: 'primary' | 'warning' | 'danger' | 'success' };
 
 const SECTIONS: DrawerSection[] = [
-  { id: 'top', label: '', items: [{ route: 'Dashboard', label: 'Dashboard', icon: '🏠' }] },
+  { id: 'top', label: '', items: [{ route: 'Dashboard', label: 'Dashboard', icon: 'home-outline' }] },
   {
     id: 'people',
     label: 'People',
     items: [
-      { route: 'Users', label: 'Users', icon: '👥' },
-      { route: 'Officers', label: 'Officers', icon: '🛡️' },
+      { route: 'Users', label: 'Users', icon: 'people-outline' },
+      { route: 'Officers', label: 'Officers', icon: 'shield-checkmark-outline' },
     ],
   },
   {
     id: 'hr',
     label: 'HR & Workforce',
     items: [
-      { route: 'Attendance', label: 'Attendance', icon: '📅' },
-      { route: 'Payroll', label: 'Payroll', icon: '💰' },
-      { route: 'RoleManagement', label: 'Role Management', icon: '🔐' },
+      { route: 'Attendance', label: 'Attendance', icon: 'calendar-outline' },
+      { route: 'Payroll', label: 'Payroll', icon: 'cash-outline' },
+      { route: 'RoleManagement', label: 'Role Management', icon: 'key-outline' },
     ],
   },
   {
     id: 'ops',
     label: 'Operations',
     items: [
-      { route: 'Requests', label: 'Requests', icon: '📋', showBadge: true },
-      { route: 'Plans', label: 'Plans', icon: '📶', showBadge: true },
-      { route: 'Notifications', label: 'Notifications', icon: '🔔', showBadge: true },
+      { route: 'Requests', label: 'Requests', icon: 'document-text-outline', showBadge: true },
+      { route: 'Plans', label: 'Plans', icon: 'cellular-outline', showBadge: true },
+      { route: 'Notifications', label: 'Notifications', icon: 'notifications-outline', showBadge: true },
     ],
   },
   {
     id: 'finance',
     label: 'Finance',
     items: [
-      { route: 'Payments', screen: 'PaymentList', label: 'Payments', icon: '💳' },
-      { route: 'Payments', screen: 'CollectionAssignments', label: 'Collection assignments', icon: '📋' },
-      { route: 'Invoices', label: 'Invoices', icon: '🧾' },
+      { route: 'Payments', screen: 'PaymentList', label: 'Payments', icon: 'card-outline' },
+      { route: 'Payments', screen: 'CollectionAssignments', label: 'Collection assignments', icon: 'clipboard-outline' },
+      { route: 'Invoices', label: 'Invoices', icon: 'receipt-outline' },
     ],
   },
   {
     id: 'assets',
     label: 'Assets',
     items: [
-      { route: 'Inventory', screen: 'InventoryList', label: 'Inventory', icon: '📦' },
-      { route: 'Inventory', screen: 'AssignmentRequests', label: 'Assignment Requests', icon: '📋' },
-      { route: 'Inventory', screen: 'InventoryHistory', label: 'Inventory History', icon: '🕐' },
-      { route: 'Inventory', screen: 'Categories', label: 'Categories', icon: '🏷️' },
-      { route: 'Inventory', screen: 'BulkOperations', label: 'Bulk Operations', icon: '⚡' },
+      { route: 'Inventory', screen: 'InventoryList', label: 'Inventory', icon: 'cube-outline' },
+      { route: 'Inventory', screen: 'AssignmentRequests', label: 'Assignment Requests', icon: 'swap-horizontal-outline' },
+      { route: 'Inventory', screen: 'InventoryHistory', label: 'Inventory History', icon: 'time-outline' },
+      { route: 'Inventory', screen: 'Categories', label: 'Categories', icon: 'pricetag-outline' },
+      { route: 'Inventory', screen: 'BulkOperations', label: 'Bulk Operations', icon: 'flash-outline' },
     ],
   },
   {
     id: 'reports',
     label: 'Reports',
-    items: [{ route: 'Reports', label: 'Reports', icon: '📊' }],
+    items: [{ route: 'Reports', label: 'Reports', icon: 'bar-chart-outline' }],
   },
   {
     id: 'system',
     label: 'System',
     items: [
-      { route: 'Support', label: 'Customer Support', icon: '💬', showBadge: true },
-      { route: 'Settings', label: 'Settings', icon: '⚙️' },
-      { route: 'Map', label: 'Map', icon: '🗺️' },
+      { route: 'Support', label: 'Customer Support', icon: 'chatbubbles-outline', showBadge: true },
+      { route: 'Settings', label: 'Settings', icon: 'settings-outline' },
+      { route: 'Map', label: 'Map', icon: 'map-outline' },
     ],
   },
 ];
@@ -248,7 +249,13 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
                 onPress={() => navigate(item.route, item.screen)}
               >
                 {isActive ? <View style={styles.activeBar} /> : null}
-                <Text style={styles.itemIcon}>{item.icon}</Text>
+                <View style={[styles.itemIconWrap, isActive && styles.itemIconWrapActive]}>
+                  <Ionicons
+                    name={item.icon}
+                    size={20}
+                    color={isActive ? adminColors.primary : colors.textSecondary}
+                  />
+                </View>
                 <Text
                   style={[styles.itemLabel, isActive && styles.itemLabelActive]}
                   numberOfLines={1}
@@ -277,12 +284,17 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
 
         {user ? (
           <View style={styles.userCard}>
-            <Text style={styles.userName} numberOfLines={1}>
-              {user.name}
-            </Text>
-            <Text style={styles.userEmail} numberOfLines={1}>
-              {user.email}
-            </Text>
+            <View style={styles.userAvatar}>
+              <Ionicons name="person" size={20} color={adminColors.primary} />
+            </View>
+            <View style={styles.userTextBlock}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {user.name}
+              </Text>
+              <Text style={styles.userEmail} numberOfLines={1}>
+                {user.email}
+              </Text>
+            </View>
           </View>
         ) : null}
       </View>
@@ -299,6 +311,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
       <View style={styles.footer}>
         <View style={styles.footerDivider} />
         <Pressable style={styles.signOutBtn} onPress={handleSignOut}>
+          <Ionicons name="log-out-outline" size={20} color={adminColors.badgeBlocked} />
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
       </View>
@@ -307,7 +320,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
 }
 
 const ITEM_HEIGHT = 48;
-const DRAWER_EDGE_INSET = spacing.xs;
+const DRAWER_EDGE_INSET = spacing.sm;
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -317,8 +330,8 @@ const styles = StyleSheet.create({
     backgroundColor: adminColors.sidebarBg,
   },
   header: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   scroll: {
     flex: 1,
@@ -340,27 +353,40 @@ const styles = StyleSheet.create({
     marginRight: DRAWER_EDGE_INSET,
   },
   brand: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '800',
     color: adminColors.primary,
     paddingTop: spacing.sm,
+    letterSpacing: -0.3,
   },
   brandSub: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textSecondary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 0.9,
     fontWeight: '600',
   },
   userCard: {
-    marginBottom: spacing.xs,
-    padding: spacing.sm,
-    borderRadius: radius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    padding: spacing.md,
+    borderRadius: 16,
     backgroundColor: adminColors.primaryTint,
     borderWidth: 1,
-    borderColor: adminColors.permissionBoxBorder,
+    borderColor: colors.borderDefault,
+    gap: spacing.sm,
   },
+  userAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  userTextBlock: { flex: 1, minWidth: 0 },
   userName: {
     fontSize: 15,
     fontWeight: '700',
@@ -399,7 +425,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     marginHorizontal: DRAWER_EDGE_INSET,
-    borderRadius: radius.full,
+    marginBottom: 2,
+    borderRadius: radius.lg,
     position: 'relative',
   },
   itemActive: {
@@ -408,16 +435,22 @@ const styles = StyleSheet.create({
   activeBar: {
     position: 'absolute',
     left: 0,
-    top: 4,
-    bottom: 4,
+    top: 8,
+    bottom: 8,
     width: 3,
     backgroundColor: adminColors.activeBorder,
     borderRadius: 2,
   },
-  itemIcon: {
-    width: 28,
-    fontSize: 20,
-    textAlign: 'center',
+  itemIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceWhite,
+  },
+  itemIconWrapActive: {
+    backgroundColor: colors.surfaceWhite,
   },
   itemLabel: {
     flex: 1,
@@ -425,7 +458,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textPrimary,
     fontWeight: '500',
-    marginLeft: spacing.md,
+    marginLeft: spacing.sm,
     marginRight: spacing.sm,
   },
   itemLabelActive: {
@@ -474,13 +507,18 @@ const styles = StyleSheet.create({
     color: adminColors.navPillSuccessText,
   },
   signOutBtn: {
-    paddingVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.borderDefault,
     backgroundColor: colors.surfaceWhite,
     marginBottom: spacing.xs,
+    minHeight: 48,
   },
   signOutText: {
     fontSize: 15,

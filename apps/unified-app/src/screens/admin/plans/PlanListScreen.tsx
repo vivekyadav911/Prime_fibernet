@@ -52,7 +52,7 @@ export function PlanListScreen({ navigation }: Props) {
         <View style={styles.header}>
           <Button label="Add New Plan" onPress={() => navigation.navigate('PlanForm', { mode: 'create' })} />
         </View>
-        {!data?.length ? <AdminEmptyState title="No plans" icon="📶" /> : (
+        {!data?.length ? <AdminEmptyState title="No plans" iconName="cellular-outline" /> : (
           <FlatList data={data} keyExtractor={(p) => p.id} renderItem={renderItem} />
         )}
       </Screen>

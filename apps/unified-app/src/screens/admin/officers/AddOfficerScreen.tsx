@@ -39,6 +39,7 @@ import {
   useGetOfficerRolesQuery,
 } from '@/store/api/endpoints';
 import type { AdminOfficersStackParamList } from '@/types/navigation';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { queryErrorMessage } from '@/utils/queryError';
 import {
   pickOfficerDocument,
@@ -313,7 +314,7 @@ export function AddOfficerScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="officers.create">
-      <Screen padded={false} safeAreaTop={false} style={styles.canvas}>
+      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -915,7 +916,6 @@ export function AddOfficerScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  canvas: { backgroundColor: ui.bg, flex: 1 },
   scroll: {
     paddingHorizontal: ui.pagePad,
     paddingTop: 12,

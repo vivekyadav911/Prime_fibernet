@@ -7,7 +7,7 @@ import { RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetComplaintQuery } from '@/services/api/adminSupportApi';
 import { updateComplaint } from '@/services/complaintService';
-import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
@@ -36,7 +36,7 @@ export function ComplaintDetailScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <SectionCard title={complaint.complaintNumber}>
           <Text style={styles.label}>Customer</Text>
           <Text style={styles.value}>{complaint.customerName}</Text>
@@ -67,7 +67,6 @@ export function ComplaintDetailScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', marginTop: spacing.sm },
   value: { fontSize: 15, color: colors.textPrimary, fontWeight: '600' },
   body: { fontSize: 14, color: colors.textPrimary, lineHeight: 20, marginTop: spacing.xs },

@@ -1,29 +1,23 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-export const ADMIN_HEADER_BTN_SIZE = 40;
-export const ADMIN_HEADER_ICON_SIZE = 24;
-export const ADMIN_HEADER_EDGE_INSET = 10;
+import {
+  adminHeaderIconButtonStyle,
+  adminHeaderLeftContainerStyle,
+  adminHeaderRightContainerStyle,
+  adminHeaderTheme,
+} from '@/theme/adminHeader';
 
-export const adminHeaderLeftContainerStyle: ViewStyle = {
-  paddingStart: ADMIN_HEADER_EDGE_INSET,
-  paddingEnd: 0,
-  alignItems: 'center',
-  justifyContent: 'center',
-  alignSelf: 'stretch',
-};
+export const ADMIN_HEADER_BTN_SIZE = adminHeaderTheme.buttonSize;
+export const ADMIN_HEADER_ICON_SIZE = adminHeaderTheme.iconSize;
+export const ADMIN_HEADER_EDGE_INSET = adminHeaderTheme.edgeInset;
 
-export const adminHeaderRightContainerStyle: ViewStyle = {
-  paddingStart: 0,
-  paddingEnd: ADMIN_HEADER_EDGE_INSET,
-  alignItems: 'center',
-  justifyContent: 'center',
-  alignSelf: 'stretch',
-};
+export { adminHeaderLeftContainerStyle, adminHeaderRightContainerStyle };
 
 type AdminHeaderButtonProps = {
   accessibilityLabel: string;
   children: ReactNode;
+  filled?: boolean;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 };
@@ -31,17 +25,18 @@ type AdminHeaderButtonProps = {
 export function AdminHeaderButton({
   accessibilityLabel,
   children,
+  filled = true,
   onPress,
   style,
 }: AdminHeaderButtonProps) {
-  const content = (
-    <View style={[styles.button, style]}>
-      <View style={styles.iconSlot}>{children}</View>
-    </View>
-  );
+  const buttonStyle = [styles.button, filled && styles.filled, style];
 
   if (!onPress) {
-    return content;
+    return (
+      <View style={buttonStyle}>
+        <View style={styles.iconSlot}>{children}</View>
+      </View>
+    );
   }
 
   return (
@@ -49,7 +44,7 @@ export function AdminHeaderButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, pressed && styles.pressed, style]}
+      style={({ pressed }) => [buttonStyle, pressed && styles.pressed]}
     >
       <View style={styles.iconSlot}>{children}</View>
     </Pressable>
@@ -63,6 +58,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  filled: adminHeaderIconButtonStyle,
   iconSlot: {
     width: ADMIN_HEADER_ICON_SIZE,
     height: ADMIN_HEADER_ICON_SIZE,
@@ -70,6 +66,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pressed: {
-    opacity: 0.75,
+    opacity: 0.82,
   },
 });

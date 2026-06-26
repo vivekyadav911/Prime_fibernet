@@ -103,7 +103,7 @@ export function UpcomingRechargesSection({
 
       <View style={styles.list}>
         {count === 0 ? (
-          <AdminEmptyState title="No upcoming recharges" icon="📋" />
+          <AdminEmptyState title="No upcoming recharges" iconName="calendar-outline" />
         ) : (
           recharges?.map((item, index) => (
             <View key={item.id}>

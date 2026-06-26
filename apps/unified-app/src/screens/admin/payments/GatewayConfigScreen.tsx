@@ -8,6 +8,7 @@ import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGateways } from '@/hooks/usePayments';
 import type { GatewaySlug, PaymentGatewayRecord } from '@/types/payments';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -97,7 +98,7 @@ export function GatewayConfigScreen() {
   if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
 
   return (
-    <Screen style={styles.screen}>
+    <Screen style={[adminScreenStyles.canvas, styles.screenPadding]}>
       <Text style={styles.title}>Payment Gateways</Text>
       <Text style={styles.sub}>Configure your payment providers</Text>
       <ScrollView>
@@ -142,8 +143,7 @@ export function GatewayConfigScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, padding: spacing.md },
+const styles = StyleSheet.create({  screenPadding: { padding: spacing.md },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   sub: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.md },
   modal: { flex: 1, padding: spacing.lg, paddingTop: 48, backgroundColor: adminColors.canvasBg },

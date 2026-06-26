@@ -5,6 +5,8 @@ alwaysApply: true
 
 # UI & Theme
 
+Admin screens: follow `admin-design-system.mdc` for full layout, spacing, card, button, and form specs.
+
 - Always use theme tokens: `@/theme/colors`, `@/theme/spacing`, `@/theme/admin`, `@prime/ui` typography
 - `StyleSheet.create` only. No inline style objects, no NativeWind `className`
   strings duplicating what a token already covers.

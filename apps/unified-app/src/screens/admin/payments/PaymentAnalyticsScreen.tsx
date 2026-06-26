@@ -8,6 +8,7 @@ import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePaymentAnalytics } from '@/hooks/usePayments';
 import { formatINR } from '@/utils/currencyFormat';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -54,7 +55,7 @@ export function PaymentAnalyticsScreen() {
     totals.initiated > 0 ? Math.round((totals.confirmed / totals.initiated) * 100) : 0;
 
   return (
-    <Screen style={styles.screen}>
+    <Screen style={[adminScreenStyles.canvas, styles.screenPadding]}>
       <ScrollView>
         <View style={styles.kpiRow}>
           <AdminKPICard label="Collected" value={formatINR(totals.confirmedRevenue)} />
@@ -79,8 +80,7 @@ export function PaymentAnalyticsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, padding: spacing.md },
+const styles = StyleSheet.create({  screenPadding: { padding: spacing.md },
   kpiRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
   chartTitle: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginVertical: spacing.md },
   axis: { fontSize: 10, color: colors.textSecondary },

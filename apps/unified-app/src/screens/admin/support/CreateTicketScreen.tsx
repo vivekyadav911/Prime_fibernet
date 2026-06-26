@@ -1,12 +1,12 @@
 import { useCallback } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
 import { CreateTicketForm } from '@/components/TicketPortal';
 import { RoleGuard } from '@/components/admin';
 import { useTickets } from '@/hooks/useTickets';
-import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import type { AdminSupportStackParamList } from '@/types/navigation';
 
 type Props = NativeStackScreenProps<AdminSupportStackParamList, 'CreateTicket'>;
@@ -21,7 +21,7 @@ export function CreateTicketScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <ScrollView>
           <CreateTicketForm
             linkedRequestId={route.params?.linkedRequestId}
@@ -34,7 +34,3 @@ export function CreateTicketScreen({ navigation, route }: Props) {
     </RoleGuard>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
-});

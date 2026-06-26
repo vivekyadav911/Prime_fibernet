@@ -33,6 +33,7 @@ import { useGetAdminUsersQuery } from '@/store/api/endpoints';
 import { fetchPlanById } from '@/services/planService';
 import type { AdminUserListItem } from '@/types/api/admin';
 import type { AdminUsersStackParamList } from '@/types/navigation';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { queryErrorMessage } from '@/utils/queryError';
 
 import { ui } from './usersUi';
@@ -406,7 +407,7 @@ export function UserListScreen({ navigation, route }: Props) {
 
   if (isLoading) {
     return (
-      <Screen safeAreaTop={false} style={styles.canvas}>
+      <Screen safeAreaTop={false} style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={10} showAvatar />
       </Screen>
     );
@@ -414,7 +415,7 @@ export function UserListScreen({ navigation, route }: Props) {
 
   if (isError) {
     return (
-      <Screen safeAreaTop={false} style={styles.canvas}>
+      <Screen safeAreaTop={false} style={adminScreenStyles.canvas}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </Screen>
     );
@@ -422,7 +423,7 @@ export function UserListScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="users.view">
-      <Screen padded={false} safeAreaTop={false} style={styles.canvas}>
+      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -560,7 +561,7 @@ export function UserListScreen({ navigation, route }: Props) {
                           ? 'Sign in with an admin account that has database access.'
                           : 'Adjust filters or search'
                       }
-                      icon="👥"
+                      iconName="people-outline"
                     />
                   </View>
                 ) : viewMode === 'list' ? (
@@ -626,7 +627,6 @@ export function UserListScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  canvas: { backgroundColor: ui.bg, flex: 1 },
   page: {
     flex: 1,
     minHeight: 0,

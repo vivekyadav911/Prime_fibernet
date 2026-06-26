@@ -29,6 +29,7 @@ import { getPlanDeactivationNotificationPrefill } from '@/services/planService';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminPlansStackParamList } from '@/types/navigation';
@@ -357,7 +358,7 @@ export function PlansScreen({ navigation }: Props) {
   if (loading && !refreshing) {
     return (
       <RoleGuard requiredPermission="plans.view">
-        <Screen style={styles.canvas}>
+        <Screen style={adminScreenStyles.canvas}>
           <SkeletonLoader rows={4} shape="card" />
         </Screen>
       </RoleGuard>
@@ -367,7 +368,7 @@ export function PlansScreen({ navigation }: Props) {
   if (error && !allPlans.length) {
     return (
       <RoleGuard requiredPermission="plans.view">
-        <Screen style={styles.canvas}>
+        <Screen style={adminScreenStyles.canvas}>
           <ErrorState message={error} onRetry={onRefresh} />
         </Screen>
       </RoleGuard>
@@ -376,7 +377,7 @@ export function PlansScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="plans.view">
-      <Screen style={styles.canvas} padded={false}>
+      <Screen style={adminScreenStyles.canvas} padded={false}>
         {viewMode === 'grid' ? (
           <FlatList
             key={`grid-${numColumns}`}
@@ -390,7 +391,7 @@ export function PlansScreen({ navigation }: Props) {
             ListEmptyComponent={
               <AdminEmptyState
                 title="No plans found"
-                icon="📶"
+                iconName="cellular-outline"
                 actionLabel={allPlans.length ? 'Clear all filters' : '+ Create your first plan'}
                 onAction={
                   allPlans.length
@@ -415,7 +416,7 @@ export function PlansScreen({ navigation }: Props) {
             ListEmptyComponent={
               <AdminEmptyState
                 title="No plans found"
-                icon="📶"
+                iconName="cellular-outline"
                 actionLabel={allPlans.length ? 'Clear all filters' : '+ Create your first plan'}
                 onAction={
                   allPlans.length
@@ -447,7 +448,6 @@ export function PlansScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: adminColors.canvasBg },
   listContent: { paddingBottom: spacing.xxl },
   header: {
     flexDirection: 'row',

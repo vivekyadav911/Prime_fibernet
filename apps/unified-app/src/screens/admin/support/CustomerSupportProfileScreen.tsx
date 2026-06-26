@@ -8,6 +8,7 @@ import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useCustomerSupport } from '@/hooks/useCustomerSupport';
 import { logCustomerInteraction } from '@/services/complaintService';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
@@ -35,7 +36,7 @@ export function CustomerSupportProfileScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="users.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <ScrollView>
           <SectionCard title="Account Overview">
             <Text style={styles.name}>{user.name}</Text>
@@ -131,7 +132,6 @@ export function CustomerSupportProfileScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   name: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   meta: { fontSize: 13, color: colors.textSecondary, marginTop: 4 },
   quickActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginVertical: spacing.md },

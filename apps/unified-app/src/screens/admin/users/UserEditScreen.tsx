@@ -8,6 +8,7 @@ import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetOfficersQuery } from '@/services/api/officersApi';
 import { useGetAdminUserDetailQuery, useUpdateAdminUserMutation } from '@/store/api/endpoints';
 import type { AdminUsersStackParamList } from '@/types/navigation';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -63,12 +64,12 @@ export function UserEditScreen({ route, navigation }: Props) {
     }
   };
 
-  if (isLoading) return <Screen><SkeletonLoader rows={4} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <Screen style={adminScreenStyles.canvas}><SkeletonLoader rows={4} /></Screen>;
+  if (isError) return <Screen style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
 
   return (
     <RoleGuard requiredPermission="users.edit">
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <FormField label="Name" value={name} onChangeText={setName} />
         <FormField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
         <FormField label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />

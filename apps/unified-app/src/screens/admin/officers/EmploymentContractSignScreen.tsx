@@ -9,6 +9,7 @@ import { useCompanyDefaults } from '@/hooks/useCompanyDefaults';
 import { useEmploymentContract } from '@/hooks/useEmploymentContract';
 import type { AdminOfficersStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -50,14 +51,14 @@ export function EmploymentContractSignScreen({ route, navigation }: Props) {
   if (!canEdit) {
     return (
       <RoleGuard requiredPermission="officers.edit">
-        <Screen />
+        <Screen style={adminScreenStyles.canvas} />
       </RoleGuard>
     );
   }
 
   return (
     <RoleGuard requiredPermission="officers.edit">
-      <Screen style={styles.screen}>
+      <Screen style={[adminScreenStyles.canvas, styles.padded]}>
         <View style={styles.card}>
           <Text style={styles.title}>Sign for Company</Text>
           <Text style={styles.subtitle}>
@@ -85,7 +86,7 @@ export function EmploymentContractSignScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: adminColors.canvasBg, padding: spacing.md },
+  padded: { padding: spacing.md },
   card: {
     backgroundColor: adminColors.cardBg,
     borderRadius: radius.md,

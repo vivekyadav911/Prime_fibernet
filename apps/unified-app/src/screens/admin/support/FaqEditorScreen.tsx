@@ -11,6 +11,7 @@ import {
   useUpsertFaqMutation,
 } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
@@ -72,7 +73,7 @@ export function FaqEditorScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen} safeAreaTop={false}>
+      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -139,7 +140,6 @@ export function FaqEditorScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
   flex: { flex: 1 },
   scroll: { padding: spacing.md, paddingBottom: spacing.xxl, gap: spacing.sm },
   label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', marginBottom: spacing.xs },

@@ -9,6 +9,7 @@ import { RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useInventoryItem } from '@/hooks/useInventoryItem';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminInventoryStackParamList } from '@/types/navigation';
@@ -93,7 +94,7 @@ export function ItemDetailScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.view">
-      <Screen padded={false} style={styles.screen}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.identityCard}>
             <View style={styles.identityHeader}>
@@ -177,7 +178,6 @@ export function ItemDetailScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   headerActions: { flexDirection: 'row', alignItems: 'center', marginRight: spacing.sm },
   headerActionBtn: { paddingHorizontal: spacing.xs },
   content: { padding: spacing.md, paddingBottom: spacing.xl },

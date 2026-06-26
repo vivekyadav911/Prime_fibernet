@@ -30,6 +30,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminNotificationsStackParamList } from '@/types/navigation';
@@ -184,7 +185,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
   if (loading) {
     return (
       <RoleGuard requiredPermission="notifications.view">
-        <Screen style={styles.canvas} padded={false}>
+        <Screen style={adminScreenStyles.canvas} padded={false}>
           <SkeletonLoader rows={6} shape="card" />
         </Screen>
       </RoleGuard>
@@ -194,7 +195,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
   if (error) {
     return (
       <RoleGuard requiredPermission="notifications.view">
-        <Screen style={styles.canvas} padded={false}>
+        <Screen style={adminScreenStyles.canvas} padded={false}>
           <ErrorState message={error} onRetry={onRefresh} />
         </Screen>
       </RoleGuard>
@@ -206,7 +207,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="notifications.view">
-      <Screen style={styles.canvas} padded={false}>
+      <Screen style={adminScreenStyles.canvas} padded={false}>
         <View style={styles.searchRow}>
           <SearchBar
             value={filters.searchQuery}
@@ -267,7 +268,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
           ListEmptyComponent={
             <AdminEmptyState
               title={isDrafts ? 'No drafts saved' : 'No notifications sent yet'}
-              icon={isDrafts ? '✉️' : '🔔'}
+              iconName={isDrafts ? 'mail-outline' : 'notifications-outline'}
               actionLabel="Create Notification"
               onAction={() => navigation.navigate('CreateNotification', { mode: 'create' })}
             />
@@ -305,7 +306,6 @@ export function NotificationsScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: adminColors.canvasBg },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',

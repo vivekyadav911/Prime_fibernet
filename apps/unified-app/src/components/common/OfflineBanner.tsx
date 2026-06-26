@@ -6,10 +6,14 @@ import { colors } from '@prime/ui';
 import { SyncManager } from '@/services/offline/syncManager';
 import { useAppSelector } from '@/store/hooks';
 
+const BANNER_BODY_HEIGHT = 44;
+
 export function OfflineBanner() {
   const visible = useAppSelector((state) => state.ui.offlineBannerVisible);
   const insets = useSafeAreaInsets();
-  const translateY = useRef(new Animated.Value(-80)).current;
+  const hideOffset = insets.top + BANNER_BODY_HEIGHT + (Platform.OS === 'web' ? 8 : 4);
+  const translateY = useRef(new Animated.Value(-hideOffset)).current;
+  const [mounted, setMounted] = useState(visible);
   const [queueCount, setQueueCount] = useState(0);
 
   useEffect(() => {
@@ -17,15 +21,31 @@ export function OfflineBanner() {
   }, [visible]);
 
   useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+
     Animated.timing(translateY, {
-      toValue: visible ? 0 : -80,
+      toValue: -hideOffset,
       duration: 250,
       useNativeDriver: true,
-    }).start();
-  }, [visible, translateY]);
+    }).start(({ finished }) => {
+      if (finished) setMounted(false);
+    });
+  }, [visible, translateY, hideOffset]);
 
   const queueLabel =
     queueCount > 0 ? ` · ${queueCount} change${queueCount === 1 ? '' : 's'} queued` : '';
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <Animated.View

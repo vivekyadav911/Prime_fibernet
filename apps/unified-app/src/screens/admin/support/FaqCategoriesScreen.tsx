@@ -10,6 +10,7 @@ import {
   useUpsertFaqCategoryMutation,
 } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
@@ -46,7 +47,7 @@ export function FaqCategoriesScreen({}: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <FlatList
           data={categories ?? []}
           keyExtractor={(item) => item.id}
@@ -63,7 +64,6 @@ export function FaqCategoriesScreen({}: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

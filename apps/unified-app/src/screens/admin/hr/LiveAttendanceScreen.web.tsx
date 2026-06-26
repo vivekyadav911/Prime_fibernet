@@ -12,6 +12,7 @@ import {
 import type { AttendanceRecord, OfficerLiveLocation } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -97,7 +98,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.view">
-      <Screen padded={false} style={styles.canvas}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <View style={styles.countsBar}>
           <Text style={styles.count}>On shift {counts.onShift}</Text>
           <Text style={styles.count}>Present {counts.present}</Text>
@@ -137,7 +138,6 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: adminColors.canvasBg },
   countsBar: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -4,6 +4,8 @@ import { radius, spacing } from '@/theme/spacing';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: adminColors.badgePending,
+  approved: adminColors.badgeActive,
+  rejected: adminColors.badgeBlocked,
   active: adminColors.badgeActive,
   blocked: adminColors.badgeBlocked,
   inactive: adminColors.badgeBlocked,

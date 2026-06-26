@@ -7,6 +7,7 @@ import { RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetComplaintsQuery } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
@@ -38,7 +39,7 @@ export function ComplaintsScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <FlatList
           data={data ?? []}
           keyExtractor={(item) => item.id}
@@ -52,7 +53,6 @@ export function ComplaintsScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   list: { padding: spacing.md },
   card: {
     backgroundColor: colors.surfaceWhite,

@@ -19,7 +19,7 @@ import {
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { useAppTheme } from '@/theme/ThemeProvider';
-import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import type { AppSettings } from '@/types/settings';
 import { queryErrorMessage } from '@/utils/queryError';
 
@@ -98,7 +98,7 @@ export function AppearanceSettingsScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <SettingsHubLayout activeRoute="Appearance">
           <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
         </SettingsHubLayout>
@@ -108,6 +108,5 @@ export function AppearanceSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   content: { padding: 16 },
 });

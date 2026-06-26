@@ -8,6 +8,7 @@ import { PayslipTimesheetCalendar } from '@/components/payroll/PayslipTimesheetC
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePayslipCalculation } from '@/hooks/usePayslipCalculation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminPayrollStackParamList } from '@/types/navigation';
@@ -133,7 +134,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
 
   if (isLoading || isCalculating || !payslip) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={10} />
       </Screen>
     );
@@ -141,7 +142,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
 
   if (isError) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </Screen>
     );
@@ -152,7 +153,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="payroll.edit">
-      <Screen padded={false}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={styles.summaryCard}>
             <Text style={styles.employeeName}>{payslip.employeeName}</Text>

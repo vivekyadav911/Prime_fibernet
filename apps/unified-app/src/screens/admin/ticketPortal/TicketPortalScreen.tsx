@@ -9,6 +9,7 @@ import { PoolBadge, TicketStatusBadge } from '@/components/TicketPortal/TicketSt
 import { RoleGuard, SectionCard } from '@/components/admin';
 import { useTickets } from '@/hooks/useTickets';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminTicketsStackParamList } from '@/types/navigation';
@@ -56,7 +57,7 @@ export function TicketPortalScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen padded={false}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll}>
           <SectionCard title="">
             <CreateTicketForm

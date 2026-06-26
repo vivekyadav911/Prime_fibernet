@@ -89,7 +89,7 @@ export function RequestListScreen({ navigation }: Props) {
             <Button label={`Assign ${selected.length}`} onPress={() => setAssignModal(true)} />
           ) : null}
         </View>
-        {!filtered.length ? <AdminEmptyState title="No requests" icon="✅" /> : (
+        {!filtered.length ? <AdminEmptyState title="No requests" iconName="checkmark-circle-outline" /> : (
           <FlatList data={filtered} keyExtractor={(r) => r.id} renderItem={renderItem} />
         )}
         <Modal visible={assignModal} transparent animationType="slide">

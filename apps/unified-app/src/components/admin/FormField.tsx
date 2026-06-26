@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+
+import { adminDesign, adminInputStyle } from '@/theme/adminDesign';
 import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { spacing } from '@/theme/spacing';
 
 type FormFieldProps = TextInputProps & {
   label: string;
@@ -26,7 +28,7 @@ export function FormField({
       <View style={styles.inputRow}>
         <TextInput
           style={[styles.input, error ? styles.inputError : null, style]}
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={adminDesign.colors.textMuted}
           {...props}
         />
         {rightElement}
@@ -38,19 +40,16 @@ export function FormField({
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginBottom: spacing.sm },
-  label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: spacing.xxs, textTransform: 'uppercase' },
+  wrap: { marginBottom: adminDesign.layout.fieldGap },
+  label: { ...adminDesign.typography.label, marginBottom: adminDesign.layout.labelGap },
   inputRow: { flexDirection: 'row', alignItems: 'center' },
   input: {
+    ...adminInputStyle,
     flex: 1,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    backgroundColor: colors.surfaceWhite,
-    fontSize: 14,
+    fontSize: adminDesign.input.fontSize,
+    color: colors.textPrimary,
   },
   inputError: { borderColor: colors.errorRed },
-  helper: { color: colors.textSecondary, fontSize: 11, marginTop: spacing.xxs },
+  helper: { ...adminDesign.typography.meta, marginTop: spacing.xxs },
   error: { color: colors.errorRed, fontSize: 12, marginTop: spacing.xxs },
 });

@@ -3,15 +3,18 @@ import {
   Keyboard,
   Pressable,
   StyleSheet,
-  Text,
   TextInput,
   View,
   type StyleProp,
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+import { adminColors } from '@/theme/admin';
+import { adminDesign, adminInputStyle } from '@/theme/adminDesign';
 import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { spacing } from '@/theme/spacing';
 
 type SearchBarProps = {
   value: string;
@@ -76,10 +79,16 @@ export function SearchBar({
 
   return (
     <View style={[styles.container, containerStyle]}>
+      <Ionicons
+        name="search-outline"
+        size={20}
+        color={colors.textSecondary}
+        style={styles.searchIcon}
+      />
       <TextInput
-        style={[styles.input, style]}
+        style={[styles.input, focused && styles.inputFocused, style]}
         placeholder={placeholder}
-        placeholderTextColor={colors.textSecondary}
+        placeholderTextColor={adminDesign.colors.textMuted}
         value={local}
         onChangeText={setLocal}
         onFocus={() => setFocused(true)}
@@ -102,7 +111,7 @@ export function SearchBar({
           accessibilityLabel="Clear search"
           hitSlop={8}
         >
-          <Text style={styles.clearBtnText}>✕</Text>
+          <Ionicons name="close-circle" size={20} color={colors.textMuted} />
         </Pressable>
       ) : null}
     </View>
@@ -117,28 +126,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
+  searchIcon: {
+    position: 'absolute',
+    left: spacing.md,
+    zIndex: 1,
+  },
   input: {
+    ...adminInputStyle,
     flex: 1,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    paddingRight: spacing.xl,
-    backgroundColor: colors.surfaceWhite,
-    fontSize: 14,
+    fontSize: adminDesign.input.fontSize,
     color: colors.textPrimary,
+    paddingLeft: spacing.xl + spacing.sm,
+    paddingRight: spacing.xl + spacing.sm,
+  },
+  inputFocused: {
+    borderColor: adminColors.primary,
   },
   clearBtn: {
     position: 'absolute',
-    right: spacing.sm,
-    width: 24,
-    height: 24,
+    right: spacing.md,
+    width: adminDesign.layout.minTouch,
+    height: adminDesign.layout.minTouch,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  clearBtnText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '600',
   },
 });

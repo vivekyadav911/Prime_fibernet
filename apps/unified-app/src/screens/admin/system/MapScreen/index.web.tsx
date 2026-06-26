@@ -6,6 +6,7 @@ import { AdminWebLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetTrackingOfficerLocationsQuery, useGetOpenRequestPinsQuery } from '@/store/api/endpoints';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -53,12 +54,12 @@ export function AdminMapScreen() {
     return rows;
   }, [officers, requests, showOfficers, showRequests]);
 
-  if (oLoad || rLoad) return <Screen><SkeletonLoader rows={3} tall /></Screen>;
-  if (oErr || rErr) return <Screen><ErrorState message={queryErrorMessage(oError ?? rError)} onRetry={() => { oRefetch(); rRefetch(); }} /></Screen>;
+  if (oLoad || rLoad) return <Screen style={adminScreenStyles.canvas}><SkeletonLoader rows={3} tall /></Screen>;
+  if (oErr || rErr) return <Screen style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(oError ?? rError)} onRetry={() => { oRefetch(); rRefetch(); }} /></Screen>;
 
   return (
     <RoleGuard requiredPermission="map.view">
-      <Screen padded={false}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <AdminWebLayout>
           <View style={styles.notice}>
             <Text style={styles.noticeTitle}>Map view</Text>

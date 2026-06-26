@@ -18,6 +18,7 @@ import { fetchCategories } from '@/services/inventoryService';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminInventoryStackParamList } from '@/types/navigation';
@@ -58,7 +59,7 @@ export function EditItemScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <Screen padded={false} style={styles.screen}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Information</Text>
@@ -122,7 +123,6 @@ export function EditItemScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
   content: { padding: spacing.md, paddingBottom: 100 },
   section: {
     backgroundColor: colors.surfaceWhite,

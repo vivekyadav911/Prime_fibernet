@@ -118,14 +118,10 @@ import type {
   AdminUsersStackParamList,
 } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
-import { colors } from '@/theme/colors';
 
 import { AdminDrawerHeaderLeft } from './AdminDrawerHeaderLeft';
 import { AdminDrawerProfileButton } from './AdminDrawerProfileButton';
-import {
-  adminHeaderLeftContainerStyle,
-  adminHeaderRightContainerStyle,
-} from './AdminHeaderButton';
+import { adminStackScreenOptions } from './adminScreenOptions';
 
 const DashboardStack = createNativeStackNavigator<AdminDashboardStackParamList>();
 const UsersStack = createNativeStackNavigator<AdminUsersStackParamList>();
@@ -141,15 +137,6 @@ const InvoicesStack = createNativeStackNavigator<AdminInvoicesStackParamList>();
 const InventoryStack = createNativeStackNavigator<AdminInventoryStackParamList>();
 const SettingsStack = createNativeStackNavigator<AdminSettingsStackParamList>();
 const SupportStack = createNativeStackNavigator<AdminSupportStackParamList>();
-
-const stackScreenOptions = {
-  headerStyle: { backgroundColor: colors.primaryNavy },
-  headerTintColor: colors.white,
-  headerLeft: (props: NativeStackHeaderBackProps) => <AdminDrawerHeaderLeft {...props} />,
-  headerRight: () => <AdminDrawerProfileButton />,
-  headerLeftContainerStyle: adminHeaderLeftContainerStyle,
-  headerRightContainerStyle: adminHeaderRightContainerStyle,
-};
 
 function InventoryDrawerHeaderLeft(props: NativeStackHeaderBackProps) {
   const route = useRoute<RouteProp<AdminInventoryStackParamList, keyof AdminInventoryStackParamList>>();
@@ -171,26 +158,13 @@ function InventoryDrawerHeaderLeft(props: NativeStackHeaderBackProps) {
 }
 
 const inventoryStackScreenOptions = {
-  ...stackScreenOptions,
+  ...adminStackScreenOptions,
   headerLeft: (props: NativeStackHeaderBackProps) => <InventoryDrawerHeaderLeft {...props} />,
 };
 
-const brandStackScreenOptions = {
-  headerStyle: { backgroundColor: '#5B4FE9' },
-  headerTintColor: '#FFFFFF',
-  headerTitleStyle: { fontSize: 20, fontWeight: '600' as const },
-  headerShadowVisible: false,
-  headerLeft: (props: NativeStackHeaderBackProps) => <AdminDrawerHeaderLeft {...props} />,
-  headerRight: () => <AdminDrawerProfileButton />,
-  headerLeftContainerStyle: adminHeaderLeftContainerStyle,
-  headerRightContainerStyle: adminHeaderRightContainerStyle,
-};
-
-const usersStackScreenOptions = brandStackScreenOptions;
-
 export function AdminDashboardStackNav() {
   return (
-    <DashboardStack.Navigator screenOptions={brandStackScreenOptions}>
+    <DashboardStack.Navigator screenOptions={adminStackScreenOptions}>
       <DashboardStack.Screen
         name="DashboardHome"
         component={DashboardScreen}
@@ -202,7 +176,7 @@ export function AdminDashboardStackNav() {
 
 export function AdminUsersStackNav() {
   return (
-    <UsersStack.Navigator screenOptions={usersStackScreenOptions}>
+    <UsersStack.Navigator screenOptions={adminStackScreenOptions}>
       <UsersStack.Screen
         name="UserList"
         component={UserListScreen}
@@ -215,13 +189,7 @@ export function AdminUsersStackNav() {
       <UsersStack.Screen
         name="AddUser"
         component={AddUserScreen}
-        options={{
-          title: 'Add New User',
-          headerStyle: { backgroundColor: '#5B4FE9' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
-          headerShadowVisible: false,
-        }}
+        options={{ title: 'Add New User' }}
       />
     </UsersStack.Navigator>
   );
@@ -229,9 +197,9 @@ export function AdminUsersStackNav() {
 
 export function AdminOfficersStackNav() {
   return (
-    <OfficersStack.Navigator screenOptions={brandStackScreenOptions}>
+    <OfficersStack.Navigator screenOptions={adminStackScreenOptions}>
       <OfficersStack.Screen name="OfficerList" component={OfficerListScreen} options={{ title: 'Officers' }} />
-      <OfficersStack.Screen name="OfficerDetail" component={OfficerDetailScreen} options={{ headerShown: false }} />
+      <OfficersStack.Screen name="OfficerDetail" component={OfficerDetailScreen} options={{ title: 'Officer' }} />
       <OfficersStack.Screen name="OfficerEdit" component={EditOfficerScreen} options={{ title: 'Edit officer' }} />
       <OfficersStack.Screen
         name="EmploymentContractForm"
@@ -256,13 +224,7 @@ export function AdminOfficersStackNav() {
       <OfficersStack.Screen
         name="AddOfficer"
         component={AddOfficerScreen}
-        options={{
-          title: 'Add Officer',
-          headerStyle: { backgroundColor: '#5B4FE9' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
-          headerShadowVisible: false,
-        }}
+        options={{ title: 'Add Officer' }}
       />
     </OfficersStack.Navigator>
   );
@@ -271,7 +233,7 @@ export function AdminOfficersStackNav() {
 export function AdminAttendanceStackNav() {
   return (
     <AttendanceStack.Navigator
-      screenOptions={stackScreenOptions}
+      screenOptions={adminStackScreenOptions}
       initialRouteName="LiveAttendance"
     >
       <AttendanceStack.Screen name="LiveAttendance" component={LiveAttendanceScreen} options={{ title: 'Live Attendance' }} />
@@ -292,7 +254,7 @@ export function AdminAttendanceStackNav() {
 
 export function AdminPayrollStackNav() {
   return (
-    <PayrollStack.Navigator screenOptions={stackScreenOptions}>
+    <PayrollStack.Navigator screenOptions={adminStackScreenOptions}>
       <PayrollStack.Screen name="Payroll" component={PayrollScreen} options={{ title: 'Payroll' }} />
       <PayrollStack.Screen name="PayslipsManagement" component={PayslipsManagementScreen} options={{ title: 'Payslips' }} />
       <PayrollStack.Screen name="PayslipReview" component={PayslipReviewScreen} options={{ title: 'Review payslip' }} />
@@ -304,7 +266,7 @@ export function AdminPayrollStackNav() {
 
 export function AdminRequestsStackNav() {
   return (
-    <RequestsStack.Navigator screenOptions={stackScreenOptions}>
+    <RequestsStack.Navigator screenOptions={adminStackScreenOptions}>
       <RequestsStack.Screen name="RequestList" component={RequestsScreen} options={{ title: 'Requests' }} />
     </RequestsStack.Navigator>
   );
@@ -312,7 +274,7 @@ export function AdminRequestsStackNav() {
 
 export function AdminTicketPortalStackNav() {
   return (
-    <TicketsStack.Navigator screenOptions={stackScreenOptions}>
+    <TicketsStack.Navigator screenOptions={adminStackScreenOptions}>
       <TicketsStack.Screen name="TicketPortalHome" component={TicketPortalScreen} options={{ title: 'Ticket Portal' }} />
       <TicketsStack.Screen name="TicketList" component={TicketListScreen} options={{ title: 'All Tickets' }} />
       <TicketsStack.Screen name="TicketDetail" component={TicketDetailScreen} options={{ title: 'Ticket Detail' }} />
@@ -322,7 +284,7 @@ export function AdminTicketPortalStackNav() {
 
 export function AdminPlansStackNav() {
   return (
-    <PlansStack.Navigator screenOptions={stackScreenOptions}>
+    <PlansStack.Navigator screenOptions={adminStackScreenOptions}>
       <PlansStack.Screen name="PlanList" component={PlansScreen} options={{ title: 'Plans' }} />
       <PlansStack.Screen name="PlanForm" component={PlanFormScreenV2} options={{ title: 'Plan form' }} />
     </PlansStack.Navigator>
@@ -331,7 +293,7 @@ export function AdminPlansStackNav() {
 
 export function AdminNotificationsStackNav() {
   return (
-    <NotificationsStack.Navigator screenOptions={stackScreenOptions}>
+    <NotificationsStack.Navigator screenOptions={adminStackScreenOptions}>
       <NotificationsStack.Screen
         name="NotificationList"
         component={NotificationsScreen}
@@ -355,7 +317,7 @@ export function AdminNotificationsStackNav() {
 
 export function AdminPaymentsStackNav() {
   return (
-    <PaymentsStack.Navigator screenOptions={stackScreenOptions} initialRouteName="PaymentList">
+    <PaymentsStack.Navigator screenOptions={adminStackScreenOptions} initialRouteName="PaymentList">
       <PaymentsStack.Screen name="PaymentList" component={PaymentsListScreen} options={{ title: 'Payments' }} />
       <PaymentsStack.Screen
         name="CollectionAssignments"
@@ -378,7 +340,7 @@ export function AdminPaymentsStackNav() {
 
 export function AdminInvoicesStackNav() {
   return (
-    <InvoicesStack.Navigator screenOptions={stackScreenOptions}>
+    <InvoicesStack.Navigator screenOptions={adminStackScreenOptions}>
       <InvoicesStack.Screen name="InvoiceList" component={InvoiceListScreen} options={{ title: 'Invoices' }} />
       <InvoicesStack.Screen name="InvoiceHistory" component={InvoiceHistoryScreen} options={{ title: 'Invoice history' }} />
       <InvoicesStack.Screen name="ManualGstInvoice" component={ManualGSTInvoiceScreen} options={{ title: 'Manual GST invoice' }} />
@@ -388,7 +350,7 @@ export function AdminInvoicesStackNav() {
 
 export function AdminSupportStackNav() {
   return (
-    <SupportStack.Navigator screenOptions={stackScreenOptions} initialRouteName="SupportDashboard">
+    <SupportStack.Navigator screenOptions={adminStackScreenOptions} initialRouteName="SupportDashboard">
       <SupportStack.Screen name="SupportDashboard" component={SupportDashboardScreen} options={{ title: 'Customer Support' }} />
       <SupportStack.Screen name="Tickets" component={SupportTicketsScreen} options={{ title: 'Support Tickets' }} />
       <SupportStack.Screen name="TicketDetail" component={SupportTicketDetailScreen} options={{ title: 'Ticket Detail' }} />
@@ -410,18 +372,12 @@ export function AdminSupportStackNav() {
 
 export function AdminSettingsStackNav() {
   return (
-    <SettingsStack.Navigator screenOptions={stackScreenOptions} initialRouteName="SettingsHub">
+    <SettingsStack.Navigator screenOptions={adminStackScreenOptions} initialRouteName="SettingsHub">
       <SettingsStack.Screen name="SettingsHub" component={SettingsHubScreen} options={{ title: 'Settings' }} />
       <SettingsStack.Screen
         name="AdminAccount"
         component={AdminAccountScreen}
-        options={{
-          title: 'Admin Account',
-          headerStyle: { backgroundColor: '#5B4FE9' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontSize: 20, fontWeight: '600' },
-          headerShadowVisible: false,
-        }}
+        options={{ title: 'Admin Account' }}
       />
       <SettingsStack.Screen name="General" component={GeneralSettingsScreen} options={{ title: 'General' }} />
       <SettingsStack.Screen name="Security" component={SecurityScreen} options={{ title: 'Security' }} />

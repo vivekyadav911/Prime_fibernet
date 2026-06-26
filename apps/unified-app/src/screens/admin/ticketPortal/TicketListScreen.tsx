@@ -20,6 +20,7 @@ import { ErrorState, SkeletonLoader } from '@/components/common';
 import { DEFAULT_TICKET_FILTERS, useTickets } from '@/hooks/useTickets';
 import { useGetSupportDashboardStatsQuery } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminTicketsStackParamList } from '@/types/navigation';
@@ -100,7 +101,7 @@ export function TicketListScreen({ navigation }: Props) {
 
   if (loading && !refreshing) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={8} />
       </Screen>
     );
@@ -108,7 +109,7 @@ export function TicketListScreen({ navigation }: Props) {
 
   if (error && !allTickets.length) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <ErrorState message={error} onRetry={onRefresh} />
       </Screen>
     );
@@ -116,7 +117,7 @@ export function TicketListScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen padded={false}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <View style={styles.header}>
           <Text style={styles.title}>All Tickets</Text>
           <View style={styles.countBadge}>
@@ -190,6 +191,7 @@ export function TicketListScreen({ navigation }: Props) {
             <AdminEmptyState
               title="No tickets found"
               subtitle="Try adjusting your filters or create a new ticket."
+              iconName="ticket-outline"
               actionLabel="Clear filters"
               onAction={resetFilters}
             />

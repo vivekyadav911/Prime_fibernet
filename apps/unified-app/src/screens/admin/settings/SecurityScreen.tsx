@@ -12,7 +12,7 @@ import {
 } from '@/store/api/endpoints';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
-import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminOfficerDetail } from '@/types/api/admin';
@@ -119,7 +119,7 @@ export function SecurityScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <SettingsHubLayout activeRoute="Security">
           <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
         </SettingsHubLayout>
@@ -129,7 +129,6 @@ export function SecurityScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   content: { padding: 16 },
   row: {
     flexDirection: 'row',

@@ -14,6 +14,7 @@ import {
 import { computeNextDueDate } from '@/utils/nextDueDate';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -75,7 +76,7 @@ export function PaymentReviewScreen({ route, navigation }: Props) {
   }
 
   return (
-    <Screen style={styles.screen}>
+    <Screen style={adminScreenStyles.canvas}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Review — {payment.payment_number}</Text>
         <View style={styles.card}>
@@ -140,7 +141,6 @@ export function PaymentReviewScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   content: { padding: spacing.md, gap: spacing.sm },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.sm },
   card: {

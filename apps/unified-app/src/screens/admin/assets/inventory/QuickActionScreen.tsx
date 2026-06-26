@@ -11,6 +11,7 @@ import { useQuickAction } from '@/hooks/useQuickAction';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminInventoryStackParamList } from '@/types/navigation';
@@ -68,7 +69,7 @@ export function QuickActionScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <Screen padded={false} style={styles.screen}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.summaryCard}>
             <Text style={styles.itemName}>{item.name}</Text>
@@ -131,7 +132,6 @@ export function QuickActionScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
   content: { padding: spacing.md },
   summaryCard: {
     backgroundColor: colors.surfaceWhite,

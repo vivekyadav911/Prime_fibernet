@@ -7,7 +7,7 @@ import { SettingsMobileNav } from '@/components/admin/settings';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetAppSettingsQuery } from '@/store/api/endpoints';
 import { useAppTheme } from '@/theme/ThemeProvider';
-import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { queryErrorMessage } from '@/utils/queryError';
 
 export function SettingsHubScreen() {
@@ -22,7 +22,7 @@ export function SettingsHubScreen() {
 
   if (isLoading) {
     return (
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={8} />
       </Screen>
     );
@@ -30,7 +30,7 @@ export function SettingsHubScreen() {
 
   if (isError) {
     return (
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </Screen>
     );
@@ -39,7 +39,7 @@ export function SettingsHubScreen() {
   if (isWide) {
     return (
       <RoleGuard requiredPermission="settings.view">
-        <Screen style={styles.screen}>
+        <Screen style={adminScreenStyles.canvas}>
           <ScrollView contentContainerStyle={styles.wideHint}>
             <SettingsMobileNav />
           </ScrollView>
@@ -50,7 +50,7 @@ export function SettingsHubScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <ScrollView contentContainerStyle={styles.mobileContent}>
           <SettingsMobileNav />
         </ScrollView>
@@ -60,7 +60,6 @@ export function SettingsHubScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   mobileContent: { padding: 16, gap: 8 },
   wideHint: { padding: 16 },
 });

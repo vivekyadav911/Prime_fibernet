@@ -13,6 +13,7 @@ import { useChatSession } from '@/hooks/useChatSession';
 import { acceptChatSession } from '@/services/chatService';
 import { useAppSelector } from '@/store/hooks';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
@@ -93,7 +94,7 @@ export function LiveChatScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen} padded={false} safeAreaTop={false}>
+      <Screen style={adminScreenStyles.canvas} padded={false} safeAreaTop={false}>
         <View style={styles.container}>
           <View style={styles.toolbar}>
             <AgentStatusToggle status={status} onChange={updateStatus} loading={statusLoading} />
@@ -129,7 +130,6 @@ export function LiveChatScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
   container: { flex: 1 },
   toolbar: {
     padding: spacing.md,

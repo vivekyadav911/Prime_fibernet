@@ -23,6 +23,7 @@ import {
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AppSettings } from '@/types/settings';
@@ -168,7 +169,7 @@ export function BackupExportScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <SettingsHubLayout activeRoute="BackupExport">
           <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
         </SettingsHubLayout>
@@ -178,7 +179,6 @@ export function BackupExportScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   content: { padding: 16 },
   banner: {
     backgroundColor: adminColors.badgeWarning + '22',

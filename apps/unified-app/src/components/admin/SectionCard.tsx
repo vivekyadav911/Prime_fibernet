@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@prime/ui';
-import { adminColors } from '@/theme/admin';
+
+import { adminCardStyle, adminDesign } from '@/theme/adminDesign';
 import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { spacing } from '@/theme/spacing';
 
 type SectionCardProps = {
   title: string;
@@ -28,15 +29,8 @@ export function SectionCard({ title, actionLabel, onAction, children }: SectionC
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: adminColors.cardBg,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    ...adminCardStyle,
+    marginBottom: adminDesign.layout.sectionGap,
   },
   header: {
     flexDirection: 'row',
@@ -44,5 +38,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
-  title: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  title: adminDesign.typography.cardTitle,
 });

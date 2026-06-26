@@ -83,7 +83,9 @@ export function MonthNavigator({
         >
           <Text style={[navBtnTextStyle, !canGoPrev && styles.navBtnDisabled]}>‹</Text>
         </Pressable>
-        <Text style={styles.title}>{MONTHS[month]}</Text>
+        <Text style={styles.title}>
+          {MONTHS[month]} {year}
+        </Text>
         <Pressable
           onPress={goToNextMonth}
           hitSlop={12}
@@ -108,10 +110,11 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: colors.textPrimary,
+    letterSpacing: -0.2,
   },
   navBtn: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',

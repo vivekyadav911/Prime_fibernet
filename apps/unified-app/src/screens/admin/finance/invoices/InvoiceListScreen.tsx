@@ -7,6 +7,7 @@ import { DateRangePicker, FilterChips, RoleGuard, StatusBadge } from '@/componen
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useDownloadInvoiceMutation, useGetAdminInvoicesQuery, useSendInvoiceMutation } from '@/store/api/endpoints';
 import type { AdminInvoicesStackParamList } from '@/types/navigation';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -39,12 +40,12 @@ export function InvoiceListScreen({ navigation }: Props) {
     [download, send],
   );
 
-  if (isLoading) return <Screen><SkeletonLoader rows={8} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <Screen style={adminScreenStyles.canvas}><SkeletonLoader rows={8} /></Screen>;
+  if (isError) return <Screen style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
 
   return (
     <RoleGuard requiredPermission="invoices.view">
-      <Screen padded={false}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <View style={styles.toolbar}>
           <FilterChips
             options={[

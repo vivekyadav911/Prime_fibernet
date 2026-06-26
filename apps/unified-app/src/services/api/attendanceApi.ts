@@ -18,7 +18,8 @@ import { baseApi } from './baseApi';
 import {
   buildAttendanceSummary,
   getCurrentOfficerId,
-  mapApprovalRow,
+  fetchApprovalRequestById,
+  fetchApprovalRequests,
   mapAttendanceRow,
   mapGeofenceRow,
   mapLeaveBalanceRow,
@@ -32,7 +33,6 @@ import { getOfficerIdForUser } from './mappers';
 const GEOFENCE_SELECT = '*, geofence_officer_assignments(officer_id)';
 const OFFICER_EMBED = 'full_name, profile_photo_url';
 const ATTENDANCE_SELECT = `*, officers(${OFFICER_EMBED}), geofences(name)`;
-const APPROVAL_SELECT = `*, officers(${OFFICER_EMBED}), geofences(name)`;
 
 export const attendanceApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -283,13 +283,7 @@ export const attendanceApi = baseApi.injectEndpoints({
       { status?: string; page?: number }
     >({
       query: ({ status }) => ({
-        handler: async (client) => {
-          let q = client.from('attendance_approval_requests').select(APPROVAL_SELECT);
-          if (status && status !== 'all') q = q.eq('status', status);
-          const { data, error } = await q.order('requested_at', { ascending: false });
-          if (error) throw error;
-          return (data ?? []).map((row) => mapApprovalRow(row as never));
-        },
+        handler: async (client) => fetchApprovalRequests(client, { status }),
       }),
       providesTags: ['Approvals'],
     }),
@@ -307,13 +301,7 @@ export const attendanceApi = baseApi.injectEndpoints({
           });
           if (rpcError) throw rpcError;
 
-          const { data, error } = await client
-            .from('attendance_approval_requests')
-            .select(APPROVAL_SELECT)
-            .eq('id', id)
-            .single();
-          if (error) throw error;
-          return mapApprovalRow(data as never);
+          return fetchApprovalRequestById(client, id);
         },
       }),
       invalidatesTags: ['Approvals', 'Attendance', 'Shifts', 'Map', 'Analytics'],
@@ -719,10 +707,10 @@ export const attendanceApi = baseApi.injectEndpoints({
               photo_proof_url: body.photoProof,
               attendance_date: body.date,
             })
-            .select(APPROVAL_SELECT)
+            .select('*')
             .single();
           if (error) throw error;
-          return mapApprovalRow(data as never);
+          return fetchApprovalRequestById(client, data.id);
         },
       }),
       invalidatesTags: ['Approvals'],
@@ -732,13 +720,7 @@ export const attendanceApi = baseApi.injectEndpoints({
       query: () => ({
         handler: async (client) => {
           const officerId = await getCurrentOfficerId(client);
-          const { data, error } = await client
-            .from('attendance_approval_requests')
-            .select(APPROVAL_SELECT)
-            .eq('officer_id', officerId)
-            .order('requested_at', { ascending: false });
-          if (error) throw error;
-          return (data ?? []).map((row) => mapApprovalRow(row as never));
+          return fetchApprovalRequests(client, { officerId });
         },
       }),
       providesTags: ['Approvals'],

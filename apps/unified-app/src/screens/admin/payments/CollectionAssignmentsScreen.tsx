@@ -350,7 +350,7 @@ export function CollectionAssignmentsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           ListHeaderComponent={listHeader}
-          ListEmptyComponent={<AdminEmptyState title="No customers match" icon="👥" />}
+          ListEmptyComponent={<AdminEmptyState title="No customers match" iconName="people-outline" />}
           ListFooterComponent={
             isFetching && page > 1 ? (
               <View style={styles.footerLoader}>

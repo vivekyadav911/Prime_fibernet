@@ -33,6 +33,7 @@ import {
 } from '@/store/api/endpoints';
 import type { AdminOfficerDetail, OfficerAccountStatus } from '@/types/api/admin';
 import type { AdminOfficersStackParamList } from '@/types/navigation';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { queryErrorMessage } from '@/utils/queryError';
 
 import { OfficerKpiCarousel } from './components/OfficerKpiCarousel';
@@ -197,7 +198,7 @@ export function OfficerListScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen padded={false} style={styles.screen}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={6} showAvatar />
       </Screen>
     );
@@ -205,7 +206,7 @@ export function OfficerListScreen({ navigation }: Props) {
 
   if (isError) {
     return (
-      <Screen padded={false} style={styles.screen}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </Screen>
     );
@@ -213,14 +214,14 @@ export function OfficerListScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="officers.view">
-      <Screen padded={false} safeAreaTop={false} style={styles.screen}>
+      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
         {!officers.length ? (
           <View style={styles.emptyWrap}>
             <View style={styles.pageInset}>{listHeader}</View>
             <AdminEmptyState
               title={officerStrings.list.emptyTitle}
               subtitle={officerStrings.list.emptySubtitle}
-              icon="🛡️"
+              iconName="shield-outline"
               actionLabel={canCreate ? officerStrings.list.addOfficer : undefined}
               onAction={canCreate ? () => navigation.navigate('AddOfficer') : undefined}
             />
@@ -284,10 +285,6 @@ export function OfficerListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    backgroundColor: ui.bg,
-    flex: 1,
-  },
   headerBlock: {
     gap: ui.sectionGap,
     paddingTop: 12,

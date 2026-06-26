@@ -17,7 +17,7 @@ import {
 } from '@/store/api/endpoints';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
-import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import type { AppSettings } from '@/types/settings';
 import { queryErrorMessage } from '@/utils/queryError';
 
@@ -109,7 +109,7 @@ export function NotificationsSettingsScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <SettingsHubLayout activeRoute="Notifications">
           <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
         </SettingsHubLayout>
@@ -119,6 +119,5 @@ export function NotificationsSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   content: { padding: 16 },
 });

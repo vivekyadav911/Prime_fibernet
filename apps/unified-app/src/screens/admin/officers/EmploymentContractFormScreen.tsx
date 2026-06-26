@@ -31,6 +31,7 @@ import type { AdminOfficersStackParamList } from '@/types/navigation';
 import type { ContractFormValues } from '@/types/contract';
 import { contractToFormValues } from '@/types/contract';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { autoSplitCtc } from '@/utils/ctcAutoSplit';
@@ -150,7 +151,7 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
 
   if (profileLoading || contractLoading || !initialValues) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={8} />
       </Screen>
     );
@@ -158,7 +159,7 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
 
   if (!profile) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <ErrorState message="Officer profile not found." onRetry={() => navigation.goBack()} />
       </Screen>
     );
@@ -166,7 +167,7 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="officers.edit">
-      <Screen padded={false} style={styles.screen}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -450,7 +451,6 @@ function CustomClausesEditor({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: adminColors.canvasBg },
   flex: { flex: 1 },
   scroll: { padding: spacing.md, paddingBottom: spacing.xl },
   pageTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xxs },

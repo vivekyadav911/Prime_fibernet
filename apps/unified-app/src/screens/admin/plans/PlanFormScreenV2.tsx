@@ -17,6 +17,7 @@ import { FormField, RoleGuard, SectionCard, SelectField } from '@/components/adm
 import { usePlanForm } from '@/hooks/usePlanForm';
 import { fetchPlanById } from '@/services/planService';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminPlansStackParamList } from '@/types/navigation';
@@ -120,7 +121,7 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
 
   if (loadingPlan) {
     return (
-      <Screen style={styles.canvas}>
+      <Screen style={adminScreenStyles.canvas}>
         <ActivityIndicator size="large" color={adminColors.primary} />
       </Screen>
     );
@@ -128,7 +129,7 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission={mode === 'edit' ? 'plans.edit' : 'plans.create'}>
-      <Screen style={styles.canvas} padded={false}>
+      <Screen style={adminScreenStyles.canvas} padded={false}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -324,7 +325,6 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: adminColors.canvasBg },
   flex: { flex: 1 },
   scroll: { padding: spacing.sm, paddingBottom: spacing.xxl },
   screenTitle: {

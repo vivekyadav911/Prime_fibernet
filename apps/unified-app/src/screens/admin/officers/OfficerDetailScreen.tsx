@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -8,9 +8,11 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
+import { AdminHeaderButton, ADMIN_HEADER_ICON_SIZE } from '@/navigation/AdminHeaderButton';
 import {
   DocumentLabelModal,
   DocumentRow,
@@ -44,6 +46,8 @@ import {
   maskAccountNumber,
 } from '@/types/api/officer';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
+import { adminHeaderTheme } from '@/theme/adminHeader';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import {
@@ -120,6 +124,24 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
       ] as const,
     [],
   );
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: summary?.name ?? 'Officer',
+      headerRight: () => (
+        <AdminHeaderButton
+          accessibilityLabel="Edit officer"
+          onPress={() => navigation.navigate('OfficerEdit', { officerId })}
+        >
+          <Ionicons
+            name="ellipsis-vertical"
+            size={ADMIN_HEADER_ICON_SIZE}
+            color={adminHeaderTheme.foreground}
+          />
+        </AdminHeaderButton>
+      ),
+    });
+  }, [navigation, officerId, summary?.name]);
 
   const handleReveal = useCallback(async () => {
     try {
@@ -301,27 +323,14 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
     );
   };
 
-  if (isLoading) return <Screen safeAreaTop><SkeletonLoader rows={8} showAvatar /></Screen>;
-  if (isError || !summary) return <Screen safeAreaTop><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <Screen safeAreaTop={false} style={adminScreenStyles.canvas}><SkeletonLoader rows={8} showAvatar /></Screen>;
+  if (isError || !summary) return <Screen safeAreaTop={false} style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
 
   const p = profile;
 
   return (
     <RoleGuard requiredPermission="officers.view">
-      <Screen padded={false} safeAreaTop style={styles.screen}>
-        <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-            <Text style={styles.back}>←</Text>
-          </Pressable>
-          <Text style={styles.headerTitle} numberOfLines={1}>{summary.name}</Text>
-          <Pressable
-            onPress={() => navigation.navigate('OfficerEdit', { officerId })}
-            hitSlop={8}
-          >
-            <Text style={styles.menuIcon}>⋮</Text>
-          </Pressable>
-        </View>
-
+      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
         <View style={styles.tabBar}>
           {tabs.map((t) => (
             <Pressable key={t.key} style={styles.tabItem} onPress={() => setTab(t.key)}>
@@ -469,18 +478,6 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: adminColors.canvasBg },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: adminColors.cardBg,
-    gap: spacing.sm,
-  },
-  back: { fontSize: 22, color: colors.textPrimary },
-  headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-  menuIcon: { fontSize: 22, color: colors.textSecondary, fontWeight: '700' },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: adminColors.cardBg,

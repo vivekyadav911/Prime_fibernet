@@ -1,0 +1,123 @@
+---
+description: Premium ISP admin design system — palette, spacing, typography, cards, buttons, forms
+globs: apps/unified-app/src/{screens/admin,components/admin}/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Admin Design System
+
+Before editing any admin screen or component, align to this system.
+See also: `ui-theme.mdc` (tokens), `unified-app-standards.mdc` (code rules).
+
+**Goal:** One premium, mobile-first ISP admin product — same palette, rhythm, and components everywhere.
+
+## Token map (never hardcode hex)
+
+| Role | Token |
+|------|-------|
+| Layout constants | `@/theme/adminDesign` (`adminDesign.layout`, `adminDesign.typography`) |
+| Screen canvas / list padding | `@/theme/adminScreenStyles` (`adminScreenStyles.canvas`, `.listContent`) |
+| Page shell wrapper | `AdminScreenLayout` from `@/components/admin` |
+| Page canvas | `adminColors.canvasBg` |
+| Card / surface | `adminColors.cardBg` |
+| **App header bar** | `@/theme/adminHeader` (`adminHeaderTheme`) |
+| Primary accent (actions, active, selected) | `adminColors.primary` |
+| Primary text | `colors.textPrimary` |
+| Secondary text | `colors.textSecondary` |
+| Muted / labels | `adminColors.sectionLabel` |
+| Border | `colors.borderDefault` |
+| Success | `adminColors.badgeActive` |
+| Warning | `adminColors.badgePending` |
+| Error / destructive | `adminColors.badgeBlocked` or `colors.errorRed` |
+| Soft shadow | `shadow.card` from `@/theme/spacing` |
+
+New colors → add to `@/theme/admin.ts` first. Never one-off hex in screens.
+
+## Spacing (strict scale only)
+
+Use `@/theme/spacing`: `xxs` 4 · `xs` 8 · `sm` 12 · `md` 16 · `lg` 20 · `xl` 24 · `xxl` 32 · `xxxl` 40.
+
+| Use | Token |
+|-----|-------|
+| Page horizontal padding | `spacing.lg` (20) |
+| Section gap | `spacing.md`–`spacing.lg` (16–20) |
+| Card padding | `spacing.md` (16) |
+| Field gap | `spacing.sm` (12) |
+| Label → field | 6 (only allowed off-scale micro-gap) |
+| Title → content | `spacing.sm` (12) |
+
+No random magic numbers. Refactor off-scale screens toward this rhythm.
+
+## Radius, cards, shadows
+
+- Card radius: `adminDesign.radius.card` (22) or `radius.xl` (20) — one family everywhere
+- Card: white bg, 1px `colors.borderDefault`, `shadow.card`, padding `spacing.md`
+- No heavy shadows or harsh outlines
+- KPI / summary cards: reuse `KPICard`, `SectionCard` from `@/components/admin`
+
+## Typography (`@prime/ui` typography + admin context)
+
+| Role | Size / weight |
+|------|----------------|
+| Page title | 20–22 semibold |
+| Section title | 18 semibold |
+| Card title | 16–18 semibold |
+| Body | 14–16 regular |
+| Label | 12–13 semibold, uppercase, `colors.textSecondary` |
+| Helper / metadata | 12–13, muted |
+| KPI number | bold, not oversized |
+
+Same hierarchy on every screen. Readable line height on mobile.
+
+## Buttons
+
+Reuse `@prime/ui` `Button` or admin patterns. Target spec when extending:
+- Height 48–52 · radius `radius.lg` (16) · primary fill `adminColors.primary`
+- White semibold label · consistent pressed opacity
+- Secondary: outlined/muted · destructive: error tokens only
+- Min touch target 44pt
+
+## Inputs & forms
+
+Reuse `@/components/admin`: `FormField`, `SelectField`, `DateField`, `FilterChips`.
+- Height 52–56 · radius `radius.lg` · label above field
+- Body 16 · placeholder muted · focus: accent border
+- React Hook Form + Zod · inline errors · group fields in `SectionCard`
+- Long forms → stepped sections, same visual language
+
+## Icons
+
+- `@expo/vector-icons` (Ionicons) — one style set, consistent sizes
+- No emoji as section icons on admin screens (use icon components or `SectionHeader` patterns)
+- Icons support scanning, not decoration
+
+## Layout pattern (every screen)
+
+1. Header (stack nav or in-screen)
+2. Optional summary / hero KPI block
+3. Filters · actions · key status
+4. Main content (list / cards / form)
+5. Secondary content
+6. Footer / bottom nav
+
+One clear primary purpose per screen. Important content near top. No giant header gaps.
+
+## Lists & dashboards
+
+- `FlatList` / `FlashList` · stable keys · memoized rows
+- Compact status chips via `StatusBadge` — color = meaning only
+- Metadata quieter than titles · actions in consistent positions
+- Dashboard: aligned KPI cards · reserve loud color for urgent states · charts only when they clarify
+
+## States (required)
+
+Loading (skeleton), error (retry), empty (explanation + next action) on every data-driven screen.
+
+## Quality check before finishing
+
+Does it match theme tokens, spacing rhythm, card/button/input style, typography, icons, and feel like the same ISP admin product as Dashboard, Users, Officers, HR, and Support screens?
+
+## Shared components (prefer reuse)
+
+`@/components/admin`: `FormField`, `SelectField`, `DateField`, `SectionCard`, `FilterChips`, `StatusBadge`, `KPICard`, `SearchBar`, `SectionHeader`
+`@prime/ui`: `Screen`, `Button`, `EmptyState`, `ErrorState`

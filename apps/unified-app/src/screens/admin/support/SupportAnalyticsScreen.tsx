@@ -11,6 +11,7 @@ import { FilterChips, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useSupportAnalytics } from '@/hooks/useSupportAnalytics';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
@@ -59,7 +60,7 @@ export function SupportAnalyticsScreen({}: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen} safeAreaTop={false}>
+      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <FilterChips options={PERIOD_OPTIONS} selected={period} onSelect={(v) => setPeriod(v as SupportAnalyticsPeriod)} />
 
@@ -102,7 +103,6 @@ export function SupportAnalyticsScreen({}: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
   scroll: { padding: spacing.md, paddingBottom: spacing.xxl, gap: spacing.md },
   chartCard: {
     backgroundColor: colors.surfaceWhite,

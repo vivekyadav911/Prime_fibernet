@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 
-import { colors } from '@/theme/colors';
+import { adminHeaderTheme } from '@/theme/adminHeader';
 
 import { AdminHeaderButton, ADMIN_HEADER_ICON_SIZE } from './AdminHeaderButton';
 
@@ -10,7 +10,7 @@ type AdminDrawerToggleButtonProps = {
 };
 
 export function AdminDrawerToggleButton({
-  tintColor = colors.white,
+  tintColor = adminHeaderTheme.foreground,
 }: AdminDrawerToggleButtonProps) {
   const navigation = useNavigation();
 

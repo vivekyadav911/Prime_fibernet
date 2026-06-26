@@ -19,6 +19,7 @@ import {
 } from '@/store/api/endpoints';
 import type { AdminDrawerParamList } from '@/types/navigation';
 import type { RechargeFilter, RechargeSort } from '@/services/api/adminDashboardApi';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { queryErrorMessage } from '@/utils/queryError';
 
 import { DashboardOpsSummary } from './components/DashboardOpsSummary';
@@ -246,7 +247,7 @@ export function DashboardScreen() {
 
   if (kpisLoading || rechargeLoading) {
     return (
-      <Screen safeAreaTop={false}>
+      <Screen safeAreaTop={false} style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={8} shape="card" />
       </Screen>
     );
@@ -254,14 +255,14 @@ export function DashboardScreen() {
 
   if (rechargeError) {
     return (
-      <Screen safeAreaTop={false}>
+      <Screen safeAreaTop={false} style={adminScreenStyles.canvas}>
         <ErrorState message={queryErrorMessage(rechargeError)} onRetry={refetch} />
       </Screen>
     );
   }
 
   return (
-    <Screen padded={false} safeAreaTop={false} style={styles.canvas}>
+    <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
@@ -330,9 +331,6 @@ export function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  canvas: {
-    backgroundColor: dash.bg,
-  },
   scroll: {
     paddingHorizontal: dash.pagePad,
     paddingTop: 12,

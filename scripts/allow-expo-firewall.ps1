@@ -26,3 +26,6 @@ foreach ($port in $ports) {
 
 Write-Host ""
 Write-Host "Done. Restart Expo with: pnpm start"
+Write-Host ""
+Write-Host "Optional — set current Wi-Fi to Private (helps hotspot):"
+Write-Host '  Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private'

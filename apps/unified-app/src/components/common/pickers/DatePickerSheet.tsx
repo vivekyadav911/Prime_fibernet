@@ -121,22 +121,27 @@ export function DatePickerSheet({
               maximumDate={maximumDate}
               accent={accent}
             />
-            <YearScrollPicker
-              value={viewYear}
-              onChange={handleYearChange}
-              minYear={minYear}
-              maxYear={maxYear}
-              accent={accent}
-            />
-            <CalendarGrid
-              selected={selected}
-              viewMonth={viewMonth}
-              viewYear={viewYear}
-              onSelect={handleDaySelect}
-              minimumDate={minimumDate}
-              maximumDate={maximumDate}
-              accent={accent}
-            />
+
+            <View style={styles.pickerRow}>
+              <YearScrollPicker
+                value={viewYear}
+                onChange={handleYearChange}
+                minYear={minYear}
+                maxYear={maxYear}
+                accent={accent}
+              />
+              <View style={styles.calendarWrap}>
+                <CalendarGrid
+                  selected={selected}
+                  viewMonth={viewMonth}
+                  viewYear={viewYear}
+                  onSelect={handleDaySelect}
+                  minimumDate={minimumDate}
+                  maximumDate={maximumDate}
+                  accent={accent}
+                />
+              </View>
+            </View>
           </View>
         </View>
       </View>
@@ -168,17 +173,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.borderDefault,
   },
-  sheetTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
-  sheetAction: { fontSize: 16, color: colors.textSecondary, minWidth: 56 },
+  sheetTitle: { fontSize: 17, fontWeight: '600', color: colors.textPrimary },
+  sheetAction: { fontSize: 16, color: colors.textSecondary, minWidth: 64 },
   sheetDone: { fontWeight: '600', textAlign: 'right' },
   body: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  calendarWrap: {
+    flex: 1,
+    minWidth: 0,
   },
 });

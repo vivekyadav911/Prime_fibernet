@@ -21,6 +21,7 @@ import { useCreateAdminUserMutation } from '@/store/api/endpoints';
 import { fetchPlans, updateSubscriberCount } from '@/services/planService';
 import type { Plan } from '@/types/plans';
 import type { AdminUsersStackParamList } from '@/types/navigation';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { parseIndianAddress } from '@/utils/parseIndianAddress';
 import { queryErrorMessage } from '@/utils/queryError';
 
@@ -139,7 +140,7 @@ export function AddUserScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="users.create">
-      <Screen padded={false} safeAreaTop={false} style={styles.canvas}>
+      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -451,7 +452,6 @@ export function AddUserScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  canvas: { backgroundColor: ui.bg, flex: 1 },
   scroll: {
     paddingHorizontal: ui.pagePad,
     paddingTop: 12,

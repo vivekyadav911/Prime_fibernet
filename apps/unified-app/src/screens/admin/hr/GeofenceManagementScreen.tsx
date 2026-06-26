@@ -15,6 +15,7 @@ import {
 import type { Geofence } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -120,7 +121,7 @@ export function GeofenceManagementScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <Screen padded={false} style={styles.canvas}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <View style={styles.header}>
           <Text style={styles.title}>Geofences</Text>
           <Button
@@ -157,7 +158,6 @@ export function GeofenceManagementScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: adminColors.canvasBg },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

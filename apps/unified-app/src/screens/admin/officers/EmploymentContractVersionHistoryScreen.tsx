@@ -11,6 +11,7 @@ import { useContractVersionHistory } from '@/hooks/useEmploymentContract';
 import type { ContractVersion } from '@/types/contract';
 import type { AdminOfficersStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -125,7 +126,7 @@ export function EmploymentContractVersionHistoryScreen({ route }: Props) {
 
   return (
     <RoleGuard requiredPermission="officers.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         {isLoading ? (
           <SkeletonLoader rows={5} />
         ) : versions.length === 0 ? (
@@ -144,7 +145,6 @@ export function EmploymentContractVersionHistoryScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: adminColors.canvasBg },
   list: { padding: spacing.md, gap: spacing.sm },
   card: {
     backgroundColor: adminColors.cardBg,

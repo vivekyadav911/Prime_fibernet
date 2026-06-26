@@ -10,6 +10,7 @@ import {
   useGetUserSubscriptionsQuery,
 } from '@/store/api/endpoints';
 import type { AdminUsersStackParamList } from '@/types/navigation';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -22,12 +23,12 @@ export function UserDetailScreen({ route, navigation }: Props) {
   const { data: subs } = useGetUserSubscriptionsQuery(userId);
   const { data: payments } = useGetUserPaymentsQuery(userId);
 
-  if (isLoading) return <Screen><SkeletonLoader rows={6} showAvatar /></Screen>;
-  if (isError || !user) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <Screen style={adminScreenStyles.canvas}><SkeletonLoader rows={6} showAvatar /></Screen>;
+  if (isError || !user) return <Screen style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
 
   return (
     <RoleGuard requiredPermission="users.view">
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <View style={styles.profile}>
           <AvatarIcon name={user.name} size={64} />
           <Text style={styles.name}>{user.name}</Text>

@@ -24,7 +24,7 @@ import {
   useUpdateOfficerRoleMutation,
 } from '@/store/api/endpoints';
 import type { AdminOfficersStackParamList } from '@/types/navigation';
-import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 
@@ -138,14 +138,14 @@ export function EditOfficerScreen({ route, navigation }: Props) {
   };
 
   if (isLoading || !profile) {
-    return <Screen><Text>Loading…</Text></Screen>;
+    return <Screen style={adminScreenStyles.canvas}><Text>Loading…</Text></Screen>;
   }
 
   const roleOptions = roles.map((r) => ({ value: r.id, label: r.name }));
 
   return (
     <RoleGuard requiredPermission="officers.edit">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={keyboardInset}>
           <KeyboardDismissView>
             <ScrollView contentContainerStyle={styles.scroll}>
@@ -205,7 +205,6 @@ export function EditOfficerScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   scroll: { padding: spacing.md, paddingBottom: spacing.xxl },
   tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
   tabBtn: { flexGrow: 1 },

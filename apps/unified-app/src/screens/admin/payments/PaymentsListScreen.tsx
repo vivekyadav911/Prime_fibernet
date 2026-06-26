@@ -10,6 +10,7 @@ import { useCollectionAssignmentsSync } from '@/hooks/admin/useCollectionAssignm
 import { usePayments } from '@/hooks/usePayments';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -76,7 +77,7 @@ export function PaymentsListScreen() {
 
   if (isLoading) {
     return (
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         {listHeader}
         <SkeletonLoader rows={6} />
       </Screen>
@@ -85,7 +86,7 @@ export function PaymentsListScreen() {
 
   if (isError) {
     return (
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         {listHeader}
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </Screen>
@@ -93,7 +94,7 @@ export function PaymentsListScreen() {
   }
 
   return (
-    <Screen style={styles.screen}>
+    <Screen style={adminScreenStyles.canvas}>
       <FlatList
         data={rows}
         keyExtractor={(item) => item.id}
@@ -114,7 +115,6 @@ export function PaymentsListScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg, flex: 1 },
   listContent: { padding: spacing.md, paddingTop: 0 },
   sectionTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xs },
   subtitle: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.md },

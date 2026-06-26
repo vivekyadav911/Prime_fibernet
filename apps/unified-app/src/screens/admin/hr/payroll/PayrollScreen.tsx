@@ -7,6 +7,7 @@ import { FormField, RoleGuard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePayrollDashboard } from '@/hooks/usePayrollDashboard';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminPayrollStackParamList } from '@/types/navigation';
@@ -123,7 +124,7 @@ export function PayrollScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={8} />
       </Screen>
     );
@@ -131,7 +132,7 @@ export function PayrollScreen({ navigation }: Props) {
 
   if (isError) {
     return (
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </Screen>
     );
@@ -139,7 +140,7 @@ export function PayrollScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="payroll.view">
-      <Screen padded={false}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <View style={styles.toolbar}>
           <FormField
             label="Month"

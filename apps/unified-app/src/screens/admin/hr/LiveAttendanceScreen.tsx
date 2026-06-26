@@ -24,6 +24,7 @@ import { useSavedMapPlaces } from '@/hooks/useSavedMapPlaces';
 import type { AttendanceRecord, CheckInMethod, Geofence, OfficerLiveLocation } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -655,7 +656,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen padded={false} safeAreaTop={false} style={styles.canvas}>
+      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={8} />
       </Screen>
     );
@@ -663,7 +664,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 
   if (isError) {
     return (
-      <Screen padded={false} safeAreaTop={false} style={styles.canvas}>
+      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </Screen>
     );
@@ -671,7 +672,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.view">
-      <Screen padded={false} safeAreaTop={false} style={styles.canvas}>
+      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
         <FlatList
           data={attendance ?? []}
           keyExtractor={(r) => r.id}
@@ -711,7 +712,6 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { backgroundColor: adminColors.canvasBg, flex: 1 },
   listContent: {
     paddingHorizontal: PAGE_PADDING,
     paddingTop: spacing.md,

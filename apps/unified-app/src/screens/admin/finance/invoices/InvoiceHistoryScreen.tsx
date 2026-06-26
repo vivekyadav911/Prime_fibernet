@@ -6,6 +6,7 @@ import { RoleGuard, SearchBar, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetAdminInvoicesQuery } from '@/store/api/endpoints';
 import type { AdminInvoicesStackParamList } from '@/types/navigation';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -21,12 +22,12 @@ export function InvoiceHistoryScreen(_props: Props) {
     (i) => !search || i.customerName.toLowerCase().includes(search.toLowerCase()) || i.invoiceNumber.includes(search),
   );
 
-  if (isLoading) return <Screen><SkeletonLoader rows={8} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <Screen style={adminScreenStyles.canvas}><SkeletonLoader rows={8} /></Screen>;
+  if (isError) return <Screen style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
 
   return (
     <RoleGuard requiredPermission="invoices.view">
-      <Screen padded={false}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search invoice or customer…" />
         <FlatList
           data={filtered}

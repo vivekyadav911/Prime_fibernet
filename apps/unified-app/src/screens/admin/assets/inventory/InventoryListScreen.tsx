@@ -24,6 +24,7 @@ import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useInventory } from '@/hooks/useInventory';
 import { fetchCategories } from '@/services/inventoryService';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminInventoryStackParamList } from '@/types/navigation';
@@ -121,7 +122,7 @@ export function InventoryListScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.view">
-      <Screen padded={false} style={styles.screen}>
+      <Screen padded={false} style={adminScreenStyles.canvas}>
         <View style={styles.tabBar}>
           <Pressable
             style={[styles.tab, activeTab === 'requests' && styles.tabActive]}
@@ -246,7 +247,6 @@ export function InventoryListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: colors.surfaceWhite,

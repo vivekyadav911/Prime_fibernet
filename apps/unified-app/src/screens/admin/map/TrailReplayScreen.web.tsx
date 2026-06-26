@@ -7,6 +7,7 @@ import { Screen } from '@prime/ui';
 import { useGetLocationHistoryQuery, useGetOfficerDwellsQuery } from '@/services/api/officerTrackingApi';
 import type { AdminMapStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
@@ -47,7 +48,7 @@ export function TrailReplayScreen({ route, navigation }: Props) {
   }, []);
 
   return (
-    <Screen padded={false}>
+    <Screen padded={false} style={adminScreenStyles.canvas}>
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()}>
           <Text style={styles.back}>← Back</Text>

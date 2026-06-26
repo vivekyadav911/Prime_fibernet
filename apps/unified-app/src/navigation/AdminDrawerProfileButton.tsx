@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 
+import { adminHeaderTheme } from '@/theme/adminHeader';
 import type { AdminDrawerParamList } from '@/types/navigation';
 
 import { AdminHeaderButton, ADMIN_HEADER_ICON_SIZE } from './AdminHeaderButton';
@@ -15,7 +16,7 @@ export function AdminDrawerProfileButton() {
 
   return (
     <AdminHeaderButton accessibilityLabel="Profile" onPress={handlePress}>
-      <Ionicons name="person-circle-outline" size={ADMIN_HEADER_ICON_SIZE} color="#FFFFFF" />
+      <Ionicons name="person-circle-outline" size={ADMIN_HEADER_ICON_SIZE} color={adminHeaderTheme.foreground} />
     </AdminHeaderButton>
   );
 }

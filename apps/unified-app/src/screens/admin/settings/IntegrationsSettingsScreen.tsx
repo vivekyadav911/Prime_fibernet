@@ -19,7 +19,7 @@ import {
 } from '@/store/api/endpoints';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
-import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSettingsStackParamList } from '@/types/navigation';
@@ -164,7 +164,7 @@ export function IntegrationsSettingsScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <SettingsHubLayout activeRoute="Integrations">
           <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
         </SettingsHubLayout>
@@ -174,7 +174,6 @@ export function IntegrationsSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   content: { padding: 16 },
   flagRow: { fontSize: 15, color: colors.textPrimary, marginVertical: spacing.xs },
 });

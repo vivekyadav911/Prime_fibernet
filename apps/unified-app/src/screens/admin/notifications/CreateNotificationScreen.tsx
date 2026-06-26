@@ -29,6 +29,7 @@ import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useCreateNotification } from '@/hooks/useCreateNotification';
 import { fetchNotificationById } from '@/services/broadcastNotificationService';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminNotificationsStackParamList } from '@/types/navigation';
@@ -116,7 +117,7 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
 
   if (loadingExisting) {
     return (
-      <Screen style={styles.canvas}>
+      <Screen style={adminScreenStyles.canvas}>
         <SkeletonLoader rows={8} />
       </Screen>
     );
@@ -124,7 +125,7 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="notifications.create">
-      <Screen style={styles.canvas} padded={false}>
+      <Screen style={adminScreenStyles.canvas} padded={false}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -349,7 +350,6 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: adminColors.canvasBg },
   flex: { flex: 1 },
   scroll: { padding: spacing.sm, paddingBottom: spacing.xxl },
   label: {

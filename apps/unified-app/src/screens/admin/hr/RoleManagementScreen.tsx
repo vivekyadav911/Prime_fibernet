@@ -5,6 +5,7 @@ import { Button, Screen } from '@prime/ui';
 import { RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetAdminRolesQuery, useUpdateRolePermissionsMutation } from '@/store/api/endpoints';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -38,14 +39,14 @@ export function RoleManagementScreen() {
     }
   };
 
-  if (isLoading) return <Screen><SkeletonLoader rows={6} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <Screen style={adminScreenStyles.canvas}><SkeletonLoader rows={6} /></Screen>;
+  if (isError) return <Screen style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
 
   const perms = Object.keys(permissions).length ? permissions : role?.permissions ?? {};
 
   return (
     <RoleGuard requiredPermission="roles.view">
-      <Screen>
+      <Screen style={adminScreenStyles.canvas}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.roleRow}>
           {(roles ?? []).map((r) => (
             <Button key={r.id} label={r.name} variant={role?.id === r.id ? 'primary' : 'ghost'} onPress={() => { setSelectedRole(r.id); setPermissions(r.permissions); }} />

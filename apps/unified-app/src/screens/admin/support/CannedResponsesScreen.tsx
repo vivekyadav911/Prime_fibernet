@@ -7,6 +7,7 @@ import { RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetCannedResponsesQuery, useUpsertCannedResponseMutation } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
@@ -46,7 +47,7 @@ export function CannedResponsesScreen({}: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={styles.screen}>
+      <Screen style={adminScreenStyles.canvas}>
         <FlatList
           data={grouped}
           keyExtractor={([cat]) => cat}
@@ -89,7 +90,6 @@ export function CannedResponsesScreen({}: Props) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: adminColors.canvasBg },
   list: { padding: spacing.md },
   addBtn: { marginBottom: spacing.md },
   addText: { fontSize: 14, fontWeight: '600', color: adminColors.primary },
