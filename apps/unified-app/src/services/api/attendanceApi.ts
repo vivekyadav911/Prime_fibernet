@@ -1,4 +1,5 @@
 import type {
+  ApprovalAuditEntry,
   ApprovalRequest,
   ApprovalType,
   AttendanceRecord,
@@ -20,15 +21,18 @@ import {
   getCurrentOfficerId,
   fetchApprovalRequestById,
   fetchApprovalRequests,
+  mapApprovalAuditRow,
   mapAttendanceRow,
   mapGeofenceRow,
   mapLeaveBalanceRow,
   mapLeaveRow,
+  mapLiveOfficerFromLocationRow,
   mapLiveOfficerRow,
   mapShiftDefinitionRow,
 } from './attendanceMappers';
 import type { AttendanceReportData } from './attendanceMappers';
 import { getOfficerIdForUser } from './mappers';
+import { getLocalDateString } from '@/utils/dateUtils';
 
 const GEOFENCE_SELECT = '*, geofence_officer_assignments(officer_id)';
 const OFFICER_EMBED = 'full_name, profile_photo_url';
@@ -172,7 +176,7 @@ export const attendanceApi = baseApi.injectEndpoints({
     getAllAttendanceToday: builder.query<AttendanceRecord[], void>({
       query: () => ({
         handler: async (client) => {
-          const today = new Date().toISOString().slice(0, 10);
+          const today = getLocalDateString();
           const { data, error } = await client
             .from('shifts')
             .select(ATTENDANCE_SELECT)
@@ -187,15 +191,26 @@ export const attendanceApi = baseApi.injectEndpoints({
 
     getAdminAttendance: builder.query<
       AttendanceRecord[],
-      { date?: string; officerId?: string; status?: string; page?: number }
+      { date?: string; from?: string; to?: string; officerId?: string; status?: string; page?: number }
     >({
-      query: ({ date, officerId, status }) => ({
+      query: ({ date, from, to, officerId, status }) => ({
         handler: async (client) => {
-          const targetDate = date ?? new Date().toISOString().slice(0, 10);
-          let q = client.from('shifts').select(ATTENDANCE_SELECT).eq('shift_date', targetDate);
+          const targetDate = date ?? getLocalDateString();
+          let q = client.from('shifts').select(ATTENDANCE_SELECT);
+
+          if (from && to) {
+            q = q.gte('shift_date', from).lte('shift_date', to);
+          } else if (from) {
+            q = q.gte('shift_date', from);
+          } else if (to) {
+            q = q.lte('shift_date', to);
+          } else {
+            q = q.eq('shift_date', targetDate);
+          }
+
           if (officerId) q = q.eq('officer_id', officerId);
           if (status) q = q.eq('attendance_status', status);
-          const { data, error } = await q.order('check_in_time', { ascending: false });
+          const { data, error } = await q.order('shift_date', { ascending: false }).order('check_in_time', { ascending: false });
           if (error) throw error;
           return (data ?? []).map((row) => mapAttendanceRow(row as never));
         },
@@ -252,10 +267,25 @@ export const attendanceApi = baseApi.injectEndpoints({
         checkOut?: string;
         status: string;
         notes?: string;
+        reason: string;
       }
     >({
       query: (body) => ({
         handler: async (client) => {
+          const { data: session } = await client.auth.getSession();
+          const userId = session.session?.user?.id;
+          let adminName = 'Admin';
+          if (userId) {
+            const { data: userRow } = await client
+              .from('users')
+              .select('email, name')
+              .eq('id', userId)
+              .maybeSingle();
+            adminName = userRow?.name?.trim() || userRow?.email || 'Admin';
+          }
+
+          const manualNote = `Manually entered by ${adminName}${body.reason ? `: ${body.reason}` : ''}`;
+
           const { data, error } = await client
             .from('shifts')
             .upsert({
@@ -265,8 +295,12 @@ export const attendanceApi = baseApi.injectEndpoints({
               check_out_time: body.checkOut,
               attendance_status: body.status,
               check_in_method: 'admin_override',
-              notes: body.notes,
-              status: 'completed',
+              notes: manualNote,
+              status: body.checkOut ? 'completed' : 'active',
+              manual_entry_by: userId,
+              manual_entry_by_name: adminName,
+              manual_entry_reason: body.reason,
+              manual_entry_at: new Date().toISOString(),
             })
             .select(ATTENDANCE_SELECT)
             .single();
@@ -302,6 +336,49 @@ export const attendanceApi = baseApi.injectEndpoints({
           if (rpcError) throw rpcError;
 
           return fetchApprovalRequestById(client, id);
+        },
+      }),
+      invalidatesTags: ['Approvals', 'Attendance', 'Shifts', 'Map', 'Analytics'],
+    }),
+
+    getApprovalAuditLog: builder.query<ApprovalAuditEntry[], string>({
+      query: (approvalRequestId) => ({
+        handler: async (client) => {
+          const { data, error } = await client
+            .from('attendance_approval_audit_log')
+            .select('*')
+            .eq('approval_request_id', approvalRequestId)
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          return (data ?? []).map((row) => mapApprovalAuditRow(row as Record<string, unknown>));
+        },
+      }),
+      providesTags: (_r, _e, id) => [{ type: 'Approvals', id: `audit-${id}` }],
+    }),
+
+    bulkReviewApprovals: builder.mutation<
+      { succeeded: string[]; failed: { id: string; error: string }[] },
+      { ids: string[]; action: 'approve' | 'reject'; notes?: string; reason?: string }
+    >({
+      query: ({ ids, action, notes, reason }) => ({
+        handler: async (client) => {
+          const succeeded: string[] = [];
+          const failed: { id: string; error: string }[] = [];
+
+          for (const id of ids) {
+            const { error: rpcError } = await client.rpc('review_attendance_approval', {
+              p_request_id: id,
+              p_action: action,
+              p_review_notes: action === 'approve' ? notes ?? null : reason ?? null,
+            });
+            if (rpcError) {
+              failed.push({ id, error: rpcError.message });
+            } else {
+              succeeded.push(id);
+            }
+          }
+
+          return { succeeded, failed };
         },
       }),
       invalidatesTags: ['Approvals', 'Attendance', 'Shifts', 'Map', 'Analytics'],
@@ -454,35 +531,66 @@ export const attendanceApi = baseApi.injectEndpoints({
     getLiveOfficerLocations: builder.query<OfficerLiveLocation[], void>({
       query: () => ({
         handler: async (client) => {
-          const today = new Date().toISOString().slice(0, 10);
-          const [officersRes, shiftsRes] = await Promise.all([
-            client
-              .from('officers')
-              .select(
-                'id, full_name, profile_photo_url, current_latitude, current_longitude, last_location_update',
-              )
-              .not('current_latitude', 'is', null),
-            client
-              .from('shifts')
-              .select('officer_id, status, check_in_time, check_out_time')
-              .eq('shift_date', today)
-              .eq('status', 'active'),
-          ]);
-          if (officersRes.error) throw officersRes.error;
+          const today = getLocalDateString();
+
+          const geofencesRes = await client
+            .from('geofences')
+            .select(GEOFENCE_SELECT)
+            .eq('is_active', true);
+          const activeGeofences = (geofencesRes.data ?? []).map((row) =>
+            mapGeofenceRow(row as never),
+          );
+
+          const shiftsRes = await client
+            .from('shifts')
+            .select('officer_id, status, check_in_time, check_out_time')
+            .eq('shift_date', today)
+            .eq('status', 'active');
           if (shiftsRes.error) throw shiftsRes.error;
 
           const activeByOfficer = new Map(
             (shiftsRes.data ?? []).map((shift) => [shift.officer_id as string, shift]),
           );
 
+          const locationsRes = await client
+            .from('officer_locations')
+            .select(
+              `
+              officer_id, latitude, longitude, accuracy, last_seen_at, is_online,
+              officers(id, full_name, profile_photo_url)
+            `,
+            )
+            .order('updated_at', { ascending: false });
+
+          if (!locationsRes.error && locationsRes.data?.length) {
+            return locationsRes.data.map((row) =>
+              mapLiveOfficerFromLocationRow(
+                row as Record<string, unknown>,
+                activeByOfficer.get(row.officer_id as string),
+                activeGeofences,
+              ),
+            );
+          }
+
+          const officersRes = await client
+            .from('officers')
+            .select(
+              'id, full_name, profile_photo_url, current_latitude, current_longitude, last_location_update',
+            )
+            .not('current_latitude', 'is', null);
+          if (officersRes.error) throw officersRes.error;
+
           return (officersRes.data ?? []).map((row) => {
             const active = activeByOfficer.get(row.id as string);
-            return mapLiveOfficerRow({
-              ...(row as Record<string, unknown>),
-              active_shift_status: active?.status ?? null,
-              active_shift_check_in: active?.check_in_time ?? null,
-              active_shift_check_out: active?.check_out_time ?? null,
-            });
+            return mapLiveOfficerRow(
+              {
+                ...(row as Record<string, unknown>),
+                active_shift_status: active?.status ?? null,
+                active_shift_check_in: active?.check_in_time ?? null,
+                active_shift_check_out: active?.check_out_time ?? null,
+              },
+              activeGeofences,
+            );
           });
         },
       }),
@@ -496,8 +604,8 @@ export const attendanceApi = baseApi.injectEndpoints({
     >({
       query: ({ from, to, officerId }) => ({
         handler: async (client) => {
-          const fromDate = from ?? new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-          const toDate = to ?? new Date().toISOString().slice(0, 10);
+          const fromDate = from ?? getLocalDateString(new Date(Date.now() - 30 * 86400000));
+          const toDate = to ?? getLocalDateString();
           let q = client.from('shifts').select(ATTENDANCE_SELECT).gte('shift_date', fromDate).lte('shift_date', toDate);
           if (officerId) q = q.eq('officer_id', officerId);
           const { data, error } = await q;
@@ -553,7 +661,7 @@ export const attendanceApi = baseApi.injectEndpoints({
       query: () => ({
         handler: async (client) => {
           const officerId = await getCurrentOfficerId(client);
-          const today = new Date().toISOString().slice(0, 10);
+          const today = getLocalDateString();
           const { data, error } = await client
             .from('shifts')
             .select(ATTENDANCE_SELECT)
@@ -607,7 +715,7 @@ export const attendanceApi = baseApi.injectEndpoints({
       query: (body) => ({
         handler: async (client) => {
           const officerId = await getCurrentOfficerId(client);
-          const today = new Date().toISOString().slice(0, 10);
+          const today = getLocalDateString();
           const now = new Date().toISOString();
 
           const { data, error } = await client
@@ -641,7 +749,7 @@ export const attendanceApi = baseApi.injectEndpoints({
       query: (body) => ({
         handler: async (client) => {
           const officerId = await getCurrentOfficerId(client);
-          const today = new Date().toISOString().slice(0, 10);
+          const today = getLocalDateString();
           const now = new Date().toISOString();
 
           const { data: active, error: findError } = await client
@@ -918,7 +1026,9 @@ export const {
   useGetAttendanceSummaryQuery,
   useAttendanceOverrideMutation,
   useGetApprovalRequestsQuery,
+  useGetApprovalAuditLogQuery,
   useReviewApprovalMutation,
+  useBulkReviewApprovalsMutation,
   useGetShiftDefinitionsQuery,
   useCreateShiftDefinitionMutation,
   useUpdateShiftDefinitionMutation,

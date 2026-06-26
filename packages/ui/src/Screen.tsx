@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Keyboard, StyleSheet, TouchableWithoutFeedback, View, type ViewProps } from 'react-native';
+import { Keyboard, Platform, StyleSheet, TouchableWithoutFeedback, View, type ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from './theme';
@@ -48,10 +48,17 @@ export function Screen({
 }
 
 function KeyboardDismissWrapper({ children }: { children: ReactNode }) {
+  if (Platform.OS === 'web') {
+    return <View style={styles.container}>{children}</View>;
+  }
+
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={styles.container}>{children}</View>
-    </TouchableWithoutFeedback>
+    <View style={styles.container} pointerEvents="box-none">
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <View style={StyleSheet.absoluteFillObject} />
+      </TouchableWithoutFeedback>
+      {children}
+    </View>
   );
 }
 
@@ -59,9 +66,11 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.surface,
+    ...(Platform.OS === 'web' ? { minHeight: 0 } : null),
   },
   container: {
     flex: 1,
+    ...(Platform.OS === 'web' ? { minHeight: 0 } : null),
   },
   padded: {
     padding: 16,

@@ -149,13 +149,36 @@ export function circleToPolygon(
 /**
  * Validate geofence geometry.
  */
+export const GEOFENCE_RADIUS_MIN_M = 50;
+export const GEOFENCE_RADIUS_MAX_M = 500;
+
 export function validateGeofence(geometry: CircleGeofence | PolygonGeofence): {
   valid: boolean;
   error?: string;
+  warning?: string;
 } {
   if (geometry.shape === 'circle') {
-    if (geometry.radius < 50) return { valid: false, error: 'Minimum radius is 50 meters' };
-    if (geometry.radius > 50_000) return { valid: false, error: 'Maximum radius is 50 km' };
+    if (geometry.radius < GEOFENCE_RADIUS_MIN_M) {
+      return { valid: false, error: `Minimum radius is ${GEOFENCE_RADIUS_MIN_M} meters` };
+    }
+    if (geometry.radius > GEOFENCE_RADIUS_MAX_M) {
+      return {
+        valid: false,
+        error: `Maximum radius is ${GEOFENCE_RADIUS_MAX_M} meters`,
+      };
+    }
+    if (geometry.radius < 75) {
+      return {
+        valid: true,
+        warning: 'Radius under 75m may cause false negatives from GPS drift.',
+      };
+    }
+    if (geometry.radius > 400) {
+      return {
+        valid: true,
+        warning: 'Radius over 400m may not effectively constrain check-in location.',
+      };
+    }
     return { valid: true };
   }
 

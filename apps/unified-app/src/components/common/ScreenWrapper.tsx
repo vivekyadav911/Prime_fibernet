@@ -6,6 +6,7 @@ import { spacing } from '@/theme/spacing';
 
 import { DismissKeyboardScrollView } from './DismissKeyboardScrollView';
 import { KeyboardDismissView } from './KeyboardDismissView';
+import { scrollLayoutStyles } from './scrollLayoutStyles';
 
 type ScreenWrapperProps = {
   children: React.ReactNode;
@@ -25,22 +26,22 @@ export function ScreenWrapper({
   const inner = padded ? <View style={styles.inner}>{children}</View> : children;
 
   return (
-    <Screen padded={false} safeAreaTop={safeAreaTop} style={{ backgroundColor: background }}>
+    <Screen keyboardDismiss={false} padded={false} safeAreaTop={safeAreaTop} style={{ backgroundColor: background }}>
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={scrollLayoutStyles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         {scrollable ? (
           <DismissKeyboardScrollView
-            style={styles.flex}
+            style={scrollLayoutStyles.scrollContainer}
             contentContainerStyle={[styles.scrollContent, padded && styles.scrollPadded]}
             showsVerticalScrollIndicator={false}
           >
             {inner}
           </DismissKeyboardScrollView>
         ) : (
-          <KeyboardDismissView style={[styles.flex, padded && styles.inner]}>{children}</KeyboardDismissView>
+          <KeyboardDismissView style={[scrollLayoutStyles.flex, padded && styles.inner]}>{children}</KeyboardDismissView>
         )}
       </KeyboardAvoidingView>
     </Screen>
@@ -48,7 +49,6 @@ export function ScreenWrapper({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   inner: { paddingHorizontal: spacing.md },
   scrollContent: { paddingBottom: spacing.xxl },
   scrollPadded: { paddingHorizontal: spacing.md },

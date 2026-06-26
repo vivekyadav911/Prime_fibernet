@@ -28,6 +28,8 @@ import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
+import { SHOW_SAVED_MAP_PLACES } from '@/constants/attendanceFeatures';
+import { formatSyncLabel } from '@/utils/dateUtils';
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'LiveAttendance'>;
 
@@ -67,14 +69,7 @@ function formatDuration(hours?: number): string {
 }
 
 function formatRelativeSync(iso?: string): string {
-  if (!iso) return 'Updated just now';
-  const diffMs = Date.now() - new Date(iso).getTime();
-  if (diffMs < 60_000) return 'Updated just now';
-  if (diffMs < 3_600_000) {
-    const mins = Math.floor(diffMs / 60_000);
-    return `Updated ${mins}m ago`;
-  }
-  return `Updated ${formatTime(iso)}`;
+  return formatSyncLabel(iso).label;
 }
 
 function checkInMethodLabel(method: CheckInMethod): string {
@@ -125,6 +120,8 @@ function LiveOperationsSummary({
   activeGeofences,
   lastSync,
 }: SummaryProps) {
+  const sync = formatSyncLabel(lastSync);
+
   return (
     <View style={styles.summaryCard}>
       <View style={styles.summaryHeader}>
@@ -132,7 +129,12 @@ function LiveOperationsSummary({
           <Text style={styles.summaryTitle}>Today&apos;s Attendance</Text>
           <LivePulse />
         </View>
-        <Text style={styles.summarySync}>{formatRelativeSync(lastSync)}</Text>
+        <View style={styles.syncColumn}>
+          <Text style={[styles.summarySync, sync.isStale && styles.summarySyncStale]}>
+            {sync.label}
+          </Text>
+          {sync.isStale ? <Text style={styles.staleHint}>Data may be stale</Text> : null}
+        </View>
       </View>
 
       <Text style={styles.summaryHelper}>
@@ -174,6 +176,13 @@ function LiveOperationsSummary({
     </View>
   );
 }
+
+const MAP_EDGE_PADDING = {
+  top: 58,
+  right: 72,
+  bottom: 56,
+  left: 12,
+};
 
 type MapModuleProps = {
   initialRegion: Region;
@@ -327,6 +336,7 @@ const GeofenceMapModule = memo(function GeofenceMapModule({
           ref={mapRef}
           style={styles.map}
           initialRegion={initialRegion}
+          mapPadding={MAP_EDGE_PADDING}
           scrollEnabled
           zoomEnabled
           zoomTapEnabled
@@ -368,22 +378,26 @@ const GeofenceMapModule = memo(function GeofenceMapModule({
           </View>
         </View>
 
-        <View style={styles.mapPlaceActions} pointerEvents="box-none">
-          <Pressable
-            style={[styles.placeActionBtn, savedPlaces.home && styles.placeActionBtnSaved]}
-            onPress={() => handlePlaceButtonPress('home')}
-            onLongPress={() => flyToSavedPlace('home')}
-          >
-            <Text style={styles.placeActionText}>Home</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.placeActionBtn, savedPlaces.office && styles.placeActionBtnSaved]}
-            onPress={() => handlePlaceButtonPress('office')}
-            onLongPress={() => flyToSavedPlace('office')}
-          >
-            <Text style={styles.placeActionText}>Office</Text>
-          </Pressable>
-        </View>
+        {SHOW_SAVED_MAP_PLACES ? (
+          <View style={styles.mapPlaceActions} pointerEvents="box-none">
+            <Pressable
+              accessibilityLabel="Home location — tap to pin or go to saved home"
+              style={[styles.placeActionBtn, savedPlaces.home && styles.placeActionBtnSaved]}
+              onPress={() => handlePlaceButtonPress('home')}
+              onLongPress={() => flyToSavedPlace('home')}
+            >
+              <Text style={styles.placeActionText}>🏠 Home</Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Office location — tap to pin or go to saved office"
+              style={[styles.placeActionBtn, savedPlaces.office && styles.placeActionBtnSaved]}
+              onPress={() => handlePlaceButtonPress('office')}
+              onLongPress={() => flyToSavedPlace('office')}
+            >
+              <Text style={styles.placeActionText}>🏢 Office</Text>
+            </Pressable>
+          </View>
+        ) : null}
 
         <View style={styles.mapOverlayBottom} pointerEvents="none">
           <Text style={styles.mapSiteLabel} numberOfLines={1}>
@@ -480,7 +494,7 @@ function AttendanceRecordCard({ item }: { item: AttendanceRecord }) {
   );
 }
 
-function RecordsEmptyState() {
+function RecordsEmptyState({ onAddGeofence }: { onAddGeofence: () => void }) {
   return (
     <View style={styles.recordsEmpty}>
       <Text style={styles.recordsEmptyTitle}>No attendance records yet</Text>
@@ -488,6 +502,9 @@ function RecordsEmptyState() {
         Officer check-ins will appear here in real time as they are validated against active
         geofences.
       </Text>
+      <Pressable style={styles.recordsEmptyCta} onPress={onAddGeofence}>
+        <Text style={styles.recordsEmptyCtaText}>No active zones — Add a geofence</Text>
+      </Pressable>
     </View>
   );
 }
@@ -499,6 +516,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
   const { data: geofences } = useGeofences();
   const { places: savedPlaces, savePlace, clearPlace } = useSavedMapPlaces();
   const [userRefreshing, setUserRefreshing] = useState(false);
+  const [lastFetchAt, setLastFetchAt] = useState<string | undefined>();
   const [mapInitialRegion, setMapInitialRegion] = useState<Region | null>(null);
   const mapRegionInitializedRef = useRef(false);
 
@@ -523,6 +541,12 @@ export function LiveAttendanceScreen({ navigation }: Props) {
     }
   }, [locations, isLoading, locationsLoading]);
 
+  useEffect(() => {
+    if (!isLoading && !locationsLoading) {
+      setLastFetchAt(new Date().toISOString());
+    }
+  }, [attendance, isLoading, locations, locationsLoading]);
+
   const counts = useMemo(() => {
     const records = attendance ?? [];
     return {
@@ -539,10 +563,12 @@ export function LiveAttendanceScreen({ navigation }: Props) {
     const inGeofence = locs.filter((l) => l.isInsideGeofence).length;
     const checkedIn = records.filter((r) => r.checkInTime).length;
     const exceptions = records.filter((r) => r.approvalRequestId || r.isLate).length;
-    const lastSync = locs.reduce<string | undefined>((latest, loc) => {
-      if (!latest || new Date(loc.lastUpdated) > new Date(latest)) return loc.lastUpdated;
-      return latest;
-    }, undefined);
+    const lastSync = [lastFetchAt, ...locs.map((l) => l.lastUpdated)]
+      .filter(Boolean)
+      .reduce<string | undefined>((latest, ts) => {
+        if (!latest || new Date(ts!) > new Date(latest)) return ts;
+        return latest;
+      }, undefined);
 
     const siteLabel =
       activeGeofences.length > 0
@@ -563,7 +589,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
       siteLabel,
       geofenceActive: activeGeofences.length > 0,
     };
-  }, [attendance, geofences, locations]);
+  }, [attendance, geofences, lastFetchAt, locations]);
 
   const renderItem = useCallback(
     ({ item }: { item: AttendanceRecord }) => <AttendanceRecordCard item={item} />,
@@ -573,6 +599,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
   const handleRefresh = useCallback(() => {
     setUserRefreshing(true);
     void Promise.all([refetch(), refetchLocations()]).finally(() => {
+      setLastFetchAt(new Date().toISOString());
       setUserRefreshing(false);
     });
   }, [refetch, refetchLocations]);
@@ -678,7 +705,11 @@ export function LiveAttendanceScreen({ navigation }: Props) {
           keyExtractor={(r) => r.id}
           renderItem={renderItem}
           ListHeaderComponent={listHeader}
-          ListEmptyComponent={<RecordsEmptyState />}
+          ListEmptyComponent={
+            <RecordsEmptyState
+              onAddGeofence={() => navigation.navigate('CreateGeofence', {})}
+            />
+          }
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
@@ -754,6 +785,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     color: colors.textSecondary,
+    textAlign: 'right',
+  },
+  summarySyncStale: {
+    color: adminColors.badgePending,
+  },
+  syncColumn: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  staleHint: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: adminColors.badgePending,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   summaryHelper: {
     fontSize: 13,
@@ -1089,6 +1135,20 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  recordsEmptyCta: {
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: adminColors.primaryTint,
+    borderWidth: 1,
+    borderColor: adminColors.primary,
+  },
+  recordsEmptyCtaText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: adminColors.primary,
   },
 
   toolbar: {

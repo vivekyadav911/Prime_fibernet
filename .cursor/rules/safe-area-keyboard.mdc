@@ -16,9 +16,15 @@ alwaysApply: true
 ## Keyboard dismiss
 
 - Screens/lists with text inputs must use `DismissKeyboardScrollView`, `DismissKeyboardFlatList`, or spread `KEYBOARD_AWARE_SCROLL_PROPS` / `KEYBOARD_AWARE_LIST_PROPS` from `@/components/common`.
-- Tap outside inputs dismisses keyboard (`KeyboardDismissView` wrapper).
+- Tap outside inputs dismisses keyboard (`KeyboardDismissView` wrapper on native; scroll drag on web).
 - Tapping a field refocuses it: always set `keyboardShouldPersistTaps="handled"` on scrollables with inputs.
 - Gorhom bottom sheets with inputs: `keyboardBehavior="interactive"`, `keyboardBlurBehavior="restore"`.
+
+### Web-specific
+
+- Never wrap `DismissKeyboardScrollView` + inputs in `TouchableWithoutFeedback` — it blocks `TextInput` focus on web. Shared primitives (`Screen`, `KeyboardDismissView`) already avoid this.
+- Scrollable form screens: `<Screen keyboardDismiss={false}>` + `DismissKeyboardScrollView` only — do not also wrap with `KeyboardDismissView`.
+- Do not stack `Screen` default keyboard dismiss and `KeyboardDismissView` on the same form screen.
 
 ## Shared primitives (use these, do not reinvent)
 

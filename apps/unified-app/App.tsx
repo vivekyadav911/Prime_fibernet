@@ -23,9 +23,12 @@ import { paymentCollectionApi } from '@/services/api/paymentCollectionApi';
 import { requestsApi } from '@/services/api/requestsApi';
 import { persistor, store } from '@/store/store';
 import { useAppSelector } from '@/store/hooks';
+import { bootstrapWebLayout } from '@/utils/webLayoutBootstrap';
 
 if (Platform.OS !== 'web') {
   void setupBackgroundHandler();
+} else {
+  bootstrapWebLayout();
 }
 
 function Root() {
@@ -189,5 +192,8 @@ if (Platform.OS !== 'web' && process.env.EXPO_PUBLIC_SENTRY_DSN) {
 export default AppExport;
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: Platform.select({
+    web: { flex: 1, minHeight: 0 },
+    default: { flex: 1 },
+  }),
 });

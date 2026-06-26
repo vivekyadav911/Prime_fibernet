@@ -1,0 +1,23 @@
+- generic [ref=e2]:
+  - generic [ref=e17]:
+    - generic [ref=e18]: Prime Fibernet
+    - textbox "Email" [ref=e19]
+    - textbox "Password" [ref=e20]
+    - button "Sign in" [ref=e21] [cursor=pointer]:
+      - generic [ref=e22]: Sign in
+    - button "Create account" [ref=e23] [cursor=pointer]:
+      - generic [ref=e24]: Create account
+    - button "Forgot password" [ref=e25] [cursor=pointer]:
+      - generic [ref=e26]: Forgot password
+    - generic [ref=e27]:
+      - generic [ref=e28]: Dev quick sign in
+      - generic [ref=e29]: Real sign-in with seeded test accounts (development only).
+      - generic [ref=e30]:
+        - button "Login as Customer — Plans, payments & support" [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]: Login as Customer — Plans, payments & support
+        - button "Login as Officer — Field jobs, shifts & inventory" [ref=e33] [cursor=pointer]:
+          - generic [ref=e34]: Login as Officer — Field jobs, shifts & inventory
+        - button "Login as Admin — Users, analytics & settings" [ref=e35] [cursor=pointer]:
+          - generic [ref=e36]: Login as Admin — Users, analytics & settings
+  - generic:
+    - img

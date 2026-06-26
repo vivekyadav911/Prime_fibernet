@@ -40,6 +40,14 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       type: 'sourceFile',
     };
   }
+  if (platform === 'web' && (moduleName === 'zustand' || moduleName.startsWith('zustand/'))) {
+    const subpath =
+      moduleName === 'zustand' ? 'index.js' : `${moduleName.slice('zustand/'.length)}.js`;
+    return {
+      filePath: path.join(monorepoRoot, 'node_modules/zustand', subpath),
+      type: 'sourceFile',
+    };
+  }
   if (defaultResolveRequest) {
     return defaultResolveRequest(context, moduleName, platform);
   }

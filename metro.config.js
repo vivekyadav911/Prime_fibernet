@@ -44,6 +44,15 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       type: 'sourceFile',
     };
   }
+  // Prefer CJS builds on web — zustand's ESM middleware uses import.meta, which breaks Metro web bundles.
+  if (platform === 'web' && (moduleName === 'zustand' || moduleName.startsWith('zustand/'))) {
+    const subpath =
+      moduleName === 'zustand' ? 'index.js' : `${moduleName.slice('zustand/'.length)}.js`;
+    return {
+      filePath: path.join(monorepoRoot, 'node_modules/zustand', subpath),
+      type: 'sourceFile',
+    };
+  }
   if (defaultResolveRequest) {
     return defaultResolveRequest(context, moduleName, platform);
   }

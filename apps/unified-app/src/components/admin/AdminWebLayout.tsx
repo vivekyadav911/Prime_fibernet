@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { spacing } from '@/theme/spacing';
+import { scrollLayoutStyles } from '@/components/common/scrollLayoutStyles';
 
 const WEB_MAX_WIDTH = 1400;
 
@@ -27,14 +28,14 @@ export function AdminWebLayout({ children }: AdminWebLayoutProps) {
 
 const styles = StyleSheet.create({
   outer: {
-    flex: 1,
+    ...scrollLayoutStyles.flex,
     width: '100%',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
   inner: {
-    flex: 1,
+    ...scrollLayoutStyles.scrollContainer,
     width: '100%',
     maxWidth: WEB_MAX_WIDTH,
   },

@@ -1,0 +1,602 @@
+[   10583ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:19607
+[   10704ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[   10761ms] [WARNING] [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455961
+[   10762ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:5326
+[   10788ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[   10807ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:66278
+[   10819ms] [WARNING] TouchableWithoutFeedback is deprecated. Please use Pressable. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[   10927ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8081/auth/login:0
+[   28680ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455856:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455832:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456056:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453948:45
+[   29320ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[   29511ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[   29570ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[  342099ms] ReferenceError: PaperProvider is not defined
+    at App (http://localhost:8081/apps/unified-app/App.bundle//&platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable&minify=false&modulesOnly=true&runModule=false&shallow=true:154:68)
+    at react-stack-bottom-frame (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:18893:20)
+    at renderWithHooks (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:9103:22)
+    at updateFunctionComponent (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:10796:19)
+    at beginWork (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:11382:18)
+    at runWithFiberInDEV (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:6875:70)
+    at performUnitOfWork (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:13455:95)
+    at workLoopSync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:13348:40)
+    at renderRootSync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:13332:9)
+    at performWorkOnRoot (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:13096:44)
+[  342093ms] [WARNING] %s
+
+%s
+ An error occurred in the <App> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:10556
+[  347345ms] ReferenceError: PaperProvider is not defined
+    at App (http://localhost:8081/apps/unified-app/App.bundle//&platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable&minify=false&modulesOnly=true&runModule=false&shallow=true:154:68)
+    at react-stack-bottom-frame (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:18893:20)
+    at renderWithHooks (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:9103:22)
+    at updateFunctionComponent (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:10796:19)
+    at beginWork (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:11382:18)
+    at runWithFiberInDEV (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:6875:70)
+    at performUnitOfWork (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:13455:95)
+    at workLoopSync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:13348:40)
+    at renderRootSync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:13332:9)
+    at performWorkOnRoot (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:13096:44)
+[  347340ms] [WARNING] %s
+
+%s
+ An error occurred in the <App> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:10556
+[  369893ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455856:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455832:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456056:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453948:45
+[  370152ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455856:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455832:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456056:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453948:45
+[  370409ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455856:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455832:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456056:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453948:45
+[  457329ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:19607
+[  457455ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  457519ms] [WARNING] [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455996
+[  457521ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:5326
+[  457539ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  457548ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:66287
+[  457576ms] [WARNING] TouchableWithoutFeedback is deprecated. Please use Pressable. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  457651ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455891:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455867:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456091:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453983:45
+[  458052ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[  458052ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[  458099ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[  599278ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:19607
+[  599329ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  599355ms] [WARNING] [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455996
+[  599355ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:5326
+[  599361ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  599364ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:66287
+[  599381ms] [WARNING] TouchableWithoutFeedback is deprecated. Please use Pressable. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  599437ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455891:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455867:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456091:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453983:45
+[  599827ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[  599835ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[  599871ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[  751047ms] [LOG] Warning: TT: undefined function: 21 @ https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js:21
+[  751062ms] [LOG] Warning: TT: invalid function id: 136 @ https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js:21
+[  751069ms] [LOG] Warning: TT: undefined function: 21 @ https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js:21
+[  770528ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/attendance_approval_requests?select=*%2Cofficers%28full_name%2Cprofile_photo_url%29&status=eq.pending&order=requested_at.desc:0
+[  772603ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/attendance_approval_requests?select=*%2Cofficers%28full_name%2Cprofile_photo_url%29&order=requested_at.desc:0
+[  882479ms] Error: TransformError SyntaxError: /Users/vivekyadav/Prime_fibernet/apps/unified-app/src/screens/admin/officers/EditOfficerScreen.tsx: Expected corresponding JSX closing tag for <KeyboardAvoidingView>. (505:10)
+
+  503 |               <Button label={officerStrings.form.cancel} variant="ghost" onPress={() => navigation.goBack()} style={styles.cancel} />
+  504 |             </DismissKeyboardScrollView>
+> 505 |           </KeyboardDismissView>
+      |           ^
+  506 |         </KeyboardAvoidingView>
+  507 |       </Screen>
+  508 |     </RoleGuard>
+    at showCompileError (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1770:19)
+    at HMRClient.<anonymous> (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1690:13)
+    at HMRClient.emit (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:2021:31)
+    at HMRClient._ws.onmessage (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1836:18)
+[  882972ms] Error: TransformError SyntaxError: /Users/vivekyadav/Prime_fibernet/apps/unified-app/src/screens/admin/officers/EditOfficerScreen.tsx: Expected corresponding JSX closing tag for <KeyboardAvoidingView>. (505:10)
+
+  503 |               <Button label={officerStrings.form.cancel} variant="ghost" onPress={() => navigation.goBack()} style={styles.cancel} />
+  504 |             </DismissKeyboardScrollView>
+> 505 |           </KeyboardDismissView>
+      |           ^
+  506 |         </KeyboardAvoidingView>
+  507 |       </Screen>
+  508 |     </RoleGuard>
+    at showCompileError (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1770:19)
+    at HMRClient.<anonymous> (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1690:13)
+    at HMRClient.emit (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:2021:31)
+    at HMRClient._ws.onmessage (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1836:18)
+[  883194ms] Error: TransformError SyntaxError: /Users/vivekyadav/Prime_fibernet/apps/unified-app/src/screens/admin/officers/AddOfficerScreen.tsx: Expected corresponding JSX closing tag for <KeyboardAvoidingView>. (909:10)
+
+  907 |               </View>
+  908 |             </DismissKeyboardScrollView>
+> 909 |           </KeyboardDismissView>
+      |           ^
+  910 |         </KeyboardAvoidingView>
+  911 |       </Screen>
+  912 |     </RoleGuard>
+    at showCompileError (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1770:19)
+    at HMRClient.<anonymous> (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1690:13)
+    at HMRClient.emit (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:2021:31)
+    at HMRClient._ws.onmessage (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1836:18)
+[  884330ms] Error: TransformError SyntaxError: /Users/vivekyadav/Prime_fibernet/apps/unified-app/src/screens/admin/users/AddUserScreen.tsx: Expected corresponding JSX closing tag for <KeyboardAvoidingView>. (442:10)
+
+  440 |               </View>
+  441 |             </DismissKeyboardScrollView>
+> 442 |           </KeyboardDismissView>
+      |           ^
+  443 |         </KeyboardAvoidingView>
+  444 |       </Screen>
+  445 |     </RoleGuard>
+    at showCompileError (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1770:19)
+    at HMRClient.<anonymous> (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1690:13)
+    at HMRClient.emit (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:2021:31)
+    at HMRClient._ws.onmessage (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1836:18)
+[  887582ms] Error: TransformError SyntaxError: /Users/vivekyadav/Prime_fibernet/apps/unified-app/src/screens/admin/plans/PlanFormScreenV2.tsx: Expected corresponding JSX closing tag for <View>. (323:10)
+
+  321 |             />
+  322 |           </View>
+> 323 |           </KeyboardDismissView>
+      |           ^
+  324 |         </KeyboardAvoidingView>
+  325 |       </Screen>
+  326 |     </RoleGuard>
+    at showCompileError (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1770:19)
+    at HMRClient.<anonymous> (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1690:13)
+    at HMRClient.emit (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:2021:31)
+    at HMRClient._ws.onmessage (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1836:18)
+[  888437ms] Error: TransformError SyntaxError: /Users/vivekyadav/Prime_fibernet/apps/unified-app/src/screens/admin/officers/EmploymentContractFormScreen.tsx: Expected corresponding JSX closing tag for <View>. (396:10)
+
+  394 |             />
+  395 |           </View>
+> 396 |           </KeyboardDismissView>
+      |           ^
+  397 |         </KeyboardAvoidingView>
+  398 |       </Screen>
+  399 |     </RoleGuard>
+    at showCompileError (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1770:19)
+    at HMRClient.<anonymous> (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1690:13)
+    at HMRClient.emit (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:2021:31)
+    at HMRClient._ws.onmessage (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1836:18)
+[  889791ms] Error: TransformError SyntaxError: /Users/vivekyadav/Prime_fibernet/apps/unified-app/src/screens/admin/notifications/CreateNotificationScreen.tsx: Expected corresponding JSX closing tag for <View>. (336:10)
+
+  334 |             />
+  335 |           </View>
+> 336 |           </KeyboardDismissView>
+      |           ^
+  337 |         </KeyboardAvoidingView>
+  338 |
+  339 |         <AudiencePickerSheet
+    at showCompileError (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1770:19)
+    at HMRClient.<anonymous> (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1690:13)
+    at HMRClient.emit (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:2021:31)
+    at HMRClient._ws.onmessage (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1836:18)
+[  890558ms] Error: TransformError SyntaxError: /Users/vivekyadav/Prime_fibernet/apps/unified-app/src/screens/admin/finance/invoices/InvoiceSettingsScreen.tsx: Expected corresponding JSX closing tag for <Screen>. (82:8)
+
+  80 |           <Button label="Save settings" onPress={() => void onSave()} />
+  81 |           </DismissKeyboardScrollView>
+> 82 |         </KeyboardDismissView>
+     |         ^
+  83 |       </Screen>
+  84 |     </RoleGuard>
+  85 |   );
+    at showCompileError (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1770:19)
+    at HMRClient.<anonymous> (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1690:13)
+    at HMRClient.emit (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:2021:31)
+    at HMRClient._ws.onmessage (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1836:18)
+[  892017ms] Error: TransformError SyntaxError: /Users/vivekyadav/Prime_fibernet/apps/unified-app/src/screens/admin/finance/invoices/CreateInvoiceScreen.tsx: Expected corresponding JSX closing tag for <Screen>. (250:8)
+
+  248 |           </View>
+  249 |           </DismissKeyboardScrollView>
+> 250 |         </KeyboardDismissView>
+      |         ^
+  251 |
+  252 |         <SelectCustomerModal
+  253 |           visible={customerModalVisible}
+    at showCompileError (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1770:19)
+    at HMRClient.<anonymous> (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1690:13)
+    at HMRClient.emit (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:2021:31)
+    at HMRClient._ws.onmessage (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1836:18)
+[  935881ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:19607
+[  936037ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  936113ms] [WARNING] [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456009
+[  936115ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:5326
+[  936131ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  936138ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:66287
+[  936281ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455904:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455880:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456104:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453996:45
+[  936340ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[  936393ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[  936427ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[  980410ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:19607
+[  980473ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  980502ms] [WARNING] [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456009
+[  980503ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:5326
+[  980508ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  980512ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:66287
+[  980602ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455904:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455880:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456104:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453996:45
+[  980902ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[  981210ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[  981256ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[  998503ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:19607
+[  998552ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  998583ms] [WARNING] [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456009
+[  998584ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:5326
+[  998589ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[  998593ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:66287
+[  998670ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455904:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455880:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456104:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453996:45
+[  998782ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[  998819ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 1019554ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:19607
+[ 1019602ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[ 1019627ms] [WARNING] [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456009
+[ 1019628ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:5326
+[ 1019633ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[ 1019637ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:66287
+[ 1019709ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455904:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455880:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456104:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453996:45
+[ 1019827ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 1019834ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 1019875ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 1513923ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:19607
+[ 1513969ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[ 1513992ms] [WARNING] [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456009
+[ 1513992ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:5326
+[ 1513999ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[ 1514002ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:66287
+[ 1514114ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455904:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455880:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456104:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453996:45
+[ 1514300ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 1514301ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 1514350ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 1894525ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455904:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455880:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456104:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453996:45
+[ 1894621ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455904:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455880:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456104:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453996:45
+[ 1894743ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 1894755ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 1894812ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 1895265ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 1895265ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 1895313ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 1897111ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455904:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455880:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456104:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:453996:45
+[ 1897180ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 1897229ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 1897264ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2038967ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:19607
+[ 2039081ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[ 2039133ms] [WARNING] [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456058
+[ 2039134ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:5326
+[ 2039146ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[ 2039151ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:66287
+[ 2039227ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2039445ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2039445ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2039502ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2103537ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:19607
+[ 2103646ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[ 2103696ms] [WARNING] [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456058
+[ 2103697ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:5326
+[ 2103709ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[ 2103722ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:66287
+[ 2103818ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2105245ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2105503ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2140231ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2140972ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2140998ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2141048ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2141255ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2141358ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2141371ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2141416ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2143050ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2143256ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2143256ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2143305ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2143440ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2143680ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2143780ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2143781ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2143847ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2143889ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2143889ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2143930ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2144203ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2144304ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2144360ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2144405ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2144476ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2144548ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2144605ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2144713ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2159148ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2159278ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2159297ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2159334ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2159387ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2159509ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2159554ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2159594ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2160929ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2161083ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2161130ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2161170ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2165481ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2165543ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2165799ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2165848ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2170728ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2170816ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2170836ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2170876ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2171643ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2171685ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2171732ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2171781ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2171783ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2171850ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2171896ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2171941ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2172065ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2172169ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2172202ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2172237ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2176334ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2176409ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2176450ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2176490ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2176744ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2176887ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2176951ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2176993ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2179414ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2179528ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2179536ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2179577ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2181999ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2182121ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2182156ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2182196ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2188844ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2188945ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2188976ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2189017ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2190496ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2190571ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2190615ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2190656ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2193980ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2194109ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2194109ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2194166ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2197831ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2197902ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2198016ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2198067ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2198348ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455953:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:455929:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456153:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454045:45
+[ 2198423ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2198464ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2198507ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2203014ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:19607
+[ 2203127ms] [WARNING] "shadow*" style props are deprecated. Use "boxShadow". @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[ 2203175ms] [WARNING] [expo-notifications] Listening to push token changes is not yet fully supported on web. Adding a listener will have no effect. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456228
+[ 2203176ms] [LOG] Running application "main" with appParams:
+ {rootTag: #root, hydrate: undefined} 
+Development-level warnings: ON.
+Performance optimizations: OFF. @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:5326
+[ 2203187ms] [WARNING] props.pointerEvents is deprecated. Use style.pointerEvents @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:24527
+[ 2203192ms] [WARNING] Animated: `useNativeDriver` is not supported because the native animated module is missing. Falling back to JS-based animation. To resolve this, add `RCTAnimation` module to this app, or remove `useNativeDriver`. Make sure to run `bundle exec pod install` first. Read more about autolinking: https://github.com/react-native-community/cli/blob/master/docs/autolinking.md @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:66287
+[ 2203276ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456123:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456099:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456323:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454215:45
+[ 2203356ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2203379ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456123:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456099:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456323:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454215:45
+[ 2203414ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2203455ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2203546ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2203599ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2203641ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2369799ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456123:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456099:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456323:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454215:45
+[ 2370272ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2370335ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2370374ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2421970ms] CodedError: You must provide `notification.vapidPublicKey` in `app.json` to use push notifications on web. Learn more: https://docs.expo.dev/versions/latest/guides/using-vapid/.
+    at _subscribeDeviceToPushNotificationsAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456123:13)
+    at getDevicePushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456099:24)
+    at Object.getExpoPushTokenAsync (http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:456323:99)
+    at http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:454215:45
+[ 2422455ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/rpc/get_analytics_time_series:0
+[ 2422458ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444401&order=timestamp.asc:0
+[ 2422518ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://afsaadjdhqnvsgkmmupq.supabase.co/rest/v1/request_activities?select=*&request_id=eq.44444444-4444-4444-4444-444444444402&order=timestamp.asc:0
+[ 2818391ms] [WARNING] Disconnected from Metro (1006)
+To reconnect:
+- Ensure that Metro is running and available on the same network
+- Reload this app (will trigger further help if Metro cannot be connected to) @ http://localhost:8081/index.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable:1729

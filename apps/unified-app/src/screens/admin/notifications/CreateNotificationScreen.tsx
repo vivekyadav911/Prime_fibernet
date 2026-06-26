@@ -25,7 +25,7 @@ import {
   formatScheduleDisplay,
 } from '@/components/Notifications';
 import { RoleGuard, SectionCard } from '@/components/admin';
-import { SkeletonLoader, DismissKeyboardScrollView, KeyboardDismissView } from '@/components/common';
+import { SkeletonLoader, DismissKeyboardScrollView } from '@/components/common';
 import { useCreateNotification } from '@/hooks/useCreateNotification';
 import { fetchNotificationById } from '@/services/broadcastNotificationService';
 import { useAppDispatch } from '@/store/hooks';
@@ -137,12 +137,12 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="notifications.create">
-      <Screen style={adminScreenStyles.canvas} padded={false}>
+      <Screen keyboardDismiss={false} style={adminScreenStyles.canvas} padded={false}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <KeyboardDismissView style={styles.flex}>
+          <View style={styles.flex}>
           <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
             <SectionCard title="Content">
               <Text style={styles.label}>NOTIFICATION TITLE *</Text>
@@ -333,7 +333,7 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
               style={styles.footerBtn}
             />
           </View>
-          </KeyboardDismissView>
+          </View>
         </KeyboardAvoidingView>
 
         <AudiencePickerSheet

@@ -1,18 +1,22 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
 
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
 import { DateField, RoleGuard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAdminAttendance } from '@/hooks/attendance/useAdminAttendance';
+import { setAdminRecordsPrefs } from '@/store/slices/attendanceSlice';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import type { AttendanceRecord, CheckInMethod } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { shareAttendanceCsv, shareAttendancePdf } from '@/utils/attendanceExport';
+import { getLocalDateString } from '@/utils/dateUtils';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'AttendanceRecords'>;
@@ -57,13 +61,15 @@ function checkInMethodLabel(method: CheckInMethod): string {
   }
 }
 
-type SummaryProps = {
+function AttendanceSummaryStrip({
+  present,
+  absent,
+  late,
+}: {
   present: number;
   absent: number;
   late: number;
-};
-
-function AttendanceSummaryStrip({ present, absent, late }: SummaryProps) {
+}) {
   return (
     <View style={styles.kpiStrip}>
       <View style={[styles.kpiCell, styles.kpiCellPresent]}>
@@ -86,11 +92,12 @@ function AttendanceSummaryStrip({ present, absent, late }: SummaryProps) {
 
 function AttendanceHistoryCard({ item }: { item: AttendanceRecord }) {
   const isOutsideZone = item.checkInMethod === 'approved_outside';
+  const isManual = item.checkInMethod === 'admin_override' || Boolean(item.manualEntryByName);
 
   return (
     <View style={styles.recordCard}>
       <View style={styles.recordHeader}>
-        <Text style={styles.recordName}>{item.officerName}</Text>
+        <Text style={styles.recordName}>{item.officerName || 'Unknown officer'}</Text>
         <View style={styles.recordChipRow}>
           <StatusBadge status={item.status} />
           {item.isLate ? (
@@ -103,8 +110,20 @@ function AttendanceHistoryCard({ item }: { item: AttendanceRecord }) {
               <Text style={[styles.chipText, styles.chipTextError]}>Outside zone</Text>
             </View>
           ) : null}
+          {isManual ? (
+            <View style={[styles.chip, styles.chipInfo]}>
+              <Text style={[styles.chipText, styles.chipTextInfo]}>Manual entry</Text>
+            </View>
+          ) : null}
         </View>
       </View>
+
+      {item.manualEntryByName ? (
+        <Text style={styles.manualNote}>
+          Manually entered by {item.manualEntryByName}
+          {item.manualEntryReason ? ` — ${item.manualEntryReason}` : ''}
+        </Text>
+      ) : null}
 
       <View style={styles.recordTimeRow}>
         <View style={styles.recordTimeCell}>
@@ -132,31 +151,25 @@ function AttendanceHistoryCard({ item }: { item: AttendanceRecord }) {
           {checkInMethodLabel(item.checkInMethod)}
         </Text>
       </View>
-
-      {item.lateByMinutes != null && item.lateByMinutes > 0 ? (
-        <Text style={styles.recordLateNote}>Late by {item.lateByMinutes} min</Text>
-      ) : null}
     </View>
   );
 }
 
-function RecordsEmptyState({ date }: { date: string }) {
-  return (
-    <View style={styles.emptyCard}>
-      <Text style={styles.emptyTitle}>No attendance records</Text>
-      <Text style={styles.emptySubtitle}>
-        No officer sessions were logged for {formatDisplayDate(date)}. Try another date or check
-        back after check-ins are recorded.
-      </Text>
-    </View>
-  );
-}
+export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
+  const dispatch = useAppDispatch();
+  const prefs = useAppSelector((s) => s.attendance.adminRecordsPrefs);
+  const { viewMode, selectedDate, dateFrom, dateTo, useDateRange } = prefs;
 
-export function AttendanceRecordsScreenEnhanced(_props: Props) {
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
-  const selectedDate = new Date(date);
-  const { data, isLoading, isError, error, refetch, isFetching } = useAdminAttendance({ date });
+  const queryArgs = useMemo(
+    () =>
+      useDateRange
+        ? { from: dateFrom, to: dateTo }
+        : { date: selectedDate },
+    [dateFrom, dateTo, selectedDate, useDateRange],
+  );
+
+  const { data, isLoading, isError, error, refetch, isFetching } = useAdminAttendance(queryArgs);
+  const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
 
   const records = data ?? [];
   const counts = useMemo(
@@ -168,25 +181,111 @@ export function AttendanceRecordsScreenEnhanced(_props: Props) {
     [records],
   );
 
+  const rangeLabel = useDateRange ? `${dateFrom} to ${dateTo}` : selectedDate;
+
+  const updatePrefs = useCallback(
+    (patch: Partial<typeof prefs>) => {
+      dispatch(setAdminRecordsPrefs(patch));
+    },
+    [dispatch, prefs],
+  );
+
+  const handleCalendarDayPress = useCallback(
+    (date: string) => {
+      updatePrefs({ selectedDate: date, viewMode: 'list', useDateRange: false });
+    },
+    [updatePrefs],
+  );
+
+  const handleExportCsv = useCallback(async () => {
+    setExporting('csv');
+    try {
+      await shareAttendanceCsv(records, rangeLabel.replace(/\s/g, '_'));
+    } catch (e) {
+      Alert.alert('Export failed', queryErrorMessage(e));
+    } finally {
+      setExporting(null);
+    }
+  }, [rangeLabel, records]);
+
+  const handleExportPdf = useCallback(async () => {
+    setExporting('pdf');
+    try {
+      await shareAttendancePdf(records, rangeLabel);
+    } catch (e) {
+      Alert.alert('Export failed', queryErrorMessage(e));
+    } finally {
+      setExporting(null);
+    }
+  }, [rangeLabel, records]);
+
   const renderItem = useCallback(
     ({ item }: { item: AttendanceRecord }) => <AttendanceHistoryCard item={item} />,
     [],
   );
 
-  const listHeader = useMemo(
-    () => (
+  const listHeader = useMemo(() => {
+    const selected = new Date(selectedDate);
+
+    return (
       <View style={styles.listHeader}>
         <View style={styles.filterCard}>
-          <DateField label="Date" value={date} onChange={setDate} placeholder="Select date" />
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setViewMode((v) => (v === 'list' ? 'calendar' : 'list'))}
-            style={({ pressed }) => [styles.viewToggle, pressed && styles.viewTogglePressed]}
-          >
-            <Text style={styles.viewToggleText}>
-              {viewMode === 'list' ? 'Calendar view' : 'List view'}
-            </Text>
-          </Pressable>
+          <View style={styles.rangeToggleRow}>
+            <Text style={styles.rangeToggleLabel}>Date range</Text>
+            <Switch
+              value={useDateRange}
+              onValueChange={(v) => updatePrefs({ useDateRange: v })}
+              trackColor={{ true: adminColors.primary }}
+            />
+          </View>
+
+          {useDateRange ? (
+            <>
+              <DateField label="From" value={dateFrom} onChange={(v) => updatePrefs({ dateFrom: v })} />
+              <DateField label="To" value={dateTo} onChange={(v) => updatePrefs({ dateTo: v })} />
+            </>
+          ) : (
+            <DateField
+              label="Date"
+              value={selectedDate}
+              onChange={(v) => updatePrefs({ selectedDate: v })}
+              placeholder="Select date"
+            />
+          )}
+
+          <View style={styles.toolbarRow}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => updatePrefs({ viewMode: viewMode === 'list' ? 'calendar' : 'list' })}
+              style={({ pressed }) => [styles.viewToggle, pressed && styles.viewTogglePressed]}
+            >
+              <Text style={styles.viewToggleText}>
+                {viewMode === 'list' ? 'Calendar view' : 'List view'}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => navigation.navigate('ManualAttendanceEntry')}
+              style={({ pressed }) => [styles.viewToggle, pressed && styles.viewTogglePressed]}
+            >
+              <Text style={styles.viewToggleText}>Manual entry</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.exportRow}>
+            <Button
+              label={exporting === 'csv' ? 'Exporting…' : 'Export CSV'}
+              variant="secondary"
+              onPress={() => void handleExportCsv()}
+              disabled={Boolean(exporting) || records.length === 0}
+            />
+            <Button
+              label={exporting === 'pdf' ? 'Exporting…' : 'Export PDF'}
+              variant="secondary"
+              onPress={() => void handleExportPdf()}
+              disabled={Boolean(exporting) || records.length === 0}
+            />
+          </View>
         </View>
 
         <AttendanceSummaryStrip
@@ -198,9 +297,11 @@ export function AttendanceRecordsScreenEnhanced(_props: Props) {
         {viewMode === 'calendar' ? (
           <View style={styles.calendarCard}>
             <AttendanceCalendar
-              year={selectedDate.getFullYear()}
-              month={selectedDate.getMonth() + 1}
+              year={selected.getFullYear()}
+              month={selected.getMonth() + 1}
+              selectedDate={selectedDate}
               records={records.map((r) => ({ date: r.date, status: r.status }))}
+              onDayPress={handleCalendarDayPress}
             />
           </View>
         ) : (
@@ -210,9 +311,24 @@ export function AttendanceRecordsScreenEnhanced(_props: Props) {
           </View>
         )}
       </View>
-    ),
-    [counts.absent, counts.late, counts.present, date, records, selectedDate, viewMode],
-  );
+    );
+  }, [
+    counts.absent,
+    counts.late,
+    counts.present,
+    dateFrom,
+    dateTo,
+    exporting,
+    handleCalendarDayPress,
+    handleExportCsv,
+    handleExportPdf,
+    navigation,
+    records,
+    selectedDate,
+    updatePrefs,
+    useDateRange,
+    viewMode,
+  ]);
 
   if (isLoading) {
     return (
@@ -256,7 +372,14 @@ export function AttendanceRecordsScreenEnhanced(_props: Props) {
             showsVerticalScrollIndicator={false}
             refreshing={isFetching}
             onRefresh={refetch}
-            ListEmptyComponent={<RecordsEmptyState date={date} />}
+            ListEmptyComponent={
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyTitle}>No attendance records</Text>
+                <Text style={styles.emptySubtitle}>
+                  No officer sessions were logged for {formatDisplayDate(selectedDate)}.
+                </Text>
+              </View>
+            }
           />
         )}
       </Screen>
@@ -274,16 +397,17 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.sm,
   },
-  viewToggle: {
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.xs,
+  rangeToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
+  rangeToggleLabel: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  toolbarRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  exportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  viewToggle: { paddingVertical: spacing.xs },
   viewTogglePressed: { opacity: 0.7 },
-  viewToggleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: adminColors.primary,
-  },
+  viewToggleText: { fontSize: 14, fontWeight: '600', color: adminColors.primary },
   kpiStrip: {
     flexDirection: 'row',
     backgroundColor: adminColors.cardBg,
@@ -317,11 +441,7 @@ const styles = StyleSheet.create({
   kpiValuePresent: { color: adminColors.badgeActive },
   kpiValueAbsent: { color: adminColors.badgeBlocked },
   kpiValueLate: { color: adminColors.badgePending },
-  kpiLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
+  kpiLabel: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
   calendarCard: {
     backgroundColor: adminColors.cardBg,
     borderRadius: CARD_RADIUS,
@@ -335,16 +455,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: spacing.xxs,
   },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  sectionCount: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
+  sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.textPrimary },
+  sectionCount: { fontSize: 13, fontWeight: '500', color: colors.textSecondary },
   recordCard: {
     backgroundColor: adminColors.cardBg,
     borderRadius: CARD_RADIUS,
@@ -375,9 +487,12 @@ const styles = StyleSheet.create({
   },
   chipWarning: { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
   chipError: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+  chipInfo: { backgroundColor: adminColors.primaryTint, borderColor: '#C9C2F0' },
   chipText: { fontSize: 12, fontWeight: '600' },
   chipTextWarning: { color: '#B45309' },
   chipTextError: { color: '#B91C1C' },
+  chipTextInfo: { color: adminColors.primary },
+  manualNote: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic' },
   recordTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -405,22 +520,9 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
   },
-  recordMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  recordMeta: {
-    flexShrink: 1,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
+  recordMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  recordMeta: { flexShrink: 1, fontSize: 13, color: colors.textSecondary },
   recordMetaDot: { fontSize: 13, color: colors.textSecondary },
-  recordLateNote: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: adminColors.badgePending,
-  },
   emptyCard: {
     backgroundColor: adminColors.cardBg,
     borderRadius: CARD_RADIUS,

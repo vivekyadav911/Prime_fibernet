@@ -20,7 +20,7 @@ import {
   SalaryTotalDisplay,
   SelectField,
 } from '@/components/admin';
-import { DismissKeyboardScrollView, KeyboardDismissView } from '@/components/common';
+import { DismissKeyboardScrollView } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
 import {
   AdminCreateOfficerSchema,
@@ -314,13 +314,12 @@ export function AddOfficerScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="officers.create">
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <Screen keyboardDismiss={false} padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
         >
-          <KeyboardDismissView style={styles.flex}>
             <DismissKeyboardScrollView
               style={styles.flex}
               contentContainerStyle={styles.scroll}
@@ -907,7 +906,6 @@ export function AddOfficerScreen({ navigation }: Props) {
                 )}
               </View>
             </DismissKeyboardScrollView>
-          </KeyboardDismissView>
         </KeyboardAvoidingView>
       </Screen>
     </RoleGuard>
