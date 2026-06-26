@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CustomerBadge, GlassCard } from '@/components/customer/ui';
+import { CustomerBadge, CustomerEmptyState, GlassCard } from '@/components/customer/ui';
 import { signalGlass } from '@/theme/customer/signalGlass';
 import { formatRelativeIst } from '@/utils/formatDate';
 import { formatCurrencyInr } from '@/utils/formatCurrency';
@@ -34,31 +34,43 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' |
 }
 
 export function RecentActivity({ items, onViewAll }: RecentActivityProps) {
-  if (!items.length) return null;
-
   return (
     <GlassCard style={styles.card}>
       <View style={styles.header}>
         <Text style={styles.title}>Recent activity</Text>
-        <Pressable onPress={onViewAll} accessibilityLabel="View all activity">
-          <Text style={styles.link}>View all</Text>
-        </Pressable>
+        {items.length > 0 ? (
+          <Pressable onPress={onViewAll} accessibilityLabel="View all activity" hitSlop={8}>
+            <Text style={styles.link}>View all</Text>
+          </Pressable>
+        ) : null}
       </View>
-      {items.map((item) => (
-        <View key={item.id} style={styles.row}>
-          <Text style={styles.icon}>{icons[item.kind]}</Text>
-          <View style={styles.body}>
-            <Text style={styles.rowTitle}>{item.title}</Text>
-            <Text style={styles.date}>{formatRelativeIst(item.date)}</Text>
+      {items.length === 0 ? (
+        <CustomerEmptyState
+          title="No recent activity"
+          subtitle="Payments and updates will show up here"
+          actionLabel="View payment history"
+          onAction={onViewAll}
+          icon="📋"
+        />
+      ) : (
+        items.map((item) => (
+          <View key={item.id} style={styles.row}>
+            <Text style={styles.icon}>{icons[item.kind]}</Text>
+            <View style={styles.body}>
+              <Text style={styles.rowTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={styles.date}>{formatRelativeIst(item.date)}</Text>
+            </View>
+            <View style={styles.right}>
+              {item.amount != null ? (
+                <Text style={styles.amount}>{formatCurrencyInr(item.amount)}</Text>
+              ) : null}
+              <CustomerBadge label={item.status} tone={statusTone(item.status)} />
+            </View>
           </View>
-          <View style={styles.right}>
-            {item.amount != null ? (
-              <Text style={styles.amount}>{formatCurrencyInr(item.amount)}</Text>
-            ) : null}
-            <CustomerBadge label={item.status} tone={statusTone(item.status)} />
-          </View>
-        </View>
-      ))}
+        ))
+      )}
     </GlassCard>
   );
 }
@@ -81,6 +93,8 @@ const styles = StyleSheet.create({
     color: signalGlass.colors.accentGlow,
     fontFamily: signalGlass.fonts.bodyMedium,
     fontSize: 13,
+    minHeight: 44,
+    lineHeight: 44,
   },
   row: {
     flexDirection: 'row',
@@ -91,7 +105,7 @@ const styles = StyleSheet.create({
     borderTopColor: signalGlass.colors.borderSubtle,
   },
   icon: { fontSize: 20 },
-  body: { flex: 1 },
+  body: { flex: 1, minWidth: 0 },
   rowTitle: {
     color: signalGlass.colors.textPrimary,
     fontFamily: signalGlass.fonts.bodyMedium,
@@ -103,7 +117,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  right: { alignItems: 'flex-end', gap: 4 },
+  right: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
   amount: {
     color: signalGlass.colors.textPrimary,
     fontFamily: signalGlass.fonts.mono,

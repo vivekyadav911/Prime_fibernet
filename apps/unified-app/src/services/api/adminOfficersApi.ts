@@ -23,6 +23,7 @@ import {
 import { parseOfficerDocumentStoragePath } from '@/utils/uploadOfficerDocument';
 
 import { baseApi } from './baseApi';
+import type { TypedSupabaseClient } from './supabase';
 import { OFFICER_ADMIN_SELECT } from './mappers';
 
 type OfficerRow = {
@@ -59,8 +60,16 @@ type OfficerRow = {
 
 type OnboardingData = {
   emergencyContacts?: Array<{ name?: string; relationship?: string; phone?: string; address?: string }>;
-  education?: { highestQualification?: string; university?: string; graduationYear?: string };
-  backgroundInfo?: { criminalRecord?: boolean; healthIssues?: boolean; details?: string };
+  education?: {
+    highestQualification?: string | null;
+    university?: string | null;
+    graduationYear?: string | null;
+  };
+  backgroundInfo?: {
+    criminalRecord?: boolean;
+    healthIssues?: boolean;
+    details?: string | null;
+  };
   positionApplied?: string | null;
   expectedSalary?: number | null;
   joiningDatePreference?: string | null;
@@ -112,6 +121,40 @@ function mapOfficerRow(row: OfficerRow): AdminOfficerDetail {
 function parseOnboardingData(raw: unknown): OnboardingData {
   if (!raw || typeof raw !== 'object') return {};
   return raw as OnboardingData;
+}
+
+async function saveOfficerOnboardingData(
+  client: TypedSupabaseClient,
+  officerId: string,
+  patch: Partial<OnboardingData>,
+): Promise<void> {
+  const { data: existing, error: fetchError } = await client
+    .from('officer_onboarding')
+    .select('id, data')
+    .eq('officer_id', officerId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
+
+  const nextData = { ...parseOnboardingData(existing?.data), ...patch };
+
+  if (existing?.id) {
+    const { error } = await client
+      .from('officer_onboarding')
+      .update({ data: nextData, updated_at: new Date().toISOString() })
+      .eq('id', existing.id);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await client.from('officer_onboarding').insert({
+    officer_id: officerId,
+    data: nextData,
+    status: 'completed',
+  });
+  if (error) throw error;
 }
 
 function mapOfficerProfile(
@@ -577,27 +620,18 @@ export const adminOfficersApi = baseApi.injectEndpoints({
             if (error) throw error;
           }
 
-          const { data: existing } = await client
-            .from('officer_onboarding')
-            .select('data')
-            .eq('officer_id', id)
-            .maybeSingle();
+          const onboardingPatch: Partial<OnboardingData> = {};
+          if (education !== undefined) onboardingPatch.education = education;
+          if (backgroundInfo !== undefined) onboardingPatch.backgroundInfo = backgroundInfo;
+          if (positionApplied !== undefined) onboardingPatch.positionApplied = positionApplied;
+          if (expectedSalary !== undefined) onboardingPatch.expectedSalary = expectedSalary;
+          if (joiningDatePreference !== undefined) {
+            onboardingPatch.joiningDatePreference = joiningDatePreference;
+          }
 
-          const prev = parseOnboardingData(existing?.data);
-          const nextData = {
-            ...prev,
-            education: education ?? prev.education,
-            backgroundInfo: backgroundInfo ?? prev.backgroundInfo,
-            positionApplied: positionApplied ?? prev.positionApplied,
-            expectedSalary: expectedSalary ?? prev.expectedSalary,
-            joiningDatePreference: joiningDatePreference ?? prev.joiningDatePreference,
-          };
-
-          await client.from('officer_onboarding').upsert({
-            officer_id: id,
-            data: nextData,
-            updated_at: new Date().toISOString(),
-          });
+          if (Object.keys(onboardingPatch).length) {
+            await saveOfficerOnboardingData(client, id, onboardingPatch);
+          }
         },
       }),
       invalidatesTags: (_r, _e, { id }) => [{ type: 'Officers', id }, 'Officers'],
@@ -634,17 +668,7 @@ export const adminOfficersApi = baseApi.injectEndpoints({
           }
 
           if (emergencyContacts) {
-            const { data: existing } = await client
-              .from('officer_onboarding')
-              .select('data')
-              .eq('officer_id', id)
-              .maybeSingle();
-            const prev = parseOnboardingData(existing?.data);
-            await client.from('officer_onboarding').upsert({
-              officer_id: id,
-              data: { ...prev, emergencyContacts },
-              updated_at: new Date().toISOString(),
-            });
+            await saveOfficerOnboardingData(client, id, { emergencyContacts });
           }
         },
       }),

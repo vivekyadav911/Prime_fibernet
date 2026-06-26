@@ -1,6 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { adminColors } from '@/theme/admin';
-import { radius } from '@/theme/spacing';
 
 const AVATAR_COLORS = ['#5B4FCF', '#0D7377', '#1B3A6B', '#7C3AED', '#D4820A', '#C0392B'];
 

@@ -1,8 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { Plan } from '@prime/types';
 
-import { CustomerBadge } from '@/components/customer/ui';
+import { CustomerBadge, PressableScale } from '@/components/customer/ui';
 import { signalGlass } from '@/theme/customer/signalGlass';
 
 type PlanCardProps = {
@@ -21,7 +21,11 @@ export const PlanCard = React.memo(function PlanCard({
   onPress,
 }: PlanCardProps) {
   return (
-    <Pressable style={styles.wrapper} onPress={() => onPress(plan)}>
+    <PressableScale
+      style={styles.wrapper}
+      onPress={() => onPress(plan)}
+      accessibilityLabel={`${plan.name}, ${plan.speedMbps} Mbps, ${priceLabel}`}
+    >
       <View style={[styles.card, isCurrentPlan && styles.current]}>
         {isFeatured ? (
           <CustomerBadge label="Featured" tone="info" style={styles.featured} />
@@ -29,13 +33,17 @@ export const PlanCard = React.memo(function PlanCard({
         {isCurrentPlan ? <CustomerBadge label="Current Plan" tone="success" style={styles.featured} /> : null}
         <Text style={styles.speed}>{plan.speedMbps}</Text>
         <Text style={styles.unit}>Mbps</Text>
-        <Text style={styles.limit}>
+        <Text style={styles.limit} numberOfLines={1}>
           {plan.isUnlimited ? 'UNLIMITED' : plan.dataLimitGb ? `${plan.dataLimitGb} GB` : 'Unlimited'}
         </Text>
-        <Text style={styles.price}>{priceLabel}</Text>
-        <Text style={styles.name}>{plan.name}</Text>
+        <Text style={styles.price} numberOfLines={1}>
+          {priceLabel}
+        </Text>
+        <Text style={styles.name} numberOfLines={2}>
+          {plan.name}
+        </Text>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 });
 

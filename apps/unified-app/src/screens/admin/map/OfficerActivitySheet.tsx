@@ -15,7 +15,6 @@ import { useGetLocationHistoryQuery } from '@/services/api/officerTrackingApi';
 import { useOfficerActivity } from '@/hooks/useOfficerActivity';
 import { useOfficerDwells } from '@/hooks/useOfficerDwells';
 import type { AdminMapStackParamList } from '@/types/navigation';
-import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { OfficerLocation, TimeRange } from '@/types/map';

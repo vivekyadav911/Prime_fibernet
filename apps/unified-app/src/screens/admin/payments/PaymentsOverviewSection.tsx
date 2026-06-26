@@ -9,7 +9,6 @@ import { useCollectionDashboardKpis } from '@/hooks/usePayments';
 import { CollectionActivityTicker } from '@/screens/admin/DashboardScreen/components/CollectionActivityTicker';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
-import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { formatINR } from '@/utils/currencyFormat';
 

@@ -6,7 +6,7 @@ import {
   loadAdminRequestBoard,
 } from '@/services/api/adminRequestsBoardApi';
 import { requestsApi } from '@/services/api/requestsApi';
-import { sendAutoNotification } from '@/services/broadcastNotificationService';
+import { triggerAutoNotification } from '@/services/broadcastNotificationService';
 import { getSupabase } from '@/services/supabase';
 import { store } from '@/store/store';
 import type { Officer, RequestFilters, ServiceRequest } from '@/types/requests';
@@ -105,12 +105,13 @@ export async function assignOfficer(
   try {
     const request = await fetchRequestById(requestId);
     if (request.customerId) {
-      await sendAutoNotification({
+      await triggerAutoNotification('request_update', {
+        audience: { type: 'specific_users', userIds: [request.customerId] },
+        templateVars: {
+          message: `${officer.name} has been assigned to handle your ${request.type} request.`,
+        },
         title: 'Officer assigned to your request',
         message: `${officer.name} has been assigned to handle your ${request.type} request.`,
-        priority: 'Normal',
-        eventType: 'requestUpdate',
-        audience: { type: 'specific_users', userIds: [request.customerId] },
         linkedRequestId: requestId,
         deepLinkUrl: `primefiber://requests/${requestId}`,
       });
@@ -149,12 +150,13 @@ export async function reassignOfficer(
   try {
     const request = await fetchRequestById(requestId);
     if (request.customerId) {
-      await sendAutoNotification({
+      await triggerAutoNotification('request_update', {
+        audience: { type: 'specific_users', userIds: [request.customerId] },
+        templateVars: {
+          message: `${officer.name} has been assigned to handle your ${request.type} request.`,
+        },
         title: 'Officer assigned to your request',
         message: `${officer.name} has been assigned to handle your ${request.type} request.`,
-        priority: 'Normal',
-        eventType: 'requestUpdate',
-        audience: { type: 'specific_users', userIds: [request.customerId] },
         linkedRequestId: requestId,
       });
     }
@@ -178,12 +180,13 @@ export async function updateRequestStatusWithNotification(
   try {
     const request = await fetchRequestById(id);
     if (request.customerId) {
-      await sendAutoNotification({
+      await triggerAutoNotification('request_update', {
+        audience: { type: 'specific_users', userIds: [request.customerId] },
+        templateVars: {
+          message: `Your ${request.type} request has been resolved by our team.`,
+        },
         title: 'Your request has been completed',
         message: `Your ${request.type} request has been resolved by our team.`,
-        priority: 'Normal',
-        eventType: 'requestUpdate',
-        audience: { type: 'specific_users', userIds: [request.customerId] },
         linkedRequestId: id,
         deepLinkUrl: `primefiber://requests/${id}`,
       });

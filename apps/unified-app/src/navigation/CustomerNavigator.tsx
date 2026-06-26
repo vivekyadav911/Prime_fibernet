@@ -42,6 +42,7 @@ import {
   TermsScreen,
 } from './customerStackScreens';
 import { TabIcon } from './TabIcon';
+import { AnimatedTabBar } from './AnimatedTabBar';
 
 function parsePaymentDeepLink(url: string): { status?: string; paymentId?: string; amount?: string; planName?: string } {
   const query = url.includes('?') ? url.split('?')[1] : '';
@@ -62,6 +63,7 @@ function CustomerTabs() {
 
   return (
     <Tab.Navigator
+      tabBar={(props) => <AnimatedTabBar {...props} />}
       screenOptions={{
         headerStyle: { backgroundColor: signalGlass.colors.bgSurface },
         headerTintColor: signalGlass.colors.textPrimary,

@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
@@ -18,7 +18,7 @@ import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminSupportStackParamList, 'FaqCategories'>;
 
-export function FaqCategoriesScreen({}: Props) {
+export function FaqCategoriesScreen(_props: Props) {
   const { data: categories, isLoading, isError, error, refetch } = useGetFaqCategoriesQuery();
   const [upsertCategory] = useUpsertFaqCategoryMutation();
 

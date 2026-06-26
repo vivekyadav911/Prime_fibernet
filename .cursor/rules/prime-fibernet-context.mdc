@@ -26,6 +26,8 @@ Single Expo app serving three roles from one codebase: Customer, Officer, Admin.
 - Supabase: Postgres + Auth + Realtime + Storage + Edge Functions
 - All schema changes go through Supabase MCP — never hand-edit prod tables
   outside of a migration file checked into the repo
+- **Deploy via MCP** — see `supabase-deploy.mdc`: apply migrations and deploy
+  edge functions on the linked project yourself; never leave `db push` to the user
 - State: Redux Toolkit + RTK Query for ALL server state. No component-level
   useState holding server data, no parallel fetch logic outside RTK Query slices
 - Local/UI-only state (modals, sheet visibility, form drafts) can use

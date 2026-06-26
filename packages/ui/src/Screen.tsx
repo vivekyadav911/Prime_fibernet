@@ -1,4 +1,5 @@
-import { StyleSheet, View, type ViewProps } from 'react-native';
+import type { ReactNode } from 'react';
+import { Keyboard, StyleSheet, TouchableWithoutFeedback, View, type ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from './theme';
@@ -7,16 +8,25 @@ type ScreenProps = ViewProps & {
   padded?: boolean;
   /** Disable when the screen sits below a navigation header that already handles the top inset. */
   safeAreaTop?: boolean;
+  /** Wrap content in tap-to-dismiss keyboard behavior. Default true. */
+  keyboardDismiss?: boolean;
 };
 
 export function Screen({
   children,
   padded = true,
   safeAreaTop = false,
+  keyboardDismiss = true,
   style,
   ...props
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
+
+  const content = (
+    <View style={[styles.container, padded && styles.padded, style]} {...props}>
+      {children}
+    </View>
+  );
 
   return (
     <View
@@ -28,10 +38,20 @@ export function Screen({
         },
       ]}
     >
-      <View style={[styles.container, padded && styles.padded, style]} {...props}>
-        {children}
-      </View>
+      {keyboardDismiss ? (
+        <KeyboardDismissWrapper>{content}</KeyboardDismissWrapper>
+      ) : (
+        content
+      )}
     </View>
+  );
+}
+
+function KeyboardDismissWrapper({ children }: { children: ReactNode }) {
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.container}>{children}</View>
+    </TouchableWithoutFeedback>
   );
 }
 

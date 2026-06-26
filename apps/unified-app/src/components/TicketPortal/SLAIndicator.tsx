@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { format } from 'date-fns';
 
-import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { Ticket } from '@/types/tickets';
@@ -31,7 +30,6 @@ function BarRow({
   animatedWidth: Animated.Value;
 }) {
   const color = getSLAColor(remainingMs, totalMs);
-  const pct = Math.max(0, Math.min(1, remainingMs / totalMs));
 
   return (
     <View style={styles.barSection}>

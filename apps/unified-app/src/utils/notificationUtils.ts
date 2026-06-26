@@ -519,7 +519,7 @@ export function replaceTemplateVars(template: string, vars: Record<string, strin
 export function getPlanDeactivationPrefill(
   planId: string,
   planName: string,
-  subscriberCount: number,
+  _subscriberCount: number,
 ): Partial<CreateNotificationFormData> {
   return {
     title: `Important update about ${planName}`,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { Screen } from '@prime/ui';
 

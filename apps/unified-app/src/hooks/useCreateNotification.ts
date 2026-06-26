@@ -226,7 +226,14 @@ export function useCreateNotification(
   }, [formData, validateAudience, validateSchedule, estimatedRecipientCount]);
 
   const sendNow = useCallback(async (): Promise<AppNotification | null> => {
-    if (!validateForSend()) return null;
+    if (!validateForSend()) {
+      dispatch(enqueueToast({
+        id: `send-val-${Date.now()}`,
+        type: 'error',
+        message: 'Please fix the highlighted fields before sending.',
+      }));
+      return null;
+    }
     setIsSubmitting(true);
     setSendProgress({ total: estimatedRecipientCount, sent: 0, failed: 0, percent: 0 });
     try {
@@ -266,7 +273,14 @@ export function useCreateNotification(
   }, [formData, admin, validateForSend, estimatedRecipientCount, dispatch]);
 
   const scheduleIt = useCallback(async (): Promise<boolean> => {
-    if (!validateForSend()) return false;
+    if (!validateForSend()) {
+      dispatch(enqueueToast({
+        id: `sched-val-${Date.now()}`,
+        type: 'error',
+        message: 'Please fix the highlighted fields before scheduling.',
+      }));
+      return false;
+    }
     if (!formData.schedule.scheduledAt) return false;
     setIsSubmitting(true);
     try {
@@ -346,5 +360,6 @@ export function useCreateNotification(
     saveAsTemplate: saveAsTemplateAction,
     sendProgress,
     draftId: draftIdRef.current,
+    validateForSend,
   };
 }

@@ -1,4 +1,5 @@
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
@@ -24,18 +25,26 @@ export function ConfirmModal({
   onCancel,
   loading,
 }: ConfirmModalProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.backdrop}>
-        <View style={styles.card}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <Pressable
+        style={[styles.backdrop, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          onCancel();
+        }}
+      >
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.actions}>
             <Button label={cancelLabel} variant="ghost" onPress={onCancel} />
             <Button label={loading ? '…' : confirmLabel} onPress={onConfirm} disabled={loading} />
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

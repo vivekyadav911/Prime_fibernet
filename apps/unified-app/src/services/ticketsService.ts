@@ -13,7 +13,7 @@ import type {
   TicketStatus,
 } from '@/types/tickets';
 import { getSupabase } from '@/services/supabase';
-import { sendAutoNotification } from '@/services/broadcastNotificationService';
+import { triggerAutoNotification } from '@/services/broadcastNotificationService';
 import { fetchOfficers } from '@/services/requestsService';
 import {
   buildSlaInsertFields,
@@ -23,7 +23,7 @@ import {
   mapDbRowToTicket,
   mapNoteRow,
 } from '@/utils/ticketViewMappers';
-import { computeSLADeadlines, isSLABreached } from '@/utils/slaUtils';
+import { isSLABreached } from '@/utils/slaUtils';
 
 async function requireSession() {
   const client = getSupabase();
@@ -252,12 +252,14 @@ export async function updateTicketStatus(
 
   if (status === 'Resolved' && ticket.customerId) {
     try {
-      await sendAutoNotification({
+      await triggerAutoNotification('ticket_update', {
+        audience: { type: 'specific_users', userIds: [ticket.customerId] },
+        templateVars: {
+          ticketNumber: ticket.ticketNumber,
+          message: resolutionSummary ?? ticket.resolutionSummary ?? 'Your issue has been resolved.',
+        },
         title: 'Your complaint has been resolved',
         message: `Ticket #${ticket.ticketNumber} — ${resolutionSummary ?? ticket.resolutionSummary ?? 'Your issue has been resolved.'}`,
-        priority: 'Normal',
-        eventType: 'ticketUpdate',
-        audience: { type: 'specific_users', userIds: [ticket.customerId] },
         linkedTicketId: ticketId,
         deepLinkUrl: `primefiber://tickets/${ticketId}`,
       });

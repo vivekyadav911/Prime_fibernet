@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Code Standards
 
-See also: `date-time-pickers.mdc` (picker UX) and `ui-theme.mdc` (theme tokens & UI consistency).
+See also: `date-time-pickers.mdc` (picker UX), `ui-theme.mdc` (theme tokens & UI consistency), and `safe-area-keyboard.mdc` (safe insets + keyboard dismiss on screens/modals).
 
 - Functional components only. No class components.
 - RTK Query for all API calls. No raw fetch/axios anywhere in screens

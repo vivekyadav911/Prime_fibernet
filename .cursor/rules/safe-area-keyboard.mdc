@@ -1,0 +1,35 @@
+---
+description: Safe area insets and keyboard dismiss behavior for all screens and modals
+globs: apps/unified-app/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+# Safe Area & Keyboard Dismiss
+
+## Safe area (no clipped headers)
+
+- No interactive header (back, cancel, done, close) may sit under the status bar or notch.
+- Full-screen `Modal`s must use `FullScreenModalShell` or `ModalSheetHeader` with `useSafeAreaInsets()` — never rely on bare `SafeAreaView` inside `Modal` alone.
+- Bottom-sheet modals must apply `paddingBottom: insets.bottom` on the sheet card (and top inset on backdrop when full-height).
+- Header actions: `minHeight: 48`, generous `hitSlop`, padding below `insets.top`.
+
+## Keyboard dismiss
+
+- Screens/lists with text inputs must use `DismissKeyboardScrollView`, `DismissKeyboardFlatList`, or spread `KEYBOARD_AWARE_SCROLL_PROPS` / `KEYBOARD_AWARE_LIST_PROPS` from `@/components/common`.
+- Tap outside inputs dismisses keyboard (`KeyboardDismissView` wrapper).
+- Tapping a field refocuses it: always set `keyboardShouldPersistTaps="handled"` on scrollables with inputs.
+- Gorhom bottom sheets with inputs: `keyboardBehavior="interactive"`, `keyboardBlurBehavior="restore"`.
+
+## Shared primitives (use these, do not reinvent)
+
+| Primitive | Use when |
+|-----------|----------|
+| `FullScreenModalShell` | Full-screen modal with header |
+| `ModalSheetHeader` | Cancel / title / Done row inside any modal |
+| `KeyboardDismissView` | Wrap screen/modal body with inputs |
+| `DismissKeyboardScrollView` | Scrollable form screens |
+| `DismissKeyboardFlatList` | Search + list pickers |
+
+## Definition of done
+
+Any new screen or modal with inputs must use the shared primitives above. Manual check: header buttons fully visible and tappable on iOS and Android.

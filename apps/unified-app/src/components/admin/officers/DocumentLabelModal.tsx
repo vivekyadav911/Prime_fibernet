@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  Keyboard,
   Modal,
   Pressable,
   StyleSheet,
@@ -7,6 +8,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { KeyboardDismissView } from '@/components/common';
 import { colors } from '@/theme/colors';
 import { adminColors } from '@/theme/admin';
 import { radius, spacing } from '@/theme/spacing';
@@ -18,6 +22,7 @@ type DocumentLabelModalProps = {
 };
 
 export function DocumentLabelModal({ visible, onCancel, onSubmit }: DocumentLabelModalProps) {
+  const insets = useSafeAreaInsets();
   const [label, setLabel] = useState('');
 
   const handleSubmit = () => {
@@ -34,33 +39,42 @@ export function DocumentLabelModal({ visible, onCancel, onSubmit }: DocumentLabe
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          <Text style={styles.title}>Document label</Text>
-          <Text style={styles.subtitle}>Enter a name for this document (e.g. Police verification)</Text>
-          <TextInput
-            style={styles.input}
-            value={label}
-            onChangeText={setLabel}
-            placeholder="Document name"
-            placeholderTextColor={colors.textSecondary}
-            autoFocus
-            onSubmitEditing={handleSubmit}
-          />
-          <View style={styles.actions}>
-            <Pressable onPress={handleCancel} style={styles.cancelBtn}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </Pressable>
-            <Pressable
-              onPress={handleSubmit}
-              style={[styles.doneBtn, !label.trim() && styles.doneBtnDisabled]}
-              disabled={!label.trim()}
-            >
-              <Text style={styles.doneText}>Continue</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
+      <Pressable
+        style={[styles.backdrop, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          handleCancel();
+        }}
+      >
+        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <KeyboardDismissView>
+            <Text style={styles.title}>Document label</Text>
+            <Text style={styles.subtitle}>Enter a name for this document (e.g. Police verification)</Text>
+            <TextInput
+              style={styles.input}
+              value={label}
+              onChangeText={setLabel}
+              placeholder="Document name"
+              placeholderTextColor={colors.textSecondary}
+              autoFocus
+              onSubmitEditing={handleSubmit}
+            />
+            <View style={styles.actions}>
+              <Pressable onPress={handleCancel} style={styles.cancelBtn} hitSlop={16}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSubmit}
+                style={[styles.doneBtn, !label.trim() && styles.doneBtnDisabled]}
+                disabled={!label.trim()}
+                hitSlop={16}
+              >
+                <Text style={styles.doneText}>Continue</Text>
+              </Pressable>
+            </View>
+          </KeyboardDismissView>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

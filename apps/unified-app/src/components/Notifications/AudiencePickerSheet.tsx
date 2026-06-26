@@ -102,6 +102,9 @@ export function AudiencePickerSheet({ visible, audience, onClose, onConfirm }: A
         onClose={onClose}
         backdropComponent={renderBackdrop}
         backgroundStyle={{ backgroundColor: colors.surfaceWhite }}
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
       >
         <BottomSheetScrollView contentContainerStyle={styles.content}>
           <Text style={styles.sheetTitle}>Select Target Audience</Text>

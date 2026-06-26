@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -21,6 +20,7 @@ import {
   SalaryTotalDisplay,
   SelectField,
 } from '@/components/admin';
+import { DismissKeyboardScrollView, KeyboardDismissView } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
 import {
   AdminCreateOfficerSchema,
@@ -319,14 +319,13 @@ export function AddOfficerScreen({ navigation }: Props) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
         >
-          <ScrollView
-            style={styles.flex}
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            nestedScrollEnabled
-            showsVerticalScrollIndicator={false}
-          >
+          <KeyboardDismissView style={styles.flex}>
+            <DismissKeyboardScrollView
+              style={styles.flex}
+              contentContainerStyle={styles.scroll}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.introCard}>
                 <Text style={styles.introTitle}>Add Officer</Text>
                 <Text style={styles.introSubtitle}>
@@ -906,7 +905,8 @@ export function AddOfficerScreen({ navigation }: Props) {
                   </Pressable>
                 )}
               </View>
-            </ScrollView>
+            </DismissKeyboardScrollView>
+          </KeyboardDismissView>
         </KeyboardAvoidingView>
       </Screen>
     </RoleGuard>

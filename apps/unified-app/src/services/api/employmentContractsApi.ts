@@ -256,7 +256,7 @@ export const employmentContractsApi = baseApi.injectEndpoints({
       EmploymentContract,
       { contractId: string; officerId: string }
     >({
-      query: ({ contractId, officerId }) => ({
+      query: ({ contractId }) => ({
         handler: async (client) => {
           const { error: rpcError } = await client.rpc('notify_officer_contract_signature', {
             p_contract_id: contractId,

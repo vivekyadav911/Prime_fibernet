@@ -1,6 +1,5 @@
 import type { TicketPriority } from '@/types/tickets';
 import type {
-  AgentAvailability,
   CannedResponse,
   ChatMessage,
   ChatSession,

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { dateSchema, entityIdSchema, timestamptzSchema, uuidSchema } from './common';
+import { timestamptzSchema, uuidSchema } from './common';
 import { PlanSchema } from './plan';
 import { SubscriptionSchema } from './subscription';
 

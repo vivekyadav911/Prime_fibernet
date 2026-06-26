@@ -16,7 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { getSupabase } from '@/services/supabase';
-import type { Plan, PlanFilters, PlanFormData, PlanStats } from '@/types/plans';
+import type { Plan, PlanFilters, PlanFormData } from '@/types/plans';
 import {
   applyPlanFilters,
   computePlanStats,

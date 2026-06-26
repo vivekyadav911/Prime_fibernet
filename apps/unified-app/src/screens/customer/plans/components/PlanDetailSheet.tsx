@@ -1,7 +1,13 @@
-import BottomSheet, { BottomSheetBackdrop, type BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import BottomSheet, {
+  BottomSheetBackdrop,
+  BottomSheetHandle,
+  type BottomSheetBackdropProps,
+  type BottomSheetHandleProps,
+} from '@gorhom/bottom-sheet';
 import { forwardRef, useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { BillingCycle, Plan } from '@prime/types';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CustomerButton } from '@/components/customer/ui';
 import { signalGlass } from '@/theme/customer/signalGlass';
@@ -22,11 +28,19 @@ export const PlanDetailSheet = forwardRef<BottomSheet, PlanDetailSheetProps>(
     { plan, price, billingCycle, isCurrentPlan, subscribing, onSubscribe, onPlanChange },
     ref,
   ) {
+    const insets = useSafeAreaInsets();
     const snapPoints = useMemo(() => ['60%'], []);
 
     const renderBackdrop = useCallback(
       (props: BottomSheetBackdropProps) => (
         <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />
+      ),
+      [],
+    );
+
+    const renderHandle = useCallback(
+      (props: BottomSheetHandleProps) => (
+        <BottomSheetHandle {...props} indicatorStyle={styles.handleIndicator} />
       ),
       [],
     );
@@ -42,10 +56,13 @@ export const PlanDetailSheet = forwardRef<BottomSheet, PlanDetailSheetProps>(
         index={-1}
         snapPoints={snapPoints}
         enablePanDownToClose
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
         backdropComponent={renderBackdrop}
+        handleComponent={renderHandle}
         backgroundStyle={styles.sheetBg}
       >
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingBottom: insets.bottom + signalGlass.spacing.lg }]}>
           <Text style={styles.name}>{plan.name}</Text>
           <Text style={styles.meta}>
             {plan.speedMbps} Mbps · {billingCycle} billing
@@ -62,7 +79,7 @@ export const PlanDetailSheet = forwardRef<BottomSheet, PlanDetailSheetProps>(
           {!isCurrentPlan ? (
             <>
               <CustomerButton
-                label={subscribing ? 'Processing…' : 'Subscribe now'}
+                label={subscribing ? 'Processing…' : `Subscribe for ${formatCurrencyInr(price)}`}
                 onPress={onSubscribe}
                 style={styles.cta}
               />
@@ -79,6 +96,7 @@ export const PlanDetailSheet = forwardRef<BottomSheet, PlanDetailSheetProps>(
 
 const styles = StyleSheet.create({
   sheetBg: { backgroundColor: signalGlass.colors.bgSurface },
+  handleIndicator: { backgroundColor: signalGlass.colors.textMuted, width: 40 },
   content: { padding: signalGlass.spacing.lg, gap: signalGlass.spacing.xs },
   name: {
     fontSize: 22,

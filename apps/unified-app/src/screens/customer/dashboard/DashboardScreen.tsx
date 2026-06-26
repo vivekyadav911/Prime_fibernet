@@ -14,8 +14,7 @@ import {
   type ActivityItem,
 } from '@/components/customer/dashboard';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
-import { CustomerSkeletonLoader, CustomerToast, FadeInSection } from '@/components/customer/ui';
-import { ErrorState } from '@/components/common';
+import { CustomerEmptyState, CustomerSkeletonLoader, CustomerToast, CustomerErrorState, FadeInSection } from '@/components/customer/ui';
 import {
   useGetCustomerDashboardQuery,
   useGetCustomerProfileQuery,
@@ -81,7 +80,7 @@ function DashboardContent() {
   if (error) {
     return (
       <View style={styles.canvas}>
-        <ErrorState message="Could not load your dashboard" onRetry={refetch} />
+        <CustomerErrorState message="We couldn't load your dashboard. Check your connection and try again." onRetry={refetch} />
       </View>
     );
   }
@@ -130,7 +129,17 @@ function DashboardContent() {
               onUpgrade={() => navigation.navigate('Plans')}
             />
           </FadeInSection>
-        ) : null}
+        ) : (
+          <FadeInSection delayMs={200}>
+            <CustomerEmptyState
+              title="No active plan"
+              subtitle="Browse plans to get connected"
+              actionLabel="Browse Plans"
+              onAction={() => navigation.navigate('Plans')}
+              icon="◎"
+            />
+          </FadeInSection>
+        )}
 
         <FadeInSection delayMs={300}>
           <QuickActions

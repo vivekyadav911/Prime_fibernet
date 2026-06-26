@@ -126,8 +126,6 @@ export function useNotifications(): UseNotificationsResult {
       try {
         const authUser = store.getState().auth.user;
         const userType = authUser?.role ?? 'customer';
-        let planId: string | undefined;
-        let area: string | undefined;
 
         const client = getSupabase();
         const { data: profile } = await client
@@ -135,7 +133,7 @@ export function useNotifications(): UseNotificationsResult {
           .select('city')
           .eq('id', userId)
           .maybeSingle();
-        area = profile?.city ? String(profile.city) : undefined;
+        const area = profile?.city ? String(profile.city) : undefined;
 
         const { data: sub } = await client
           .from('subscriptions')
@@ -143,7 +141,7 @@ export function useNotifications(): UseNotificationsResult {
           .eq('user_id', userId)
           .eq('status', 'active')
           .maybeSingle();
-        planId = sub?.plan_id ? String(sub.plan_id) : undefined;
+        const planId = sub?.plan_id ? String(sub.plan_id) : undefined;
 
         await registerFcmToken(userId, pushToken, { userType, planId, area });
       } catch (e) {

@@ -151,7 +151,7 @@ export const adminHrApi = baseApi.injectEndpoints({
     }),
 
     getPayroll: builder.query<PayrollEntry[], { month?: string; year?: string }>({
-      query: ({ month, year }) => ({
+      query: () => ({
         handler: async (client) => {
           const { data: officers, error } = await client
             .from('officers')

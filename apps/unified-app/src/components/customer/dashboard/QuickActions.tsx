@@ -1,5 +1,6 @@
-import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 
+import { PressableScale } from '@/components/customer/ui';
 import { signalGlass } from '@/theme/customer/signalGlass';
 
 export type QuickAction = {
@@ -19,17 +20,20 @@ export function QuickActions({ actions }: QuickActionsProps) {
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
+      keyboardShouldPersistTaps="handled"
     >
       {actions.map((action) => (
-        <Pressable
+        <PressableScale
           key={action.id}
           accessibilityLabel={action.label}
           onPress={action.onPress}
           style={styles.chip}
         >
           <Text style={styles.icon}>{action.icon}</Text>
-          <Text style={styles.label}>{action.label}</Text>
-        </Pressable>
+          <Text style={styles.label} numberOfLines={1}>
+            {action.label}
+          </Text>
+        </PressableScale>
       ))}
     </ScrollView>
   );
@@ -39,6 +43,7 @@ const styles = StyleSheet.create({
   row: {
     gap: signalGlass.spacing.sm,
     paddingVertical: signalGlass.spacing.sm,
+    paddingRight: signalGlass.spacing.lg,
     marginBottom: signalGlass.spacing.lg,
   },
   chip: {
@@ -51,6 +56,7 @@ const styles = StyleSheet.create({
     paddingVertical: signalGlass.spacing.md,
     paddingHorizontal: signalGlass.spacing.lg,
     minWidth: 88,
+    minHeight: 44,
   },
   icon: { fontSize: 22, marginBottom: signalGlass.spacing.xs },
   label: {

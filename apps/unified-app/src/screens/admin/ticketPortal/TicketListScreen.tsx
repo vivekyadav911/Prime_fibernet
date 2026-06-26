@@ -17,7 +17,7 @@ import { TicketCard, TicketFilterSheet } from '@/components/TicketPortal';
 import { StatsCard } from '@/components/support';
 import { AdminEmptyState, FilterChips, RoleGuard, SearchBar, SelectField } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
-import { DEFAULT_TICKET_FILTERS, useTickets } from '@/hooks/useTickets';
+import { useTickets } from '@/hooks/useTickets';
 import { useGetSupportDashboardStatsQuery } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';

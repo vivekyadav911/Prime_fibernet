@@ -25,7 +25,7 @@ const PERIOD_OPTIONS: { value: SupportAnalyticsPeriod; label: string }[] = [
   { value: 'month', label: 'This Month' },
 ];
 
-export function SupportAnalyticsScreen({}: Props) {
+export function SupportAnalyticsScreen(_props: Props) {
   const { data, period, setPeriod, isLoading, isError, error, refetch } = useSupportAnalytics('week');
 
   const handleExport = useCallback(async () => {

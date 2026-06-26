@@ -1,25 +1,25 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChatBubble, ChatInputBar, CsatModal } from '@/components/support';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { DismissKeyboardFlatList } from '@/components/common';
+import { CustomerErrorState, CustomerSkeletonLoader } from '@/components/customer/ui';
 import { useChatMessages } from '@/hooks/useChatSession';
 import {
   createChatSession,
-  endChatSession,
   sendChatMessage,
   submitChatCsat,
 } from '@/services/chatService';
 import { useAppSelector } from '@/store/hooks';
-import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'CustomerLiveChat'>;
 
 export function CustomerLiveChatScreen({ route, navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const user = useAppSelector((s) => s.auth.user);
   const [sessionId, setSessionId] = useState(route.params?.sessionId ?? '');
   const [text, setText] = useState('');
@@ -74,49 +74,46 @@ export function CustomerLiveChatScreen({ route, navigation }: Props) {
     }
   }, [text, user, sessionId]);
 
-  const handleEnd = useCallback(async () => {
-    if (!sessionId) return;
-    await endChatSession(sessionId);
-    setShowCsat(true);
-  }, [sessionId]);
+  const retryStart = useCallback(() => {
+    setStartError(null);
+    setStarting(true);
+    void createChatSession({
+      customerId: user?.id ?? null,
+      customerName: user?.name ?? 'Customer',
+      channel: 'app',
+    })
+      .then((session) => {
+        setSessionId(session.id);
+        setStarting(false);
+      })
+      .catch((e) => {
+        setStartError(e instanceof Error ? e.message : 'Could not start chat');
+        setStarting(false);
+      });
+  }, [user?.id, user?.name]);
 
   if (starting) {
     return (
-      <Screen style={styles.screen}>
-        <SkeletonLoader rows={4} />
-      </Screen>
+      <View style={styles.canvas}>
+        <CustomerSkeletonLoader rows={4} />
+      </View>
     );
   }
 
   if (startError) {
     return (
-      <Screen style={styles.screen}>
-        <ErrorState
-          message={startError}
-          onRetry={() => {
-            setStartError(null);
-            setStarting(true);
-            void createChatSession({
-              customerId: user?.id ?? null,
-              customerName: user?.name ?? 'Customer',
-              channel: 'app',
-            })
-              .then((session) => {
-                setSessionId(session.id);
-                setStarting(false);
-              })
-              .catch((e) => {
-                setStartError(e instanceof Error ? e.message : 'Could not start chat');
-                setStarting(false);
-              });
-          }}
-        />
-      </Screen>
+      <View style={styles.canvas}>
+        <CustomerErrorState message={startError} onRetry={retryStart} />
+      </View>
     );
   }
 
   return (
-    <Screen style={styles.screen} padded={false} safeAreaTop={false}>
+    <KeyboardAvoidingView
+      style={styles.canvas}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 56 : 0}
+    >
       <View style={styles.container}>
         {queueMsg ? (
           <View style={styles.queueBanner}>
@@ -124,7 +121,7 @@ export function CustomerLiveChatScreen({ route, navigation }: Props) {
           </View>
         ) : null}
 
-        <FlatList
+        <DismissKeyboardFlatList
           style={styles.list}
           data={messages}
           keyExtractor={(item) => item.id}
@@ -134,7 +131,9 @@ export function CustomerLiveChatScreen({ route, navigation }: Props) {
           )}
         />
 
-        <ChatInputBar value={text} onChangeText={setText} onSend={() => void handleSend()} sending={sending} />
+        <View style={{ paddingBottom: insets.bottom }}>
+          <ChatInputBar value={text} onChangeText={setText} onSend={() => void handleSend()} sending={sending} />
+        </View>
       </View>
 
       <CsatModal
@@ -150,15 +149,20 @@ export function CustomerLiveChatScreen({ route, navigation }: Props) {
           navigation.goBack();
         }}
       />
-    </Screen>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
   container: { flex: 1 },
   list: { flex: 1 },
-  queueBanner: { backgroundColor: '#FEF3C7', padding: spacing.md },
-  queueText: { fontSize: 13, color: colors.textPrimary, textAlign: 'center' },
-  messages: { padding: spacing.md, flexGrow: 1 },
+  queueBanner: {
+    backgroundColor: signalGlass.colors.accentPrimaryMuted,
+    padding: signalGlass.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: signalGlass.colors.borderSubtle,
+  },
+  queueText: { fontSize: 13, color: signalGlass.colors.textPrimary, textAlign: 'center' },
+  messages: { padding: signalGlass.spacing.lg, flexGrow: 1 },
 });

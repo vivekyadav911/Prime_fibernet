@@ -2,11 +2,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button } from '@prime/ui';
 import { z } from 'zod';
 
-import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { CustomerButton } from '@/components/customer/ui';
+import { signalGlass } from '@/theme/customer/signalGlass';
 
 import type { ProfileFormValues } from '../hooks/useProfile';
 
@@ -41,13 +40,15 @@ export function ProfileForm({ defaultValues, saving, onSubmit }: ProfileFormProp
         name="name"
         render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
           <View style={styles.field}>
+            <Text style={styles.label}>FULL NAME</Text>
             <TextInput
               style={styles.input}
               placeholder="Full name"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={signalGlass.colors.textMuted}
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
+              accessibilityLabel="Full name"
             />
             {error ? <Text style={styles.error}>{error.message}</Text> : null}
           </View>
@@ -59,14 +60,16 @@ export function ProfileForm({ defaultValues, saving, onSubmit }: ProfileFormProp
         name="phone"
         render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
           <View style={styles.field}>
+            <Text style={styles.label}>PHONE</Text>
             <TextInput
               style={styles.input}
               placeholder="Phone number"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={signalGlass.colors.textMuted}
               keyboardType="phone-pad"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
+              accessibilityLabel="Phone number"
             />
             {error ? <Text style={styles.error}>{error.message}</Text> : null}
           </View>
@@ -78,21 +81,23 @@ export function ProfileForm({ defaultValues, saving, onSubmit }: ProfileFormProp
         name="address"
         render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
           <View style={styles.field}>
+            <Text style={styles.label}>SERVICE ADDRESS</Text>
             <TextInput
               style={[styles.input, styles.multiline]}
               placeholder="Address"
-              placeholderTextColor={colors.textSecondary}
+              placeholderTextColor={signalGlass.colors.textMuted}
               multiline
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
+              accessibilityLabel="Service address"
             />
             {error ? <Text style={styles.error}>{error.message}</Text> : null}
           </View>
         )}
       />
 
-      <Button
+      <CustomerButton
         label={saving ? 'Saving…' : 'Save changes'}
         onPress={handleSubmit(onSubmit)}
         style={styles.btn}
@@ -103,24 +108,37 @@ export function ProfileForm({ defaultValues, saving, onSubmit }: ProfileFormProp
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    backgroundColor: signalGlass.colors.bgSurface,
+    borderRadius: signalGlass.radius.md,
+    padding: signalGlass.spacing.lg,
     borderWidth: 1,
-    borderColor: colors.borderDefault,
-    gap: spacing.sm,
+    borderColor: signalGlass.colors.borderSubtle,
+    gap: signalGlass.spacing.sm,
   },
-  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xs },
-  field: { gap: spacing.xxs },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: signalGlass.colors.textPrimary,
+    fontFamily: signalGlass.fonts.display,
+    marginBottom: signalGlass.spacing.xs,
+  },
+  field: { gap: signalGlass.spacing.xs },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: signalGlass.colors.textSecondary,
+    textTransform: 'uppercase',
+  },
   input: {
     borderWidth: 1,
-    borderColor: colors.borderDefault,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    backgroundColor: colors.background,
-    color: colors.textPrimary,
+    borderColor: signalGlass.colors.borderSubtle,
+    borderRadius: signalGlass.radius.sm,
+    padding: signalGlass.spacing.md,
+    backgroundColor: signalGlass.colors.bgDeep,
+    color: signalGlass.colors.textPrimary,
+    minHeight: 44,
   },
   multiline: { minHeight: 88, textAlignVertical: 'top' },
-  error: { color: colors.errorRed, fontSize: 12 },
-  btn: { marginTop: spacing.xs },
+  error: { color: signalGlass.colors.accentDanger, fontSize: 12 },
+  btn: { marginTop: signalGlass.spacing.xs },
 });

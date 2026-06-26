@@ -1,5 +1,7 @@
 import type { Payment, PaymentGateway, PaymentOrderResponse, PaymentStatus } from '@prime/types';
 
+import { mapDbRowToInvoiceRecord } from '@/utils/invoicePdf';
+
 import { baseApi } from './baseApi';
 
 export type InvoiceDetail = {
@@ -294,6 +296,30 @@ export const paymentsApi = baseApi.injectEndpoints({
     getInvoice: builder.query<InvoiceDetail, string>({
       query: (paymentId) => ({
         handler: async (client) => {
+          const { data: linked } = await client
+            .from('invoices')
+            .select('*')
+            .eq('payment_id', paymentId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (linked) {
+            const inv = mapDbRowToInvoiceRecord(linked as Record<string, unknown>);
+            const planLine = inv.lineItems[0]?.description ?? null;
+            return {
+              id: inv.id,
+              invoiceNumber: inv.invoiceNumber,
+              customerName: inv.customerName,
+              planName: planLine,
+              amount: inv.subtotal,
+              gstAmount: inv.gstAmount,
+              totalAmount: inv.totalAmount,
+              paymentMethod: null,
+              createdAt: inv.createdAt,
+            };
+          }
+
           const { data, error } = await client.from('user_payments').select('*').eq('id', paymentId).maybeSingle();
           if (error) throw error;
           if (!data) throw new Error('Invoice not found');
@@ -306,7 +332,7 @@ export const paymentsApi = baseApi.injectEndpoints({
             planName: (data.plan_name as string) ?? null,
             amount,
             gstAmount,
-            totalAmount: amount,
+            totalAmount: amount + gstAmount,
             paymentMethod: (data.payment_method as string) ?? null,
             createdAt: data.created_at as string,
           };

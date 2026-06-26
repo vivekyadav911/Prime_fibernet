@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import type { Payslip } from '@prime/types';
 import { colors } from '@/theme/colors';
 

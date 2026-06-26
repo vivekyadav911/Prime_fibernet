@@ -5,6 +5,15 @@
     },
     "twilio-developer-kit": {
       "enabled": true
+    },
+    "magicpath": {
+      "enabled": true
+    },
+    "gsap-skills": {
+      "enabled": true
+    },
+    "atlan": {
+      "enabled": true
     }
   }
 }

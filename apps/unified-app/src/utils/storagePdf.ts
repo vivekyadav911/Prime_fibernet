@@ -78,7 +78,7 @@ export function buildPdfJsViewerHtml(pdfUrl: string): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=4.0, user-scalable=yes" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; min-height: 100%; background: #525659; font-family: -apple-system, sans-serif; }
@@ -128,7 +128,7 @@ export function buildPdfJsViewerHtml(pdfUrl: string): string {
           statusEl.className = 'error';
         });
     })();
-  <\/script>
+  </script>
 </body>
 </html>`;
 }

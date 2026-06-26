@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { z } from 'zod';
 
 import { CustomerButton, CustomerInput } from '@/components/customer/ui';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
+import { DismissKeyboardScrollView } from '@/components/common';
 import { useCreateCustomerTicketMutation } from '@/services/api/customerTicketsApi';
 import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
@@ -62,13 +63,13 @@ function CreateTicketContent({ navigation }: Props) {
       Alert.alert('Ticket raised', `Your ticket ${ticket.ticketNumber} has been submitted.`);
       navigation.replace('CustomerTicketDetail', { ticketId: ticket.id });
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Could not create ticket');
+      Alert.alert('Could not create ticket', e instanceof Error ? e.message : 'Try again in a moment.');
     }
   };
 
   return (
-    <ScrollView style={styles.canvas} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Raise a complaint</Text>
+    <DismissKeyboardScrollView style={styles.canvas} contentContainerStyle={styles.content}>
+      <Text style={styles.heading}>Raise a ticket</Text>
       <View style={styles.categories}>
         {CATEGORIES.map((c) => (
           <CustomerButton
@@ -91,11 +92,11 @@ function CreateTicketContent({ navigation }: Props) {
         style={styles.textarea}
       />
       <CustomerButton
-        label={isLoading ? 'Submitting...' : 'Submit ticket'}
+        label={isLoading ? 'Submitting…' : 'Raise Ticket'}
         onPress={() => void onSubmit()}
         disabled={isLoading}
       />
-    </ScrollView>
+    </DismissKeyboardScrollView>
   );
 }
 
@@ -109,7 +110,7 @@ export function CreateCustomerTicketScreen(props: Props) {
 
 const styles = StyleSheet.create({
   canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  content: { padding: signalGlass.spacing.lg, gap: signalGlass.spacing.md },
+  content: { padding: signalGlass.spacing.lg, gap: signalGlass.spacing.md, paddingBottom: signalGlass.spacing.xxxl },
   heading: {
     color: signalGlass.colors.textPrimary,
     fontFamily: signalGlass.fonts.display,

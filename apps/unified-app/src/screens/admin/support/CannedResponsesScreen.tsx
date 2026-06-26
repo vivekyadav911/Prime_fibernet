@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen, Button } from '@prime/ui';
 
@@ -15,7 +15,7 @@ import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminSupportStackParamList, 'CannedResponses'>;
 
-export function CannedResponsesScreen({}: Props) {
+export function CannedResponsesScreen(_props: Props) {
   const { data, isLoading, isError, error, refetch } = useGetCannedResponsesQuery();
   const [upsert] = useUpsertCannedResponseMutation();
   const [showForm, setShowForm] = useState(false);

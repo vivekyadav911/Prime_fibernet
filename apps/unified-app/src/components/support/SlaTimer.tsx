@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { formatSLARemaining, getSLAColor } from '@/utils/slaUtils';
 

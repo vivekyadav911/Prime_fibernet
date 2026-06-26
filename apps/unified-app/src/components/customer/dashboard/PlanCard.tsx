@@ -83,6 +83,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     flex: 1,
+    flexShrink: 1,
+    marginRight: signalGlass.spacing.sm,
   },
   renewal: {
     color: signalGlass.colors.textSecondary,

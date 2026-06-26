@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { StyleProp, TextStyle, TextInputProps, ViewStyle } from 'react-native';
+import type { StyleProp, TextInputProps, ViewStyle } from 'react-native';
 
 import { FormField } from '@/components/admin';
 

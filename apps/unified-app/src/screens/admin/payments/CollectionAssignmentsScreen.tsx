@@ -2,12 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Keyboard,
   Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
@@ -62,6 +64,7 @@ const SORT_OPTIONS: { value: CollectionSortKey; label: string }[] = [
 
 export function CollectionAssignmentsScreen() {
   useCollectionAssignmentsSync();
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<AdminPaymentsStackParamList>>();
   const listRef = useRef<FlatList<CollectionAssignmentRow>>(null);
 
@@ -374,9 +377,18 @@ export function CollectionAssignmentsScreen() {
           onClear={handleClearFilters}
         />
 
-        <Modal visible={assignModal} transparent animationType="slide">
-          <View style={styles.modalBg}>
-            <View style={styles.modalCard}>
+        <Modal visible={assignModal} transparent animationType="slide" onRequestClose={closeAssignModal}>
+          <Pressable
+            style={[styles.modalBg, { paddingTop: insets.top }]}
+            onPress={() => {
+              Keyboard.dismiss();
+              closeAssignModal();
+            }}
+          >
+            <Pressable
+              style={[styles.modalCard, { paddingBottom: spacing.md + insets.bottom }]}
+              onPress={(e) => e.stopPropagation()}
+            >
               <Text style={styles.modalTitle}>
                 {singleTarget ? `Assign ${singleTarget.name}` : `Assign ${selected.length} customers`}
               </Text>
@@ -401,8 +413,8 @@ export function CollectionAssignmentsScreen() {
                 disabled={bulkSaving || singleSaving || pickedOfficerId == null}
               />
               <Button label="Cancel" variant="ghost" onPress={closeAssignModal} />
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
       </Screen>
     </RoleGuard>

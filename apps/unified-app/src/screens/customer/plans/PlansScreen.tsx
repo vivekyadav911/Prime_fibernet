@@ -1,15 +1,14 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import BottomSheet from '@gorhom/bottom-sheet';
 import type { Plan, PaymentGateway, BillingCycle } from '@prime/types';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 
 import { PaymentCheckoutWebView } from '@/components/PaymentCheckoutWebView';
-import { CustomerButton } from '@/components/customer/ui';
-import { EmptyState, ErrorState } from '@/components/common';
-import { CustomerSkeletonLoader } from '@/components/customer/ui';
+import { CustomerEmptyState, CustomerErrorState, CustomerSkeletonLoader } from '@/components/customer/ui';
 import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
 import { formatCurrencyInr } from '@/utils/formatCurrency';
@@ -21,6 +20,7 @@ import { SortBottomSheet } from './components/SortBottomSheet';
 import { usePlans } from './hooks/usePlans';
 
 const CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual'];
+const SEARCH_DEBOUNCE_MS = 300;
 
 export function PlansScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
@@ -47,6 +47,7 @@ export function PlansScreen() {
 
   const sortSheetRef = useRef<BottomSheet>(null);
   const detailSheetRef = useRef<BottomSheet>(null);
+  const [searchInput, setSearchInput] = useState(search);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [subscribing, setSubscribing] = useState(false);
   const [checkout, setCheckout] = useState<{
@@ -55,6 +56,11 @@ export function PlansScreen() {
     orderId: string;
     gateway: PaymentGateway;
   } | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput, setSearch]);
 
   const openDetail = useCallback((plan: Plan) => {
     setSelectedPlan(plan);
@@ -100,7 +106,7 @@ export function PlansScreen() {
   if (error) {
     return (
       <View style={styles.canvas}>
-        <ErrorState message="Failed to load plans" onRetry={refetch} />
+        <CustomerErrorState message="We couldn't load plans. Pull to refresh or try again." onRetry={refetch} />
       </View>
     );
   }
@@ -108,10 +114,14 @@ export function PlansScreen() {
   if (isLoading) {
     return (
       <View style={styles.canvas}>
-        <CustomerSkeletonLoader rows={6} rowHeight={120} />
+        <CustomerSkeletonLoader rows={3} rowHeight={150} />
       </View>
     );
   }
+
+  const emptyTitle = search.trim()
+    ? `No results for "${search.trim()}"`
+    : 'No plans match filters';
 
   return (
     <View style={styles.canvas}>
@@ -122,6 +132,7 @@ export function PlansScreen() {
             key={cycle}
             onPress={() => setBillingCycle(cycle)}
             style={[styles.cycleChip, billingCycle === cycle && styles.cycleChipActive]}
+            accessibilityLabel={`${cycle} billing`}
           >
             <Text style={[styles.cycleText, billingCycle === cycle && styles.cycleTextActive]}>
               {cycle.charAt(0).toUpperCase() + cycle.slice(1)}
@@ -130,13 +141,27 @@ export function PlansScreen() {
         ))}
       </View>
       <Text style={styles.gatewayNote}>Payments via {paymentGateway}</Text>
-      <TextInput
-        style={styles.search}
-        placeholder="Search plans…"
-        placeholderTextColor={signalGlass.colors.textMuted}
-        value={search}
-        onChangeText={setSearch}
-      />
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.search}
+          placeholder="Search plans…"
+          placeholderTextColor={signalGlass.colors.textMuted}
+          value={searchInput}
+          onChangeText={setSearchInput}
+          returnKeyType="search"
+          accessibilityLabel="Search plans"
+        />
+        {searchInput.length > 0 ? (
+          <Pressable
+            onPress={() => setSearchInput('')}
+            style={styles.clearBtn}
+            accessibilityLabel="Clear search"
+            hitSlop={8}
+          >
+            <Ionicons name="close-circle" size={20} color={signalGlass.colors.textMuted} />
+          </Pressable>
+        ) : null}
+      </View>
       <PlanFilterChips categories={allCategories} selected={category} onSelect={setCategory} />
       <Pressable style={styles.sortButton} onPress={() => sortSheetRef.current?.expand()}>
         <Text style={styles.sortText}>Sort: {sortBy}</Text>
@@ -147,7 +172,10 @@ export function PlansScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <EmptyState title="No plans match filters" subtitle="Try another category or search" />
+          <CustomerEmptyState
+            title={emptyTitle}
+            subtitle="Try another category or clear your search"
+          />
         }
         renderItem={renderItem}
       />
@@ -193,24 +221,36 @@ const styles = StyleSheet.create({
     borderColor: signalGlass.colors.borderSubtle,
     paddingVertical: signalGlass.spacing.sm,
     alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
   },
   cycleChipActive: {
     borderColor: signalGlass.colors.accentPrimary,
-    backgroundColor: 'rgba(59,130,246,0.15)',
+    backgroundColor: signalGlass.colors.accentPrimaryMuted,
   },
   cycleText: { color: signalGlass.colors.textSecondary, fontSize: 12, fontWeight: '600' },
   cycleTextActive: { color: signalGlass.colors.accentGlow },
   gatewayNote: { color: signalGlass.colors.textMuted, fontSize: 12, marginBottom: signalGlass.spacing.sm },
+  searchRow: { position: 'relative', marginBottom: signalGlass.spacing.xs },
   search: {
     borderWidth: 1,
     borderColor: signalGlass.colors.borderSubtle,
     borderRadius: signalGlass.radius.sm,
     padding: signalGlass.spacing.md,
+    paddingRight: signalGlass.spacing.xxxl,
     backgroundColor: signalGlass.colors.bgSurface,
     color: signalGlass.colors.textPrimary,
-    marginBottom: signalGlass.spacing.xs,
   },
-  sortButton: { alignSelf: 'flex-end', marginBottom: signalGlass.spacing.xs },
+  clearBtn: {
+    position: 'absolute',
+    right: signalGlass.spacing.md,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    minWidth: 44,
+    alignItems: 'center',
+  },
+  sortButton: { alignSelf: 'flex-end', marginBottom: signalGlass.spacing.xs, minHeight: 44, justifyContent: 'center' },
   sortText: { color: signalGlass.colors.accentGlow, fontWeight: '600' },
   list: { paddingBottom: signalGlass.spacing.xxxl },
 });

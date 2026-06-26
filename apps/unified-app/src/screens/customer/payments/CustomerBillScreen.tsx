@@ -1,11 +1,18 @@
 import { useCallback } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { AmountDisplay, BillingStatusBadge, type BillingStatus } from '@/components/payments';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import {
+  CustomerButton,
+  CustomerErrorState,
+  CustomerSkeletonLoader,
+  GlassCard,
+  PressableScale,
+} from '@/components/customer/ui';
+import { DismissKeyboardScrollView } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import {
   useGetActivePaymentGatewayQuery,
@@ -14,8 +21,7 @@ import {
 import { PAYMENT_METHOD_CONFIG, type PaymentMethod } from '@/types/payments';
 import { formatINR } from '@/utils/currencyFormat';
 import type { CustomerStackParamList } from '@/types/navigation';
-import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { signalGlass } from '@/theme/customer/signalGlass';
 import { queryErrorMessage } from '@/utils/queryError';
 
 const QUICK_METHODS: PaymentMethod[] = ['upi', 'card', 'netbanking', 'wallet'];
@@ -67,25 +73,25 @@ export function CustomerBillScreen() {
 
   if (!authId) {
     return (
-      <Screen>
-        <ErrorState message="Sign in to view your bill." />
-      </Screen>
+      <View style={styles.canvas}>
+        <CustomerErrorState message="Sign in to view your bill." />
+      </View>
     );
   }
 
   if (isLoading) {
     return (
-      <Screen>
-        <SkeletonLoader rows={6} />
-      </Screen>
+      <View style={styles.canvas}>
+        <CustomerSkeletonLoader rows={6} rowHeight={72} />
+      </View>
     );
   }
 
   if (isError || !bill) {
     return (
-      <Screen>
-        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      <View style={styles.canvas}>
+        <CustomerErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </View>
     );
   }
 
@@ -93,17 +99,19 @@ export function CustomerBillScreen() {
   const overdue = billingStatus === 'overdue';
 
   return (
-    <Screen style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <View style={styles.canvas}>
+      <DismissKeyboardScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerText}>
             <Text style={styles.title}>My Bill</Text>
-            <Text style={styles.account}>Account {bill.accountNumber}</Text>
+            <Text style={styles.account} numberOfLines={1}>
+              Account {bill.accountNumber}
+            </Text>
           </View>
           <BillingStatusBadge status={billingStatus} />
         </View>
 
-        <View style={styles.hero}>
+        <LinearGradient colors={[...signalGlass.gradients.hero]} style={styles.hero}>
           <Text style={styles.heroLabel}>Amount due</Text>
           <AmountDisplay amount={bill.totalPayable} large />
           {bill.dueDate ? (
@@ -112,9 +120,9 @@ export function CustomerBillScreen() {
               {overdue ? ' · Please pay to avoid suspension' : ''}
             </Text>
           ) : null}
-        </View>
+        </LinearGradient>
 
-        <View style={styles.card}>
+        <GlassCard style={styles.card}>
           <Text style={styles.plan}>{bill.planName ?? 'Broadband plan'}</Text>
           {bill.billingPeriodStart && bill.billingPeriodEnd ? (
             <Text style={styles.muted}>
@@ -130,7 +138,7 @@ export function CustomerBillScreen() {
             <Text style={styles.totalLabel}>Total payable</Text>
             <AmountDisplay amount={bill.totalPayable} large />
           </View>
-        </View>
+        </GlassCard>
 
         {bill.lastPaidAt ? (
           <View style={styles.lastPaid}>
@@ -145,10 +153,15 @@ export function CustomerBillScreen() {
           {QUICK_METHODS.map((m) => {
             const cfg = PAYMENT_METHOD_CONFIG[m];
             return (
-              <Pressable key={m} style={styles.methodChip} onPress={() => onPay(m)}>
+              <PressableScale
+                key={m}
+                style={styles.methodChip}
+                onPress={() => onPay(m)}
+                accessibilityLabel={`Pay with ${cfg.label}`}
+              >
                 <Text style={styles.methodIcon}>{cfg.icon}</Text>
                 <Text style={styles.methodLabel}>{cfg.label}</Text>
-              </Pressable>
+              </PressableScale>
             );
           })}
         </View>
@@ -165,14 +178,14 @@ export function CustomerBillScreen() {
           <Text style={styles.gatewayHint}>Secured by {activeGateway.display_name}</Text>
         )}
 
-        <Button label={`Pay ${formatINR(bill.totalPayable)} online`} onPress={() => onPay()} />
-        <Button
+        <CustomerButton label={`Pay ${formatINR(bill.totalPayable)}`} onPress={() => onPay()} />
+        <CustomerButton
           label="Payment history"
           variant="ghost"
           onPress={() => navigation.navigate('PaymentHistory')}
         />
-      </ScrollView>
-    </Screen>
+      </DismissKeyboardScrollView>
+    </View>
   );
 }
 
@@ -186,68 +199,101 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.background },
-  scroll: { padding: spacing.md, paddingBottom: spacing.xl },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
-  title: { fontSize: 22, fontWeight: '700', color: colors.primaryNavy },
-  account: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
+  scroll: { padding: signalGlass.spacing.lg, paddingBottom: signalGlass.spacing.xxxl },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: signalGlass.spacing.md,
+    gap: signalGlass.spacing.sm,
+  },
+  headerText: { flex: 1, minWidth: 0 },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: signalGlass.colors.textPrimary,
+    fontFamily: signalGlass.fonts.display,
+  },
+  account: { fontSize: 12, color: signalGlass.colors.textSecondary, marginTop: 2 },
   hero: {
-    backgroundColor: colors.primaryNavy,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+    borderRadius: signalGlass.radius.lg,
+    padding: signalGlass.spacing.lg,
+    marginBottom: signalGlass.spacing.md,
     alignItems: 'center',
-  },
-  heroLabel: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase' },
-  due: { marginTop: spacing.sm, fontSize: 13, color: 'rgba(255,255,255,0.9)' },
-  overdue: { color: '#FFCDD2', fontWeight: '600' },
-  card: {
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.borderDefault,
+    borderColor: signalGlass.colors.borderSubtle,
   },
-  plan: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.xs },
-  muted: { fontSize: 13, color: colors.textSecondary },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs },
-  value: { fontWeight: '600', color: colors.textPrimary },
-  divider: { height: 1, backgroundColor: colors.borderDefault, marginVertical: spacing.sm },
+  heroLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: signalGlass.colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  due: { marginTop: signalGlass.spacing.sm, fontSize: 13, color: signalGlass.colors.textPrimary },
+  overdue: { color: signalGlass.colors.accentDanger, fontWeight: '600' },
+  card: { marginBottom: signalGlass.spacing.md },
+  plan: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: signalGlass.colors.textPrimary,
+    marginBottom: signalGlass.spacing.xs,
+  },
+  muted: { fontSize: 13, color: signalGlass.colors.textSecondary },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: signalGlass.spacing.xs },
+  value: { fontWeight: '600', color: signalGlass.colors.textPrimary, fontFamily: signalGlass.fonts.mono },
+  divider: { height: 1, backgroundColor: signalGlass.colors.borderSubtle, marginVertical: signalGlass.spacing.sm },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalLabel: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  totalLabel: { fontSize: 15, fontWeight: '600', color: signalGlass.colors.textPrimary },
   lastPaid: {
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
+    backgroundColor: signalGlass.colors.bgGlass,
+    borderRadius: signalGlass.radius.sm,
+    padding: signalGlass.spacing.sm,
+    marginBottom: signalGlass.spacing.md,
     borderWidth: 1,
-    borderColor: colors.borderDefault,
+    borderColor: signalGlass.colors.borderSubtle,
   },
-  lastPaidText: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.sm },
-  methodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+  lastPaidText: { fontSize: 12, color: signalGlass.colors.textSecondary, textAlign: 'center' },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: signalGlass.colors.textPrimary,
+    marginBottom: signalGlass.spacing.sm,
+  },
+  methodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: signalGlass.spacing.sm, marginBottom: signalGlass.spacing.md },
   methodChip: {
     width: '22%',
     minWidth: 72,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
+    minHeight: 44,
+    paddingVertical: signalGlass.spacing.sm,
+    borderRadius: signalGlass.radius.md,
     borderWidth: 1,
-    borderColor: colors.borderDefault,
-    backgroundColor: colors.surfaceWhite,
+    borderColor: signalGlass.colors.borderSubtle,
+    backgroundColor: signalGlass.colors.bgSurface,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   methodIcon: { fontSize: 20 },
-  methodLabel: { marginTop: 4, fontSize: 10, fontWeight: '600', color: colors.textSecondary },
+  methodLabel: { marginTop: 4, fontSize: 10, fontWeight: '600', color: signalGlass.colors.textSecondary },
   notice: {
-    backgroundColor: '#FFF8E1',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    backgroundColor: signalGlass.colors.accentPrimaryMuted,
+    borderRadius: signalGlass.radius.md,
+    padding: signalGlass.spacing.md,
+    marginBottom: signalGlass.spacing.md,
     borderWidth: 1,
-    borderColor: '#FFE082',
+    borderColor: signalGlass.colors.accentWarning,
   },
-  noticeTitle: { fontSize: 13, fontWeight: '700', color: '#F57F17', marginBottom: spacing.xs },
-  noticeBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
-  gatewayHint: { textAlign: 'center', fontSize: 11, color: colors.textSecondary, marginBottom: spacing.sm },
+  noticeTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: signalGlass.colors.accentWarning,
+    marginBottom: signalGlass.spacing.xs,
+  },
+  noticeBody: { fontSize: 12, color: signalGlass.colors.textSecondary, lineHeight: 18 },
+  gatewayHint: {
+    textAlign: 'center',
+    fontSize: 11,
+    color: signalGlass.colors.textMuted,
+    marginBottom: signalGlass.spacing.sm,
+  },
 });

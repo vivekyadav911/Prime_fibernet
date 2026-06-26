@@ -13,7 +13,6 @@ import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminTicketsStackParamList } from '@/types/navigation';
 import type { Ticket } from '@/types/tickets';
-import { truncateTicketNumber } from '@/utils/ticketViewMappers';
 
 type Props = NativeStackScreenProps<AdminTicketsStackParamList, 'TicketPortalHome'>;
 

@@ -25,9 +25,11 @@ import {
   formatScheduleDisplay,
 } from '@/components/Notifications';
 import { RoleGuard, SectionCard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { SkeletonLoader, DismissKeyboardScrollView, KeyboardDismissView } from '@/components/common';
 import { useCreateNotification } from '@/hooks/useCreateNotification';
 import { fetchNotificationById } from '@/services/broadcastNotificationService';
+import { useAppDispatch } from '@/store/hooks';
+import { enqueueToast } from '@/store/slices/uiSlice';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
@@ -81,9 +83,19 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
     applyTemplate,
     saveAsTemplate,
     sendProgress,
+    validateForSend,
   } = useCreateNotification(existing, prefill);
+  const dispatch = useAppDispatch();
 
   const confirmAndSend = useCallback(() => {
+    if (!validateForSend()) {
+      dispatch(enqueueToast({
+        id: `confirm-val-${Date.now()}`,
+        type: 'error',
+        message: 'Please fix the highlighted fields before sending.',
+      }));
+      return;
+    }
     Alert.alert(
       `Send to ${estimatedRecipientCount} recipients?`,
       `Title: ${formData.title}\nAudience: ${formatAudienceLabel({ ...formData.audience, estimatedCount: estimatedRecipientCount })}\nPriority: ${formData.priority}`,
@@ -105,7 +117,7 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
         },
       ],
     );
-  }, [estimatedRecipientCount, formData, navigation, scheduleIt, sendNow]);
+  }, [estimatedRecipientCount, formData, navigation, scheduleIt, sendNow, validateForSend, dispatch]);
 
   const addTag = useCallback(() => {
     const tag = tagInput.trim().replace(/,$/, '');
@@ -129,7 +141,8 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+          <KeyboardDismissView style={styles.flex}>
+          <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
             <SectionCard title="Content">
               <Text style={styles.label}>NOTIFICATION TITLE *</Text>
               <TextInput
@@ -297,7 +310,7 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
                 <Text style={styles.scheduleHint}>Sends immediately on Send Now</Text>
               )}
             </SectionCard>
-          </ScrollView>
+          </DismissKeyboardScrollView>
 
           <View style={styles.footer}>
             <Button
@@ -319,6 +332,7 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
               style={styles.footerBtn}
             />
           </View>
+          </KeyboardDismissView>
         </KeyboardAvoidingView>
 
         <AudiencePickerSheet

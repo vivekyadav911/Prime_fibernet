@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { CustomerButton } from '@/components/customer/ui';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import {
+  CustomerButton,
+  CustomerErrorState,
+  CustomerSkeletonLoader,
+  CustomerToast,
+} from '@/components/customer/ui';
+import { DismissKeyboardScrollView } from '@/components/common';
 import { signOut } from '@/hooks/useAuth';
 import { useAppDispatch } from '@/store/hooks';
 import { useCustomerUiStore } from '@/store/customerUiStore';
@@ -51,11 +56,14 @@ export function ProfileScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const darkMode = useCustomerUiStore((s) => s.darkMode);
   const setDarkMode = useCustomerUiStore((s) => s.setDarkMode);
+  const toast = useCustomerUiStore((s) => s.toast);
+  const clearToast = useCustomerUiStore((s) => s.clearToast);
+  const showToast = useCustomerUiStore((s) => s.showToast);
 
   if (error) {
     return (
       <View style={styles.screen}>
-        <ErrorState message="Failed to load profile" onRetry={refetch} />
+        <CustomerErrorState message="Failed to load profile. Try again." onRetry={refetch} />
       </View>
     );
   }
@@ -63,7 +71,7 @@ export function ProfileScreen() {
   if (isLoading || !authUser) {
     return (
       <View style={styles.screen}>
-        <SkeletonLoader rows={6} rowHeight={48} shape="card" />
+        <CustomerSkeletonLoader rows={6} rowHeight={48} />
       </View>
     );
   }
@@ -72,18 +80,18 @@ export function ProfileScreen() {
     try {
       await saveProfile(values);
       await saveNotificationPrefs();
-      Alert.alert('Saved', 'Profile updated successfully.');
+      showToast('Profile saved', 'Your changes have been updated.');
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Could not save profile');
+      Alert.alert('Could not save', e instanceof Error ? e.message : 'Try again in a moment.');
     }
   };
 
   const onPhoto = async () => {
     try {
       await pickAndUploadPhoto();
-      Alert.alert('Updated', 'Profile photo saved.');
+      showToast('Photo updated', 'Your profile photo has been saved.');
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Could not update photo');
+      Alert.alert('Could not update photo', e instanceof Error ? e.message : 'Try again.');
     }
   };
 
@@ -107,7 +115,13 @@ export function ProfileScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <CustomerToast
+        title={toast?.title ?? ''}
+        body={toast?.body}
+        visible={Boolean(toast)}
+        onDismiss={clearToast}
+      />
+      <DismissKeyboardScrollView contentContainerStyle={styles.content}>
         <ProfileHeader
           name={defaultValues.name || authUser.name}
           email={authUser.email}
@@ -140,7 +154,7 @@ export function ProfileScreen() {
           <CustomerButton label="Sign out" onPress={() => signOut(dispatch)} />
           <CustomerButton label="Delete account" variant="danger" onPress={() => setDeleteModalVisible(true)} />
         </View>
-      </ScrollView>
+      </DismissKeyboardScrollView>
 
       <ChangePasswordModal
         visible={passwordModalVisible}

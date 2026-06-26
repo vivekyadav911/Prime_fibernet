@@ -2,6 +2,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackHeaderBackProps } from '@react-navigation/native-stack';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NavigationProp, RouteProp } from '@react-navigation/native';
+import { Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { DashboardScreen } from '@/screens/admin/DashboardScreen';
 import { InventoryListScreen } from '@/screens/admin/assets/inventory/InventoryListScreen';
@@ -15,7 +17,10 @@ import { CategoriesScreen } from '@/screens/admin/assets/inventory/CategoriesScr
 import { InventoryHistoryScreen } from '@/screens/admin/assets/inventory/InventoryHistoryScreen';
 import { InvoiceHistoryScreen } from '@/screens/admin/finance/invoices/InvoiceHistoryScreen';
 import { InvoiceListScreen } from '@/screens/admin/finance/invoices/InvoiceListScreen';
+import { CreateInvoiceScreen } from '@/screens/admin/finance/invoices/CreateInvoiceScreen';
+import { InvoiceSettingsScreen } from '@/screens/admin/finance/invoices/InvoiceSettingsScreen';
 import { ManualGSTInvoiceScreen } from '@/screens/admin/finance/invoices/ManualGSTInvoiceScreen';
+import { InvoicePdfViewerScreen } from '@/screens/common/InvoicePdfViewerScreen';
 import { AttendanceScreen } from '@/screens/admin/hr/AttendanceScreen';
 import { AttendanceRecordsScreenEnhanced as AttendanceRecordsScreen } from '@/screens/admin/hr/AttendanceRecordsScreenEnhanced';
 import { ApprovalRequestsScreen } from '@/screens/admin/hr/ApprovalRequestsScreen';
@@ -38,6 +43,7 @@ import { NotificationCenterScreen } from '@/screens/admin/notifications/Notifica
 import { NotificationsScreen } from '@/screens/admin/notifications/NotificationsScreen';
 import { CreateNotificationScreen } from '@/screens/admin/notifications/CreateNotificationScreen';
 import { NotificationDetailScreen } from '@/screens/admin/notifications/NotificationDetailScreen';
+import { AutomaticNotificationsScreen } from '@/screens/admin/notifications/AutomaticNotificationsScreen';
 import { AddOfficerScreen } from '@/screens/admin/officers/AddOfficerScreen';
 import { EditOfficerScreen } from '@/screens/admin/officers/EditOfficerScreen';
 import { OfficerDetailScreen } from '@/screens/admin/officers/OfficerDetailScreen';
@@ -117,7 +123,6 @@ import type {
   AdminTicketsStackParamList,
   AdminUsersStackParamList,
 } from '@/types/navigation';
-import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 
 import { AdminDrawerHeaderLeft } from './AdminDrawerHeaderLeft';
@@ -335,7 +340,18 @@ export function AdminNotificationsStackNav() {
       <NotificationsStack.Screen
         name="NotificationList"
         component={NotificationsScreen}
-        options={{ title: 'Notifications' }}
+        options={({ navigation }) => ({
+          title: 'Notifications',
+          headerRight: () => (
+            <Pressable
+              onPress={() => navigation.navigate('AutomaticNotifications')}
+              style={{ paddingHorizontal: 12 }}
+              accessibilityLabel="Automation settings"
+            >
+              <Ionicons name="settings-outline" size={22} color={colors.textPrimary} />
+            </Pressable>
+          ),
+        })}
       />
       <NotificationsStack.Screen
         name="CreateNotification"
@@ -348,6 +364,11 @@ export function AdminNotificationsStackNav() {
         name="NotificationDetail"
         component={NotificationDetailScreen}
         options={{ title: 'Notification Detail' }}
+      />
+      <NotificationsStack.Screen
+        name="AutomaticNotifications"
+        component={AutomaticNotificationsScreen}
+        options={{ title: 'Automation Settings' }}
       />
     </NotificationsStack.Navigator>
   );
@@ -381,7 +402,14 @@ export function AdminInvoicesStackNav() {
     <InvoicesStack.Navigator screenOptions={stackScreenOptions}>
       <InvoicesStack.Screen name="InvoiceList" component={InvoiceListScreen} options={{ title: 'Invoices' }} />
       <InvoicesStack.Screen name="InvoiceHistory" component={InvoiceHistoryScreen} options={{ title: 'Invoice history' }} />
+      <InvoicesStack.Screen name="CreateInvoice" component={CreateInvoiceScreen} options={{ title: 'Create invoice' }} />
       <InvoicesStack.Screen name="ManualGstInvoice" component={ManualGSTInvoiceScreen} options={{ title: 'Manual GST invoice' }} />
+      <InvoicesStack.Screen name="InvoiceSettings" component={InvoiceSettingsScreen} options={{ title: 'Invoice templates' }} />
+      <InvoicesStack.Screen
+        name="InvoicePdfViewer"
+        component={InvoicePdfViewerScreen}
+        options={{ title: 'Invoice PDF', headerShown: false }}
+      />
     </InvoicesStack.Navigator>
   );
 }

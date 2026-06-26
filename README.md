@@ -41,7 +41,23 @@ pnpm dev
 
 Run from the repo root — do **not** use `npx expo start` in the monorepo root (that starts the wrong project). The `pnpm dev` command launches `apps/unified-app` correctly.
 
-Requires **Expo Go SDK 54+** on your phone (matches Expo SDK 54 in this project).
+### Expo Go vs dev client
+
+| Workflow | Use when | Customer glass UI |
+|----------|----------|-------------------|
+| **Expo Go** (SDK 54+) | Quick iteration on Admin/Officer flows | Solid glass cards (blur degrades gracefully — no crash) |
+| **Dev client** | Customer dashboard blur, native modules, production-like testing | Full frosted `BlurView` |
+
+**Expo Go:** install Expo Go SDK 54+ on your device and scan the QR from `pnpm dev`.
+
+**Dev client (native blur):**
+
+```bash
+pnpm --filter @prime/unified-app prebuild
+pnpm --filter @prime/unified-app ios:native    # or android:native
+```
+
+Alternatively, build via EAS: `eas build --profile development` from `apps/unified-app`.
 
 ## Quality
 
@@ -54,6 +70,7 @@ pnpm typecheck
 
 | Doc | Path |
 |-----|------|
+| **Build from scratch (start here)** | [docs/BUILD_FROM_SCRATCH.md](docs/BUILD_FROM_SCRATCH.md) |
 | PRD v2.0 | [docs/PRD.md](docs/PRD.md) |
 | Architecture | [docs/TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) |
 | Security | [docs/SECURITY_AND_ACCESS.md](docs/SECURITY_AND_ACCESS.md) |

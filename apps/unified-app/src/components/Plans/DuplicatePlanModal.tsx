@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
 
 import { FormField } from '@/components/admin';
-import { adminColors } from '@/theme/admin';
+import { KeyboardDismissView } from '@/components/common';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { Plan } from '@/types/plans';
@@ -16,6 +17,7 @@ type DuplicatePlanModalProps = {
 };
 
 export function DuplicatePlanModal({ visible, plan, onClose, onConfirm }: DuplicatePlanModalProps) {
+  const insets = useSafeAreaInsets();
   const [displayName, setDisplayName] = useState('');
   const [planTag, setPlanTag] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,30 +33,38 @@ export function DuplicatePlanModal({ visible, plan, onClose, onConfirm }: Duplic
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable
+        style={[styles.backdrop, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          onClose();
+        }}
+      >
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.title}>Duplicate Plan</Text>
-          <Text style={styles.subtitle}>{plan.displayName}</Text>
+          <KeyboardDismissView>
+            <Text style={styles.title}>Duplicate Plan</Text>
+            <Text style={styles.subtitle}>{plan.displayName}</Text>
 
-          <FormField label="Display Name" value={displayName} onChangeText={setDisplayName} />
-          <FormField label="Plan Tag" value={planTag} onChangeText={setPlanTag} />
+            <FormField label="Display Name" value={displayName} onChangeText={setDisplayName} />
+            <FormField label="Plan Tag" value={planTag} onChangeText={setPlanTag} />
 
-          <Text style={styles.note}>
-            A new plan will be created with the same speed, pricing, and features. Subscribers will NOT
-            be copied.
-          </Text>
+            <Text style={styles.note}>
+              A new plan will be created with the same speed, pricing, and features. Subscribers will NOT
+              be copied.
+            </Text>
 
-          <View style={styles.actions}>
-            <Button label="Cancel" variant="ghost" onPress={onClose} />
-            <Button
-              label={loading ? 'Duplicating…' : 'Duplicate'}
-              disabled={loading || !displayName.trim()}
-              onPress={() => {
-                setLoading(true);
-                void onConfirm(displayName.trim(), planTag.trim()).finally(() => setLoading(false));
-              }}
-            />
-          </View>
+            <View style={styles.actions}>
+              <Button label="Cancel" variant="ghost" onPress={onClose} />
+              <Button
+                label={loading ? 'Duplicating…' : 'Duplicate'}
+                disabled={loading || !displayName.trim()}
+                onPress={() => {
+                  setLoading(true);
+                  void onConfirm(displayName.trim(), planTag.trim()).finally(() => setLoading(false));
+                }}
+              />
+            </View>
+          </KeyboardDismissView>
         </Pressable>
       </Pressable>
     </Modal>

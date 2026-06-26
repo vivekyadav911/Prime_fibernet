@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput } from 'react-native';
+import { FlatList, StyleSheet, TextInput } from 'react-native';
 import type { UserProfile } from '@prime/types';
 import { Screen } from '@prime/ui';
 import { colors } from '@/theme/colors';

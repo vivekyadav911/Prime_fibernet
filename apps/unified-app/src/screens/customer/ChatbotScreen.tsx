@@ -1,8 +1,17 @@
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CustomerButton } from '@/components/customer/ui';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { CustomerButton, CustomerErrorState, CustomerSkeletonLoader } from '@/components/customer/ui';
+import { DismissKeyboardFlatList } from '@/components/common';
 import { useGetCustomerDashboardQuery, useGetCustomerProfileQuery } from '@/services/api';
 import { getSupabase } from '@/services/supabase';
 import { useAppSelector } from '@/store/hooks';
@@ -25,6 +34,7 @@ const QUICK_REPLIES = [
 ];
 
 export function ChatbotScreen() {
+  const insets = useSafeAreaInsets();
   const authUser = useAppSelector((s) => s.auth.user);
   const { data: profile } = useGetCustomerProfileQuery(undefined, { skip: !authUser });
   const userId = profile?.id ?? authUser?.id ?? '';
@@ -84,7 +94,7 @@ export function ChatbotScreen() {
         const reply = (data as { reply?: string })?.reply ?? 'Sorry, I could not help right now.';
         setHistory((h) => [...h, { id: nextMessageId(), role: 'bot', text: reply }]);
       } catch {
-        setError('Prima is unavailable right now.');
+        setError('Prima is unavailable right now. Try again in a moment.');
         setHistory((h) => [
           ...h,
           { id: nextMessageId(), role: 'bot', text: 'Sorry, I could not help right now.' },
@@ -99,43 +109,63 @@ export function ChatbotScreen() {
   if (!userId) {
     return (
       <View style={styles.canvas}>
-        <SkeletonLoader rows={3} />
+        <CustomerSkeletonLoader rows={3} />
       </View>
     );
   }
 
   return (
-    <View style={styles.canvas}>
-      {error ? <ErrorState message={error} onRetry={() => setError(null)} /> : null}
+    <KeyboardAvoidingView
+      style={styles.canvas}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 56 : 0}
+    >
+      {error ? (
+        <View style={styles.errorBanner}>
+          <CustomerErrorState message={error} onRetry={() => setError(null)} retryLabel="Dismiss" />
+        </View>
+      ) : null}
       <View style={styles.faqRow}>
         {QUICK_REPLIES.map((q) => (
-          <Pressable key={q} style={styles.faqChip} onPress={() => void onSend(q)}>
+          <Pressable
+            key={q}
+            style={styles.faqChip}
+            onPress={() => void onSend(q)}
+            accessibilityLabel={q}
+          >
             <Text style={styles.faqText}>{q}</Text>
           </Pressable>
         ))}
       </View>
-      <FlatList
+      <DismissKeyboardFlatList
         data={history}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => <ChatBubble message={item} />}
       />
-      <View style={styles.composer}>
+      <View style={[styles.composer, { paddingBottom: insets.bottom + signalGlass.spacing.md }]}>
         <TextInput
           style={styles.input}
           placeholder="Ask Prima..."
           placeholderTextColor={signalGlass.colors.textMuted}
           value={message}
           onChangeText={setMessage}
+          returnKeyType="send"
+          onSubmitEditing={() => void onSend()}
         />
-        <CustomerButton label={sending ? '...' : 'Send'} onPress={() => void onSend()} disabled={sending} />
+        <CustomerButton
+          label={sending ? 'Sending…' : 'Send Reply'}
+          onPress={() => void onSend()}
+          disabled={sending || !message.trim()}
+        />
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
+  errorBanner: { padding: signalGlass.spacing.sm },
   faqRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -145,13 +175,15 @@ const styles = StyleSheet.create({
   faqChip: {
     backgroundColor: signalGlass.colors.bgGlass,
     borderRadius: signalGlass.radius.pill,
-    paddingHorizontal: signalGlass.spacing.sm,
-    paddingVertical: signalGlass.spacing.xs,
+    paddingHorizontal: signalGlass.spacing.md,
+    paddingVertical: signalGlass.spacing.sm,
     borderWidth: 1,
     borderColor: signalGlass.colors.borderSubtle,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   faqText: { color: signalGlass.colors.textSecondary, fontSize: 12 },
-  list: { padding: signalGlass.spacing.md, paddingBottom: 100 },
+  list: { padding: signalGlass.spacing.md, paddingBottom: signalGlass.spacing.lg },
   composer: {
     flexDirection: 'row',
     gap: signalGlass.spacing.sm,
@@ -159,6 +191,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: signalGlass.colors.borderSubtle,
     backgroundColor: signalGlass.colors.bgSurface,
+    alignItems: 'center',
   },
   input: {
     flex: 1,
@@ -166,6 +199,7 @@ const styles = StyleSheet.create({
     borderColor: signalGlass.colors.borderSubtle,
     borderRadius: signalGlass.radius.sm,
     padding: signalGlass.spacing.sm,
+    minHeight: 44,
     color: signalGlass.colors.textPrimary,
     backgroundColor: signalGlass.colors.bgDeep,
   },

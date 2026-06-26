@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@prime/ui';
 
@@ -39,7 +39,7 @@ export function OfflineBanner() {
       ]}
     >
       <Text style={styles.text}>
-        You're offline — changes will sync when connected{queueLabel}
+        You&apos;re offline — changes will sync when connected{queueLabel}
       </Text>
     </Animated.View>
   );

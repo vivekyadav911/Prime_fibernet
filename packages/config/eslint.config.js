@@ -24,6 +24,9 @@ export default [
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
       'react/react-in-jsx-scope': 'off',
+      // Prop types are enforced by TypeScript; the runtime prop-types rule is
+      // redundant and produces false positives for navigation/route props.
+      'react/prop-types': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },

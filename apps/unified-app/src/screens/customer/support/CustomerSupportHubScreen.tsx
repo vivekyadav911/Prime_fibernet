@@ -36,7 +36,7 @@ const OPTIONS = [
   },
 ];
 
-export function CustomerSupportHubScreen({}: Props) {
+export function CustomerSupportHubScreen(_props: Props) {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
 
   return (
@@ -57,7 +57,7 @@ export function CustomerSupportHubScreen({}: Props) {
       ))}
       <Pressable onPress={() => navigation.navigate('CreateCustomerTicket')}>
         <View style={styles.raiseCta}>
-          <Text style={styles.raiseText}>Didn't find your answer? Raise a ticket</Text>
+          <Text style={styles.raiseText}>Didn&apos;t find your answer? Raise a ticket</Text>
         </View>
       </Pressable>
     </ScrollView>

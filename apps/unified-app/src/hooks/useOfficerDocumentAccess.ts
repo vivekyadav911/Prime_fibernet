@@ -46,7 +46,7 @@ export function useOfficerDocumentAccess() {
   );
 
   const downloadToCache = useCallback(
-    async (storagePath: string, cacheFileName: string, mimeType?: string | null) => {
+    async (storagePath: string, cacheFileName: string, _mimeType?: string | null) => {
       const normalizedPath = normalizeStoragePath(storagePath, OFFICER_DOCUMENTS_BUCKET);
       try {
         return await downloadStorageObjectAuthenticated(

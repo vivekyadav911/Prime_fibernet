@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Linking,
   Pressable,
@@ -55,16 +54,6 @@ import { truncateRequestId } from '@/utils/requestViewMappers';
 
 type Props = NativeStackScreenProps<AdminTicketsStackParamList, 'TicketDetail'>;
 
-const STATUS_OPTIONS: TicketStatus[] = [
-  'Open',
-  'In Progress',
-  'Awaiting Customer',
-  'Awaiting Parts',
-  'Resolved',
-  'Closed',
-  'Reopened',
-];
-
 const VALID_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
   Open: ['In Progress', 'Awaiting Customer', 'Resolved', 'Closed'],
   'In Progress': ['Awaiting Customer', 'Awaiting Parts', 'Resolved', 'Closed'],
@@ -75,7 +64,7 @@ const VALID_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
   Reopened: ['In Progress', 'Resolved', 'Closed'],
 };
 
-export function TicketDetailScreen({ route, navigation }: Props) {
+export function TicketDetailScreen({ route }: Props) {
   const supportNav = useNavigation();
   const { ticketId } = route.params;
   const insets = useSafeAreaInsets();

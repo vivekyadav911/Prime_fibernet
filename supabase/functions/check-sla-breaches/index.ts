@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.178.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.42.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { deliverBroadcastNotification } from '../_shared/notificationDelivery.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -52,13 +53,49 @@ serve(async (req) => {
           .maybeSingle();
 
         if (officer?.user_id) {
-          await supabase.from('notification_queue').insert({
-            title: 'SLA Breach',
-            body: `Ticket ${ticket.ticket_number} has breached SLA resolution deadline.`,
-            audience: 'user',
-            audience_filter: { user_id: officer.user_id },
-            status: 'pending',
-          });
+          const { data: rule } = await supabase
+            .from('notification_automation_rules')
+            .select('*')
+            .eq('event_key', 'sla_breach')
+            .maybeSingle();
+
+          if (rule?.enabled) {
+            const channels = (rule.channels as { push?: boolean; in_app?: boolean }) ?? {
+              push: true,
+              in_app: true,
+            };
+            const title = String(rule.title_template).replace('{ticketNumber}', String(ticket.ticket_number));
+            const message = String(rule.message_template).replace('{ticketNumber}', String(ticket.ticket_number));
+
+            const { data: broadcast } = await supabase
+              .from('broadcast_notifications')
+              .insert({
+                title,
+                message,
+                priority: rule.priority ?? 'Urgent',
+                event_type: rule.event_type ?? 'ticketUpdate',
+                status: 'sending',
+                audience_type: 'specific_users',
+                audience_user_ids: [officer.user_id],
+                audience_estimated_count: 1,
+                is_draft: false,
+                is_auto_generated: true,
+                linked_ticket_id: ticket.id,
+                created_by_id: 'system',
+                created_by_name: 'SLA Cron',
+                tags: ['auto', 'sla_breach'],
+                timezone: 'Asia/Kolkata',
+              })
+              .select('id')
+              .single();
+
+            if (broadcast?.id) {
+              await deliverBroadcastNotification(supabase, String(broadcast.id), {
+                skipPush: !channels.push,
+                skipInApp: !channels.in_app,
+              });
+            }
+          }
         }
       }
 

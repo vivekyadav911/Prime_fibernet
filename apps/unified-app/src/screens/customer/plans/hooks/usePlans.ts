@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { BillingCycle, Plan, PaymentGateway } from '@prime/types';
 
 import { getPriceForCycle } from '@/services/api/customerDashboardApi';
