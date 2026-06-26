@@ -15,7 +15,7 @@ type ScreenProps = ViewProps & {
 export function Screen({
   children,
   padded = true,
-  safeAreaTop = false,
+  safeAreaTop = true,
   keyboardDismiss = true,
   style,
   ...props
