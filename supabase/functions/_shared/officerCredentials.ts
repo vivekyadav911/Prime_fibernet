@@ -1,10 +1,17 @@
 const ALGO = { name: 'AES-GCM', length: 256 } as const;
 
 function getKeyMaterial(): string {
+  // No guessable literal fallback. A dedicated OFFICER_CREDENTIALS_KEY is
+  // preferred; SUPABASE_SERVICE_ROLE_KEY is accepted only so any credentials
+  // encrypted before a dedicated key was provisioned remain decryptable.
   const key =
     Deno.env.get('OFFICER_CREDENTIALS_KEY') ??
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ??
-    'fallback-dev-key-change-in-prod';
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!key || key.length < 32) {
+    throw new Error(
+      'OFFICER_CREDENTIALS_KEY (or SUPABASE_SERVICE_ROLE_KEY) must be set and at least 32 characters',
+    );
+  }
   return key.slice(0, 32).padEnd(32, '0');
 }
 

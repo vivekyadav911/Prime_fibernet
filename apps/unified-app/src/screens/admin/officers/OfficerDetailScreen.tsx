@@ -33,6 +33,7 @@ import {
   useGetOfficerProfileQuery,
   useGetOfficerRolePermissionsQuery,
   useRevealOfficerPasswordMutation,
+  useRevealOfficerBankMutation,
   useResetOfficerPasswordMutation,
   useUploadAdditionalOfficerDocumentMutation,
   useUploadOfficerDocumentMutation,
@@ -41,7 +42,6 @@ import type { AdminOfficersStackParamList } from '@/types/navigation';
 import type { OfficerDocument } from '@/types/api/officer';
 import {
   OFFICER_DOCUMENT_DEFINITIONS,
-  maskAccountNumber,
 } from '@/types/api/officer';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -96,6 +96,11 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
   });
 
   const { prepareView, downloadDocument } = useOfficerDocumentAccess();
+  const [revealedBank, setRevealedBank] = useState<{
+    accountNumber: string | null;
+    ifscCode: string | null;
+  } | null>(null);
+  const [revealBank, { isLoading: revealingBank }] = useRevealOfficerBankMutation();
   const [revealPassword, { isLoading: revealing }] = useRevealOfficerPasswordMutation();
   const [resetPassword, { isLoading: resetting }] = useResetOfficerPasswordMutation();
   const [uploadDoc] = useUploadOfficerDocumentMutation();
@@ -132,6 +137,22 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
       Alert.alert('Error', queryErrorMessage(e));
     }
   }, [officerId, revealPassword]);
+
+  const handleRevealBank = useCallback(async () => {
+    if (revealedBank) {
+      setRevealedBank(null);
+      return;
+    }
+    try {
+      const result = await revealBank({ officerId }).unwrap();
+      setRevealedBank({
+        accountNumber: result.accountNumber,
+        ifscCode: result.ifscCode,
+      });
+    } catch (e) {
+      Alert.alert('Error', queryErrorMessage(e));
+    }
+  }, [officerId, revealBank, revealedBank]);
 
   const handleReset = useCallback(async () => {
     try {
@@ -379,8 +400,38 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
                 <SectionHeader icon="🏦" title={officerStrings.detail.sections.bankDetails} iconColor={adminColors.sectionIconBlue} />
                 <InfoRow label={officerStrings.detail.labels.bankName} value={p.bankDetails.bankName ?? officerStrings.detail.na} />
                 <InfoRow label={officerStrings.detail.labels.accountHolder} value={p.bankDetails.accountHolderName ?? officerStrings.detail.na} />
-                <InfoRow label={officerStrings.detail.labels.accountNumber} value={maskAccountNumber(p.bankDetails.accountNumber)} />
-                <InfoRow label={officerStrings.detail.labels.ifsc} value={p.bankDetails.ifscCode ?? officerStrings.detail.na} />
+                <InfoRow
+                  label={officerStrings.detail.labels.accountNumber}
+                  value={
+                    revealedBank
+                      ? revealedBank.accountNumber ?? officerStrings.detail.na
+                      : p.bankDetails.accountNumber ?? officerStrings.detail.na
+                  }
+                />
+                <InfoRow
+                  label={officerStrings.detail.labels.ifsc}
+                  value={
+                    revealedBank
+                      ? revealedBank.ifscCode ?? officerStrings.detail.na
+                      : p.bankDetails.ifscCode ?? officerStrings.detail.na
+                  }
+                />
+                {p.bankDetails.accountNumber ? (
+                  <Pressable
+                    onPress={() => void handleRevealBank()}
+                    disabled={revealingBank}
+                    style={styles.bankReveal}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.bankRevealText}>
+                      {revealingBank
+                        ? 'Loading…'
+                        : revealedBank
+                          ? 'Hide bank details'
+                          : 'Reveal bank details'}
+                    </Text>
+                  </Pressable>
+                ) : null}
 
                 <SectionHeader icon="🆘" title={officerStrings.detail.sections.emergencyContacts} iconColor={adminColors.badgeWarning} />
                 {p.emergencyContacts.map((ec, i) => (
@@ -537,4 +588,6 @@ const styles = StyleSheet.create({
   ecBlock: { marginBottom: spacing.sm },
   ecTitle: { fontSize: 13, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xxs },
   emptyTab: { color: colors.textSecondary, marginBottom: spacing.sm },
+  bankReveal: { paddingVertical: spacing.xs, alignSelf: 'flex-start' },
+  bankRevealText: { fontSize: 13, fontWeight: '600', color: adminColors.primary },
 });

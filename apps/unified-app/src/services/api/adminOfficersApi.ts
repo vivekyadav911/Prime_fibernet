@@ -26,6 +26,18 @@ import { baseApi } from './baseApi';
 import type { TypedSupabaseClient } from './supabase';
 import { OFFICER_ADMIN_SELECT } from './mappers';
 
+const ENCRYPTED_PREFIX = 'encrypted:';
+
+// Officer bank account number / IFSC are encrypted at rest. The admin client
+// only ever receives ciphertext from a plain SELECT, so never expose it: render
+// a masked placeholder and fetch plaintext on demand via admin-officer-bank.
+function maskBankValue(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (value.startsWith(ENCRYPTED_PREFIX)) return '••••••';
+  // Legacy plaintext (pre-backfill): mask all but the last 4 characters.
+  return value.length <= 4 ? '••••' : `••••${value.slice(-4)}`;
+}
+
 type OfficerRow = {
   id: string;
   full_name?: string | null;
@@ -236,8 +248,8 @@ function mapOfficerProfile(
     bankDetails: {
       bankName: bank?.bank_name ?? null,
       accountHolderName: bank?.account_holder_name ?? null,
-      accountNumber: bank?.account_number ?? null,
-      ifscCode: bank?.ifsc_code ?? null,
+      accountNumber: maskBankValue(bank?.account_number),
+      ifscCode: maskBankValue(bank?.ifsc_code),
     },
     emergencyContacts,
     education: {
@@ -314,8 +326,8 @@ function mapContractRow(
     bankDetails: {
       bankName: bank?.bank_name ?? null,
       accountHolderName: bank?.account_holder_name ?? null,
-      accountNumber: bank?.account_number ?? null,
-      ifscCode: bank?.ifsc_code ?? null,
+      accountNumber: maskBankValue(bank?.account_number),
+      ifscCode: maskBankValue(bank?.ifsc_code),
     },
     benefits: {
       healthInsurance: benefitsRaw.healthInsurance ?? false,
@@ -657,14 +669,12 @@ export const adminOfficersApi = baseApi.injectEndpoints({
           }
 
           if (bankDetails) {
-            await client.from('officer_bank_details').upsert({
-              officer_id: id,
-              bank_name: bankDetails.bankName,
-              account_holder_name: bankDetails.accountHolderName,
-              account_number: bankDetails.accountNumber,
-              ifsc_code: bankDetails.ifscCode,
-              updated_at: new Date().toISOString(),
+            // Account number / IFSC are encrypted server-side; the client has no
+            // key, so route the write through the admin-gated edge function.
+            const { error } = await client.functions.invoke('admin-officer-bank', {
+              body: { action: 'save', officerId: id, bankDetails },
             });
+            if (error) throw error;
           }
 
           if (emergencyContacts) {
@@ -716,6 +726,14 @@ export const adminOfficersApi = baseApi.injectEndpoints({
           if (joiningDate !== undefined) updates.joining_date = joiningDate || null;
           const { error } = await client.from('officers').update(updates).eq('id', id);
           if (error) throw error;
+
+          // Role assignment is a privilege change — record it for the audit trail.
+          await client.from('audit_logs').insert({
+            action: 'officer_role_updated',
+            target_entity: id,
+            new_values: { role_id: roleId ?? null },
+            status: 'SUCCESS',
+          });
         },
       }),
       invalidatesTags: (_r, _e, { id }) => [{ type: 'Officers', id }, 'Officers'],
@@ -967,6 +985,43 @@ export const adminOfficersApi = baseApi.injectEndpoints({
       }),
     }),
 
+    revealOfficerBank: builder.mutation<
+      {
+        bankName: string | null;
+        accountHolderName: string | null;
+        accountNumber: string | null;
+        ifscCode: string | null;
+      },
+      { officerId: string }
+    >({
+      query: ({ officerId }) => ({
+        handler: async (client) => {
+          const { data, error } = await client.functions.invoke('admin-officer-bank', {
+            body: { action: 'reveal', officerId },
+          });
+          if (error) throw error;
+          const result = data as {
+            bankDetails?: {
+              bankName: string | null;
+              accountHolderName: string | null;
+              accountNumber: string | null;
+              ifscCode: string | null;
+            } | null;
+            error?: string;
+          };
+          if (result.error) throw new Error(result.error);
+          return (
+            result.bankDetails ?? {
+              bankName: null,
+              accountHolderName: null,
+              accountNumber: null,
+              ifscCode: null,
+            }
+          );
+        },
+      }),
+    }),
+
     resetOfficerPassword: builder.mutation<
       { loginEmail: string; password: string },
       { officerId: string; newPassword?: string }
@@ -1078,6 +1133,7 @@ export const {
   useUploadAdditionalOfficerDocumentMutation,
   useDeleteOfficerDocumentMutation,
   useRevealOfficerPasswordMutation,
+  useRevealOfficerBankMutation,
   useResetOfficerPasswordMutation,
   useGetOfficerPerformanceQuery,
   useGetOfficerPayslipsQuery,
