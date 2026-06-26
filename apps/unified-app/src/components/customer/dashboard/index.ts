@@ -1,7 +1,11 @@
 export { SignalHero } from './SignalHero';
 export { PlanCard } from './PlanCard';
+export { DashboardPlanCard } from './DashboardPlanCard';
+export { CustomerInfoHeader } from './CustomerInfoHeader';
+export { SpeedGauge } from './SpeedGauge';
 export { UsageBar } from './UsageBar';
 export { QuickActions } from './QuickActions';
+export { QuickActionsGrid } from './QuickActionsGrid';
 export { RecentActivity } from './RecentActivity';
 export type { ActivityItem } from './RecentActivity';
 export { AnnouncementBanner } from './AnnouncementBanner';

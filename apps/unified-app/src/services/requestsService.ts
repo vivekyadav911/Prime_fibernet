@@ -11,6 +11,7 @@ import { getSupabase } from '@/services/supabase';
 import { store } from '@/store/store';
 import type { Officer, RequestFilters, ServiceRequest } from '@/types/requests';
 import { mapDbRowToServiceRequest, officerInitials } from '@/utils/requestViewMappers';
+import { insertOfficerPortalNotification } from '@/utils/officerPortalNotification';
 
 export async function fetchRequests(_filters?: Partial<RequestFilters>): Promise<ServiceRequest[]> {
   const client = getSupabase();
@@ -103,6 +104,7 @@ export async function assignOfficer(
     .unwrap();
 
   try {
+    const client = getSupabase();
     const request = await fetchRequestById(requestId);
     if (request.customerId) {
       await triggerAutoNotification('request_update', {
@@ -116,6 +118,14 @@ export async function assignOfficer(
         deepLinkUrl: `primefiber://requests/${requestId}`,
       });
     }
+    await insertOfficerPortalNotification(client, {
+      officerId: officer.id,
+      type: 'request_assigned',
+      title: 'New service request assigned',
+      body: `A ${request.type} service request has been assigned to you by ${adminName}.`,
+      data: { requestId },
+      category: 'request',
+    });
   } catch {
     /* non-blocking */
   }
@@ -148,6 +158,7 @@ export async function reassignOfficer(
     .unwrap();
 
   try {
+    const client = getSupabase();
     const request = await fetchRequestById(requestId);
     if (request.customerId) {
       await triggerAutoNotification('request_update', {
@@ -160,6 +171,14 @@ export async function reassignOfficer(
         linkedRequestId: requestId,
       });
     }
+    await insertOfficerPortalNotification(client, {
+      officerId: officer.id,
+      type: 'request_assigned',
+      title: 'Service request reassigned to you',
+      body: `A ${request.type} service request has been reassigned to you by ${adminName}.`,
+      data: { requestId },
+      category: 'request',
+    });
   } catch {
     /* non-blocking */
   }

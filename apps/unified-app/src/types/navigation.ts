@@ -252,7 +252,7 @@ export type AdminOfficersStackParamList = {
 
 export type AdminAttendanceStackParamList = {
   LiveAttendance: undefined;
-  Attendance: undefined;
+  AttendanceHub: undefined;
   CheckInExceptions: undefined;
   AttendanceRecords: undefined;
   CompletedShifts: undefined;
@@ -266,7 +266,7 @@ export type AdminAttendanceStackParamList = {
 };
 
 export type AdminPayrollStackParamList = {
-  Payroll: undefined;
+  PayrollHome: undefined;
   PayslipsManagement: undefined;
   PayslipReview: {
     officerId: string;

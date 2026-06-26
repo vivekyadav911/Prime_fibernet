@@ -308,7 +308,7 @@ export async function fetchDueScheduledNotifications(): Promise<AppNotification[
 
 export async function sendNotification(
   id: string,
-  admin: { id: string; name: string },
+  _admin: { id: string; name: string },
   onProgress?: SendProgressCallback,
 ): Promise<AppNotification> {
   const { client } = await requireSession();
@@ -329,7 +329,6 @@ export async function sendNotification(
   const targeted = Number((data as { totalTargeted?: number })?.totalTargeted ?? estimatedCount);
   onProgress?.(delivered, Math.max(0, targeted - delivered), targeted);
 
-  void admin;
   return fetchNotificationById(id);
 }
 

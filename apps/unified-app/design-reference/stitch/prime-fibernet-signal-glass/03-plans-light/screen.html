@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Prime Fibernet - Plans</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-container": "#1d4ed8",
+                      "surface-variant": "#d3e4fe",
+                      "on-primary-fixed": "#001551",
+                      "inverse-surface": "#213145",
+                      "on-surface": "#0b1c30",
+                      "outline": "#747686",
+                      "on-tertiary-container": "#ffc9b7",
+                      "primary-fixed": "#dce1ff",
+                      "on-error-container": "#93000a",
+                      "surface": "#f8f9ff",
+                      "on-tertiary-fixed": "#390c00",
+                      "on-primary-fixed-variant": "#0039b5",
+                      "outline-variant": "#c4c5d7",
+                      "on-secondary-container": "#6f5900",
+                      "error": "#ba1a1a",
+                      "surface-container": "#e5eeff",
+                      "on-tertiary-fixed-variant": "#832700",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-fixed-dim": "#ffb59c",
+                      "error-container": "#ffdad6",
+                      "on-primary": "#ffffff",
+                      "surface-container-low": "#eff4ff",
+                      "primary": "#0037b0",
+                      "inverse-on-surface": "#eaf1ff",
+                      "tertiary": "#7f2500",
+                      "on-secondary-fixed-variant": "#574500",
+                      "tertiary-fixed": "#ffdbcf",
+                      "surface-container-highest": "#d3e4fe",
+                      "background": "#f8f9ff",
+                      "surface-tint": "#2151da",
+                      "on-secondary": "#ffffff",
+                      "on-surface-variant": "#434655",
+                      "on-primary-container": "#cad3ff",
+                      "on-background": "#0b1c30",
+                      "surface-bright": "#f8f9ff",
+                      "on-error": "#ffffff",
+                      "secondary-fixed": "#ffe083",
+                      "secondary": "#735c00",
+                      "tertiary-container": "#a73400",
+                      "secondary-fixed-dim": "#eec200",
+                      "on-secondary-fixed": "#231b00",
+                      "surface-dim": "#cbdbf5",
+                      "secondary-container": "#fed01b",
+                      "primary-fixed-dim": "#b7c4ff",
+                      "inverse-primary": "#b7c4ff",
+                      "surface-container-high": "#dce9ff",
+                      "on-tertiary": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sm": "16px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px",
+                      "base": "4px",
+                      "xs": "8px",
+                      "xl": "64px",
+                      "md": "24px",
+                      "margin-desktop": "auto",
+                      "max-width": "1280px",
+                      "lg": "40px"
+              },
+              "fontFamily": {
+                      "display-lg": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-sm": ["Inter"],
+                      "display-lg-mobile": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "body-md": ["Inter"],
+                      "label-md": ["Inter"]
+              },
+              "fontSize": {
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "display-lg-mobile": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-md": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md antialiased pb-32 md:pb-0 min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-on-background border-b border-outline-variant dark:border-outline docked full-width top-0 sticky z-40">
+<div class="flex justify-between items-center px-margin-mobile h-16 w-full max-w-max-width mx-margin-desktop">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="signal_cellular_alt">signal_cellular_alt</span>
+<span class="font-display-lg-mobile text-display-lg-mobile font-bold text-primary dark:text-primary-fixed tracking-tight">FiberFlow</span>
+</div>
+<!-- Desktop Nav -->
+<nav class="hidden md:flex gap-gutter">
+<a class="text-on-surface-variant dark:text-surface-variant font-label-md hover:text-primary transition-colors flex items-center gap-base" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span> Home
+                </a>
+<a class="text-primary dark:text-primary-fixed font-label-md flex items-center gap-base border-b-2 border-primary pb-1" href="#">
+<span class="material-symbols-outlined fill" data-icon="speed">speed</span> Plans
+                </a>
+<a class="text-on-surface-variant dark:text-surface-variant font-label-md hover:text-primary transition-colors flex items-center gap-base" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span> Payments
+                </a>
+<a class="text-on-surface-variant dark:text-surface-variant font-label-md hover:text-primary transition-colors flex items-center gap-base" href="#">
+<span class="material-symbols-outlined" data-icon="headset_mic">headset_mic</span> Support
+                </a>
+</nav>
+<button class="flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-low hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface" data-icon="person">person</span>
+</button>
+</div>
+</header>
+<main class="flex-grow w-full max-w-max-width mx-margin-desktop px-margin-mobile md:px-gutter py-md md:py-xl">
+<div class="mb-md flex flex-col md:flex-row md:items-end justify-between gap-sm">
+<div>
+<h1 class="font-headline-md text-headline-md mb-base">Broadband Plans</h1>
+<p class="text-on-surface-variant font-body-md">Select a plan that fits your digital lifestyle.</p>
+</div>
+<!-- Billing Toggle -->
+<div class="inline-flex bg-surface-container-low p-1 rounded-lg border border-outline-variant">
+<button class="px-sm py-xs rounded text-on-surface font-label-md hover:bg-surface-container transition-colors">Monthly</button>
+<button class="px-sm py-xs rounded bg-surface text-primary border shadow-sm border-outline-variant font-label-md">Quarterly</button>
+<button class="px-sm py-xs rounded text-on-surface font-label-md hover:bg-surface-container transition-colors">Annual</button>
+</div>
+</div>
+<!-- Plans Grid/List -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Plan Card 1: 150 Mbps -->
+<div class="bg-surface-container-lowest rounded-[24px] border border-outline-variant p-md flex flex-col hover:shadow-sm transition-shadow">
+<div class="flex justify-between items-start mb-sm">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Essential</span>
+<div class="flex items-baseline gap-base mt-1">
+<span class="font-headline-sm text-headline-sm text-primary">150</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Mbps</span>
+</div>
+</div>
+</div>
+<div class="mb-md">
+<span class="font-headline-sm text-headline-sm text-on-surface">₹499</span>
+<span class="text-on-surface-variant font-body-md">/mo</span>
+</div>
+<div class="flex-grow flex flex-col gap-xs mb-md">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-on-surface-variant text-sm">Unlimited Data</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-on-surface-variant text-sm">Free Router</span>
+</div>
+</div>
+<button class="w-full py-xs px-sm rounded-xl border border-primary text-primary font-label-md hover:bg-primary-container hover:text-on-primary transition-colors">Select Plan</button>
+</div>
+<!-- Plan Card 2: 300 Mbps (Current Plan Highlight) -->
+<div class="bg-surface-container-lowest rounded-[24px] border-2 border-primary shadow-sm p-md flex flex-col relative transform md:-translate-y-2">
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-on-primary px-sm py-1 rounded-full font-label-sm text-label-sm whitespace-nowrap shadow-sm">
+                    Current Plan
+                </div>
+<div class="flex justify-between items-start mb-sm mt-xs">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Pro</span>
+<div class="flex items-baseline gap-base mt-1">
+<span class="font-headline-sm text-headline-sm text-primary">300</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Mbps</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-secondary-container fill" data-icon="star">star</span>
+</div>
+<div class="mb-md">
+<span class="font-headline-sm text-headline-sm text-on-surface">₹799</span>
+<span class="text-on-surface-variant font-body-md">/mo</span>
+</div>
+<div class="flex-grow flex flex-col gap-xs mb-md">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-on-surface-variant text-sm">Unlimited Data</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-on-surface-variant text-sm">Free Router</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-on-surface-variant text-sm">OTT Bundle (Basic)</span>
+</div>
+</div>
+<button class="w-full py-xs px-sm rounded-xl bg-surface-container text-on-surface font-label-md cursor-default border border-outline-variant">Active</button>
+</div>
+<!-- Plan Card 3: 500 Mbps -->
+<div class="bg-surface-container-lowest rounded-[24px] border border-outline-variant p-md flex flex-col hover:shadow-sm transition-shadow">
+<div class="flex justify-between items-start mb-sm">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Max</span>
+<div class="flex items-baseline gap-base mt-1">
+<span class="font-headline-sm text-headline-sm text-primary">500</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Mbps</span>
+</div>
+</div>
+</div>
+<div class="mb-md">
+<span class="font-headline-sm text-headline-sm text-on-surface">₹1299</span>
+<span class="text-on-surface-variant font-body-md">/mo</span>
+</div>
+<div class="flex-grow flex flex-col gap-xs mb-md">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-on-surface-variant text-sm">Unlimited Data</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-on-surface-variant text-sm">Mesh Router Included</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary text-sm" data-icon="check_circle">check_circle</span>
+<span class="font-body-md text-on-surface-variant text-sm">OTT Bundle (Premium)</span>
+</div>
+</div>
+<button class="w-full py-xs px-sm rounded-xl border border-primary text-primary font-label-md hover:bg-primary-container hover:text-on-primary transition-colors">Upgrade Plan</button>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-surface dark:bg-on-background px-margin-mobile py-xs border-t border-outline-variant dark:border-outline shadow-sm rounded-t-xl pb-6">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container dark:bg-secondary dark:text-on-secondary rounded-full px-4 py-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined fill" data-icon="speed">speed</span>
+<span class="font-label-sm text-label-sm mt-1">Plans</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-label-sm text-label-sm mt-1">Payments</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="headset_mic">headset_mic</span>
+<span class="font-label-sm text-label-sm mt-1">Support</span>
+</a>
+</nav>
+</body></html>

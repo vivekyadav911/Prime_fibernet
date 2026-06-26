@@ -1,0 +1,76 @@
+{
+  "projectId": "725027997658492422",
+  "projectTitle": "Prime Fibernet Signal Glass",
+  "screens": [
+    {
+      "slug": "00-design-system",
+      "title": "Design System (Prime Light Broadband)",
+      "assetId": "assets/1a99a816b0b440d39f160d05f41d6f3b",
+      "files": [
+        "design-system.md",
+        "design-system.json",
+        "style-guidelines.md"
+      ]
+    },
+    {
+      "slug": "01-dashboard-light",
+      "title": "Dashboard (Light)",
+      "screenId": "eda175fa03324788993d5d973359da85",
+      "files": [
+        "metadata.json",
+        "screen.html",
+        "screenshot.png"
+      ]
+    },
+    {
+      "slug": "02-payments-light",
+      "title": "Payments (Light)",
+      "screenId": "db9788fb42e94daca779a13aa9428400",
+      "files": [
+        "metadata.json",
+        "screen.html",
+        "screenshot.png"
+      ]
+    },
+    {
+      "slug": "03-plans-light",
+      "title": "Plans (Light)",
+      "screenId": "d6a911db48494cfba557d656985c26ce",
+      "files": [
+        "metadata.json",
+        "screen.html",
+        "screenshot.png"
+      ]
+    },
+    {
+      "slug": "04-payment-selection-light",
+      "title": "Payment Selection (Light)",
+      "screenId": "012316050d5a4bae9d7010b2929257a2",
+      "files": [
+        "metadata.json",
+        "screen.html",
+        "screenshot.png"
+      ]
+    },
+    {
+      "slug": "05-support-hub-light",
+      "title": "Support Hub (Light)",
+      "screenId": "7f541cbb95594f268cb0e3b2ab8713d6",
+      "files": [
+        "metadata.json",
+        "screen.html",
+        "screenshot.png"
+      ]
+    },
+    {
+      "slug": "06-profile-light",
+      "title": "Profile (Light)",
+      "screenId": "19d497ad30d245d286463897d76e8c9c",
+      "files": [
+        "metadata.json",
+        "screen.html",
+        "screenshot.png"
+      ]
+    }
+  ]
+}

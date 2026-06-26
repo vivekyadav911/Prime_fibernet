@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Profile - FiberFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-container": "#1d4ed8",
+                      "surface-variant": "#d3e4fe",
+                      "on-primary-fixed": "#001551",
+                      "inverse-surface": "#213145",
+                      "on-surface": "#0b1c30",
+                      "outline": "#747686",
+                      "on-tertiary-container": "#ffc9b7",
+                      "primary-fixed": "#dce1ff",
+                      "on-error-container": "#93000a",
+                      "surface": "#f8f9ff",
+                      "on-tertiary-fixed": "#390c00",
+                      "on-primary-fixed-variant": "#0039b5",
+                      "outline-variant": "#c4c5d7",
+                      "on-secondary-container": "#6f5900",
+                      "error": "#ba1a1a",
+                      "surface-container": "#e5eeff",
+                      "on-tertiary-fixed-variant": "#832700",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-fixed-dim": "#ffb59c",
+                      "error-container": "#ffdad6",
+                      "on-primary": "#ffffff",
+                      "surface-container-low": "#eff4ff",
+                      "primary": "#0037b0",
+                      "inverse-on-surface": "#eaf1ff",
+                      "tertiary": "#7f2500",
+                      "on-secondary-fixed-variant": "#574500",
+                      "tertiary-fixed": "#ffdbcf",
+                      "surface-container-highest": "#d3e4fe",
+                      "background": "#f8f9ff",
+                      "surface-tint": "#2151da",
+                      "on-secondary": "#ffffff",
+                      "on-surface-variant": "#434655",
+                      "on-primary-container": "#cad3ff",
+                      "on-background": "#0b1c30",
+                      "surface-bright": "#f8f9ff",
+                      "on-error": "#ffffff",
+                      "secondary-fixed": "#ffe083",
+                      "secondary": "#735c00",
+                      "tertiary-container": "#a73400",
+                      "secondary-fixed-dim": "#eec200",
+                      "on-secondary-fixed": "#231b00",
+                      "surface-dim": "#cbdbf5",
+                      "secondary-container": "#fed01b",
+                      "primary-fixed-dim": "#b7c4ff",
+                      "inverse-primary": "#b7c4ff",
+                      "surface-container-high": "#dce9ff",
+                      "on-tertiary": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sm": "16px",
+                      "margin-mobile": "16px",
+                      "gutter": "24px",
+                      "base": "4px",
+                      "xs": "8px",
+                      "xl": "64px",
+                      "md": "24px",
+                      "margin-desktop": "auto",
+                      "max-width": "1280px",
+                      "lg": "40px"
+              },
+              "fontFamily": {
+                      "display-lg": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-sm": ["Inter"],
+                      "display-lg-mobile": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "body-md": ["Inter"],
+                      "label-md": ["Inter"]
+              },
+              "fontSize": {
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "display-lg-mobile": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-md": ["30px", {"lineHeight": "38px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-surface text-primary font-headline-sm text-headline-sm docked full-width top-0 sticky border-b border-outline-variant flat no shadows">
+<div class="flex justify-between items-center px-margin-mobile h-16 w-full max-w-max-width mx-margin-desktop">
+<div class="flex items-center gap-xs text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-full p-2 active:scale-95 transition-transform duration-150 cursor-pointer">
+<span class="material-symbols-outlined text-outline">arrow_back</span>
+</div>
+<div class="font-display-lg-mobile text-display-lg-mobile font-bold text-primary">FiberFlow</div>
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden cursor-pointer active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined text-outline">account_circle</span>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow w-full max-w-max-width mx-margin-desktop px-margin-mobile md:px-gutter py-xl flex flex-col items-center">
+<div class="w-full max-w-2xl bg-surface-container-lowest rounded-[24px] border border-[#E2E8F0] shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-hidden">
+<!-- Profile Header -->
+<div class="p-lg flex flex-col items-center border-b border-outline-variant/30 bg-surface-container-low relative">
+<div class="relative mb-md group cursor-pointer">
+<img class="w-24 h-24 rounded-full object-cover border-4 border-surface-container-lowest shadow-sm" data-alt="A highly detailed, professional headshot portrait of an individual, taken in a bright, modern studio setting. The lighting is soft and even, highlighting their features against a crisp, clean background. The aesthetic is clean, corporate modern, and deeply professional, aligning with a premium digital service. Colors are natural and high quality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzelEfkxFV-O1DSlQM_fszGBkgrrohex_iDKl7vdAskSnxhXyIDrrcqQJ6ty7Fd9kiniGa7rbM7Ra_Z22LpH8tK9SHMKS4oYuQqcUDzox5EaSo7tXLLqce7xWnxooPbQzmQ6wRq1tYINM6T7Z0Ssvl3zI_Mnf1FDp0ScRXcK6XoBScTf1RzguRwumWLzw-sKUdYW_bgMA-jkaV85XfkK9I-HzygfoooehLl0ZcFgXcYkmSXp1lGHAVoA5zHQz8GbR6K7cjTK1Gzw"/>
+<div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-primary">photo_camera</span>
+</div>
+</div>
+<h1 class="font-headline-md text-headline-md text-on-surface mb-xs">Sarah Jenkins</h1>
+<div class="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-[16px]">verified</span>
+<span class="font-label-sm text-label-sm">Member Since 2021</span>
+</div>
+</div>
+<div class="p-lg">
+<form class="space-y-xl">
+<!-- Personal Info Section -->
+<section>
+<h2 class="font-headline-sm text-headline-sm text-on-surface mb-md flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">person</span>
+                            Personal Information
+                        </h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface-variant">Full Name</label>
+<input class="w-full px-4 py-3 rounded-[16px] border border-[#E2E8F0] bg-surface-container-lowest font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" type="text" value="Sarah Jenkins"/>
+</div>
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface-variant">Phone Number</label>
+<input class="w-full px-4 py-3 rounded-[16px] border border-[#E2E8F0] bg-surface-container-lowest font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" type="tel" value="(555) 123-4567"/>
+</div>
+<div class="flex flex-col gap-xs md:col-span-2">
+<label class="font-label-md text-label-md text-on-surface-variant">Service Address</label>
+<input class="w-full px-4 py-3 rounded-[16px] border border-[#E2E8F0] bg-surface-container-lowest font-body-md text-body-md text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" type="text" value="123 Fiber Lane, Apt 4B, Tech City, ST 90210"/>
+</div>
+</div>
+</section>
+<div class="h-px bg-[#E2E8F0] w-full"></div>
+<!-- Account Details Section -->
+<section>
+<h2 class="font-headline-sm text-headline-sm text-on-surface mb-md flex items-center gap-2">
+<span class="material-symbols-outlined text-outline">lock</span>
+                            Account Details
+                        </h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<div class="flex flex-col gap-xs opacity-75 pointer-events-none">
+<label class="font-label-md text-label-md text-on-surface-variant">Email Address</label>
+<input class="w-full px-4 py-3 rounded-[16px] border border-outline-variant bg-surface-container-low font-body-md text-body-md text-on-surface-variant outline-none" readonly="" type="email" value="sarah.j@example.com"/>
+</div>
+<div class="flex flex-col gap-xs opacity-75 pointer-events-none">
+<label class="font-label-md text-label-md text-on-surface-variant">Account ID</label>
+<div class="relative">
+<input class="w-full px-4 py-3 rounded-[16px] border border-outline-variant bg-surface-container-low font-body-md text-body-md text-on-surface-variant outline-none" readonly="" type="text" value="ACT-987654321"/>
+<span class="material-symbols-outlined absolute right-4 top-3 text-outline">content_copy</span>
+</div>
+</div>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-sm">Contact support to change these details.</p>
+</section>
+<!-- Actions -->
+<div class="pt-md flex flex-col sm:flex-row gap-sm justify-end">
+<button class="px-6 py-3 rounded-[16px] font-label-md text-label-md font-semibold text-primary border border-primary hover:bg-surface-container-low transition-colors" type="button">
+                            Cancel
+                        </button>
+<button class="px-8 py-3 rounded-[16px] bg-primary text-on-primary font-label-md text-label-md font-semibold hover:bg-on-primary-fixed-variant transition-colors shadow-sm active:scale-95" type="button">
+                            Save Changes
+                        </button>
+</div>
+</form>
+</div>
+</div>
+</main>
+</body></html>

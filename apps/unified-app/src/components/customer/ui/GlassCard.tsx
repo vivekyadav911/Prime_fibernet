@@ -46,10 +46,10 @@ export function GlassCard({ children, style, glow = false, padded = true }: Glas
 
 const styles = StyleSheet.create({
   wrap: {
-    borderRadius: signalGlass.radius.md,
+    borderRadius: signalGlass.radius.lg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
+    borderColor: signalGlass.colors.borderGlass,
   },
   blur: { overflow: 'hidden' },
   solidFallback: {

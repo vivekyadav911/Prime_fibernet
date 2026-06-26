@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
@@ -77,13 +77,27 @@ export function InvoicePdfViewerScreen({ route, navigation }: Props) {
         <ErrorState message={error} onRetry={() => void loadPdf()} onBack={() => navigation.goBack()} />
       ) : null}
 
+      {!loading && !error && !localUri ? (
+        <ErrorState
+          message="Could not prepare PDF for viewing."
+          onRetry={() => void loadPdf()}
+          onBack={() => navigation.goBack()}
+        />
+      ) : null}
+
       {!loading && !error && localUri ? (
         <>
           <PdfWebView viewMode={viewMode} localUri={localUri} viewerHtml={viewerHtml ?? undefined} />
           <View style={styles.footer}>
-            <Text style={styles.downloadHint} onPress={() => void handleDownload()}>
-              Download PDF
-            </Text>
+            <Pressable
+              onPress={() => void handleDownload()}
+              style={({ pressed }) => [styles.downloadBtn, pressed && styles.downloadBtnPressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Download PDF"
+              hitSlop={12}
+            >
+              <Text style={styles.downloadHint}>Download PDF</Text>
+            </Pressable>
           </View>
         </>
       ) : null}
@@ -102,6 +116,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWhite,
     alignItems: 'center',
   },
+  downloadBtn: { paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
+  downloadBtnPressed: { opacity: 0.6 },
   downloadHint: {
     color: adminColors.primary,
     fontWeight: '600',

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -9,6 +9,7 @@ import {
   CustomerSkeletonLoader,
   CustomerToast,
 } from '@/components/customer/ui';
+import { CustomerTopBar } from '@/components/customer/shell';
 import { DismissKeyboardScrollView } from '@/components/common';
 import { signOut } from '@/hooks/useAuth';
 import { useAppDispatch } from '@/store/hooks';
@@ -54,8 +55,6 @@ export function ProfileScreen() {
 
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const darkMode = useCustomerUiStore((s) => s.darkMode);
-  const setDarkMode = useCustomerUiStore((s) => s.setDarkMode);
   const toast = useCustomerUiStore((s) => s.toast);
   const clearToast = useCustomerUiStore((s) => s.clearToast);
   const showToast = useCustomerUiStore((s) => s.showToast);
@@ -63,6 +62,7 @@ export function ProfileScreen() {
   if (error) {
     return (
       <View style={styles.screen}>
+        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
         <CustomerErrorState message="Failed to load profile. Try again." onRetry={refetch} />
       </View>
     );
@@ -71,6 +71,7 @@ export function ProfileScreen() {
   if (isLoading || !authUser) {
     return (
       <View style={styles.screen}>
+        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
         <CustomerSkeletonLoader rows={6} rowHeight={48} />
       </View>
     );
@@ -121,6 +122,7 @@ export function ProfileScreen() {
         visible={Boolean(toast)}
         onDismiss={clearToast}
       />
+      <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
       <DismissKeyboardScrollView contentContainerStyle={styles.content}>
         <ProfileHeader
           name={defaultValues.name || authUser.name}
@@ -131,7 +133,13 @@ export function ProfileScreen() {
           onChangePhoto={onPhoto}
         />
 
-        <ProfileForm defaultValues={defaultValues} saving={isSaving} onSubmit={onSave} />
+        <ProfileForm
+          defaultValues={defaultValues}
+          email={authUser.email}
+          accountId={authUser.id ? `PFN-${authUser.id.slice(0, 8).toUpperCase()}` : undefined}
+          saving={isSaving}
+          onSubmit={onSave}
+        />
 
         <NotificationToggles
           pushEnabled={pushEnabled}
@@ -142,16 +150,10 @@ export function ProfileScreen() {
           onSmsChange={setSmsEnabled}
         />
 
-        <View style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Dark mode (Signal Glass)</Text>
-          <Switch value={darkMode} onValueChange={setDarkMode} />
-        </View>
-
         <View style={styles.actions}>
-          <CustomerButton label="Billing & payments" variant="ghost" onPress={() => navigation.navigate('CustomerTabs', { screen: 'Payments' })} />
-          <CustomerButton label="Notifications" variant="ghost" onPress={() => navigation.navigate('Notifications')} />
-          <CustomerButton label="Change password" variant="ghost" onPress={() => setPasswordModalVisible(true)} />
-          <CustomerButton label="Sign out" onPress={() => signOut(dispatch)} />
+          <CustomerButton label="Notifications" variant="outline" onPress={() => navigation.navigate('Notifications')} />
+          <CustomerButton label="Change password" variant="outline" onPress={() => setPasswordModalVisible(true)} />
+          <CustomerButton label="Sign out" variant="ghost" onPress={() => signOut(dispatch)} />
           <CustomerButton label="Delete account" variant="danger" onPress={() => setDeleteModalVisible(true)} />
         </View>
       </DismissKeyboardScrollView>
@@ -174,17 +176,11 @@ export function ProfileScreen() {
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: signalGlass.colors.bgDeep, flex: 1 },
-  content: { padding: signalGlass.spacing.lg, gap: signalGlass.spacing.lg, paddingBottom: signalGlass.spacing.xxxl },
-  actions: { gap: signalGlass.spacing.sm },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: signalGlass.spacing.md,
-    backgroundColor: signalGlass.colors.bgSurface,
-    borderRadius: signalGlass.radius.sm,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
+  content: {
+    paddingHorizontal: signalGlass.spacing.marginMobile,
+    paddingTop: signalGlass.spacing.md,
+    paddingBottom: signalGlass.spacing.xxxl,
+    gap: signalGlass.spacing.lg,
   },
-  toggleLabel: { color: signalGlass.colors.textPrimary, fontWeight: '600' },
+  actions: { gap: signalGlass.spacing.sm },
 });

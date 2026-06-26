@@ -135,12 +135,11 @@ function parseOnboardingData(raw: unknown): OnboardingData {
   return raw as OnboardingData;
 }
 
-async function saveOfficerOnboardingData(
+async function fetchOfficerOnboardingRow(
   client: TypedSupabaseClient,
   officerId: string,
-  patch: Partial<OnboardingData>,
-): Promise<void> {
-  const { data: existing, error: fetchError } = await client
+): Promise<{ id: string; data?: unknown } | null> {
+  const { data, error } = await client
     .from('officer_onboarding')
     .select('id, data')
     .eq('officer_id', officerId)
@@ -148,25 +147,21 @@ async function saveOfficerOnboardingData(
     .limit(1)
     .maybeSingle();
 
-  if (fetchError) throw fetchError;
+  if (error) throw error;
+  return data;
+}
 
-  const nextData = { ...parseOnboardingData(existing?.data), ...patch };
-
-  if (existing?.id) {
-    const { error } = await client
-      .from('officer_onboarding')
-      .update({ data: nextData, updated_at: new Date().toISOString() })
-      .eq('id', existing.id);
-    if (error) throw error;
-    return;
-  }
-
-  const { error } = await client.from('officer_onboarding').insert({
-    officer_id: officerId,
-    data: nextData,
-    status: 'completed',
+async function saveOfficerOnboardingData(
+  client: TypedSupabaseClient,
+  officerId: string,
+  patch: Partial<OnboardingData>,
+): Promise<void> {
+  const { data, error } = await client.functions.invoke('admin-officer-onboarding', {
+    body: { action: 'save', officerId, patch },
   });
   if (error) throw error;
+  const result = data as { error?: string; success?: boolean };
+  if (result?.error) throw new Error(result.error);
 }
 
 function mapOfficerProfile(
@@ -491,9 +486,9 @@ export const adminOfficersApi = baseApi.injectEndpoints({
           if (error) throw error;
           if (!row) throw new Error('Officer not found');
 
-          const [{ data: bank }, { data: onboarding }, { data: creds }] = await Promise.all([
+          const [{ data: bank }, onboarding, { data: creds }] = await Promise.all([
             client.from('officer_bank_details').select('*').eq('officer_id', officerId).maybeSingle(),
-            client.from('officer_onboarding').select('data').eq('officer_id', officerId).maybeSingle(),
+            fetchOfficerOnboardingRow(client, officerId),
             client.from('officer_credentials').select('login_email, visible_to_admin, password_set_method, rotated_at').eq('officer_id', officerId).maybeSingle(),
           ]);
 
@@ -669,12 +664,12 @@ export const adminOfficersApi = baseApi.injectEndpoints({
           }
 
           if (bankDetails) {
-            // Account number / IFSC are encrypted server-side; the client has no
-            // key, so route the write through the admin-gated edge function.
-            const { error } = await client.functions.invoke('admin-officer-bank', {
+            const { data, error } = await client.functions.invoke('admin-officer-bank', {
               body: { action: 'save', officerId: id, bankDetails },
             });
             if (error) throw error;
+            const result = data as { error?: string };
+            if (result?.error) throw new Error(result.error);
           }
 
           if (emergencyContacts) {

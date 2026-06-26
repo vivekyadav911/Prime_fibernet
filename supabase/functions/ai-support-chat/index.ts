@@ -1,6 +1,11 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import { corsHeaders } from '../_shared/cors.ts';
+import {
+  formatUserMemoryContext,
+  persistChatTurn,
+  recallUserMemory,
+} from '../_shared/supermemory.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -45,6 +50,11 @@ serve(async (req) => {
     const lastUser = [...messages].reverse().find((m) => m.role === 'user');
     const userText = lastUser?.content ?? '';
 
+    const userMemory = userText ? await recallUserMemory(customer_id, userText) : null;
+    const memoryBlock = userMemory
+      ? `\n\nLong-term customer memory (use when relevant):\n${formatUserMemoryContext(userMemory)}`
+      : '';
+
     let reply = `Thanks for reaching out. I can help with billing, plan info, and troubleshooting. You asked: "${userText}"`;
 
     if (ANTHROPIC_API_KEY) {
@@ -58,7 +68,7 @@ serve(async (req) => {
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 512,
-          system: PRIMA_SYSTEM + contextBlock,
+          system: PRIMA_SYSTEM + contextBlock + memoryBlock,
           messages: messages.map((m) => ({
             role: m.role === 'user' ? 'user' : 'assistant',
             content: m.content,
@@ -77,7 +87,7 @@ serve(async (req) => {
             contents: [
               {
                 role: 'user',
-                parts: [{ text: `${PRIMA_SYSTEM}${contextBlock}\n\nUser: ${userText}` }],
+                parts: [{ text: `${PRIMA_SYSTEM}${contextBlock}${memoryBlock}\n\nUser: ${userText}` }],
               },
             ],
           }),
@@ -85,6 +95,12 @@ serve(async (req) => {
       );
       const json = await res.json();
       reply = json.candidates?.[0]?.content?.parts?.[0]?.text ?? reply;
+    }
+
+    if (userText) {
+      persistChatTurn(customer_id, userText, reply, {
+        channel: 'ai-support-chat',
+      }).catch(console.error);
     }
 
     return new Response(JSON.stringify({ reply }), {

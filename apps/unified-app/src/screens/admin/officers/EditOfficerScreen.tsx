@@ -11,7 +11,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { DateField, FormField, RoleGuard, SectionLabel, SelectField } from '@/components/admin';
-import { DismissKeyboardScrollView, KeyboardDismissView } from '@/components/common';
+import { DismissKeyboardScrollView, ErrorState, KeyboardDismissView } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
 import { useKeyboardBottomInset } from '@/hooks/useKeyboardBottomInset';
 import { GENDER_OPTIONS, MARITAL_STATUS_OPTIONS } from '@/schemas/adminCreateOfficer';
@@ -58,7 +58,7 @@ export function EditOfficerScreen({ route, navigation }: Props) {
   const [activeSection, setActiveSection] = useState<EditSection>(initialSection);
   const [dirty, setDirty] = useState(false);
 
-  const { data: profile, isLoading } = useGetOfficerProfileQuery(officerId);
+  const { data: profile, isLoading, isError, error, refetch } = useGetOfficerProfileQuery(officerId);
   const { data: roles = [] } = useGetOfficerRolesQuery();
 
   const [updatePersonal, { isLoading: savingPersonal }] = useUpdateOfficerPersonalMutation();
@@ -233,8 +233,16 @@ export function EditOfficerScreen({ route, navigation }: Props) {
     }
   };
 
-  if (isLoading || !profile) {
+  if (isLoading) {
     return <Screen><Text>Loading…</Text></Screen>;
+  }
+
+  if (isError || !profile) {
+    return (
+      <Screen>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </Screen>
+    );
   }
 
   const roleOptions = roles.map((r) => ({ value: r.id, label: r.name }));

@@ -90,6 +90,7 @@ export function usePlans() {
     setBillingCycle,
     getPriceForCycle: (plan: Plan) => getPriceForCycle(plan, billingCycle),
     currentPlanId,
+    subscription: subscriptionQuery.data ?? null,
     paymentGateway: (settingsQuery.data?.payment_gateway as PaymentGateway) ?? 'razorpay',
     isLoading: plansQuery.isLoading || settingsQuery.isLoading,
     error: plansQuery.error ?? settingsQuery.error,

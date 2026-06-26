@@ -1,0 +1,45 @@
+---
+description: Use Google Stitch MCP for UI design exploration before implementing screens
+globs: apps/unified-app/src/screens/**/*
+alwaysApply: false
+---
+
+# Stitch MCP — UI Design Workflow
+
+Use the **stitch** MCP server to generate and explore UI designs before implementing React Native screens.
+
+## When to use Stitch
+
+- New screen or major layout redesign (admin, customer, officer)
+- Exploring visual direction for a feature before coding
+- Generating reference mockups from a text prompt
+
+Do **not** paste Stitch HTML/CSS directly into the app. Stitch output is a design reference — implementation must follow `ui-theme.mdc`.
+
+## Available tools
+
+| Tool | Use for |
+|------|---------|
+| `create_project` | Start a new Stitch project for a feature area |
+| `list_projects` / `list_screens` | Browse existing designs |
+| `generate_screen_from_text` | Create a screen from a prompt |
+| `extract_design_context` | Pull colors, fonts, layout patterns for consistency |
+| `get_screen_code` / `get_screen_image` | Fetch HTML or screenshot for reference |
+
+## Prompt guidelines (Prime Fibernet)
+
+Include in every Stitch prompt:
+
+1. **Role surface** — admin (teal accent), customer/officer (navy accent), or shared auth
+2. **Platform** — mobile-first React Native (iOS/Android), not web
+3. **Patterns** — list + detail, form with inline validation, bottom sheet, or dashboard KPI cards as appropriate
+4. **States** — loading skeleton, empty with action, error with retry
+5. **Brand** — ISP / fiber internet context; clean, professional, accessible
+
+## Implementation handoff
+
+After fetching a Stitch design:
+
+1. Map colors/spacing to `@/theme/colors`, `@/theme/spacing`, `@/theme/admin` — never hardcode hex from Stitch
+2. Reuse `@prime/ui` and role components (`@/components/admin`, `@/components/common`) instead of rebuilding primitives
+3. Use `StyleSheet.create`, React Hook Form + Zod for forms, and shared keyboard/safe-area primitives per project rules

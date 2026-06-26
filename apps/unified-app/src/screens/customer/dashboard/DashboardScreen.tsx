@@ -6,19 +6,17 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import {
-  AnnouncementBanner,
-  PlanCard,
-  QuickActions,
-  RecentActivity,
-  SignalHero,
-  type ActivityItem,
+  CustomerInfoHeader,
+  DashboardPlanCard,
+  QuickActionsGrid,
+  SpeedGauge,
 } from '@/components/customer/dashboard';
+import { CustomerTopBar } from '@/components/customer/shell';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
 import { CustomerEmptyState, CustomerSkeletonLoader, CustomerToast, CustomerErrorState, FadeInSection } from '@/components/customer/ui';
 import {
   useGetCustomerDashboardQuery,
   useGetCustomerProfileQuery,
-  useGetPortalNotificationsQuery,
 } from '@/services/api';
 import { useCustomerUiStore } from '@/store/customerUiStore';
 import { useAppSelector } from '@/store/hooks';
@@ -38,7 +36,6 @@ function DashboardContent() {
   const { data, isLoading, error, refetch, isFetching } = useGetCustomerDashboardQuery(userId, {
     skip: !userId,
   });
-  const { data: notifications = [] } = useGetPortalNotificationsQuery({ limit: 20 });
   const toast = useCustomerUiStore((s) => s.toast);
   const clearToast = useCustomerUiStore((s) => s.clearToast);
 
@@ -49,30 +46,13 @@ function DashboardContent() {
     return 'active' as const;
   }, [data?.subscription]);
 
-  const planStatus = useMemo(() => {
-    if (!data?.subscription) return 'expired' as const;
-    if (data.subscription.isOverdue) return 'overdue' as const;
-    if (data.subscription.isExpiringSoon) return 'expiring' as const;
-    if (data.subscription.status === 'expired') return 'expired' as const;
-    return 'active' as const;
-  }, [data?.subscription]);
-
-  const activityItems: ActivityItem[] = useMemo(() => {
-    const payments = (data?.recentPayments ?? []).map((p) => ({
-      id: p.id,
-      kind: 'payment' as const,
-      title: 'Payment',
-      date: p.createdAt,
-      status: p.status,
-      amount: p.amount,
-    }));
-    return payments.slice(0, 3);
-  }, [data?.recentPayments]);
-
   if (isLoading && !data) {
     return (
       <View style={styles.canvas}>
-        <CustomerSkeletonLoader rows={4} rowHeight={88} />
+        <CustomerTopBar />
+        <View style={styles.body}>
+          <CustomerSkeletonLoader rows={4} rowHeight={88} />
+        </View>
       </View>
     );
   }
@@ -80,7 +60,10 @@ function DashboardContent() {
   if (error) {
     return (
       <View style={styles.canvas}>
-        <CustomerErrorState message="We couldn't load your dashboard. Check your connection and try again." onRetry={refetch} />
+        <CustomerTopBar />
+        <View style={styles.body}>
+          <CustomerErrorState message="We couldn't load your dashboard. Check your connection and try again." onRetry={refetch} />
+        </View>
       </View>
     );
   }
@@ -88,6 +71,7 @@ function DashboardContent() {
   const sub = data?.subscription;
   const displayName = data?.profile.name ?? authUser?.name ?? 'Customer';
   const accountId = data?.profile.customerId ?? `ACC-${userId.slice(0, 8)}`;
+  const isActive = connectionStatus === 'active';
 
   return (
     <View style={styles.canvas}>
@@ -97,39 +81,44 @@ function DashboardContent() {
         visible={Boolean(toast)}
         onDismiss={clearToast}
       />
+      <CustomerTopBar
+        unreadCount={data?.unreadNotifications ?? 0}
+        onNotificationsPress={() => navigation.navigate('Notifications')}
+        onProfilePress={() => navigation.navigate('Profile')}
+      />
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={signalGlass.colors.accentPrimary} />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={signalGlass.colors.primary} />}
+        showsVerticalScrollIndicator={false}
       >
         <FadeInSection delayMs={0}>
-          <SignalHero
-            speedMbps={sub?.speedMbps ?? 100}
-            customerName={displayName}
+          <CustomerInfoHeader
+            name={displayName}
             accountId={accountId}
-            connectionStatus={connectionStatus}
-            unreadCount={data?.unreadNotifications ?? 0}
-            onNotificationsPress={() => navigation.navigate('Notifications')}
+            statusLabel={isActive ? 'Active' : connectionStatus === 'suspended' ? 'Suspended' : 'Inactive'}
+            isActive={isActive}
           />
         </FadeInSection>
 
         <FadeInSection delayMs={100}>
-          <AnnouncementBanner items={notifications} />
+          <View style={styles.heroRow}>
+            <View style={styles.gaugeCol}>
+              <SpeedGauge speedMbps={sub?.speedMbps ?? 100} maxSpeedMbps={sub?.speedMbps ?? 500} />
+            </View>
+            {sub ? (
+              <View style={styles.planCol}>
+                <DashboardPlanCard
+                  planName={sub.planName}
+                  renewalDate={sub.endAt}
+                  isUnlimited={sub.isUnlimited}
+                  onPayNow={() => navigation.navigate('Payments')}
+                />
+              </View>
+            ) : null}
+          </View>
         </FadeInSection>
 
-        {sub ? (
-          <FadeInSection delayMs={200}>
-            <PlanCard
-              planName={sub.planName}
-              status={planStatus}
-              renewalDate={sub.endAt}
-              daysUntilExpiry={sub.daysUntilExpiry}
-              dataLimitGb={sub.dataLimitGb}
-              isUnlimited={sub.isUnlimited}
-              onPayNow={() => navigation.navigate('Payments')}
-              onUpgrade={() => navigation.navigate('Plans')}
-            />
-          </FadeInSection>
-        ) : (
+        {!sub ? (
           <FadeInSection delayMs={200}>
             <CustomerEmptyState
               title="No active plan"
@@ -139,23 +128,16 @@ function DashboardContent() {
               icon="◎"
             />
           </FadeInSection>
-        )}
+        ) : null}
 
         <FadeInSection delayMs={300}>
-          <QuickActions
+          <QuickActionsGrid
             actions={[
-              { id: 'pay', label: 'Pay Bill', icon: '💳', onPress: () => navigation.navigate('Payments') },
-              { id: 'tickets', label: 'My Tickets', icon: '📋', onPress: () => navigation.navigate('CustomerTicketList') },
-              { id: 'plan', label: 'Change Plan', icon: '🔄', onPress: () => navigation.navigate('Plans') },
-              { id: 'support', label: 'Support', icon: '📞', onPress: () => navigation.navigate('Support') },
+              { id: 'pay', label: 'Pay Bill', icon: 'receipt', onPress: () => navigation.navigate('Payments') },
+              { id: 'tickets', label: 'My Tickets', icon: 'ticket-confirmation-outline', onPress: () => navigation.navigate('CustomerTicketList') },
+              { id: 'plan', label: 'Change Plan', icon: 'swap-horizontal', onPress: () => navigation.navigate('Plans') },
+              { id: 'support', label: 'Support', icon: 'headset', onPress: () => navigation.navigate('Support') },
             ]}
-          />
-        </FadeInSection>
-
-        <FadeInSection delayMs={400}>
-          <RecentActivity
-            items={activityItems}
-            onViewAll={() => navigation.navigate('PaymentHistory')}
           />
         </FadeInSection>
       </ScrollView>
@@ -176,8 +158,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: signalGlass.colors.bgDeep,
   },
+  body: {
+    flex: 1,
+    padding: signalGlass.spacing.marginMobile,
+  },
   scroll: {
-    padding: signalGlass.spacing.lg,
+    paddingHorizontal: signalGlass.spacing.marginMobile,
+    paddingTop: signalGlass.spacing.md,
     paddingBottom: signalGlass.spacing.xxxl,
   },
+  heroRow: {
+    gap: signalGlass.spacing.gutter,
+  },
+  gaugeCol: {},
+  planCol: {},
 });

@@ -1,24 +1,29 @@
 import { useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, Share, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Sharing from 'expo-sharing';
 
-import { AmountDisplay, BillingStatusBadge, type BillingStatus } from '@/components/payments';
 import {
   CustomerButton,
+  CustomerEmptyState,
   CustomerErrorState,
   CustomerSkeletonLoader,
   GlassCard,
   PressableScale,
 } from '@/components/customer/ui';
+import { CustomerTopBar } from '@/components/customer/shell';
 import { DismissKeyboardScrollView } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import {
   useGetActivePaymentGatewayQuery,
   useGetCustomerBillQuery,
+  useGetCustomerPaymentHistoryV2Query,
+  useLazyGetPaymentReceiptQuery,
 } from '@/services/api/paymentCollectionApi';
 import { PAYMENT_METHOD_CONFIG, type PaymentMethod } from '@/types/payments';
+import type { PaymentRecord } from '@/types/payments';
 import { formatINR } from '@/utils/currencyFormat';
 import type { CustomerStackParamList } from '@/types/navigation';
 import { signalGlass } from '@/theme/customer/signalGlass';
@@ -31,6 +36,16 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function formatMonthYear(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+}
+
+function statusTone(status: PaymentRecord['status']): 'paid' | 'failed' | 'pending' {
+  if (status === 'confirmed') return 'paid';
+  if (status === 'failed' || status === 'cancelled') return 'failed';
+  return 'pending';
+}
+
 export function CustomerBillScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const user = useAppSelector((s) => s.auth.user);
@@ -39,50 +54,57 @@ export function CustomerBillScreen() {
   const { data: bill, isLoading, isError, error, refetch } = useGetCustomerBillQuery(authId, {
     skip: !authId,
   });
+  const { data: history = [], isLoading: historyLoading } = useGetCustomerPaymentHistoryV2Query(authId, {
+    skip: !authId,
+  });
   const { data: activeGateway } = useGetActivePaymentGatewayQuery();
+  const [fetchReceipt] = useLazyGetPaymentReceiptQuery();
 
   const onPay = useCallback(
     (method?: PaymentMethod) => {
       if (!bill) return;
-      if (!activeGateway) {
-        navigation.navigate('PaymentMethod', {
-          amount: bill.totalPayable,
-          planName: bill.planName ?? 'Broadband',
-          customerId: bill.customerId,
-          paymentMethod: method,
-        });
-        return;
-      }
-      if (method) {
-        navigation.navigate('GatewayWebView', {
-          amount: bill.totalPayable,
-          planName: bill.planName ?? 'Broadband',
-          customerId: bill.customerId,
-          paymentMethod: method,
-        });
-        return;
-      }
       navigation.navigate('PaymentMethod', {
         amount: bill.totalPayable,
         planName: bill.planName ?? 'Broadband',
         customerId: bill.customerId,
+        paymentMethod: method,
       });
     },
-    [activeGateway, bill, navigation],
+    [bill, navigation],
+  );
+
+  const onReceipt = useCallback(
+    async (paymentId: string) => {
+      try {
+        const result = await fetchReceipt(paymentId).unwrap();
+        if (result.url && (await Sharing.isAvailableAsync())) {
+          await Share.share({ url: result.url, message: `Receipt ${result.receiptNumber}` });
+        } else {
+          navigation.navigate('Receipt', { paymentId });
+        }
+      } catch (e) {
+        Alert.alert('Receipt unavailable', e instanceof Error ? e.message : 'Try again in a moment.');
+      }
+    },
+    [fetchReceipt, navigation],
   );
 
   if (!authId) {
     return (
       <View style={styles.canvas}>
-        <CustomerErrorState message="Sign in to view your bill." />
+        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
+        <CustomerErrorState message="Sign in to view payments." />
       </View>
     );
   }
 
-  if (isLoading) {
+  if (isLoading || historyLoading) {
     return (
       <View style={styles.canvas}>
-        <CustomerSkeletonLoader rows={6} rowHeight={72} />
+        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
+        <View style={styles.body}>
+          <CustomerSkeletonLoader rows={6} rowHeight={72} />
+        </View>
       </View>
     );
   }
@@ -90,196 +112,243 @@ export function CustomerBillScreen() {
   if (isError || !bill) {
     return (
       <View style={styles.canvas}>
+        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
         <CustomerErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </View>
     );
   }
 
-  const billingStatus = (bill.paymentStatus as BillingStatus) || 'pending';
-  const overdue = billingStatus === 'overdue';
-
   return (
     <View style={styles.canvas}>
+      <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
       <DismissKeyboardScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={styles.title}>My Bill</Text>
-            <Text style={styles.account} numberOfLines={1}>
-              Account {bill.accountNumber}
-            </Text>
-          </View>
-          <BillingStatusBadge status={billingStatus} />
-        </View>
-
-        <LinearGradient colors={[...signalGlass.gradients.hero]} style={styles.hero}>
-          <Text style={styles.heroLabel}>Amount due</Text>
-          <AmountDisplay amount={bill.totalPayable} large />
+        <GlassCard style={styles.balanceCard} glow padded>
+          <Text style={styles.balanceTitle}>Outstanding Balance</Text>
           {bill.dueDate ? (
-            <Text style={[styles.due, overdue && styles.overdue]}>
-              Due {formatDate(bill.dueDate)}
-              {overdue ? ' · Please pay to avoid suspension' : ''}
-            </Text>
+            <Text style={styles.balanceDue}>Due by {formatDate(bill.dueDate)}</Text>
           ) : null}
-        </LinearGradient>
+          <Text style={styles.balanceAmount}>{formatINR(bill.totalPayable)}</Text>
+          <CustomerButton label="Pay Now" icon="credit-card-outline" onPress={() => onPay()} />
+        </GlassCard>
 
-        <GlassCard style={styles.card}>
-          <Text style={styles.plan}>{bill.planName ?? 'Broadband plan'}</Text>
-          {bill.billingPeriodStart && bill.billingPeriodEnd ? (
-            <Text style={styles.muted}>
-              Billing period: {formatDate(bill.billingPeriodStart)} – {formatDate(bill.billingPeriodEnd)}
-            </Text>
-          ) : null}
-          <View style={styles.divider} />
-          <Row label="Plan amount" value={formatINR(bill.planAmount)} />
-          <Row label="GST (18%)" value={formatINR(bill.taxAmount)} />
-          {bill.lateFee > 0 ? <Row label="Late fee" value={formatINR(bill.lateFee)} /> : null}
-          <View style={styles.divider} />
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total payable</Text>
-            <AmountDisplay amount={bill.totalPayable} large />
+        <GlassCard style={styles.quickCard} padded>
+          <View style={styles.quickRow}>
+            {QUICK_METHODS.slice(0, 2).map((m) => {
+              const cfg = PAYMENT_METHOD_CONFIG[m];
+              return (
+                <PressableScale key={m} style={styles.quickAction} onPress={() => onPay(m)}>
+                  <MaterialCommunityIcons name="receipt" size={24} color={signalGlass.colors.primary} />
+                  <Text style={styles.quickLabel}>{cfg.label === 'UPI' ? 'Auto-Pay' : cfg.label}</Text>
+                </PressableScale>
+              );
+            })}
           </View>
         </GlassCard>
 
-        {bill.lastPaidAt ? (
-          <View style={styles.lastPaid}>
-            <Text style={styles.lastPaidText}>
-              Last paid {formatINR(bill.lastPaidAmount ?? 0)} on {formatDate(bill.lastPaidAt)}
-            </Text>
+        <GlassCard style={styles.historyCard} padded>
+          <View style={styles.historyHeader}>
+            <Text style={styles.historyTitle}>Payment History</Text>
+            <PressableScale accessibilityLabel="Filter payments">
+              <View style={styles.filterBtn}>
+                <MaterialCommunityIcons name="filter-variant" size={18} color={signalGlass.colors.primary} />
+                <Text style={styles.filterText}>Filter</Text>
+              </View>
+            </PressableScale>
           </View>
-        ) : null}
 
-        <Text style={styles.sectionTitle}>Quick pay</Text>
-        <View style={styles.methodRow}>
-          {QUICK_METHODS.map((m) => {
-            const cfg = PAYMENT_METHOD_CONFIG[m];
-            return (
-              <PressableScale
-                key={m}
-                style={styles.methodChip}
-                onPress={() => onPay(m)}
-                accessibilityLabel={`Pay with ${cfg.label}`}
-              >
-                <Text style={styles.methodIcon}>{cfg.icon}</Text>
-                <Text style={styles.methodLabel}>{cfg.label}</Text>
-              </PressableScale>
-            );
-          })}
-        </View>
+          {!history.length ? (
+            <CustomerEmptyState
+              title="No payments yet"
+              subtitle="Your payment history will appear here after you pay a bill"
+              icon="💳"
+            />
+          ) : (
+            history.map((item) => {
+              const tone = statusTone(item.status);
+              return (
+                <PressableScale
+                  key={item.id}
+                  style={styles.historyItem}
+                  onPress={() => item.status === 'confirmed' && void onReceipt(item.id)}
+                >
+                  <View style={styles.historyLeft}>
+                    <View style={[styles.historyIcon, tone === 'failed' && styles.historyIconError]}>
+                      <MaterialCommunityIcons
+                        name={tone === 'failed' ? 'alert' : 'file-document-outline'}
+                        size={20}
+                        color={tone === 'failed' ? signalGlass.colors.error : signalGlass.colors.primary}
+                      />
+                    </View>
+                    <View>
+                      <Text style={styles.historyMonth}>{formatMonthYear(item.created_at)}</Text>
+                      <Text style={styles.historyInv}>Inv #{item.payment_number}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.historyRight}>
+                    <Text style={styles.historyAmount}>{formatINR(item.total_amount)}</Text>
+                    <View style={[styles.statusPill, tone === 'paid' && styles.statusPaid, tone === 'failed' && styles.statusFailed]}>
+                      <View style={[styles.statusDot, tone === 'paid' && styles.statusDotPaid, tone === 'failed' && styles.statusDotFailed]} />
+                      <Text style={[styles.statusText, tone === 'paid' && styles.statusTextPaid, tone === 'failed' && styles.statusTextFailed]}>
+                        {tone === 'paid' ? 'Paid' : tone === 'failed' ? 'Failed' : 'Pending'}
+                      </Text>
+                    </View>
+                  </View>
+                </PressableScale>
+              );
+            })
+          )}
+        </GlassCard>
 
         {!activeGateway ? (
           <View style={styles.notice}>
             <Text style={styles.noticeTitle}>Online checkout coming soon</Text>
             <Text style={styles.noticeBody}>
-              Your admin is setting up the payment gateway. You can still pay cash to your field officer or at our
-              office.
+              Your admin is setting up the payment gateway. You can still pay cash to your field officer or at our office.
             </Text>
           </View>
         ) : (
           <Text style={styles.gatewayHint}>Secured by {activeGateway.display_name}</Text>
         )}
-
-        <CustomerButton label={`Pay ${formatINR(bill.totalPayable)}`} onPress={() => onPay()} />
-        <CustomerButton
-          label="Payment history"
-          variant="ghost"
-          onPress={() => navigation.navigate('PaymentHistory')}
-        />
       </DismissKeyboardScrollView>
-    </View>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.row}>
-      <Text style={styles.muted}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  scroll: { padding: signalGlass.spacing.lg, paddingBottom: signalGlass.spacing.xxxl },
-  header: {
+  body: { flex: 1, padding: signalGlass.spacing.marginMobile },
+  scroll: {
+    paddingHorizontal: signalGlass.spacing.marginMobile,
+    paddingTop: signalGlass.spacing.md,
+    paddingBottom: signalGlass.spacing.xxxl,
+    gap: signalGlass.spacing.md,
+  },
+  balanceCard: {
+    borderRadius: signalGlass.radius.lg,
+    gap: signalGlass.spacing.sm,
+    overflow: 'hidden',
+  },
+  balanceTitle: {
+    ...signalGlass.typography.displayMd,
+    color: signalGlass.colors.onSurface,
+    fontFamily: signalGlass.fonts.bodySemiBold,
+  },
+  balanceDue: {
+    ...signalGlass.typography.body,
+    color: signalGlass.colors.onSurfaceVariant,
+    fontFamily: signalGlass.fonts.body,
+  },
+  balanceAmount: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: signalGlass.colors.primary,
+    fontFamily: signalGlass.fonts.monoBold,
+    marginVertical: signalGlass.spacing.sm,
+  },
+  quickCard: { borderRadius: signalGlass.radius.lg },
+  quickRow: { flexDirection: 'row', gap: signalGlass.spacing.sm },
+  quickAction: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: signalGlass.spacing.sm,
+    borderRadius: signalGlass.radius.sm,
+    gap: signalGlass.spacing.xs,
+    minHeight: 72,
+  },
+  quickLabel: {
+    ...signalGlass.typography.caption,
+    color: signalGlass.colors.onSurfaceVariant,
+    fontFamily: signalGlass.fonts.bodyMedium,
+  },
+  historyCard: { borderRadius: signalGlass.radius.lg },
+  historyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: signalGlass.spacing.md,
-    gap: signalGlass.spacing.sm,
-  },
-  headerText: { flex: 1, minWidth: 0 },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-  },
-  account: { fontSize: 12, color: signalGlass.colors.textSecondary, marginTop: 2 },
-  hero: {
-    borderRadius: signalGlass.radius.lg,
-    padding: signalGlass.spacing.lg,
-    marginBottom: signalGlass.spacing.md,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-  },
-  heroLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: signalGlass.colors.textSecondary,
-    textTransform: 'uppercase',
-  },
-  due: { marginTop: signalGlass.spacing.sm, fontSize: 13, color: signalGlass.colors.textPrimary },
-  overdue: { color: signalGlass.colors.accentDanger, fontWeight: '600' },
-  card: { marginBottom: signalGlass.spacing.md },
-  plan: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: signalGlass.colors.textPrimary,
-    marginBottom: signalGlass.spacing.xs,
-  },
-  muted: { fontSize: 13, color: signalGlass.colors.textSecondary },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: signalGlass.spacing.xs },
-  value: { fontWeight: '600', color: signalGlass.colors.textPrimary, fontFamily: signalGlass.fonts.mono },
-  divider: { height: 1, backgroundColor: signalGlass.colors.borderSubtle, marginVertical: signalGlass.spacing.sm },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalLabel: { fontSize: 15, fontWeight: '600', color: signalGlass.colors.textPrimary },
-  lastPaid: {
-    backgroundColor: signalGlass.colors.bgGlass,
-    borderRadius: signalGlass.radius.sm,
-    padding: signalGlass.spacing.sm,
     marginBottom: signalGlass.spacing.md,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
+    paddingBottom: signalGlass.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: signalGlass.colors.borderSubtle,
   },
-  lastPaidText: { fontSize: 12, color: signalGlass.colors.textSecondary, textAlign: 'center' },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: signalGlass.colors.textPrimary,
+  historyTitle: {
+    ...signalGlass.typography.displayMd,
+    color: signalGlass.colors.onSurface,
+    fontFamily: signalGlass.fonts.bodySemiBold,
+  },
+  filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  filterText: {
+    ...signalGlass.typography.caption,
+    color: signalGlass.colors.primary,
+    fontFamily: signalGlass.fonts.bodyMedium,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: signalGlass.spacing.sm,
+    borderRadius: signalGlass.radius.sm,
+    backgroundColor: signalGlass.colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
     marginBottom: signalGlass.spacing.sm,
   },
-  methodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: signalGlass.spacing.sm, marginBottom: signalGlass.spacing.md },
-  methodChip: {
-    width: '22%',
-    minWidth: 72,
-    minHeight: 44,
-    paddingVertical: signalGlass.spacing.sm,
-    borderRadius: signalGlass.radius.md,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-    backgroundColor: signalGlass.colors.bgSurface,
+  historyLeft: { flexDirection: 'row', alignItems: 'center', gap: signalGlass.spacing.sm, flex: 1 },
+  historyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: signalGlass.colors.accentPrimaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  methodIcon: { fontSize: 20 },
-  methodLabel: { marginTop: 4, fontSize: 10, fontWeight: '600', color: signalGlass.colors.textSecondary },
+  historyIconError: { backgroundColor: 'rgba(147,0,10,0.2)' },
+  historyMonth: {
+    ...signalGlass.typography.bodyLg,
+    color: signalGlass.colors.onSurface,
+    fontFamily: signalGlass.fonts.body,
+    fontSize: 16,
+  },
+  historyInv: {
+    ...signalGlass.typography.caption,
+    color: signalGlass.colors.onSurfaceVariant,
+    fontFamily: signalGlass.fonts.bodyMedium,
+  },
+  historyRight: { alignItems: 'flex-end', gap: signalGlass.spacing.xs },
+  historyAmount: {
+    ...signalGlass.typography.monoMd,
+    color: signalGlass.colors.onSurface,
+    fontFamily: signalGlass.fonts.mono,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: signalGlass.radius.pill,
+    borderWidth: 1,
+    minWidth: 72,
+    justifyContent: 'center',
+  },
+  statusPaid: {
+    backgroundColor: 'rgba(0,165,114,0.2)',
+    borderColor: 'rgba(78,222,163,0.3)',
+  },
+  statusFailed: {
+    backgroundColor: 'rgba(147,0,10,0.2)',
+    borderColor: 'rgba(255,180,171,0.3)',
+  },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusDotPaid: { backgroundColor: signalGlass.colors.secondary },
+  statusDotFailed: { backgroundColor: signalGlass.colors.error },
+  statusText: { ...signalGlass.typography.caption, fontSize: 11 },
+  statusTextPaid: { color: signalGlass.colors.secondary },
+  statusTextFailed: { color: signalGlass.colors.error },
   notice: {
     backgroundColor: signalGlass.colors.accentPrimaryMuted,
     borderRadius: signalGlass.radius.md,
     padding: signalGlass.spacing.md,
-    marginBottom: signalGlass.spacing.md,
     borderWidth: 1,
     borderColor: signalGlass.colors.accentWarning,
   },
@@ -294,6 +363,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 11,
     color: signalGlass.colors.textMuted,
-    marginBottom: signalGlass.spacing.sm,
   },
 });

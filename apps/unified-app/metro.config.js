@@ -15,6 +15,10 @@ config.resolver.nodeModulesPaths = [
 config.resolver.disableHierarchicalLookup = true;
 config.resolver.extraNodeModules = {
   ...(config.resolver.extraNodeModules ?? {}),
+  '@expo-google-fonts/hanken-grotesk': path.join(
+    monorepoRoot,
+    'node_modules/@expo-google-fonts/hanken-grotesk',
+  ),
   'react-native-signature-canvas': path.join(
     monorepoRoot,
     'node_modules/react-native-signature-canvas',

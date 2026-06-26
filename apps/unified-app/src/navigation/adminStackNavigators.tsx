@@ -124,6 +124,7 @@ import type {
   AdminUsersStackParamList,
 } from '@/types/navigation';
 import { colors } from '@/theme/colors';
+import { adminColors } from '@/theme/admin';
 
 import { AdminDrawerHeaderLeft } from './AdminDrawerHeaderLeft';
 import { AdminDrawerProfileButton } from './AdminDrawerProfileButton';
@@ -181,8 +182,8 @@ const inventoryStackScreenOptions = {
 };
 
 const brandStackScreenOptions = {
-  headerStyle: { backgroundColor: '#5B4FE9' },
-  headerTintColor: '#FFFFFF',
+  headerStyle: { backgroundColor: adminColors.primary },
+  headerTintColor: colors.white,
   headerTitleStyle: { fontSize: 20, fontWeight: '600' as const },
   headerShadowVisible: false,
   headerLeft: (props: NativeStackHeaderBackProps) => <AdminDrawerHeaderLeft {...props} />,
@@ -220,13 +221,7 @@ export function AdminUsersStackNav() {
       <UsersStack.Screen
         name="AddUser"
         component={AddUserScreen}
-        options={{
-          title: 'Add New User',
-          headerStyle: { backgroundColor: '#5B4FE9' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
-          headerShadowVisible: false,
-        }}
+        options={{ title: 'Add New User' }}
       />
     </UsersStack.Navigator>
   );
@@ -261,13 +256,7 @@ export function AdminOfficersStackNav() {
       <OfficersStack.Screen
         name="AddOfficer"
         component={AddOfficerScreen}
-        options={{
-          title: 'Add Officer',
-          headerStyle: { backgroundColor: '#5B4FE9' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontSize: 20, fontWeight: '600', color: '#FFFFFF' },
-          headerShadowVisible: false,
-        }}
+        options={{ title: 'Add Officer' }}
       />
     </OfficersStack.Navigator>
   );
@@ -280,7 +269,7 @@ export function AdminAttendanceStackNav() {
       initialRouteName="LiveAttendance"
     >
       <AttendanceStack.Screen name="LiveAttendance" component={LiveAttendanceScreen} options={{ title: 'Live Attendance' }} />
-      <AttendanceStack.Screen name="Attendance" component={AttendanceScreen} options={{ title: 'Attendance hub' }} />
+      <AttendanceStack.Screen name="AttendanceHub" component={AttendanceScreen} options={{ title: 'Attendance hub' }} />
       <AttendanceStack.Screen name="GeofenceManagement" component={GeofenceManagementScreen} options={{ title: 'Geofences' }} />
       <AttendanceStack.Screen name="CreateGeofence" component={CreateGeofenceScreen} options={{ title: 'Geofence', presentation: 'modal' }} />
       <AttendanceStack.Screen name="AssignGeofence" component={AssignGeofenceScreen} options={{ title: 'Assign officers', presentation: 'modal' }} />
@@ -298,7 +287,7 @@ export function AdminAttendanceStackNav() {
 export function AdminPayrollStackNav() {
   return (
     <PayrollStack.Navigator screenOptions={stackScreenOptions}>
-      <PayrollStack.Screen name="Payroll" component={PayrollScreen} options={{ title: 'Payroll' }} />
+      <PayrollStack.Screen name="PayrollHome" component={PayrollScreen} options={{ title: 'Payroll' }} />
       <PayrollStack.Screen name="PayslipsManagement" component={PayslipsManagementScreen} options={{ title: 'Payslips' }} />
       <PayrollStack.Screen name="PayslipReview" component={PayslipReviewScreen} options={{ title: 'Review payslip' }} />
       <PayrollStack.Screen name="PayslipSettings" component={PayslipSettingsScreen} options={{ title: 'Payslip settings' }} />
@@ -443,13 +432,7 @@ export function AdminSettingsStackNav() {
       <SettingsStack.Screen
         name="AdminAccount"
         component={AdminAccountScreen}
-        options={{
-          title: 'Admin Account',
-          headerStyle: { backgroundColor: '#5B4FE9' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontSize: 20, fontWeight: '600' },
-          headerShadowVisible: false,
-        }}
+        options={{ title: 'Admin Account' }}
       />
       <SettingsStack.Screen name="General" component={GeneralSettingsScreen} options={{ title: 'General' }} />
       <SettingsStack.Screen name="Security" component={SecurityScreen} options={{ title: 'Security' }} />

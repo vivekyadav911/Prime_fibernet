@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import BottomSheet from '@gorhom/bottom-sheet';
 import type { Plan, PaymentGateway, BillingCycle } from '@prime/types';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
 
 import { PaymentCheckoutWebView } from '@/components/PaymentCheckoutWebView';
+import { CustomerTopBar } from '@/components/customer/shell';
 import { CustomerEmptyState, CustomerErrorState, CustomerSkeletonLoader } from '@/components/customer/ui';
 import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
@@ -15,24 +15,14 @@ import { formatCurrencyInr } from '@/utils/formatCurrency';
 
 import { PlanCard } from './components/PlanCard';
 import { PlanDetailSheet } from './components/PlanDetailSheet';
-import { PlanFilterChips } from './components/PlanFilterChips';
-import { SortBottomSheet } from './components/SortBottomSheet';
 import { usePlans } from './hooks/usePlans';
 
 const CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual'];
-const SEARCH_DEBOUNCE_MS = 300;
 
 export function PlansScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const {
     plans,
-    allCategories,
-    category,
-    setCategory,
-    sortBy,
-    setSortBy,
-    search,
-    setSearch,
     billingCycle,
     setBillingCycle,
     getPriceForCycle,
@@ -43,11 +33,10 @@ export function PlansScreen() {
     refetch,
     subscribeToPlan,
     verifyPayment,
+    subscription,
   } = usePlans();
 
-  const sortSheetRef = useRef<BottomSheet>(null);
   const detailSheetRef = useRef<BottomSheet>(null);
-  const [searchInput, setSearchInput] = useState(search);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [subscribing, setSubscribing] = useState(false);
   const [checkout, setCheckout] = useState<{
@@ -56,11 +45,6 @@ export function PlansScreen() {
     orderId: string;
     gateway: PaymentGateway;
   } | null>(null);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [searchInput, setSearch]);
 
   const openDetail = useCallback((plan: Plan) => {
     setSelectedPlan(plan);
@@ -84,10 +68,8 @@ export function PlansScreen() {
     }
   };
 
-  const onPlanChange = () => {
-    if (!selectedPlan) return;
-    detailSheetRef.current?.close();
-    navigation.navigate('PlanChangeRequest', { planId: selectedPlan.id });
+  const onPlanChange = (plan: Plan) => {
+    navigation.navigate('PlanChangeRequest', { planId: plan.id });
   };
 
   const renderItem = useCallback(
@@ -96,16 +78,18 @@ export function PlansScreen() {
         plan={item}
         priceLabel={formatCurrencyInr(getPriceForCycle(item))}
         isCurrentPlan={item.id === currentPlanId}
-        isFeatured={item.isFeatured}
+        daysUntilRenewal={subscription?.daysUntilExpiry}
         onPress={openDetail}
+        onChangePlan={onPlanChange}
       />
     ),
-    [currentPlanId, getPriceForCycle, openDetail],
+    [currentPlanId, getPriceForCycle, openDetail, subscription?.daysUntilExpiry],
   );
 
   if (error) {
     return (
       <View style={styles.canvas}>
+        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
         <CustomerErrorState message="We couldn't load plans. Pull to refresh or try again." onRetry={refetch} />
       </View>
     );
@@ -114,72 +98,50 @@ export function PlansScreen() {
   if (isLoading) {
     return (
       <View style={styles.canvas}>
-        <CustomerSkeletonLoader rows={3} rowHeight={150} />
+        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
+        <CustomerSkeletonLoader rows={3} rowHeight={220} />
       </View>
     );
   }
 
-  const emptyTitle = search.trim()
-    ? `No results for "${search.trim()}"`
-    : 'No plans match filters';
-
   return (
     <View style={styles.canvas}>
-      <Text style={styles.heading}>Browse Plans</Text>
-      <View style={styles.cycleRow}>
-        {CYCLES.map((cycle) => (
-          <Pressable
-            key={cycle}
-            onPress={() => setBillingCycle(cycle)}
-            style={[styles.cycleChip, billingCycle === cycle && styles.cycleChipActive]}
-            accessibilityLabel={`${cycle} billing`}
-          >
-            <Text style={[styles.cycleText, billingCycle === cycle && styles.cycleTextActive]}>
-              {cycle.charAt(0).toUpperCase() + cycle.slice(1)}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <Text style={styles.gatewayNote}>Payments via {paymentGateway}</Text>
-      <View style={styles.searchRow}>
-        <TextInput
-          style={styles.search}
-          placeholder="Search plans…"
-          placeholderTextColor={signalGlass.colors.textMuted}
-          value={searchInput}
-          onChangeText={setSearchInput}
-          returnKeyType="search"
-          accessibilityLabel="Search plans"
-        />
-        {searchInput.length > 0 ? (
-          <Pressable
-            onPress={() => setSearchInput('')}
-            style={styles.clearBtn}
-            accessibilityLabel="Clear search"
-            hitSlop={8}
-          >
-            <Ionicons name="close-circle" size={20} color={signalGlass.colors.textMuted} />
-          </Pressable>
-        ) : null}
-      </View>
-      <PlanFilterChips categories={allCategories} selected={category} onSelect={setCategory} />
-      <Pressable style={styles.sortButton} onPress={() => sortSheetRef.current?.expand()}>
-        <Text style={styles.sortText}>Sort: {sortBy}</Text>
-      </Pressable>
+      <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
       <FlashList
         data={plans}
-        numColumns={2}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          <View style={styles.headerBlock}>
+            <Text style={styles.heading}>Select Your Plan</Text>
+            <Text style={styles.subheading}>
+              Upgrade your connection to match your digital lifestyle. Choose a plan that fits your speed and budget.
+            </Text>
+            <View style={styles.cycleToggle}>
+              {CYCLES.map((cycle) => {
+                const active = billingCycle === cycle;
+                return (
+                  <Pressable
+                    key={cycle}
+                    onPress={() => setBillingCycle(cycle)}
+                    style={[styles.cycleBtn, active && styles.cycleBtnActive]}
+                    accessibilityLabel={`${cycle} billing`}
+                  >
+                    <Text style={[styles.cycleText, active && styles.cycleTextActive]}>
+                      {cycle.charAt(0).toUpperCase() + cycle.slice(1)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={styles.gatewayNote}>Payments via {paymentGateway}</Text>
+          </View>
+        }
         ListEmptyComponent={
-          <CustomerEmptyState
-            title={emptyTitle}
-            subtitle="Try another category or clear your search"
-          />
+          <CustomerEmptyState title="No plans available" subtitle="Check back soon for new plans" />
         }
         renderItem={renderItem}
       />
-      <SortBottomSheet ref={sortSheetRef} sortBy={sortBy} onSelect={setSortBy} />
       <PlanDetailSheet
         ref={detailSheetRef}
         plan={selectedPlan}
@@ -188,7 +150,7 @@ export function PlansScreen() {
         isCurrentPlan={selectedPlan?.id === currentPlanId}
         subscribing={subscribing}
         onSubscribe={onSubscribe}
-        onPlanChange={onPlanChange}
+        onPlanChange={() => selectedPlan && onPlanChange(selectedPlan)}
       />
       <PaymentCheckoutWebView
         visible={!!checkout}
@@ -205,52 +167,60 @@ export function PlansScreen() {
 }
 
 const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep, padding: signalGlass.spacing.lg },
+  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
+  list: {
+    paddingHorizontal: signalGlass.spacing.marginMobile,
+    paddingBottom: signalGlass.spacing.xxxl,
+  },
+  headerBlock: {
+    paddingTop: signalGlass.spacing.md,
+    paddingBottom: signalGlass.spacing.lg,
+  },
   heading: {
-    color: signalGlass.colors.textPrimary,
+    ...signalGlass.typography.displayLg,
+    color: signalGlass.colors.onSurface,
     fontFamily: signalGlass.fonts.display,
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: signalGlass.spacing.md,
+    marginBottom: signalGlass.spacing.sm,
   },
-  cycleRow: { flexDirection: 'row', gap: signalGlass.spacing.xs, marginBottom: signalGlass.spacing.sm },
-  cycleChip: {
+  subheading: {
+    ...signalGlass.typography.body,
+    color: signalGlass.colors.onSurfaceVariant,
+    fontFamily: signalGlass.fonts.body,
+    marginBottom: signalGlass.spacing.lg,
+  },
+  cycleToggle: {
+    flexDirection: 'row',
+    backgroundColor: signalGlass.colors.bgGlass,
+    borderRadius: signalGlass.radius.pill,
+    borderWidth: 1,
+    borderColor: signalGlass.colors.borderGlass,
+    padding: 4,
+    marginBottom: signalGlass.spacing.sm,
+  },
+  cycleBtn: {
     flex: 1,
-    borderRadius: signalGlass.radius.sm,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-    paddingVertical: signalGlass.spacing.sm,
+    paddingVertical: signalGlass.spacing.xs,
+    borderRadius: signalGlass.radius.pill,
     alignItems: 'center',
-    minHeight: 44,
+    minHeight: 36,
     justifyContent: 'center',
   },
-  cycleChipActive: {
-    borderColor: signalGlass.colors.accentPrimary,
+  cycleBtnActive: {
     backgroundColor: signalGlass.colors.accentPrimaryMuted,
-  },
-  cycleText: { color: signalGlass.colors.textSecondary, fontSize: 12, fontWeight: '600' },
-  cycleTextActive: { color: signalGlass.colors.accentGlow },
-  gatewayNote: { color: signalGlass.colors.textMuted, fontSize: 12, marginBottom: signalGlass.spacing.sm },
-  searchRow: { position: 'relative', marginBottom: signalGlass.spacing.xs },
-  search: {
     borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-    borderRadius: signalGlass.radius.sm,
-    padding: signalGlass.spacing.md,
-    paddingRight: signalGlass.spacing.xxxl,
-    backgroundColor: signalGlass.colors.bgSurface,
-    color: signalGlass.colors.textPrimary,
+    borderColor: 'rgba(173,198,255,0.3)',
   },
-  clearBtn: {
-    position: 'absolute',
-    right: signalGlass.spacing.md,
-    top: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    minWidth: 44,
-    alignItems: 'center',
+  cycleText: {
+    ...signalGlass.typography.caption,
+    color: signalGlass.colors.onSurfaceVariant,
+    fontFamily: signalGlass.fonts.bodyMedium,
   },
-  sortButton: { alignSelf: 'flex-end', marginBottom: signalGlass.spacing.xs, minHeight: 44, justifyContent: 'center' },
-  sortText: { color: signalGlass.colors.accentGlow, fontWeight: '600' },
-  list: { paddingBottom: signalGlass.spacing.xxxl },
+  cycleTextActive: {
+    color: signalGlass.colors.primary,
+  },
+  gatewayNote: {
+    color: signalGlass.colors.textMuted,
+    fontSize: 12,
+    fontFamily: signalGlass.fonts.body,
+  },
 });

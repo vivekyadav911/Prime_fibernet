@@ -183,6 +183,14 @@ export function ContractPdfViewerScreen({ route, navigation }: Props) {
         />
       ) : null}
 
+      {!loading && !error && !localUri ? (
+        <ErrorState
+          message="Could not prepare document for viewing."
+          onRetry={() => void loadPdf()}
+          onBack={() => navigation.goBack()}
+        />
+      ) : null}
+
       {!loading && !error && localUri ? (
         <>
           {renderedFromSnapshot ? (

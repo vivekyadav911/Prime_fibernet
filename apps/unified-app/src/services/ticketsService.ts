@@ -24,6 +24,7 @@ import {
   mapNoteRow,
 } from '@/utils/ticketViewMappers';
 import { isSLABreached } from '@/utils/slaUtils';
+import { insertOfficerPortalNotification } from '@/utils/officerPortalNotification';
 
 async function requireSession() {
   const client = getSupabase();
@@ -200,6 +201,15 @@ export async function createTicket(
       performedBy: admin.name,
       performedByRole: admin.role,
     });
+
+    await insertOfficerPortalNotification(client, {
+      officerId: form.assignedOfficerId,
+      type: 'ticket_assigned',
+      title: 'New ticket assigned',
+      body: `You have been assigned a new support ticket by ${admin.name}.`,
+      data: { ticketId },
+      category: 'ticket',
+    });
   }
 
   if (form.linkedRequestId) {
@@ -319,6 +329,15 @@ export async function assignOfficer(
     performedBy: adminName,
     performedByRole: 'Admin',
   });
+
+  await insertOfficerPortalNotification(client, {
+    officerId: officer.id,
+    type: 'ticket_assigned',
+    title: 'New ticket assigned',
+    body: `You have been assigned a support ticket by ${adminName}.`,
+    data: { ticketId },
+    category: 'ticket',
+  });
 }
 
 export async function reassignOfficer(
@@ -345,6 +364,15 @@ export async function reassignOfficer(
     description: `Reassigned to ${officer.name}`,
     performedBy: adminName,
     performedByRole: 'Admin',
+  });
+
+  await insertOfficerPortalNotification(client, {
+    officerId: officer.id,
+    type: 'ticket_assigned',
+    title: 'Ticket reassigned to you',
+    body: `A support ticket has been reassigned to you by ${adminName}.`,
+    data: { ticketId },
+    category: 'ticket',
   });
 }
 

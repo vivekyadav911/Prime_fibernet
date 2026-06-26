@@ -20,6 +20,7 @@ import {
   PermissionPills,
   RoleGuard,
   SectionHeader,
+  useAdminPermission,
 } from '@/components/admin';
 import { EmploymentContractTab } from '@/components/admin/employment/EmploymentContractTab';
 import { ErrorState, SkeletonLoader } from '@/components/common';
@@ -89,13 +90,20 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
   const [pendingAdditionalLabel, setPendingAdditionalLabel] = useState<string | null>(null);
 
   const { data: summary, isLoading, isError, error, refetch } = useGetAdminOfficerDetailQuery(officerId);
-  const { data: profile } = useGetOfficerProfileQuery(officerId);
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    isError: profileError,
+    error: profileQueryError,
+    refetch: refetchProfile,
+  } = useGetOfficerProfileQuery(officerId);
   const { data: documents } = useGetOfficerDocumentsQuery(officerId, { skip: tab !== 'documents' });
   const { data: permissions = [] } = useGetOfficerRolePermissionsQuery(profile?.roleId ?? '', {
     skip: !profile?.roleId,
   });
 
   const { prepareView, downloadDocument } = useOfficerDocumentAccess();
+  const canEdit = useAdminPermission('officers.edit');
   const [revealedBank, setRevealedBank] = useState<{
     accountNumber: string | null;
     ifscCode: string | null;
@@ -336,10 +344,11 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
           </Pressable>
           <Text style={styles.headerTitle} numberOfLines={1}>{summary.name}</Text>
           <Pressable
-            onPress={() => navigation.navigate('OfficerEdit', { officerId })}
+            onPress={() => canEdit && navigation.navigate('OfficerEdit', { officerId })}
             hitSlop={8}
+            disabled={!canEdit}
           >
-            <Text style={styles.menuIcon}>⋮</Text>
+            <Text style={[styles.menuIcon, !canEdit && styles.menuIconDisabled]}>⋮</Text>
           </Pressable>
         </View>
 
@@ -353,9 +362,14 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
-          {tab === 'onboarding' && !p ? (
+          {tab === 'onboarding' && profileLoading ? (
             <View style={styles.card}>
               <Text style={styles.emptyTab}>Loading profile…</Text>
+            </View>
+          ) : null}
+          {tab === 'onboarding' && profileError ? (
+            <View style={styles.card}>
+              <ErrorState message={queryErrorMessage(profileQueryError)} onRetry={refetchProfile} />
             </View>
           ) : null}
           {tab === 'onboarding' && p ? (
@@ -364,7 +378,7 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
                 <SectionHeader
                   icon="🛡"
                   title={officerStrings.detail.sections.roleAssignment}
-                  onEdit={() => navigation.navigate('OfficerEdit', { officerId, section: 'role' })}
+                  onEdit={canEdit ? () => navigation.navigate('OfficerEdit', { officerId, section: 'role' }) : undefined}
                 />
                 <InfoRow label={officerStrings.detail.labels.assignedRole} value={p.role ?? officerStrings.detail.na} />
                 <InfoRow
@@ -378,7 +392,7 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
                 <SectionHeader
                   icon="📋"
                   title={officerStrings.detail.sections.onboardingDetails}
-                  onEdit={() => navigation.navigate('OfficerEdit', { officerId, section: 'personal' })}
+                  onEdit={canEdit ? () => navigation.navigate('OfficerEdit', { officerId, section: 'personal' }) : undefined}
                 />
                 <SectionHeader icon="👤" title={officerStrings.detail.sections.personalInfo} iconColor={adminColors.sectionIconBlue} />
                 <InfoRow label={officerStrings.detail.labels.fullName} value={p.fullName} />
@@ -532,6 +546,7 @@ const styles = StyleSheet.create({
   back: { fontSize: 22, color: colors.textPrimary },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   menuIcon: { fontSize: 22, color: colors.textSecondary, fontWeight: '700' },
+  menuIconDisabled: { opacity: 0.35 },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: adminColors.cardBg,
