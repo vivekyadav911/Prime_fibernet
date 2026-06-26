@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Circle } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { RoleGuard } from '@/components/admin';
 import { FreeMapView } from '@/components/map';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { ErrorState, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import {
   useDeleteGeofence,
   useGeofences,
@@ -42,11 +42,7 @@ function GeofenceCard({
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{item.name}</Text>
-        <Switch
-          value={item.isActive}
-          onValueChange={(v) => onToggle(item.id, v)}
-          trackColor={{ true: adminColors.primary }}
-        />
+        <ToggleSwitch value={item.isActive} onValueChange={(v) => onToggle(item.id, v)} />
       </View>
       <Text style={styles.cardMeta}>📍 {item.address}, {item.city}</Text>
       <Text style={styles.cardMeta}>⭕ {radius} · 👥 {item.assignedOfficers.length} officers</Text>

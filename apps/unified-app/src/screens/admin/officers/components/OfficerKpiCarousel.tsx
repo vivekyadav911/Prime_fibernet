@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 
 import { officerStrings } from '@/constants/officerStrings';
 import type { AdminOfficerStats } from '@/types/api/admin';
@@ -79,11 +80,15 @@ export function OfficerKpiCarousel({ stats }: OfficerKpiCarouselProps) {
       <View style={styles.carouselShell}>
         <ScrollView
           horizontal
+          style={styles.carousel}
+          contentContainerStyle={styles.scrollContent}
           showsHorizontalScrollIndicator={false}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
           decelerationRate="fast"
           snapToInterval={KPI_CARD_W + KPI_CARD_GAP}
           snapToAlignment="start"
-          contentContainerStyle={styles.scrollContent}
+          disableIntervalMomentum
         >
           {KPI_DEFS.map((def) => (
             <KpiCard key={def.key} def={def} value={stats?.[def.key] ?? 0} />
@@ -115,9 +120,12 @@ const styles = StyleSheet.create({
   carouselShell: {
     position: 'relative',
   },
+  carousel: {
+    height: KPI_CARD_H,
+  },
   scrollContent: {
-    gap: KPI_CARD_GAP,
     paddingBottom: 2,
+    paddingRight: KPI_CARD_GAP,
   },
   edgeFade: {
     position: 'absolute',
@@ -129,6 +137,7 @@ const styles = StyleSheet.create({
   card: {
     width: KPI_CARD_W,
     height: KPI_CARD_H,
+    marginRight: KPI_CARD_GAP,
     backgroundColor: ui.card,
     borderRadius: 20,
     padding: ui.cardPad,

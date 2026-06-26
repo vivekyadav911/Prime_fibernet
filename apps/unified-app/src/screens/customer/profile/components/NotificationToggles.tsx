@@ -1,7 +1,9 @@
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { ToggleSwitch } from '@/components/common';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { switchTheme } from '@/theme/switchTheme';
 
 type NotificationTogglesProps = {
   pushEnabled: boolean;
@@ -42,12 +44,7 @@ function ToggleRow({
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ false: colors.borderDefault, true: colors.accentTeal }}
-        thumbColor={colors.white}
-      />
+      <ToggleSwitch value={value} onValueChange={onChange} accentColor={switchTheme.accentCustomer} />
     </View>
   );
 }

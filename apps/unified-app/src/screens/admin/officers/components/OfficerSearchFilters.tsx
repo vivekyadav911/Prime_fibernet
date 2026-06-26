@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 
 import { SearchBar } from '@/components/admin';
 import { officerStrings } from '@/constants/officerStrings';
@@ -44,7 +45,9 @@ export function OfficerSearchFilters({
       </View>
       <ScrollView
         horizontal
+        style={styles.chipScroll}
         showsHorizontalScrollIndicator={false}
+        nestedScrollEnabled
         contentContainerStyle={styles.chipRow}
         keyboardShouldPersistTaps="handled"
       >
@@ -97,6 +100,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: ui.text,
     height: ui.searchH,
+  },
+  chipScroll: {
+    flexGrow: 0,
   },
   chipRow: {
     gap: 8,

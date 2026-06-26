@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react';
-import { ActionSheetIOS, Alert, Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActionSheetIOS, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { ToggleSwitch } from '@/components/common';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { switchTheme } from '@/theme/switchTheme';
 import type { Plan } from '@/types/plans';
 import { formatINR, getSpeedTier } from '@/utils/planUtils';
 
@@ -105,11 +107,10 @@ export function PlanListRow({
         </View>
 
         <View style={styles.right}>
-          <Switch
+          <ToggleSwitch
             value={plan.isActive}
             onValueChange={handleToggle}
-            trackColor={{ false: colors.borderDefault, true: '#14B8A6' }}
-            thumbColor={colors.surfaceWhite}
+            accentColor={switchTheme.accentTeal}
           />
           {plan.subscriberCount > 0 ? (
             <View style={styles.subBadge}>

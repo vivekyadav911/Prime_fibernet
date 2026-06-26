@@ -6,7 +6,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -25,7 +24,7 @@ import {
   formatScheduleDisplay,
 } from '@/components/Notifications';
 import { RoleGuard, SectionCard } from '@/components/admin';
-import { SkeletonLoader, DismissKeyboardScrollView, KeyboardDismissView } from '@/components/common';
+import { SkeletonLoader, DismissKeyboardScrollView, KeyboardDismissView, ToggleSwitch } from '@/components/common';
 import { useCreateNotification } from '@/hooks/useCreateNotification';
 import { fetchNotificationById } from '@/services/broadcastNotificationService';
 import { useAppDispatch } from '@/store/hooks';
@@ -34,6 +33,7 @@ import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { switchTheme } from '@/theme/switchTheme';
 import type { AdminNotificationsStackParamList } from '@/types/navigation';
 import type { AppNotification } from '@/types/notifications';
 import { formatAudienceLabel } from '@/utils/notificationUtils';
@@ -287,10 +287,10 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
             <SectionCard title="">
               <View style={styles.scheduleHeader}>
                 <Text style={styles.scheduleTitle}>Schedule</Text>
-                <Switch
+                <ToggleSwitch
                   value={formData.schedule.isScheduled}
                   onValueChange={(v) => updateSchedule({ ...formData.schedule, isScheduled: v })}
-                  trackColor={{ true: '#14B8A6', false: colors.borderDefault }}
+                  accentColor={switchTheme.accentTeal}
                 />
               </View>
               {formData.schedule.isScheduled ? (

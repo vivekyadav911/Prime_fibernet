@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { ToggleSwitch } from '@/components/common';
 import { colors } from '@/theme/colors';
-import { adminColors } from '@/theme/admin';
 import { spacing } from '@/theme/spacing';
 
 type SettingsRowProps = {
@@ -29,13 +29,7 @@ export function SettingsRow({
         {description ? <Text style={styles.description}>{description}</Text> : null}
       </View>
       {children ?? (
-        <Switch
-          value={value}
-          onValueChange={onValueChange}
-          disabled={disabled}
-          trackColor={{ false: colors.borderDefault, true: adminColors.primary }}
-          thumbColor={colors.surfaceWhite}
-        />
+        <ToggleSwitch value={value} onValueChange={onValueChange} disabled={disabled} />
       )}
     </View>
   );

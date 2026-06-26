@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { Button, Screen } from '@prime/ui';
 import type { PaymentGateway } from '@prime/types';
+
+import { ToggleSwitch } from '@/components/common';
 
 import { FormField, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
@@ -82,9 +84,9 @@ export function AdminSettingsScreenFull() {
           </SectionCard>
 
           <SectionCard title="Feature Flags">
-            <Text>AI Chatbot <Switch value={aiChatbot} onValueChange={setAiChatbot} /></Text>
-            <Text>WhatsApp <Switch value={whatsapp} onValueChange={setWhatsapp} /></Text>
-            <Text>Auto-Invoice <Switch value={autoInvoice} onValueChange={setAutoInvoice} /></Text>
+            <Text>AI Chatbot <ToggleSwitch value={aiChatbot} onValueChange={setAiChatbot} /></Text>
+            <Text>WhatsApp <ToggleSwitch value={whatsapp} onValueChange={setWhatsapp} /></Text>
+            <Text>Auto-Invoice <ToggleSwitch value={autoInvoice} onValueChange={setAutoInvoice} /></Text>
             <Button label="Save flags" onPress={() => updateFlags({ aiChatbot, whatsapp, autoInvoice })} />
           </SectionCard>
 

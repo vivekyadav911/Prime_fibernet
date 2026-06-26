@@ -5,7 +5,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
@@ -16,7 +15,7 @@ import { Button, Screen } from '@prime/ui';
 
 import { CollapsibleFormSection } from '@/components/admin/employment/CollapsibleFormSection';
 import { DateField, FilterChips, FormField, RoleGuard, SelectField } from '@/components/admin';
-import { DismissKeyboardScrollView, ErrorState, KeyboardDismissView, SkeletonLoader } from '@/components/common';
+import { DismissKeyboardScrollView, ErrorState, KeyboardDismissView, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import { buildDefaultFormValues, EMPLOYMENT_TYPE_OPTIONS, WEEKLY_OFF_OPTIONS } from '@/constants/employmentContractDefaults';
 import { useCompanyDefaults } from '@/hooks/useCompanyDefaults';
 import { useEmploymentContract } from '@/hooks/useEmploymentContract';
@@ -183,7 +182,7 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
                 render={({ field: { value, onChange } }) => (
                   <View style={styles.switchRow}>
                     <Text style={styles.switchLabel}>Use saved company details</Text>
-                    <Switch value={value} onValueChange={onChange} trackColor={{ true: adminColors.primary }} />
+                    <ToggleSwitch value={value} onValueChange={onChange} />
                   </View>
                 )}
               />
@@ -415,7 +414,7 @@ function ToggleRow({
     <View style={styles.toggleBlock}>
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>{label}</Text>
-        <Switch value={value} onValueChange={onChange} trackColor={{ true: adminColors.primary }} />
+        <ToggleSwitch value={value} onValueChange={onChange} />
       </View>
       {helper ? <Text style={styles.helper}>{helper}</Text> : null}
     </View>

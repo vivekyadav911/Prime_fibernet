@@ -1,6 +1,7 @@
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DateField } from '@/components/admin/DateField';
+import { ToggleSwitch } from '@/components/common';
 import { MAP_THEME } from '@/constants/mapTheme';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -156,11 +157,7 @@ function LayerToggle({
   return (
     <View style={styles.toggleRow}>
       <Text style={styles.toggleLabel}>{label}</Text>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ true: adminColors.primary }}
-      />
+      <ToggleSwitch value={value} onValueChange={onChange} />
     </View>
   );
 }

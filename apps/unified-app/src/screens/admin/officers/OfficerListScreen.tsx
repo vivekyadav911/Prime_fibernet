@@ -176,24 +176,22 @@ export function OfficerListScreen({ navigation }: Props) {
     [canEdit, canDelete, navigation],
   );
 
-  const listHeader = useMemo(
-    () => (
-      <View style={styles.headerBlock}>
-        <OfficerKpiCarousel stats={stats} />
-        <OfficerSearchFilters
-          search={search}
-          onSearchChange={setSearch}
-          accountStatus={accountStatus}
-          onAccountStatusChange={setAccountStatus}
-        />
-        {officers.length > 0 ? (
-          <Text style={styles.listEyebrow}>
-            {officers.length} officer{officers.length === 1 ? '' : 's'}
-          </Text>
-        ) : null}
-      </View>
-    ),
-    [stats, search, accountStatus, officers.length],
+  const listEyebrow = officers.length > 0 ? (
+    <Text style={styles.listEyebrow}>
+      {officers.length} officer{officers.length === 1 ? '' : 's'}
+    </Text>
+  ) : null;
+
+  const screenHeader = (
+    <View style={styles.headerBlock}>
+      <OfficerKpiCarousel stats={stats} />
+      <OfficerSearchFilters
+        search={search}
+        onSearchChange={setSearch}
+        accountStatus={accountStatus}
+        onAccountStatusChange={setAccountStatus}
+      />
+    </View>
   );
 
   if (isLoading) {
@@ -215,9 +213,10 @@ export function OfficerListScreen({ navigation }: Props) {
   return (
     <RoleGuard requiredPermission="officers.view">
       <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
-        {!officers.length ? (
-          <View style={styles.emptyWrap}>
-            <View style={styles.pageInset}>{listHeader}</View>
+        <View style={styles.page}>
+          <View style={styles.pageInset}>{screenHeader}</View>
+
+          {!officers.length ? (
             <AdminEmptyState
               title={officerStrings.list.emptyTitle}
               subtitle={officerStrings.list.emptySubtitle}
@@ -225,24 +224,26 @@ export function OfficerListScreen({ navigation }: Props) {
               actionLabel={canCreate ? officerStrings.list.addOfficer : undefined}
               onAction={canCreate ? () => navigation.navigate('AddOfficer') : undefined}
             />
-          </View>
-        ) : (
-          <FlatList
-            data={officers}
-            keyExtractor={(o) => o.id}
-            renderItem={renderItem}
-            ListHeaderComponent={listHeader}
-            ItemSeparatorComponent={ListSeparator}
-            contentContainerStyle={styles.list}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
-            }
-            onScroll={(e) => handleScroll(e.nativeEvent.contentOffset.y)}
-            scrollEventThrottle={16}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          />
-        )}
+          ) : (
+            <FlatList
+              data={officers}
+              keyExtractor={(o) => o.id}
+              renderItem={renderItem}
+              ListHeaderComponent={listEyebrow}
+              ItemSeparatorComponent={ListSeparator}
+              style={styles.listBody}
+              contentContainerStyle={styles.list}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
+              }
+              onScroll={(e) => handleScroll(e.nativeEvent.contentOffset.y)}
+              scrollEventThrottle={16}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              directionalLockEnabled
+            />
+          )}
+        </View>
 
         {canCreate ? (
           <Animated.View style={[styles.fabWrap, { opacity: fabOpacity }]}>
@@ -285,10 +286,16 @@ export function OfficerListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  page: {
+    flex: 1,
+  },
   headerBlock: {
     gap: ui.sectionGap,
     paddingTop: 12,
     paddingBottom: 4,
+  },
+  listBody: {
+    flex: 1,
   },
   listEyebrow: {
     fontSize: 11,
@@ -300,13 +307,10 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: ui.pagePad,
     paddingBottom: 104,
+    paddingTop: 4,
   },
   listSeparator: {
     height: OFFICER_CARD_GAP,
-  },
-  emptyWrap: {
-    flex: 1,
-    gap: ui.sectionGap,
   },
   pageInset: {
     paddingHorizontal: ui.pagePad,

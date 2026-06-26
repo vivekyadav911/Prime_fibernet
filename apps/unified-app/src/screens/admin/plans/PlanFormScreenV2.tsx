@@ -5,7 +5,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
@@ -14,12 +13,13 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
-import { DismissKeyboardScrollView, KeyboardDismissView } from '@/components/common';
+import { DismissKeyboardScrollView, KeyboardDismissView, ToggleSwitch } from '@/components/common';
 import { usePlanForm } from '@/hooks/usePlanForm';
 import { fetchPlanById } from '@/services/planService';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
+import { switchTheme } from '@/theme/switchTheme';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminPlansStackParamList } from '@/types/navigation';
 import type { Plan } from '@/types/plans';
@@ -287,10 +287,10 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
                   <Text style={styles.switchTitle}>Plan Active</Text>
                   <Text style={styles.switchDesc}>Subscribers can be assigned to this plan</Text>
                 </View>
-                <Switch
+                <ToggleSwitch
                   value={formData.isActive}
                   onValueChange={(v) => updateField('isActive', v)}
-                  trackColor={{ false: colors.borderDefault, true: '#14B8A6' }}
+                  accentColor={switchTheme.accentTeal}
                 />
               </View>
               <FormField

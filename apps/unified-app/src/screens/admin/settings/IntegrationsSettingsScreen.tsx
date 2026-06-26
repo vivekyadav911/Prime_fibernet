@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
+
+import { ToggleSwitch } from '@/components/common';
 import type { PaymentGateway } from '@prime/types';
 
 import { FormField, RoleGuard } from '@/components/admin';
@@ -143,9 +145,9 @@ export function IntegrationsSettingsScreen() {
       </SettingsSection>
 
       <SettingsSection title="Feature Flags">
-        <Text style={styles.flagRow}>AI Chatbot <Switch value={aiChatbot} onValueChange={setAiChatbot} /></Text>
-        <Text style={styles.flagRow}>WhatsApp <Switch value={whatsapp} onValueChange={setWhatsapp} /></Text>
-        <Text style={styles.flagRow}>Auto-Invoice <Switch value={autoInvoice} onValueChange={setAutoInvoice} /></Text>
+        <Text style={styles.flagRow}>AI Chatbot <ToggleSwitch value={aiChatbot} onValueChange={setAiChatbot} /></Text>
+        <Text style={styles.flagRow}>WhatsApp <ToggleSwitch value={whatsapp} onValueChange={setWhatsapp} /></Text>
+        <Text style={styles.flagRow}>Auto-Invoice <ToggleSwitch value={autoInvoice} onValueChange={setAutoInvoice} /></Text>
         <SaveButton
           label="Save Feature Flags"
           onPress={async () => {

@@ -6,7 +6,6 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -18,7 +17,7 @@ import { Button, Screen } from '@prime/ui';
 
 import { AudiencePickerSheet } from '@/components/Notifications';
 import { RoleGuard, SectionCard } from '@/components/admin';
-import { ErrorState, SkeletonLoader, DismissKeyboardScrollView, KeyboardDismissView } from '@/components/common';
+import { ErrorState, SkeletonLoader, DismissKeyboardScrollView, KeyboardDismissView, ToggleSwitch } from '@/components/common';
 import type { AutomationRule, RecurringSchedule } from '@/services/broadcastNotificationService';
 import {
   useCreateRecurringScheduleMutation,
@@ -220,11 +219,7 @@ export function AutomaticNotificationsScreen(_props: Props) {
             <Text style={styles.ruleTitle}>{item.label}</Text>
             {item.description ? <Text style={styles.ruleDesc}>{item.description}</Text> : null}
           </View>
-          <Switch
-            value={item.enabled}
-            onValueChange={(v) => void toggleRule(item, v)}
-            trackColor={{ false: colors.borderDefault, true: adminColors.primary }}
-          />
+          <ToggleSwitch value={item.enabled} onValueChange={(v) => void toggleRule(item, v)} />
         </View>
         <View style={styles.channelRow}>
           <Pressable
@@ -262,11 +257,7 @@ export function AutomaticNotificationsScreen(_props: Props) {
               <Text style={styles.ruleMeta}>Next: {item.nextRunAt.toLocaleString()}</Text>
             ) : null}
           </View>
-          <Switch
-            value={item.enabled}
-            onValueChange={(v) => void toggleSchedule(item, v)}
-            trackColor={{ false: colors.borderDefault, true: adminColors.primary }}
-          />
+          <ToggleSwitch value={item.enabled} onValueChange={(v) => void toggleSchedule(item, v)} />
         </View>
         <Text style={styles.schedulePreview} numberOfLines={2}>
           {item.title}: {item.message}

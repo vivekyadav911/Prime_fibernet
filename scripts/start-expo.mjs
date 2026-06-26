@@ -36,6 +36,7 @@ function main() {
   console.log(`Connection: ${mode}`);
   console.log(`LAN IP:     ${lanIp}`);
   console.log(`Expo URL:   ${expoUrl}`);
+  console.log('Mode:       Expo Go (scan QR or enter URL below)');
 
   if (mode === 'iphone-hotspot' || mode === 'android-hotspot') {
     printHotspotHelp(lanIp, defaultPort);
@@ -46,6 +47,7 @@ function main() {
   }
 
   console.log('Other modes:');
+  console.log('  Dev client:     pnpm start:dev-client  (native blur — needs custom build)');
   console.log('  USB (Android):  pnpm start:android-usb');
   console.log('  Auto-detect:    pnpm start:auto');
   console.log('  Tunnel (any):   pnpm start:tunnel');

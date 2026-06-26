@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button, Screen } from '@prime/ui';
 
 import { FormField } from '@/components/admin';
 import { GatewayCard } from '@/components/payments';
-import { DismissKeyboardScrollView, ErrorState, FullScreenModalShell, KeyboardDismissView, SkeletonLoader } from '@/components/common';
+import { DismissKeyboardScrollView, ErrorState, FullScreenModalShell, KeyboardDismissView, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import { useGateways } from '@/hooks/usePayments';
 import type { GatewaySlug, PaymentGatewayRecord } from '@/types/payments';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -132,7 +132,7 @@ export function GatewayConfigScreen() {
               : null}
             <View style={styles.row}>
               <Text style={styles.label}>Test mode</Text>
-              <Switch value={testMode} onValueChange={setTestMode} />
+              <ToggleSwitch value={testMode} onValueChange={setTestMode} />
             </View>
             {editing?.webhook_url ? (
               <Text style={styles.webhook}>Webhook: {editing.webhook_url}</Text>

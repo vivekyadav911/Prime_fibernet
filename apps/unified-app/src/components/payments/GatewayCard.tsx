@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { ToggleSwitch } from '@/components/common';
 import type { PaymentGatewayRecord } from '@/types/payments';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -21,7 +22,7 @@ export function GatewayCard({ gateway, onConfigure, onToggleActive }: Props) {
           <Text style={styles.name}>{gateway.name}</Text>
           {gateway.is_default ? <Text style={styles.defaultBadge}>Default</Text> : null}
         </View>
-        <Switch value={gateway.is_active} onValueChange={onToggleActive} />
+        <ToggleSwitch value={gateway.is_active} onValueChange={onToggleActive} />
       </View>
       <Text style={styles.methods}>{gateway.supported_methods.join(' · ')}</Text>
       <Text style={styles.status}>{configured ? 'Configured' : 'Not configured'}</Text>

@@ -173,14 +173,15 @@ export function printUsbHelp(port) {
   console.log('');
 }
 
-export function startExpo({ mode, port = defaultPort, hostname }) {
+export function startExpo({ mode, port = defaultPort, hostname, go = true }) {
   const env = {
     ...process.env,
     REACT_NATIVE_PACKAGER_HOSTNAME: hostname,
   };
 
   const flag = mode === 'localhost' ? '--localhost' : mode === 'tunnel' ? '--tunnel' : '--lan';
-  const args = `pnpm exec expo start ${flag} --port ${port}`;
+  const goFlag = go ? ' --go' : '';
+  const args = `pnpm exec expo start ${flag} --port ${port}${goFlag}`;
 
   const child = spawn(args, {
     cwd: appDir,

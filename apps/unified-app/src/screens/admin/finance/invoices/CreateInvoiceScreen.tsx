@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
-import { DismissKeyboardScrollView, KeyboardDismissView } from '@/components/common';
+import { DismissKeyboardScrollView, KeyboardDismissView, ToggleSwitch } from '@/components/common';
 import {
   InvoiceDeliverySection,
   InvoiceLineItemsEditor,
@@ -194,7 +194,7 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
             />
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>Enter details manually</Text>
-              <Switch value={manualEntry} onValueChange={setManualEntry} />
+              <ToggleSwitch value={manualEntry} onValueChange={setManualEntry} />
             </View>
             {(manualEntry || selectedCustomer) && (
               <>

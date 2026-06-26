@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { LeaveType } from '@/types/attendance';
 import { Button } from '@prime/ui';
 
 import { SelectField } from '@/components/admin';
-import { DateRangePicker, ScreenWrapper } from '@/components/common';
+import { DateRangePicker, ScreenWrapper, ToggleSwitch } from '@/components/common';
 import { useApplyLeave } from '@/hooks/attendance/useAttendance';
 import type { OfficerLeaveStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
@@ -56,7 +56,7 @@ export function ApplyLeaveScreen({ navigation }: Props) {
 
       <View style={styles.halfDayRow}>
         <Text style={styles.halfDayLabel}>Half day</Text>
-        <Switch value={isHalfDay} onValueChange={setIsHalfDay} />
+        <ToggleSwitch value={isHalfDay} onValueChange={setIsHalfDay} />
       </View>
 
       <Text style={styles.label}>REASON</Text>

@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { ToggleSwitch } from '@/components/common';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { switchTheme } from '@/theme/switchTheme';
 import type { Plan } from '@/types/plans';
 import { formatINR } from '@/utils/planUtils';
 
@@ -83,12 +85,11 @@ export function PlanCard({
             <View style={[styles.badge, plan.isActive ? styles.badgeActive : styles.badgeInactive]}>
               <Text style={styles.badgeText}>{plan.isActive ? 'ACTIVE' : 'INACTIVE'}</Text>
             </View>
-            <Switch
+            <ToggleSwitch
               value={plan.isActive}
               onValueChange={handleToggle}
               disabled={toggling}
-              trackColor={{ false: colors.borderDefault, true: '#14B8A6' }}
-              thumbColor={colors.surfaceWhite}
+              accentColor={switchTheme.accentTeal}
             />
           </View>
         </View>
