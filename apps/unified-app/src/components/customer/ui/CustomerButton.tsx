@@ -2,7 +2,9 @@ import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 type Variant = 'primary' | 'ghost' | 'danger' | 'outline';
 
@@ -25,12 +27,14 @@ export function CustomerButton({
   accessibilityLabel,
   icon,
 }: CustomerButtonProps) {
+  const { theme } = useCustomerTheme();
+  const styles = useThemedStyles(createStyles);
+  const isPrimary = variant === 'primary';
+
   const handlePress = () => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   };
-
-  const isPrimary = variant === 'primary';
 
   return (
     <Pressable
@@ -44,7 +48,7 @@ export function CustomerButton({
         variant === 'ghost' && styles.ghost,
         variant === 'outline' && styles.outline,
         variant === 'danger' && styles.danger,
-        isPrimary && signalGlass.shadow.primaryGlow,
+        isPrimary && styles.primaryGlow,
         pressed && styles.pressed,
         disabled && styles.disabled,
         style,
@@ -54,7 +58,7 @@ export function CustomerButton({
         <MaterialCommunityIcons
           name={icon}
           size={18}
-          color={isPrimary ? signalGlass.colors.onPrimaryContainer : signalGlass.colors.primary}
+          color={isPrimary ? theme.colors.onPrimary : theme.colors.primary}
           style={styles.icon}
         />
       ) : null}
@@ -73,42 +77,44 @@ export function CustomerButton({
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    borderRadius: signalGlass.radius.sm,
-    paddingVertical: signalGlass.spacing.sm,
-    paddingHorizontal: signalGlass.spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: signalGlass.spacing.xs,
-    minHeight: 48,
-  },
-  primary: { backgroundColor: signalGlass.colors.primaryContainer },
-  ghost: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-  },
-  danger: { backgroundColor: signalGlass.colors.errorContainer },
-  pressed: { opacity: 0.88 },
-  disabled: { opacity: 0.45 },
-  icon: { marginRight: 2 },
-  label: {
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  primaryLabel: {
-    color: signalGlass.colors.onPrimaryContainer,
-  },
-  ghostLabel: { color: signalGlass.colors.primary },
-  outlineLabel: { color: signalGlass.colors.onSurface },
-  disabledLabel: { color: signalGlass.colors.textMuted },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    base: {
+      borderRadius: theme.radius.sm,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: theme.spacing.xs,
+      minHeight: 48,
+    },
+    primary: { backgroundColor: theme.colors.primaryContainer },
+    primaryGlow: theme.shadow.primaryGlow,
+    ghost: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+    },
+    outline: {
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+    },
+    danger: { backgroundColor: theme.colors.errorContainer },
+    pressed: { opacity: 0.88 },
+    disabled: { opacity: 0.45 },
+    icon: { marginRight: 2 },
+    label: {
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    primaryLabel: {
+      color: theme.colors.onPrimary,
+    },
+    ghostLabel: { color: theme.colors.primary },
+    outlineLabel: { color: theme.colors.onSurface },
+    disabledLabel: { color: theme.colors.textMuted },
+  });

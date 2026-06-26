@@ -9,7 +9,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { PaymentCheckoutWebView } from '@/components/PaymentCheckoutWebView';
 import { CustomerTopBar } from '@/components/customer/shell';
 import { CustomerEmptyState, CustomerErrorState, CustomerSkeletonLoader } from '@/components/customer/ui';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 import type { CustomerStackParamList } from '@/types/navigation';
 import { formatCurrencyInr } from '@/utils/formatCurrency';
 
@@ -21,6 +22,7 @@ const CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual'];
 
 export function PlansScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
+  const styles = useThemedStyles(createStyles);
   const {
     plans,
     billingCycle,
@@ -166,61 +168,62 @@ export function PlansScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  list: {
-    paddingHorizontal: signalGlass.spacing.marginMobile,
-    paddingBottom: signalGlass.spacing.xxxl,
-  },
-  headerBlock: {
-    paddingTop: signalGlass.spacing.md,
-    paddingBottom: signalGlass.spacing.lg,
-  },
-  heading: {
-    ...signalGlass.typography.displayLg,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.display,
-    marginBottom: signalGlass.spacing.sm,
-  },
-  subheading: {
-    ...signalGlass.typography.body,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.body,
-    marginBottom: signalGlass.spacing.lg,
-  },
-  cycleToggle: {
-    flexDirection: 'row',
-    backgroundColor: signalGlass.colors.bgGlass,
-    borderRadius: signalGlass.radius.pill,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderGlass,
-    padding: 4,
-    marginBottom: signalGlass.spacing.sm,
-  },
-  cycleBtn: {
-    flex: 1,
-    paddingVertical: signalGlass.spacing.xs,
-    borderRadius: signalGlass.radius.pill,
-    alignItems: 'center',
-    minHeight: 36,
-    justifyContent: 'center',
-  },
-  cycleBtnActive: {
-    backgroundColor: signalGlass.colors.accentPrimaryMuted,
-    borderWidth: 1,
-    borderColor: 'rgba(173,198,255,0.3)',
-  },
-  cycleText: {
-    ...signalGlass.typography.caption,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.bodyMedium,
-  },
-  cycleTextActive: {
-    color: signalGlass.colors.primary,
-  },
-  gatewayNote: {
-    color: signalGlass.colors.textMuted,
-    fontSize: 12,
-    fontFamily: signalGlass.fonts.body,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    list: {
+      paddingHorizontal: theme.spacing.marginMobile,
+      paddingBottom: theme.spacing.xxxl,
+    },
+    headerBlock: {
+      paddingTop: theme.spacing.md,
+      paddingBottom: theme.spacing.lg,
+    },
+    heading: {
+      ...theme.typography.displayLg,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.display,
+      marginBottom: theme.spacing.sm,
+    },
+    subheading: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+      marginBottom: theme.spacing.lg,
+    },
+    cycleToggle: {
+      flexDirection: 'row',
+      backgroundColor: theme.colors.bgGlass,
+      borderRadius: theme.radius.pill,
+      borderWidth: 1,
+      borderColor: theme.colors.borderGlass,
+      padding: 4,
+      marginBottom: theme.spacing.sm,
+    },
+    cycleBtn: {
+      flex: 1,
+      paddingVertical: theme.spacing.xs,
+      borderRadius: theme.radius.pill,
+      alignItems: 'center',
+      minHeight: 36,
+      justifyContent: 'center',
+    },
+    cycleBtnActive: {
+      backgroundColor: theme.colors.accentPrimaryMuted,
+      borderWidth: 1,
+      borderColor: 'rgba(173,198,255,0.3)',
+    },
+    cycleText: {
+      ...theme.typography.caption,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.bodyMedium,
+    },
+    cycleTextActive: {
+      color: theme.colors.primary,
+    },
+    gatewayNote: {
+      color: theme.colors.textMuted,
+      fontSize: 12,
+      fontFamily: theme.fonts.body,
+    },
+  });

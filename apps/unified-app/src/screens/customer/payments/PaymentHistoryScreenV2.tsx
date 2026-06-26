@@ -12,15 +12,17 @@ import {
   GlassCard,
   PressableScale,
 } from '@/components/customer/ui';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useAppSelector } from '@/store/hooks';
 import { useGetCustomerPaymentHistoryV2Query, useLazyGetPaymentReceiptQuery } from '@/services/api/paymentCollectionApi';
 import type { CustomerStackParamList } from '@/types/navigation';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import type { CustomerTheme } from '@/theme/customer';
 import { queryErrorMessage } from '@/utils/queryError';
 import { DismissKeyboardFlatList } from '@/components/common';
 
 export function PaymentHistoryScreenV2() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
+  const styles = useThemedStyles(createStyles);
   const user = useAppSelector((s) => s.auth.user);
   const { data, isLoading, isError, error, refetch } = useGetCustomerPaymentHistoryV2Query(user?.id ?? '', {
     skip: !user?.id,
@@ -98,24 +100,25 @@ export function PaymentHistoryScreenV2() {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, padding: signalGlass.spacing.lg, backgroundColor: signalGlass.colors.bgDeep },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-    marginBottom: signalGlass.spacing.md,
-  },
-  list: { paddingBottom: signalGlass.spacing.xxxl },
-  rowWrap: { marginBottom: signalGlass.spacing.sm },
-  row: { gap: signalGlass.spacing.xs },
-  number: {
-    fontFamily: signalGlass.fonts.mono,
-    fontWeight: '700',
-    color: signalGlass.colors.textPrimary,
-  },
-  rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  meta: { fontSize: 11, color: signalGlass.colors.textSecondary, textTransform: 'capitalize' },
-  date: { fontSize: 12, color: signalGlass.colors.textMuted },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.bgDeep },
+    title: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.display,
+      marginBottom: theme.spacing.md,
+    },
+    list: { paddingBottom: theme.spacing.xxxl },
+    rowWrap: { marginBottom: theme.spacing.sm },
+    row: { gap: theme.spacing.xs },
+    number: {
+      fontFamily: theme.fonts.mono,
+      fontWeight: '700',
+      color: theme.colors.textPrimary,
+    },
+    rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    meta: { fontSize: 11, color: theme.colors.textSecondary, textTransform: 'capitalize' },
+    date: { fontSize: 12, color: theme.colors.textMuted },
+  });

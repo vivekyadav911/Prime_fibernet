@@ -12,8 +12,9 @@ import {
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
 import { DismissKeyboardFlatList } from '@/components/common';
 import { useCustomerNotifications } from '@/hooks/useCustomerNotifications';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useCustomerUiStore } from '@/store/customerUiStore';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import type { CustomerTheme } from '@/theme/customer';
 import type { NotificationCategory } from '@/types/payments';
 import type { CustomerStackParamList } from '@/types/navigation';
 import { formatRelativeIst } from '@/utils/formatDate';
@@ -39,6 +40,7 @@ const FILTER_EMPTY_LABELS: Partial<Record<'all' | NotificationCategory, string>>
 };
 
 function NotificationsContent({ navigation }: Props) {
+  const styles = useThemedStyles(createStyles);
   const [filter, setFilter] = useState<'all' | NotificationCategory>('all');
   const { notifications, isLoading, error, refetch, markAsRead, markAllAsRead } =
     useCustomerNotifications();
@@ -164,64 +166,65 @@ export function CustomerNotificationsScreen(props: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  filterRow: {
-    flexDirection: 'row',
-    gap: signalGlass.spacing.xs,
-    padding: signalGlass.spacing.lg,
-    alignItems: 'center',
-    paddingRight: signalGlass.spacing.xxxl,
-  },
-  chip: {
-    borderRadius: signalGlass.radius.pill,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-    paddingHorizontal: signalGlass.spacing.sm,
-    paddingVertical: signalGlass.spacing.sm,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  chipActive: {
-    borderColor: signalGlass.colors.accentPrimary,
-    backgroundColor: signalGlass.colors.accentPrimaryMuted,
-  },
-  chipText: { color: signalGlass.colors.textSecondary, fontSize: 12 },
-  chipTextActive: { color: signalGlass.colors.accentGlow },
-  markAll: { marginLeft: signalGlass.spacing.sm, minHeight: 44, justifyContent: 'center' },
-  markAllText: { color: signalGlass.colors.accentGlow, fontSize: 12 },
-  list: { paddingHorizontal: signalGlass.spacing.lg, paddingBottom: signalGlass.spacing.xxxl },
-  row: {
-    flexDirection: 'row',
-    gap: signalGlass.spacing.sm,
-    paddingVertical: signalGlass.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: signalGlass.colors.borderSubtle,
-  },
-  unread: { backgroundColor: signalGlass.colors.bgGlass },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: signalGlass.colors.accentPrimary,
-    marginTop: 6,
-  },
-  dotSpacer: { width: 8 },
-  body: { flex: 1, minWidth: 0 },
-  title: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.bodyMedium,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  bodyText: {
-    color: signalGlass.colors.textSecondary,
-    fontSize: 13,
-    marginTop: 4,
-  },
-  time: {
-    color: signalGlass.colors.textMuted,
-    fontSize: 11,
-    marginTop: 4,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    filterRow: {
+      flexDirection: 'row',
+      gap: theme.spacing.xs,
+      padding: theme.spacing.lg,
+      alignItems: 'center',
+      paddingRight: theme.spacing.xxxl,
+    },
+    chip: {
+      borderRadius: theme.radius.pill,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: theme.spacing.sm,
+      minHeight: 44,
+      justifyContent: 'center',
+    },
+    chipActive: {
+      borderColor: theme.colors.accentPrimary,
+      backgroundColor: theme.colors.accentPrimaryMuted,
+    },
+    chipText: { color: theme.colors.textSecondary, fontSize: 12 },
+    chipTextActive: { color: theme.colors.accentGlow },
+    markAll: { marginLeft: theme.spacing.sm, minHeight: 44, justifyContent: 'center' },
+    markAllText: { color: theme.colors.accentGlow, fontSize: 12 },
+    list: { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.xxxl },
+    row: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      paddingVertical: theme.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.borderSubtle,
+    },
+    unread: { backgroundColor: theme.colors.bgGlass },
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.colors.accentPrimary,
+      marginTop: 6,
+    },
+    dotSpacer: { width: 8 },
+    body: { flex: 1, minWidth: 0 },
+    title: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.bodyMedium,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    bodyText: {
+      color: theme.colors.textSecondary,
+      fontSize: 13,
+      marginTop: 4,
+    },
+    time: {
+      color: theme.colors.textMuted,
+      fontSize: 11,
+      marginTop: 4,
+    },
+  });

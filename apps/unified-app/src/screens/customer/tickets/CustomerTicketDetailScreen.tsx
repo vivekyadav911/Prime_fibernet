@@ -10,19 +10,23 @@ import {
   CustomerSkeletonLoader,
 } from '@/components/customer/ui';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { DismissKeyboardFlatList } from '@/components/common';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import {
   useGetTicketMessagesQuery,
   useSendTicketReplyMutation,
 } from '@/services/api/customerTicketsApi';
-import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
+import type { CustomerTheme } from '@/theme/customer';
 import { formatRelativeIst } from '@/utils/formatDate';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'CustomerTicketDetail'>;
 
 function TicketDetailContent({ route }: Props) {
   const insets = useSafeAreaInsets();
+  const { theme } = useCustomerTheme();
+  const styles = useThemedStyles(createStyles);
   const { ticketId } = route.params;
   const { data: messages, isLoading, error, refetch } = useGetTicketMessagesQuery(ticketId);
   const [sendReply, { isLoading: sending }] = useSendTicketReplyMutation();
@@ -73,7 +77,7 @@ function TicketDetailContent({ route }: Props) {
           </View>
         )}
       />
-      <View style={[styles.composer, { paddingBottom: insets.bottom + signalGlass.spacing.md }]}>
+      <View style={[styles.composer, { paddingBottom: insets.bottom + theme.spacing.md }]}>
         <CustomerInput
           value={text}
           onChangeText={setText}
@@ -98,34 +102,35 @@ export function CustomerTicketDetailScreen(props: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  list: { flex: 1 },
-  listContent: { padding: signalGlass.spacing.lg },
-  bubble: {
-    maxWidth: '85%',
-    borderRadius: signalGlass.radius.md,
-    padding: signalGlass.spacing.md,
-    marginBottom: signalGlass.spacing.sm,
-  },
-  customerBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: signalGlass.colors.accentPrimaryMuted,
-  },
-  agentBubble: {
-    alignSelf: 'flex-start',
-    backgroundColor: signalGlass.colors.bgGlass,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-  },
-  message: { color: signalGlass.colors.textPrimary, fontSize: 14 },
-  time: { color: signalGlass.colors.textMuted, fontSize: 10, marginTop: 4 },
-  composer: {
-    padding: signalGlass.spacing.lg,
-    backgroundColor: signalGlass.colors.bgSurface,
-    borderTopWidth: 1,
-    borderTopColor: signalGlass.colors.borderSubtle,
-    gap: signalGlass.spacing.sm,
-  },
-  input: { marginBottom: 0 },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    list: { flex: 1 },
+    listContent: { padding: theme.spacing.lg },
+    bubble: {
+      maxWidth: '85%',
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+    },
+    customerBubble: {
+      alignSelf: 'flex-end',
+      backgroundColor: theme.colors.accentPrimaryMuted,
+    },
+    agentBubble: {
+      alignSelf: 'flex-start',
+      backgroundColor: theme.colors.bgGlass,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+    },
+    message: { color: theme.colors.textPrimary, fontSize: 14 },
+    time: { color: theme.colors.textMuted, fontSize: 10, marginTop: 4 },
+    composer: {
+      padding: theme.spacing.lg,
+      backgroundColor: theme.colors.bgSurface,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.borderSubtle,
+      gap: theme.spacing.sm,
+    },
+    input: { marginBottom: 0 },
+  });

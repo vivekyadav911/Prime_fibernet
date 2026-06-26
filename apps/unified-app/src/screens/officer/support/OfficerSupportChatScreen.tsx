@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Button } from '@prime/ui';
 
-import { ScreenWrapper, SkeletonLoader } from '@/components/common';
+import { ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
 import { useOfficerProfile } from '@/hooks/officer';
 import { useAppSelector } from '@/store/hooks';
 import {
@@ -39,6 +39,7 @@ export function OfficerSupportChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const listRef = useRef<FlatList>(null);
 
@@ -56,6 +57,10 @@ export function OfficerSupportChatScreen() {
         setSessionId(session.id);
         const initial = await fetchChatMessages(session.id);
         if (!cancelled) setMessages(initial);
+      } catch (err) {
+        if (!cancelled) {
+          setSessionError((err as Error).message ?? 'Could not start chat session.');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -86,7 +91,7 @@ export function OfficerSupportChatScreen() {
     try {
       await sendChatMessage({
         sessionId,
-        senderType: 'customer',
+        senderType: 'agent',
         senderId: user.id,
         senderName: profile?.name ?? user.name ?? 'Officer',
         message: text,
@@ -105,21 +110,35 @@ export function OfficerSupportChatScreen() {
     );
   }
 
+  if (sessionError) {
+    return (
+      <ScreenWrapper scrollable={false}>
+        <ErrorState
+          message={sessionError}
+          onRetry={() => {
+            setSessionError(null);
+            setLoading(true);
+          }}
+        />
+      </ScreenWrapper>
+    );
+  }
+
   return (
     <ScreenWrapper scrollable={false} padded={false}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={90}
       >
         <FlatList
           ref={listRef}
           data={messages}
           keyExtractor={(m) => m.id}
           contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
           renderItem={({ item }) => (
-            <ChatBubble message={item} isMe={item.senderType === 'customer'} />
+            <ChatBubble message={item} isMe={item.senderType === 'agent'} />
           )}
           ListEmptyComponent={
             <Text style={styles.empty}>Chat started — an agent will join shortly.</Text>

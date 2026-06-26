@@ -5,7 +5,7 @@ import type { LeaveType } from '@/types/attendance';
 import { Button } from '@prime/ui';
 
 import { SelectField } from '@/components/admin';
-import { DateRangePicker, ScreenWrapper, ToggleSwitch } from '@/components/common';
+import { DateRangePicker, DismissKeyboardScrollView, ScreenWrapper, ToggleSwitch } from '@/components/common';
 import { useApplyLeave } from '@/hooks/attendance/useAttendance';
 import type { OfficerLeaveStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
@@ -22,22 +22,40 @@ export function ApplyLeaveScreen({ navigation }: Props) {
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
   const [isHalfDay, setIsHalfDay] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const onSubmit = useCallback(async () => {
-    if (!startDate || !endDate || !reason.trim()) return;
-    await applyLeave({
-      leaveType,
-      fromDate: startDate,
-      toDate: endDate,
-      reason: reason.trim(),
-      isHalfDay,
-      halfDayPeriod: isHalfDay ? 'morning' : undefined,
-    });
-    navigation.goBack();
+    setValidationError(null);
+    setSubmitError(null);
+
+    if (!startDate || !endDate) {
+      setValidationError('Please select a start and end date.');
+      return;
+    }
+    if (!reason.trim()) {
+      setValidationError('Please provide a reason for leave.');
+      return;
+    }
+
+    try {
+      await applyLeave({
+        leaveType,
+        fromDate: startDate,
+        toDate: endDate,
+        reason: reason.trim(),
+        isHalfDay,
+        halfDayPeriod: isHalfDay ? 'morning' : undefined,
+      });
+      navigation.goBack();
+    } catch (err) {
+      setSubmitError((err as Error).message ?? 'Failed to submit leave request. Please try again.');
+    }
   }, [applyLeave, endDate, isHalfDay, leaveType, navigation, reason, startDate]);
 
   return (
-    <ScreenWrapper>
+    <ScreenWrapper scrollable={false} padded={false}>
+      <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
       <SelectField
         label="Leave type"
         value={leaveType}
@@ -69,6 +87,9 @@ export function ApplyLeaveScreen({ navigation }: Props) {
         placeholderTextColor={colors.textSecondary}
       />
 
+      {validationError ? <Text style={styles.errorText}>{validationError}</Text> : null}
+      {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
+
       <Button
         label={submitting ? 'Submitting…' : 'Submit Leave Request'}
         onPress={() => void onSubmit()}
@@ -76,6 +97,7 @@ export function ApplyLeaveScreen({ navigation }: Props) {
         style={styles.cta}
       />
       <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
+      </DismissKeyboardScrollView>
     </ScreenWrapper>
   );
 }
@@ -107,4 +129,6 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   cta: { marginTop: spacing.lg, minHeight: 48 },
+  scroll: { paddingBottom: spacing.xl },
+  errorText: { color: colors.errorRed, fontSize: 13, marginTop: spacing.xs },
 });

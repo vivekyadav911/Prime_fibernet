@@ -2,6 +2,7 @@ import { colors as baseColors } from '@prime/ui';
 
 /** Officer field-app palette (extends @prime/ui) */
 export const officerColors = {
+  navBar: '#5B4FE9',
   drawerBg: '#0F172A',
   drawerActive: '#1E293B',
   drawerText: '#94A3B8',

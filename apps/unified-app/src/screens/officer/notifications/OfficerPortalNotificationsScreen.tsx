@@ -19,6 +19,8 @@ const FILTERS: Array<{ id: FilterId; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'hr', label: 'HR' },
   { id: 'payment', label: 'Payments' },
+  { id: 'ticket', label: 'Tickets' },
+  { id: 'request', label: 'Requests' },
   { id: 'system', label: 'System' },
 ];
 
@@ -26,6 +28,7 @@ const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   payment: 'Payment',
   plan: 'Plan',
   ticket: 'Ticket',
+  request: 'Request',
   outage: 'Outage',
   promo: 'Promo',
   system: 'System',
@@ -68,6 +71,12 @@ export function OfficerPortalNotificationsScreen() {
 
       if (isCollectionNotification(item)) {
         navigation.navigate('CollectionsStack', { screen: 'CollectionsList' });
+        return;
+      }
+
+      if (item.category === 'ticket' || item.category === 'request') {
+        navigation.navigate('RequestsStack');
+        return;
       }
     },
     [markRead, navigation],

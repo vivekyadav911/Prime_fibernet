@@ -5,8 +5,10 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { z } from 'zod';
 
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerButton, GlassCard } from '@/components/customer/ui';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 import type { ProfileFormValues } from '../hooks/useProfile';
 
@@ -24,11 +26,20 @@ type ProfileFormProps = {
   onSubmit: (values: ProfileFormValues) => Promise<void>;
 };
 
-function FieldIcon({ name }: { name: keyof typeof MaterialCommunityIcons.glyphMap }) {
-  return <MaterialCommunityIcons name={name} size={20} color={signalGlass.colors.outline} style={styles.fieldIcon} />;
+function FieldIcon({
+  name,
+  fieldIconStyle,
+}: {
+  name: keyof typeof MaterialCommunityIcons.glyphMap;
+  fieldIconStyle: { marginRight: number };
+}) {
+  const { theme } = useCustomerTheme();
+  return <MaterialCommunityIcons name={name} size={20} color={theme.colors.outline} style={fieldIconStyle} />;
 }
 
 export function ProfileForm({ defaultValues, email, accountId, saving, onSubmit }: ProfileFormProps) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useCustomerTheme();
   const { control, handleSubmit, reset } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues,
@@ -49,11 +60,11 @@ export function ProfileForm({ defaultValues, email, accountId, saving, onSubmit 
           <View style={styles.field}>
             <Text style={styles.label}>FULL NAME</Text>
             <View style={styles.inputWrap}>
-              <FieldIcon name="account-outline" />
+              <FieldIcon name="account-outline" fieldIconStyle={styles.fieldIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Full name"
-                placeholderTextColor={signalGlass.colors.textMuted}
+                placeholderTextColor={theme.colors.textMuted}
                 value={value}
                 onChangeText={onChange}
                 onBlur={onBlur}
@@ -72,11 +83,11 @@ export function ProfileForm({ defaultValues, email, accountId, saving, onSubmit 
           <View style={styles.field}>
             <Text style={styles.label}>PHONE NUMBER</Text>
             <View style={styles.inputWrap}>
-              <FieldIcon name="phone-outline" />
+              <FieldIcon name="phone-outline" fieldIconStyle={styles.fieldIcon} />
               <TextInput
                 style={[styles.input, styles.monoInput]}
                 placeholder="Phone number"
-                placeholderTextColor={signalGlass.colors.textMuted}
+                placeholderTextColor={theme.colors.textMuted}
                 keyboardType="phone-pad"
                 value={value}
                 onChangeText={onChange}
@@ -96,11 +107,11 @@ export function ProfileForm({ defaultValues, email, accountId, saving, onSubmit 
           <View style={styles.field}>
             <Text style={styles.label}>INSTALLATION ADDRESS</Text>
             <View style={[styles.inputWrap, styles.textareaWrap]}>
-              <FieldIcon name="map-marker-outline" />
+              <FieldIcon name="map-marker-outline" fieldIconStyle={styles.fieldIcon} />
               <TextInput
                 style={[styles.input, styles.textarea]}
                 placeholder="Address"
-                placeholderTextColor={signalGlass.colors.textMuted}
+                placeholderTextColor={theme.colors.textMuted}
                 multiline
                 value={value}
                 onChangeText={onChange}
@@ -119,9 +130,9 @@ export function ProfileForm({ defaultValues, email, accountId, saving, onSubmit 
       <View style={styles.field}>
         <Text style={styles.label}>EMAIL ADDRESS</Text>
         <View style={[styles.inputWrap, styles.readOnly]}>
-          <FieldIcon name="email-outline" />
+          <FieldIcon name="email-outline" fieldIconStyle={styles.fieldIcon} />
           <TextInput style={styles.input} value={email} editable={false} />
-          <MaterialCommunityIcons name="lock-outline" size={18} color={signalGlass.colors.outline} />
+          <MaterialCommunityIcons name="lock-outline" size={18} color={theme.colors.outline} />
         </View>
       </View>
 
@@ -129,9 +140,9 @@ export function ProfileForm({ defaultValues, email, accountId, saving, onSubmit 
         <View style={styles.field}>
           <Text style={styles.label}>ACCOUNT ID</Text>
           <View style={[styles.inputWrap, styles.readOnly]}>
-            <FieldIcon name="tag-outline" />
+            <FieldIcon name="tag-outline" fieldIconStyle={styles.fieldIcon} />
             <TextInput style={[styles.input, styles.monoInput]} value={accountId} editable={false} />
-            <MaterialCommunityIcons name="lock-outline" size={18} color={signalGlass.colors.outline} />
+            <MaterialCommunityIcons name="lock-outline" size={18} color={theme.colors.outline} />
           </View>
         </View>
       ) : null}
@@ -146,47 +157,48 @@ export function ProfileForm({ defaultValues, email, accountId, saving, onSubmit 
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    borderRadius: signalGlass.radius.lg,
-    gap: signalGlass.spacing.sm,
-  },
-  sectionTitle: {
-    ...signalGlass.typography.label,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-    marginBottom: signalGlass.spacing.xs,
-  },
-  field: { gap: signalGlass.spacing.xs, marginBottom: signalGlass.spacing.sm },
-  label: {
-    ...signalGlass.typography.label,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-    paddingLeft: 4,
-  },
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(66,71,84,0.3)',
-    borderRadius: signalGlass.radius.sm,
-    backgroundColor: 'rgba(29,32,39,0.5)',
-    paddingHorizontal: signalGlass.spacing.sm,
-    minHeight: 48,
-  },
-  textareaWrap: { alignItems: 'flex-start', paddingTop: signalGlass.spacing.sm },
-  fieldIcon: { marginRight: signalGlass.spacing.xs },
-  input: {
-    flex: 1,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.body,
-    fontSize: 16,
-    paddingVertical: signalGlass.spacing.sm,
-  },
-  monoInput: { fontFamily: signalGlass.fonts.mono },
-  textarea: { minHeight: 64, textAlignVertical: 'top' },
-  readOnly: { opacity: 0.5, borderStyle: 'dashed' },
-  error: { color: signalGlass.colors.error, fontSize: 12, fontFamily: signalGlass.fonts.body },
-  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: signalGlass.spacing.sm },
-  btn: { marginTop: signalGlass.spacing.md },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    card: {
+      borderRadius: theme.radius.lg,
+      gap: theme.spacing.sm,
+    },
+    sectionTitle: {
+      ...theme.typography.label,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.bodySemiBold,
+      marginBottom: theme.spacing.xs,
+    },
+    field: { gap: theme.spacing.xs, marginBottom: theme.spacing.sm },
+    label: {
+      ...theme.typography.label,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.bodySemiBold,
+      paddingLeft: 4,
+    },
+    inputWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(66,71,84,0.3)',
+      borderRadius: theme.radius.sm,
+      backgroundColor: 'rgba(29,32,39,0.5)',
+      paddingHorizontal: theme.spacing.sm,
+      minHeight: 48,
+    },
+    textareaWrap: { alignItems: 'flex-start', paddingTop: theme.spacing.sm },
+    fieldIcon: { marginRight: theme.spacing.xs },
+    input: {
+      flex: 1,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.body,
+      fontSize: 16,
+      paddingVertical: theme.spacing.sm,
+    },
+    monoInput: { fontFamily: theme.fonts.mono },
+    textarea: { minHeight: 64, textAlignVertical: 'top' },
+    readOnly: { opacity: 0.5, borderStyle: 'dashed' },
+    error: { color: theme.colors.error, fontSize: 12, fontFamily: theme.fonts.body },
+    divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: theme.spacing.sm },
+    btn: { marginTop: theme.spacing.md },
+  });

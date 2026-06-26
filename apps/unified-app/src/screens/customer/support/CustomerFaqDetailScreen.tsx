@@ -14,13 +14,15 @@ import {
   useIncrementFaqViewMutation,
   useVoteFaqHelpfulMutation,
 } from '@/services/api/adminSupportApi';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerStackParamList } from '@/types/navigation';
+import type { CustomerTheme } from '@/theme/customer';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'CustomerFaqDetail'>;
 
 export function CustomerFaqDetailScreen({ route }: Props) {
+  const styles = useThemedStyles(createStyles);
   const { faqId } = route.params;
   const { data: faqs, isLoading, isError, error, refetch } = useGetFaqsAdminQuery({ publishedOnly: true });
   const [incrementView] = useIncrementFaqViewMutation();
@@ -83,34 +85,35 @@ export function CustomerFaqDetailScreen({ route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  scroll: { padding: signalGlass.spacing.lg, paddingBottom: signalGlass.spacing.xxxl },
-  question: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-    marginBottom: signalGlass.spacing.md,
-  },
-  answerCard: { marginBottom: signalGlass.spacing.lg },
-  voteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: signalGlass.spacing.md,
-    marginTop: signalGlass.spacing.lg,
-    flexWrap: 'wrap',
-  },
-  voteLabel: { fontSize: 14, color: signalGlass.colors.textSecondary },
-  voteBtn: {
-    minHeight: 44,
-    minWidth: 44,
-    paddingHorizontal: signalGlass.spacing.md,
-    justifyContent: 'center',
-    backgroundColor: signalGlass.colors.bgSurface,
-    borderRadius: signalGlass.radius.sm,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-  },
-  voteText: { fontSize: 14, color: signalGlass.colors.textPrimary, fontWeight: '600', textAlign: 'center' },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    scroll: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxxl },
+    question: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.display,
+      marginBottom: theme.spacing.md,
+    },
+    answerCard: { marginBottom: theme.spacing.lg },
+    voteRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.md,
+      marginTop: theme.spacing.lg,
+      flexWrap: 'wrap',
+    },
+    voteLabel: { fontSize: 14, color: theme.colors.textSecondary },
+    voteBtn: {
+      minHeight: 44,
+      minWidth: 44,
+      paddingHorizontal: theme.spacing.md,
+      justifyContent: 'center',
+      backgroundColor: theme.colors.bgSurface,
+      borderRadius: theme.radius.sm,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+    },
+    voteText: { fontSize: 14, color: theme.colors.textPrimary, fontWeight: '600', textAlign: 'center' },
+  });

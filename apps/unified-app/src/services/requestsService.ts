@@ -194,7 +194,7 @@ export async function updateRequestStatusWithNotification(
     .dispatch(requestsApi.endpoints.updateRequestStatus.initiate({ id, status, note, officerName }))
     .unwrap();
 
-  if (status.toLowerCase() !== 'completed') return;
+  if (status.toLowerCase() !== 'resolved') return;
 
   try {
     const request = await fetchRequestById(id);

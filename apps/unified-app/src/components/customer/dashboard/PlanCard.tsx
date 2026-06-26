@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CustomerBadge, CustomerButton, GlassCard } from '@/components/customer/ui';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 import { formatDateIst } from '@/utils/formatDate';
 
 import { UsageBar } from './UsageBar';
@@ -29,6 +30,7 @@ export function PlanCard({
   onPayNow,
   onUpgrade,
 }: PlanCardProps) {
+  const styles = useThemedStyles(createStyles);
   const badgeTone =
     status === 'overdue' || status === 'expired'
       ? 'danger'
@@ -68,42 +70,43 @@ export function PlanCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: { marginBottom: signalGlass.spacing.lg },
-  overdueBorder: { borderColor: signalGlass.colors.accentDanger },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: signalGlass.spacing.sm,
-  },
-  planName: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-    fontSize: 18,
-    fontWeight: '700',
-    flex: 1,
-    flexShrink: 1,
-    marginRight: signalGlass.spacing.sm,
-  },
-  renewal: {
-    color: signalGlass.colors.textSecondary,
-    fontFamily: signalGlass.fonts.body,
-    fontSize: 14,
-    marginBottom: signalGlass.spacing.sm,
-  },
-  warningStrip: {
-    color: signalGlass.colors.accentWarning,
-    fontFamily: signalGlass.fonts.bodyMedium,
-    fontSize: 13,
-    marginBottom: signalGlass.spacing.sm,
-  },
-  overdueStrip: {
-    color: signalGlass.colors.accentDanger,
-    fontFamily: signalGlass.fonts.bodyMedium,
-    fontSize: 13,
-    marginBottom: signalGlass.spacing.sm,
-  },
-  actions: { gap: signalGlass.spacing.sm, marginTop: signalGlass.spacing.md },
-  primaryBtn: { width: '100%' },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    card: { marginBottom: theme.spacing.lg },
+    overdueBorder: { borderColor: theme.colors.accentDanger },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.sm,
+    },
+    planName: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.display,
+      fontSize: 18,
+      fontWeight: '700',
+      flex: 1,
+      flexShrink: 1,
+      marginRight: theme.spacing.sm,
+    },
+    renewal: {
+      color: theme.colors.textSecondary,
+      fontFamily: theme.fonts.body,
+      fontSize: 14,
+      marginBottom: theme.spacing.sm,
+    },
+    warningStrip: {
+      color: theme.colors.accentWarning,
+      fontFamily: theme.fonts.bodyMedium,
+      fontSize: 13,
+      marginBottom: theme.spacing.sm,
+    },
+    overdueStrip: {
+      color: theme.colors.accentDanger,
+      fontFamily: theme.fonts.bodyMedium,
+      fontSize: 13,
+      marginBottom: theme.spacing.sm,
+    },
+    actions: { gap: theme.spacing.sm, marginTop: theme.spacing.md },
+    primaryBtn: { width: '100%' },
+  });

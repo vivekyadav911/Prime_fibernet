@@ -1,8 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerButton, GlassCard } from '@/components/customer/ui';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 import { formatDateIst } from '@/utils/formatDate';
 
 type DashboardPlanCardProps = {
@@ -13,6 +15,9 @@ type DashboardPlanCardProps = {
 };
 
 export function DashboardPlanCard({ planName, renewalDate, isUnlimited, onPayNow }: DashboardPlanCardProps) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useCustomerTheme();
+
   return (
     <GlassCard style={styles.card} padded>
       <View style={styles.header}>
@@ -22,7 +27,7 @@ export function DashboardPlanCard({ planName, renewalDate, isUnlimited, onPayNow
             {planName}
           </Text>
         </View>
-        <MaterialCommunityIcons name="router-wireless" size={32} color={signalGlass.colors.primary} />
+        <MaterialCommunityIcons name="router-wireless" size={32} color={theme.colors.primary} />
       </View>
       <View style={styles.details}>
         <View style={styles.detailRow}>
@@ -39,55 +44,56 @@ export function DashboardPlanCard({ planName, renewalDate, isUnlimited, onPayNow
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    borderRadius: signalGlass.radius.lg,
-    justifyContent: 'space-between',
-    minHeight: 280,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: signalGlass.spacing.md,
-    gap: signalGlass.spacing.sm,
-  },
-  headerText: { flex: 1, minWidth: 0 },
-  kicker: {
-    ...signalGlass.typography.label,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.bodyMedium,
-    marginBottom: signalGlass.spacing.xs,
-  },
-  planName: {
-    ...signalGlass.typography.displayMd,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-  },
-  details: {
-    backgroundColor: signalGlass.colors.surfaceContainerLow,
-    borderRadius: signalGlass.radius.sm,
-    padding: signalGlass.spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    marginBottom: signalGlass.spacing.md,
-    gap: signalGlass.spacing.xs,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  detailLabel: {
-    ...signalGlass.typography.body,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.body,
-  },
-  detailValue: {
-    ...signalGlass.typography.monoMd,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.mono,
-  },
-  payBtn: { width: '100%' },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    card: {
+      flex: 1,
+      borderRadius: theme.radius.lg,
+      justifyContent: 'space-between',
+      minHeight: 280,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: theme.spacing.md,
+      gap: theme.spacing.sm,
+    },
+    headerText: { flex: 1, minWidth: 0 },
+    kicker: {
+      ...theme.typography.label,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.bodyMedium,
+      marginBottom: theme.spacing.xs,
+    },
+    planName: {
+      ...theme.typography.displayMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+    },
+    details: {
+      backgroundColor: theme.colors.surfaceContainerLow,
+      borderRadius: theme.radius.sm,
+      padding: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.05)',
+      marginBottom: theme.spacing.md,
+      gap: theme.spacing.xs,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    detailLabel: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+    },
+    detailValue: {
+      ...theme.typography.monoMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.mono,
+    },
+    payBtn: { width: '100%' },
+  });

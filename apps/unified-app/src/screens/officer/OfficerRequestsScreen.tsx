@@ -86,7 +86,12 @@ export function OfficerRequestsScreen() {
       const payload = { id, status: next, note: `Status changed to ${next}` };
       try {
         await updateStatus(payload).unwrap();
+        // RTK Query tag invalidation triggers an automatic re-fetch; no manual refetch needed.
+        refetch();
       } catch {
+        // Network unavailable — queue for later sync. Skip refetch so the
+        // optimistic state (still showing old status) is not overwritten with
+        // stale server data from a request that would return before the sync runs.
         await SyncManager.enqueue({
           id: `${id}-${next}-${Date.now()}`,
           operation: 'updateRequestStatus',
@@ -101,7 +106,6 @@ export function OfficerRequestsScreen() {
           }),
         );
       }
-      refetch();
     },
     [dispatch, refetch, updateStatus],
   );

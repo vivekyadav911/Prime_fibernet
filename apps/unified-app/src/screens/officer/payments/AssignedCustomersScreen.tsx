@@ -104,6 +104,7 @@ export function AssignedCustomersScreen() {
           data={openPool}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <EmptyState
               title="Open pool is empty"

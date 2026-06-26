@@ -1,14 +1,16 @@
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { GlassCard } from '@/components/customer/ui';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { PortalNotification } from '@/types/payments';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import type { CustomerTheme } from '@/theme/customer';
 
 type AnnouncementBannerProps = {
   items: PortalNotification[];
 };
 
 export function AnnouncementBanner({ items }: AnnouncementBannerProps) {
+  const styles = useThemedStyles(createStyles);
   const announcements = items.filter((n) => n.category === 'outage' || n.category === 'promo');
   if (!announcements.length) return null;
 
@@ -29,26 +31,27 @@ export function AnnouncementBanner({ items }: AnnouncementBannerProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: { gap: signalGlass.spacing.sm, marginBottom: signalGlass.spacing.lg },
-  card: { width: 260 },
-  tag: {
-    color: signalGlass.colors.accentWarning,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: signalGlass.spacing.xs,
-  },
-  title: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.bodyMedium,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  body: {
-    color: signalGlass.colors.textSecondary,
-    fontFamily: signalGlass.fonts.body,
-    fontSize: 12,
-    marginTop: signalGlass.spacing.xs,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    row: { gap: theme.spacing.sm, marginBottom: theme.spacing.lg },
+    card: { width: 260 },
+    tag: {
+      color: theme.colors.accentWarning,
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+      marginBottom: theme.spacing.xs,
+    },
+    title: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.bodyMedium,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    body: {
+      color: theme.colors.textSecondary,
+      fontFamily: theme.fonts.body,
+      fontSize: 12,
+      marginTop: theme.spacing.xs,
+    },
+  });

@@ -5,9 +5,11 @@ import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CustomerButton, PaymentSuccessCheckmark } from '@/components/customer/ui';
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useLazyGetInvoiceUrlQuery } from '@/services/api';
-import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
+import type { CustomerTheme } from '@/theme/customer';
 import { formatCurrencyInr } from '@/utils/formatCurrency';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'PaymentSuccess'>;
@@ -15,6 +17,8 @@ type Props = NativeStackScreenProps<CustomerStackParamList, 'PaymentSuccess'>;
 export function PaymentSuccessScreen({ navigation, route }: Props) {
   const { amount, planName, activationDate, paymentId } = route.params;
   const insets = useSafeAreaInsets();
+  const { theme } = useCustomerTheme();
+  const styles = useThemedStyles(createStyles);
   const [fetchInvoice, { isFetching }] = useLazyGetInvoiceUrlQuery();
 
   const onDownloadInvoice = async () => {
@@ -48,7 +52,7 @@ export function PaymentSuccessScreen({ navigation, route }: Props) {
   });
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + signalGlass.spacing.lg }]}>
+    <View style={[styles.screen, { paddingTop: insets.top + theme.spacing.lg }]}>
       <PaymentSuccessCheckmark />
       <Text style={styles.title}>{formatCurrencyInr(amount)} paid successfully</Text>
       <Text style={styles.subtitle}>Your plan is being activated</Text>
@@ -74,37 +78,38 @@ export function PaymentSuccessScreen({ navigation, route }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: signalGlass.colors.bgDeep,
-    padding: signalGlass.spacing.xl,
-    justifyContent: 'center',
-  },
-  title: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-    fontSize: 22,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  subtitle: {
-    color: signalGlass.colors.textSecondary,
-    textAlign: 'center',
-    marginTop: signalGlass.spacing.xs,
-    marginBottom: signalGlass.spacing.xl,
-  },
-  card: {
-    backgroundColor: signalGlass.colors.bgSurface,
-    borderRadius: signalGlass.radius.md,
-    padding: signalGlass.spacing.lg,
-    gap: signalGlass.spacing.md,
-    marginBottom: signalGlass.spacing.xl,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-  },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: signalGlass.spacing.sm },
-  label: { color: signalGlass.colors.textSecondary, fontSize: 14, flexShrink: 0 },
-  value: { color: signalGlass.colors.textPrimary, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
-  btn: { marginBottom: signalGlass.spacing.sm },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: theme.colors.bgDeep,
+      padding: theme.spacing.xl,
+      justifyContent: 'center',
+    },
+    title: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.display,
+      fontSize: 22,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    subtitle: {
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginTop: theme.spacing.xs,
+      marginBottom: theme.spacing.xl,
+    },
+    card: {
+      backgroundColor: theme.colors.bgSurface,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.lg,
+      gap: theme.spacing.md,
+      marginBottom: theme.spacing.xl,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+    },
+    row: { flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.sm },
+    label: { color: theme.colors.textSecondary, fontSize: 14, flexShrink: 0 },
+    value: { color: theme.colors.textPrimary, fontWeight: '600', flexShrink: 1, textAlign: 'right' },
+    btn: { marginBottom: theme.spacing.sm },
+  });

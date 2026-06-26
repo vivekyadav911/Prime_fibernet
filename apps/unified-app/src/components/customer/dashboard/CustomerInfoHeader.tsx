@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 type CustomerInfoHeaderProps = {
   name: string;
@@ -10,6 +11,8 @@ type CustomerInfoHeaderProps = {
 };
 
 export function CustomerInfoHeader({ name, accountId, statusLabel = 'Active', isActive = true }: CustomerInfoHeaderProps) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={styles.row}>
       <View style={styles.textBlock}>
@@ -24,51 +27,52 @@ export function CustomerInfoHeader({ name, accountId, statusLabel = 'Active', is
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: signalGlass.spacing.md,
-    gap: signalGlass.spacing.sm,
-  },
-  textBlock: { flex: 1, minWidth: 0 },
-  name: {
-    ...signalGlass.typography.displayMd,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-  },
-  id: {
-    ...signalGlass.typography.monoMd,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.mono,
-    marginTop: 4,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: signalGlass.radius.pill,
-    backgroundColor: 'rgba(78,222,163,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(78,222,163,0.2)',
-  },
-  badgeActive: {},
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: signalGlass.colors.secondary,
-  },
-  badgeText: {
-    ...signalGlass.typography.caption,
-    color: signalGlass.colors.secondary,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-    fontWeight: '700',
-  },
-  badgeTextActive: {
-    color: signalGlass.colors.secondary,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
+      gap: theme.spacing.sm,
+    },
+    textBlock: { flex: 1, minWidth: 0 },
+    name: {
+      ...theme.typography.displayMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+    },
+    id: {
+      ...theme.typography.monoMd,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.mono,
+      marginTop: 4,
+    },
+    badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: theme.radius.pill,
+      backgroundColor: 'rgba(78,222,163,0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(78,222,163,0.2)',
+    },
+    badgeActive: {},
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.colors.secondary,
+    },
+    badgeText: {
+      ...theme.typography.caption,
+      color: theme.colors.secondary,
+      fontFamily: theme.fonts.bodySemiBold,
+      fontWeight: '700',
+    },
+    badgeTextActive: {
+      color: theme.colors.secondary,
+    },
+  });

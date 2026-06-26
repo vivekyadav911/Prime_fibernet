@@ -1,7 +1,8 @@
 import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { PressableScale } from '@/components/customer/ui';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 export type QuickAction = {
   id: string;
@@ -15,6 +16,8 @@ type QuickActionsProps = {
 };
 
 export function QuickActions({ actions }: QuickActionsProps) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <ScrollView
       horizontal
@@ -39,30 +42,31 @@ export function QuickActions({ actions }: QuickActionsProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    gap: signalGlass.spacing.sm,
-    paddingVertical: signalGlass.spacing.sm,
-    paddingRight: signalGlass.spacing.lg,
-    marginBottom: signalGlass.spacing.lg,
-  },
-  chip: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: signalGlass.colors.bgGlass,
-    borderRadius: signalGlass.radius.md,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-    paddingVertical: signalGlass.spacing.md,
-    paddingHorizontal: signalGlass.spacing.lg,
-    minWidth: 88,
-    minHeight: 44,
-  },
-  icon: { fontSize: 22, marginBottom: signalGlass.spacing.xs },
-  label: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.bodyMedium,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    row: {
+      gap: theme.spacing.sm,
+      paddingVertical: theme.spacing.sm,
+      paddingRight: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
+    },
+    chip: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.bgGlass,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.lg,
+      minWidth: 88,
+      minHeight: 44,
+    },
+    icon: { fontSize: 22, marginBottom: theme.spacing.xs },
+    label: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.bodyMedium,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+  });

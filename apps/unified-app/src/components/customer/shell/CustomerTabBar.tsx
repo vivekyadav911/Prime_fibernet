@@ -4,8 +4,10 @@ import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { PressableScale } from '@/components/customer/ui';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 import { isBlurUnavailable } from '@/utils/expoRuntime';
 
 const TAB_CONFIG: Record<string, { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; iconFocused: keyof typeof MaterialCommunityIcons.glyphMap }> = {
@@ -18,10 +20,12 @@ const TAB_CONFIG: Record<string, { label: string; icon: keyof typeof MaterialCom
 
 export function CustomerTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
-  const useSolid = isBlurUnavailable();
+  const { theme } = useCustomerTheme();
+  const styles = useThemedStyles(createStyles);
+  const useSolid = isBlurUnavailable() || !theme.useGlassBlur;
 
   const tabs = (
-    <View style={[styles.row, { paddingBottom: Math.max(insets.bottom, signalGlass.spacing.xs) }]}>
+    <View style={[styles.row, { paddingBottom: Math.max(insets.bottom, theme.spacing.xs) }]}>
       {state.routes.map((route, index) => {
         const focused = state.index === index;
         const cfg = TAB_CONFIG[route.name] ?? { label: route.name, icon: 'circle-outline' as const, iconFocused: 'circle' as const };
@@ -47,7 +51,7 @@ export function CustomerTabBar({ state, descriptors, navigation }: BottomTabBarP
             <MaterialCommunityIcons
               name={focused ? cfg.iconFocused : cfg.icon}
               size={24}
-              color={focused ? signalGlass.colors.primary : signalGlass.colors.onSurfaceVariant}
+              color={focused ? theme.colors.primary : theme.colors.onSurfaceVariant}
             />
             <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>{label}</Text>
           </PressableScale>
@@ -61,46 +65,47 @@ export function CustomerTabBar({ state, descriptors, navigation }: BottomTabBarP
   }
 
   return (
-    <BlurView intensity={signalGlass.blur.barIntensity} tint="dark" style={styles.bar}>
+    <BlurView intensity={theme.blur.barIntensity} tint={theme.blurTint} style={styles.bar}>
       {tabs}
     </BlurView>
   );
 }
 
-const styles = StyleSheet.create({
-  bar: {
-    borderTopWidth: 1,
-    borderTopColor: signalGlass.colors.borderSubtle,
-  },
-  solidBar: {
-    backgroundColor: 'rgba(16,19,26,0.92)',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    minHeight: 64,
-    paddingTop: signalGlass.spacing.xs,
-    paddingHorizontal: signalGlass.spacing.xs,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: signalGlass.spacing.xs,
-    borderRadius: signalGlass.radius.md,
-    minHeight: 48,
-  },
-  tabFocused: {
-    backgroundColor: signalGlass.colors.accentPrimaryMuted,
-  },
-  tabLabel: {
-    ...signalGlass.typography.caption,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.bodyMedium,
-    marginTop: 2,
-  },
-  tabLabelFocused: {
-    color: signalGlass.colors.primary,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    bar: {
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.borderSubtle,
+    },
+    solidBar: {
+      backgroundColor: theme.colors.bgSurface,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      minHeight: 64,
+      paddingTop: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.xs,
+    },
+    tab: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: theme.spacing.xs,
+      borderRadius: theme.radius.md,
+      minHeight: 48,
+    },
+    tabFocused: {
+      backgroundColor: theme.colors.accentPrimaryMuted,
+    },
+    tabLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.bodyMedium,
+      marginTop: 2,
+    },
+    tabLabelFocused: {
+      color: theme.colors.primary,
+    },
+  });

@@ -7,8 +7,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { useReduceMotion } from '@/hooks/useReduceMotion';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const CHECK_LENGTH = 36;
@@ -18,6 +20,8 @@ type PaymentSuccessCheckmarkProps = {
 };
 
 export function PaymentSuccessCheckmark({ size = 88 }: PaymentSuccessCheckmarkProps) {
+  const { theme } = useCustomerTheme();
+  const styles = useThemedStyles(createStyles);
   const reduceMotion = useReduceMotion();
   const progress = useSharedValue(reduceMotion ? 1 : 0);
 
@@ -51,13 +55,13 @@ export function PaymentSuccessCheckmark({ size = 88 }: PaymentSuccessCheckmarkPr
           cx="44"
           cy="44"
           r="40"
-          stroke={signalGlass.colors.accentSuccess}
+          stroke={theme.colors.accentSuccess}
           strokeWidth="2"
           fill="rgba(16,185,129,0.2)"
         />
         <AnimatedPath
           d="M26 44 L38 56 L62 32"
-          stroke={signalGlass.colors.accentSuccess}
+          stroke={theme.colors.accentSuccess}
           strokeWidth="4"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -70,14 +74,15 @@ export function PaymentSuccessCheckmark({ size = 88 }: PaymentSuccessCheckmarkPr
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: signalGlass.spacing.xl,
-    borderWidth: 2,
-    borderColor: signalGlass.colors.accentSuccess,
-    backgroundColor: 'rgba(16,185,129,0.15)',
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    wrap: {
+      alignSelf: 'center',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: theme.spacing.xl,
+      borderWidth: 2,
+      borderColor: theme.colors.accentSuccess,
+      backgroundColor: 'rgba(16,185,129,0.15)',
+    },
+  });

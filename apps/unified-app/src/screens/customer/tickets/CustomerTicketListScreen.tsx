@@ -11,14 +11,16 @@ import {
 } from '@/components/customer/ui';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
 import { DismissKeyboardFlatList } from '@/components/common';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useGetMyTicketsQuery } from '@/services/api/customerTicketsApi';
-import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
+import type { CustomerTheme } from '@/theme/customer';
 import { formatRelativeIst } from '@/utils/formatDate';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'CustomerTicketList'>;
 
 function TicketListContent({ navigation }: Props) {
+  const styles = useThemedStyles(createStyles);
   const { data, isLoading, error, refetch } = useGetMyTicketsQuery();
 
   if (isLoading) {
@@ -88,35 +90,36 @@ export function CustomerTicketListScreen(props: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep, padding: signalGlass.spacing.lg },
-  cta: { marginBottom: signalGlass.spacing.md },
-  list: { paddingBottom: signalGlass.spacing.xxxl },
-  cardWrap: { marginBottom: signalGlass.spacing.sm },
-  card: {
-    backgroundColor: signalGlass.colors.bgSurface,
-    borderRadius: signalGlass.radius.md,
-    padding: signalGlass.spacing.md,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-  },
-  number: {
-    fontFamily: signalGlass.fonts.mono,
-    color: signalGlass.colors.accentGlow,
-    fontSize: 12,
-    marginBottom: signalGlass.spacing.xs,
-  },
-  subject: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.bodyMedium,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  meta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: signalGlass.spacing.sm,
-  },
-  date: { color: signalGlass.colors.textMuted, fontSize: 11 },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep, padding: theme.spacing.lg },
+    cta: { marginBottom: theme.spacing.md },
+    list: { paddingBottom: theme.spacing.xxxl },
+    cardWrap: { marginBottom: theme.spacing.sm },
+    card: {
+      backgroundColor: theme.colors.bgSurface,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+    },
+    number: {
+      fontFamily: theme.fonts.mono,
+      color: theme.colors.accentGlow,
+      fontSize: 12,
+      marginBottom: theme.spacing.xs,
+    },
+    subject: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.bodyMedium,
+      fontSize: 15,
+      fontWeight: '600',
+    },
+    meta: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: theme.spacing.sm,
+    },
+    date: { color: theme.colors.textMuted, fontSize: 11 },
+  });

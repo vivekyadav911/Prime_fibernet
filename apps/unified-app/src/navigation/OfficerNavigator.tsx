@@ -16,7 +16,7 @@ import { OfficerAttendanceDashboard } from '@/screens/officer/OfficerAttendanceD
 import { AttendanceHistoryScreen } from '@/screens/officer/AttendanceHistoryScreen';
 import type { OfficerDrawerParamList, OfficerStackParamList } from '@/types/navigation';
 import { adminColors, getAdminDrawerWidth } from '@/theme/admin';
-import { colors } from '@/theme/colors';
+import { colors, officerColors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 
@@ -34,7 +34,7 @@ import { OfficerRequestDetailScreen } from './officerStackScreens';
 const Drawer = createDrawerNavigator<OfficerDrawerParamList>();
 const Stack = createNativeStackNavigator<OfficerStackParamList>();
 
-const OFFICER_HEADER_PURPLE = '#5B4FE9';
+const OFFICER_HEADER_PURPLE = officerColors.navBar;
 
 function DrawerHeaderActions() {
   return (

@@ -4,12 +4,14 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerButton } from '@/components/customer/ui';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { formatINR } from '@/utils/currencyFormat';
 import { PAYMENT_METHOD_CONFIG, type PaymentMethod } from '@/types/payments';
 import { useGetActivePaymentGatewayQuery } from '@/services/api/paymentCollectionApi';
 import type { CustomerStackParamList } from '@/types/navigation';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import type { CustomerTheme } from '@/theme/customer';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'PaymentMethod'>;
 
@@ -36,13 +38,15 @@ export function PaymentMethodScreen({ route, navigation }: Props) {
   const [method, setMethod] = useState<PaymentMethod>(initialMethod ?? 'upi');
   const { data: activeGateway } = useGetActivePaymentGatewayQuery();
   const insets = useSafeAreaInsets();
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useCustomerTheme();
 
   const gatewayReady = Boolean(activeGateway);
 
   return (
     <View style={styles.overlay}>
       <Pressable style={styles.backdrop} onPress={() => navigation.goBack()} accessibilityLabel="Close" />
-      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, signalGlass.spacing.lg) }]}>
+      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, theme.spacing.lg) }]}>
         <View style={styles.handle} />
         <Text style={styles.title}>Select Payment Method</Text>
         <Text style={styles.amountLabel}>
@@ -66,7 +70,7 @@ export function PaymentMethodScreen({ route, navigation }: Props) {
                     <MaterialCommunityIcons
                       name={METHOD_ICONS[m]}
                       size={24}
-                      color={active ? signalGlass.colors.primary : signalGlass.colors.onSurfaceVariant}
+                      color={active ? theme.colors.primary : theme.colors.onSurfaceVariant}
                     />
                   </View>
                   <View>
@@ -106,109 +110,110 @@ export function PaymentMethodScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: signalGlass.colors.overlay,
-  },
-  backdrop: { ...StyleSheet.absoluteFillObject },
-  sheet: {
-    backgroundColor: signalGlass.colors.surfaceContainer,
-    borderTopLeftRadius: signalGlass.radius.xl,
-    borderTopRightRadius: signalGlass.radius.xl,
-    borderTopWidth: 1,
-    borderColor: signalGlass.colors.borderGlass,
-    paddingHorizontal: signalGlass.spacing.marginMobile,
-    paddingTop: signalGlass.spacing.md,
-    maxHeight: '85%',
-  },
-  handle: {
-    width: 48,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: signalGlass.colors.outlineVariant,
-    alignSelf: 'center',
-    marginBottom: signalGlass.spacing.lg,
-  },
-  title: {
-    ...signalGlass.typography.displayMd,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-    marginBottom: signalGlass.spacing.xs,
-  },
-  amountLabel: {
-    ...signalGlass.typography.body,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.body,
-    marginBottom: signalGlass.spacing.md,
-  },
-  list: { marginBottom: signalGlass.spacing.md },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: signalGlass.spacing.md,
-    borderRadius: signalGlass.radius.lg,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderGlass,
-    backgroundColor: signalGlass.colors.bgGlass,
-    marginBottom: signalGlass.spacing.sm,
-  },
-  optionActive: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderColor: signalGlass.colors.primary,
-    ...signalGlass.shadow.cardGlow,
-  },
-  optionDisabled: { opacity: 0.45 },
-  optionLeft: { flexDirection: 'row', alignItems: 'center', gap: signalGlass.spacing.md, flex: 1 },
-  optionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: signalGlass.colors.surfaceVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionIconActive: { backgroundColor: signalGlass.colors.accentPrimaryMuted },
-  optionTitle: {
-    ...signalGlass.typography.bodyLg,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.body,
-    fontSize: 16,
-  },
-  optionSub: {
-    ...signalGlass.typography.body,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.body,
-    fontSize: 14,
-  },
-  radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: signalGlass.colors.outlineVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioActive: { borderColor: signalGlass.colors.primary },
-  radioDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: signalGlass.colors.primary,
-  },
-  notice: {
-    fontSize: 12,
-    color: signalGlass.colors.onSurfaceVariant,
-    marginBottom: signalGlass.spacing.sm,
-    lineHeight: 18,
-  },
-  gateway: {
-    textAlign: 'center',
-    fontSize: 11,
-    color: signalGlass.colors.textMuted,
-    marginBottom: signalGlass.spacing.sm,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: theme.colors.overlay,
+    },
+    backdrop: { ...StyleSheet.absoluteFillObject },
+    sheet: {
+      backgroundColor: theme.colors.surfaceContainer,
+      borderTopLeftRadius: theme.radius.xl,
+      borderTopRightRadius: theme.radius.xl,
+      borderTopWidth: 1,
+      borderColor: theme.colors.borderGlass,
+      paddingHorizontal: theme.spacing.marginMobile,
+      paddingTop: theme.spacing.md,
+      maxHeight: '85%',
+    },
+    handle: {
+      width: 48,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: theme.colors.outlineVariant,
+      alignSelf: 'center',
+      marginBottom: theme.spacing.lg,
+    },
+    title: {
+      ...theme.typography.displayMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+      marginBottom: theme.spacing.xs,
+    },
+    amountLabel: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+      marginBottom: theme.spacing.md,
+    },
+    list: { marginBottom: theme.spacing.md },
+    option: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: theme.spacing.md,
+      borderRadius: theme.radius.lg,
+      borderWidth: 1,
+      borderColor: theme.colors.borderGlass,
+      backgroundColor: theme.colors.bgGlass,
+      marginBottom: theme.spacing.sm,
+    },
+    optionActive: {
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      borderColor: theme.colors.primary,
+      ...theme.shadow.cardGlow,
+    },
+    optionDisabled: { opacity: 0.45 },
+    optionLeft: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md, flex: 1 },
+    optionIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme.colors.surfaceVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    optionIconActive: { backgroundColor: theme.colors.accentPrimaryMuted },
+    optionTitle: {
+      ...theme.typography.bodyLg,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.body,
+      fontSize: 16,
+    },
+    optionSub: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+      fontSize: 14,
+    },
+    radio: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: theme.colors.outlineVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    radioActive: { borderColor: theme.colors.primary },
+    radioDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      backgroundColor: theme.colors.primary,
+    },
+    notice: {
+      fontSize: 12,
+      color: theme.colors.onSurfaceVariant,
+      marginBottom: theme.spacing.sm,
+      lineHeight: 18,
+    },
+    gateway: {
+      textAlign: 'center',
+      fontSize: 11,
+      color: theme.colors.textMuted,
+      marginBottom: theme.spacing.sm,
+    },
+  });

@@ -3,7 +3,9 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 import { isBlurUnavailable } from '@/utils/expoRuntime';
 
 type GlassCardProps = {
@@ -13,13 +15,13 @@ type GlassCardProps = {
   padded?: boolean;
 };
 
-function CardInner({ children, padded }: { children: ReactNode; padded: boolean }) {
+function CardInner({ children, padded, theme }: { children: ReactNode; padded: boolean; theme: CustomerTheme }) {
   return (
     <LinearGradient
-      colors={[...signalGlass.gradients.card]}
+      colors={theme.gradients.card}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[styles.inner, padded && styles.padded]}
+      style={[padded && { padding: theme.spacing.lg }]}
     >
       {children}
     </LinearGradient>
@@ -27,35 +29,40 @@ function CardInner({ children, padded }: { children: ReactNode; padded: boolean 
 }
 
 export function GlassCard({ children, style, glow = false, padded = true }: GlassCardProps) {
-  const useSolidFallback = isBlurUnavailable();
+  const { theme } = useCustomerTheme();
+  const styles = useThemedStyles(createStyles);
+  const useSolidFallback = isBlurUnavailable() || !theme.useGlassBlur;
 
   return (
-    <View style={[styles.wrap, glow && signalGlass.shadow.cardGlow, style]}>
+    <View style={[styles.wrap, glow && theme.shadow.cardGlow, style]}>
       {useSolidFallback ? (
         <View style={styles.solidFallback}>
-          <CardInner padded={padded}>{children}</CardInner>
+          <CardInner padded={padded} theme={theme}>
+            {children}
+          </CardInner>
         </View>
       ) : (
-        <BlurView intensity={signalGlass.blur.cardIntensity} tint="dark" style={styles.blur}>
-          <CardInner padded={padded}>{children}</CardInner>
+        <BlurView intensity={theme.blur.cardIntensity} tint={theme.blurTint} style={styles.blur}>
+          <CardInner padded={padded} theme={theme}>
+            {children}
+          </CardInner>
         </BlurView>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    borderRadius: signalGlass.radius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderGlass,
-  },
-  blur: { overflow: 'hidden' },
-  solidFallback: {
-    overflow: 'hidden',
-    backgroundColor: signalGlass.colors.bgGlass,
-  },
-  inner: { backgroundColor: signalGlass.colors.bgGlass },
-  padded: { padding: signalGlass.spacing.lg },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    wrap: {
+      borderRadius: theme.radius.lg,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: theme.colors.borderGlass,
+    },
+    blur: { overflow: 'hidden' },
+    solidFallback: {
+      overflow: 'hidden',
+      backgroundColor: theme.colors.bgSurface,
+    },
+  });

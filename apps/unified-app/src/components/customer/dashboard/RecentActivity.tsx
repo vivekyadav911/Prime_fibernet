@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CustomerBadge, CustomerEmptyState, GlassCard } from '@/components/customer/ui';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 import { formatRelativeIst } from '@/utils/formatDate';
 import { formatCurrencyInr } from '@/utils/formatCurrency';
 
@@ -34,6 +35,8 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'info' |
 }
 
 export function RecentActivity({ items, onViewAll }: RecentActivityProps) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <GlassCard style={styles.card}>
       <View style={styles.header}>
@@ -75,52 +78,53 @@ export function RecentActivity({ items, onViewAll }: RecentActivityProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: { marginBottom: signalGlass.spacing.lg },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: signalGlass.spacing.md,
-  },
-  title: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  link: {
-    color: signalGlass.colors.accentGlow,
-    fontFamily: signalGlass.fonts.bodyMedium,
-    fontSize: 13,
-    minHeight: 44,
-    lineHeight: 44,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: signalGlass.spacing.sm,
-    paddingVertical: signalGlass.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: signalGlass.colors.borderSubtle,
-  },
-  icon: { fontSize: 20 },
-  body: { flex: 1, minWidth: 0 },
-  rowTitle: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.bodyMedium,
-    fontSize: 14,
-  },
-  date: {
-    color: signalGlass.colors.textMuted,
-    fontFamily: signalGlass.fonts.body,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  right: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
-  amount: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.mono,
-    fontSize: 13,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    card: { marginBottom: theme.spacing.lg },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    title: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.display,
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    link: {
+      color: theme.colors.accentGlow,
+      fontFamily: theme.fonts.bodyMedium,
+      fontSize: 13,
+      minHeight: 44,
+      lineHeight: 44,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      paddingVertical: theme.spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.borderSubtle,
+    },
+    icon: { fontSize: 20 },
+    body: { flex: 1, minWidth: 0 },
+    rowTitle: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.bodyMedium,
+      fontSize: 14,
+    },
+    date: {
+      color: theme.colors.textMuted,
+      fontFamily: theme.fonts.body,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    right: { alignItems: 'flex-end', gap: 4, flexShrink: 0 },
+    amount: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.mono,
+      fontSize: 13,
+    },
+  });

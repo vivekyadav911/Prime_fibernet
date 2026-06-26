@@ -11,12 +11,14 @@ import {
 } from '@/components/customer/ui';
 import { CustomerTopBar } from '@/components/customer/shell';
 import { DismissKeyboardScrollView } from '@/components/common';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { signOut } from '@/hooks/useAuth';
 import { useAppDispatch } from '@/store/hooks';
 import { useCustomerUiStore } from '@/store/customerUiStore';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import type { CustomerTheme } from '@/theme/customer';
 import type { CustomerStackParamList } from '@/types/navigation';
 
+import { AppearanceToggle } from './components/AppearanceToggle';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { DeleteAccountModal } from './components/DeleteAccountModal';
 import { NotificationToggles } from './components/NotificationToggles';
@@ -27,6 +29,7 @@ import { useProfile } from './hooks/useProfile';
 
 export function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
+  const styles = useThemedStyles(createStyles);
   const dispatch = useAppDispatch();
   const {
     authUser,
@@ -141,6 +144,8 @@ export function ProfileScreen() {
           onSubmit={onSave}
         />
 
+        <AppearanceToggle />
+
         <NotificationToggles
           pushEnabled={pushEnabled}
           emailEnabled={emailEnabled}
@@ -174,13 +179,14 @@ export function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { backgroundColor: signalGlass.colors.bgDeep, flex: 1 },
-  content: {
-    paddingHorizontal: signalGlass.spacing.marginMobile,
-    paddingTop: signalGlass.spacing.md,
-    paddingBottom: signalGlass.spacing.xxxl,
-    gap: signalGlass.spacing.lg,
-  },
-  actions: { gap: signalGlass.spacing.sm },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    screen: { backgroundColor: theme.colors.bgDeep, flex: 1 },
+    content: {
+      paddingHorizontal: theme.spacing.marginMobile,
+      paddingTop: theme.spacing.md,
+      paddingBottom: theme.spacing.xxxl,
+      gap: theme.spacing.lg,
+    },
+    actions: { gap: theme.spacing.sm },
+  });

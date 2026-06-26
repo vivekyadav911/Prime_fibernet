@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@prime/ui';
 
 import { AmountDisplay, DenominationInput } from '@/components/payments';
-import { ScreenWrapper } from '@/components/common';
+import { DismissKeyboardScrollView, ScreenWrapper } from '@/components/common';
 import { useLocation } from '@/hooks/useLocation';
 import { useRecordCashCollectionMutation } from '@/services/api/paymentCollectionApi';
 import { SyncManager } from '@/services/offline/syncManager';
@@ -132,7 +132,7 @@ export function CashCollectionScreen({ navigation, route }: Props) {
 
   return (
     <ScreenWrapper scrollable={false} padded={false}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <DismissKeyboardScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Collect — {customerName}</Text>
         <Text style={styles.sub}>
           {accountNumber}
@@ -211,7 +211,7 @@ export function CashCollectionScreen({ navigation, route }: Props) {
         />
         <Button label="Confirm Collection" onPress={() => void onSubmit()} disabled={isLoading} />
         <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
-      </ScrollView>
+      </DismissKeyboardScrollView>
     </ScreenWrapper>
   );
 }
