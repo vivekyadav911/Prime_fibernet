@@ -1,6 +1,7 @@
 import type {
   ApprovalRequest,
   ApprovalStatus,
+  ApprovalType,
   AttendanceRecord,
   AttendanceStatus,
   AttendanceSummary,

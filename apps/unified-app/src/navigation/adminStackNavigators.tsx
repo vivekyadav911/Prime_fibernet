@@ -124,6 +124,7 @@ import type {
   AdminUsersStackParamList,
 } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminHeaderTheme } from '@/theme/adminHeader';
 
 import { AdminDrawerHeaderLeft } from './AdminDrawerHeaderLeft';
 import { AdminDrawerProfileButton } from './AdminDrawerProfileButton';
@@ -311,7 +312,7 @@ export function AdminNotificationsStackNav() {
               style={{ paddingHorizontal: 12 }}
               accessibilityLabel="Automation settings"
             >
-              <Ionicons name="settings-outline" size={22} color={colors.textPrimary} />
+              <Ionicons name="settings-outline" size={22} color={adminHeaderTheme.foreground} />
             </Pressable>
           ),
         })}
