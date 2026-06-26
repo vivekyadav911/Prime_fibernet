@@ -5,7 +5,7 @@ import type { ServiceRequest } from '@prime/types';
 import { Screen } from '@prime/ui';
 import { colors } from '@/theme/colors';
 
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { FreeMapView } from '@/components/map';
 import { useAppSelector } from '@/store/hooks';
 import { useGetAssignedRequestsQuery } from '@/store/api/endpoints';
@@ -20,13 +20,28 @@ const PRIORITY_COLORS: Record<string, string> = {
   P3: colors.textSecondary,
 };
 
+type RequestWithCoords = ServiceRequest & { latitude: number; longitude: number };
+
 export function OfficerMapScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const { data: requests, isLoading, isError, error, refetch } = useGetAssignedRequestsQuery(user?.id, {
     skip: !user?.id,
   });
 
-  const withCoords = useMemo(() => (requests ?? []).filter((r) => r.address), [requests]);
+  const withCoords = useMemo<RequestWithCoords[]>(() => {
+    return ((requests ?? []) as Array<ServiceRequest & { latitude?: number | null; longitude?: number | null }>)
+      .filter((r) => r.latitude != null && r.longitude != null) as RequestWithCoords[];
+  }, [requests]);
+
+  const initialRegion = useMemo(() => {
+    const first = withCoords[0];
+    return {
+      latitude: first?.latitude ?? 20.5937,
+      longitude: first?.longitude ?? 78.9629,
+      latitudeDelta: 0.15,
+      longitudeDelta: 0.15,
+    };
+  }, [withCoords]);
 
   const handleNavigate = useCallback((address: string) => {
     openMapsNavigation(address);
@@ -35,7 +50,7 @@ export function OfficerMapScreen() {
   const keyExtractor = useCallback((item: ServiceRequest) => item.id, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: ServiceRequest }) => (
+    ({ item }: { item: RequestWithCoords }) => (
       <MapRequestPin request={item} onNavigate={handleNavigate} />
     ),
     [handleNavigate],
@@ -57,22 +72,25 @@ export function OfficerMapScreen() {
     );
   }
 
+  if (withCoords.length === 0) {
+    return (
+      <Screen>
+        <EmptyState
+          title="No mapped requests"
+          subtitle="Assigned requests with GPS coordinates will appear here."
+        />
+      </Screen>
+    );
+  }
+
   return (
     <Screen padded={false}>
-      <FreeMapView
-        style={styles.map}
-        initialRegion={{
-          latitude: 28.6139,
-          longitude: 77.209,
-          latitudeDelta: 0.15,
-          longitudeDelta: 0.15,
-        }}
-      >
-        {withCoords.map((req, i) => (
+      <FreeMapView style={styles.map} initialRegion={initialRegion}>
+        {withCoords.map((req) => (
           <Marker
             key={req.id}
-            coordinate={{ latitude: 28.6139 + i * 0.02, longitude: 77.209 + i * 0.02 }}
-            title={req.requestType}
+            coordinate={{ latitude: req.latitude, longitude: req.longitude }}
+            title={req.requestType ?? 'Request'}
             description={req.address}
             pinColor={PRIORITY_COLORS[req.priority] ?? colors.primaryNavy}
           />

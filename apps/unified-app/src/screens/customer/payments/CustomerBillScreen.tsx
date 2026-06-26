@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import {
   CustomerButton,
   CustomerEmptyState,
@@ -15,6 +16,7 @@ import {
 } from '@/components/customer/ui';
 import { CustomerTopBar } from '@/components/customer/shell';
 import { DismissKeyboardScrollView } from '@/components/common';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useAppSelector } from '@/store/hooks';
 import {
   useGetActivePaymentGatewayQuery,
@@ -26,7 +28,7 @@ import { PAYMENT_METHOD_CONFIG, type PaymentMethod } from '@/types/payments';
 import type { PaymentRecord } from '@/types/payments';
 import { formatINR } from '@/utils/currencyFormat';
 import type { CustomerStackParamList } from '@/types/navigation';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import type { CustomerTheme } from '@/theme/customer';
 import { queryErrorMessage } from '@/utils/queryError';
 
 const QUICK_METHODS: PaymentMethod[] = ['upi', 'card', 'netbanking', 'wallet'];
@@ -48,6 +50,8 @@ function statusTone(status: PaymentRecord['status']): 'paid' | 'failed' | 'pendi
 
 export function CustomerBillScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useCustomerTheme();
   const user = useAppSelector((s) => s.auth.user);
   const authId = user?.id ?? '';
 
@@ -137,7 +141,7 @@ export function CustomerBillScreen() {
               const cfg = PAYMENT_METHOD_CONFIG[m];
               return (
                 <PressableScale key={m} style={styles.quickAction} onPress={() => onPay(m)}>
-                  <MaterialCommunityIcons name="receipt" size={24} color={signalGlass.colors.primary} />
+                  <MaterialCommunityIcons name="receipt" size={24} color={theme.colors.primary} />
                   <Text style={styles.quickLabel}>{cfg.label === 'UPI' ? 'Auto-Pay' : cfg.label}</Text>
                 </PressableScale>
               );
@@ -150,7 +154,7 @@ export function CustomerBillScreen() {
             <Text style={styles.historyTitle}>Payment History</Text>
             <PressableScale accessibilityLabel="Filter payments">
               <View style={styles.filterBtn}>
-                <MaterialCommunityIcons name="filter-variant" size={18} color={signalGlass.colors.primary} />
+                <MaterialCommunityIcons name="filter-variant" size={18} color={theme.colors.primary} />
                 <Text style={styles.filterText}>Filter</Text>
               </View>
             </PressableScale>
@@ -176,7 +180,7 @@ export function CustomerBillScreen() {
                       <MaterialCommunityIcons
                         name={tone === 'failed' ? 'alert' : 'file-document-outline'}
                         size={20}
-                        color={tone === 'failed' ? signalGlass.colors.error : signalGlass.colors.primary}
+                        color={tone === 'failed' ? theme.colors.error : theme.colors.primary}
                       />
                     </View>
                     <View>
@@ -214,154 +218,155 @@ export function CustomerBillScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  body: { flex: 1, padding: signalGlass.spacing.marginMobile },
-  scroll: {
-    paddingHorizontal: signalGlass.spacing.marginMobile,
-    paddingTop: signalGlass.spacing.md,
-    paddingBottom: signalGlass.spacing.xxxl,
-    gap: signalGlass.spacing.md,
-  },
-  balanceCard: {
-    borderRadius: signalGlass.radius.lg,
-    gap: signalGlass.spacing.sm,
-    overflow: 'hidden',
-  },
-  balanceTitle: {
-    ...signalGlass.typography.displayMd,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-  },
-  balanceDue: {
-    ...signalGlass.typography.body,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.body,
-  },
-  balanceAmount: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: signalGlass.colors.primary,
-    fontFamily: signalGlass.fonts.monoBold,
-    marginVertical: signalGlass.spacing.sm,
-  },
-  quickCard: { borderRadius: signalGlass.radius.lg },
-  quickRow: { flexDirection: 'row', gap: signalGlass.spacing.sm },
-  quickAction: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: signalGlass.spacing.sm,
-    borderRadius: signalGlass.radius.sm,
-    gap: signalGlass.spacing.xs,
-    minHeight: 72,
-  },
-  quickLabel: {
-    ...signalGlass.typography.caption,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.bodyMedium,
-  },
-  historyCard: { borderRadius: signalGlass.radius.lg },
-  historyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: signalGlass.spacing.md,
-    paddingBottom: signalGlass.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: signalGlass.colors.borderSubtle,
-  },
-  historyTitle: {
-    ...signalGlass.typography.displayMd,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-  },
-  filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  filterText: {
-    ...signalGlass.typography.caption,
-    color: signalGlass.colors.primary,
-    fontFamily: signalGlass.fonts.bodyMedium,
-  },
-  historyItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: signalGlass.spacing.sm,
-    borderRadius: signalGlass.radius.sm,
-    backgroundColor: signalGlass.colors.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    marginBottom: signalGlass.spacing.sm,
-  },
-  historyLeft: { flexDirection: 'row', alignItems: 'center', gap: signalGlass.spacing.sm, flex: 1 },
-  historyIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: signalGlass.colors.accentPrimaryMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  historyIconError: { backgroundColor: 'rgba(147,0,10,0.2)' },
-  historyMonth: {
-    ...signalGlass.typography.bodyLg,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.body,
-    fontSize: 16,
-  },
-  historyInv: {
-    ...signalGlass.typography.caption,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.bodyMedium,
-  },
-  historyRight: { alignItems: 'flex-end', gap: signalGlass.spacing.xs },
-  historyAmount: {
-    ...signalGlass.typography.monoMd,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.mono,
-  },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: signalGlass.radius.pill,
-    borderWidth: 1,
-    minWidth: 72,
-    justifyContent: 'center',
-  },
-  statusPaid: {
-    backgroundColor: 'rgba(0,165,114,0.2)',
-    borderColor: 'rgba(78,222,163,0.3)',
-  },
-  statusFailed: {
-    backgroundColor: 'rgba(147,0,10,0.2)',
-    borderColor: 'rgba(255,180,171,0.3)',
-  },
-  statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusDotPaid: { backgroundColor: signalGlass.colors.secondary },
-  statusDotFailed: { backgroundColor: signalGlass.colors.error },
-  statusText: { ...signalGlass.typography.caption, fontSize: 11 },
-  statusTextPaid: { color: signalGlass.colors.secondary },
-  statusTextFailed: { color: signalGlass.colors.error },
-  notice: {
-    backgroundColor: signalGlass.colors.accentPrimaryMuted,
-    borderRadius: signalGlass.radius.md,
-    padding: signalGlass.spacing.md,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.accentWarning,
-  },
-  noticeTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: signalGlass.colors.accentWarning,
-    marginBottom: signalGlass.spacing.xs,
-  },
-  noticeBody: { fontSize: 12, color: signalGlass.colors.textSecondary, lineHeight: 18 },
-  gatewayHint: {
-    textAlign: 'center',
-    fontSize: 11,
-    color: signalGlass.colors.textMuted,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    body: { flex: 1, padding: theme.spacing.marginMobile },
+    scroll: {
+      paddingHorizontal: theme.spacing.marginMobile,
+      paddingTop: theme.spacing.md,
+      paddingBottom: theme.spacing.xxxl,
+      gap: theme.spacing.md,
+    },
+    balanceCard: {
+      borderRadius: theme.radius.lg,
+      gap: theme.spacing.sm,
+      overflow: 'hidden',
+    },
+    balanceTitle: {
+      ...theme.typography.displayMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+    },
+    balanceDue: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+    },
+    balanceAmount: {
+      fontSize: 48,
+      fontWeight: '700',
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.monoBold,
+      marginVertical: theme.spacing.sm,
+    },
+    quickCard: { borderRadius: theme.radius.lg },
+    quickRow: { flexDirection: 'row', gap: theme.spacing.sm },
+    quickAction: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: theme.spacing.sm,
+      borderRadius: theme.radius.sm,
+      gap: theme.spacing.xs,
+      minHeight: 72,
+    },
+    quickLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.bodyMedium,
+    },
+    historyCard: { borderRadius: theme.radius.lg },
+    historyHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
+      paddingBottom: theme.spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.borderSubtle,
+    },
+    historyTitle: {
+      ...theme.typography.displayMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+    },
+    filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    filterText: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.bodyMedium,
+    },
+    historyItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: theme.spacing.sm,
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.colors.surfaceContainerLow,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.05)',
+      marginBottom: theme.spacing.sm,
+    },
+    historyLeft: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flex: 1 },
+    historyIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.colors.accentPrimaryMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    historyIconError: { backgroundColor: 'rgba(147,0,10,0.2)' },
+    historyMonth: {
+      ...theme.typography.bodyLg,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.body,
+      fontSize: 16,
+    },
+    historyInv: {
+      ...theme.typography.caption,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.bodyMedium,
+    },
+    historyRight: { alignItems: 'flex-end', gap: theme.spacing.xs },
+    historyAmount: {
+      ...theme.typography.monoMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.mono,
+    },
+    statusPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: theme.radius.pill,
+      borderWidth: 1,
+      minWidth: 72,
+      justifyContent: 'center',
+    },
+    statusPaid: {
+      backgroundColor: 'rgba(0,165,114,0.2)',
+      borderColor: 'rgba(78,222,163,0.3)',
+    },
+    statusFailed: {
+      backgroundColor: 'rgba(147,0,10,0.2)',
+      borderColor: 'rgba(255,180,171,0.3)',
+    },
+    statusDot: { width: 6, height: 6, borderRadius: 3 },
+    statusDotPaid: { backgroundColor: theme.colors.secondary },
+    statusDotFailed: { backgroundColor: theme.colors.error },
+    statusText: { ...theme.typography.caption, fontSize: 11 },
+    statusTextPaid: { color: theme.colors.secondary },
+    statusTextFailed: { color: theme.colors.error },
+    notice: {
+      backgroundColor: theme.colors.accentPrimaryMuted,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      borderWidth: 1,
+      borderColor: theme.colors.accentWarning,
+    },
+    noticeTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.colors.accentWarning,
+      marginBottom: theme.spacing.xs,
+    },
+    noticeBody: { fontSize: 12, color: theme.colors.textSecondary, lineHeight: 18 },
+    gatewayHint: {
+      textAlign: 'center',
+      fontSize: 11,
+      color: theme.colors.textMuted,
+    },
+  });

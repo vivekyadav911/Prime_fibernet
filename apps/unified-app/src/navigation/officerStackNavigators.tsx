@@ -25,7 +25,7 @@ import type {
   OfficerProfileStackParamList,
   OfficerRequestsStackParamList,
 } from '@/types/navigation';
-import { colors } from '@/theme/colors';
+import { colors, officerColors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
 const RequestsStack = createNativeStackNavigator<OfficerRequestsStackParamList>();
@@ -34,7 +34,7 @@ const ProfileStack = createNativeStackNavigator<OfficerProfileStackParamList>();
 const LeaveStack = createNativeStackNavigator<OfficerLeaveStackParamList>();
 const NotificationsStack = createNativeStackNavigator<OfficerNotificationsStackParamList>();
 
-const OFFICER_HEADER_PURPLE = '#5B4FE9';
+const OFFICER_HEADER_PURPLE = officerColors.navBar;
 
 const stackScreenOptions = {
   headerStyle: { backgroundColor: OFFICER_HEADER_PURPLE },

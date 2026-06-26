@@ -8,10 +8,12 @@ import Animated, {
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BottomTabBar } from '@react-navigation/bottom-tabs';
 
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 export function AnimatedTabBar(props: BottomTabBarProps) {
   const { state } = props;
+  const styles = useThemedStyles(createStyles);
   const tabCount = state.routes.length;
   const tabWidth = Dimensions.get('window').width / tabCount;
   const indicatorX = useSharedValue(state.index * tabWidth);
@@ -32,13 +34,14 @@ export function AnimatedTabBar(props: BottomTabBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { position: 'relative' },
-  indicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    height: 2,
-    backgroundColor: signalGlass.colors.accentPrimary,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    wrap: { position: 'relative' },
+    indicator: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      height: 2,
+      backgroundColor: theme.colors.accentPrimary,
+    },
+  });

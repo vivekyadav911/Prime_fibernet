@@ -7,7 +7,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 type CustomerSkeletonLoaderProps = {
   rows?: number;
@@ -15,7 +16,7 @@ type CustomerSkeletonLoaderProps = {
   style?: ViewStyle;
 };
 
-function Bone({ height }: { height: number }) {
+function Bone({ height, boneStyle }: { height: number; boneStyle: ViewStyle }) {
   const opacity = useSharedValue(0.35);
 
   useEffect(() => {
@@ -26,7 +27,7 @@ function Bone({ height }: { height: number }) {
 
   return (
     <Animated.View
-      style={[styles.bone, { height, borderRadius: signalGlass.radius.sm }, animatedStyle]}
+      style={[boneStyle, { height }, animatedStyle]}
     />
   );
 }
@@ -36,19 +37,23 @@ export function CustomerSkeletonLoader({
   rowHeight = 72,
   style,
 }: CustomerSkeletonLoaderProps) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={[styles.container, style]}>
       {Array.from({ length: rows }).map((_, i) => (
-        <Bone key={`sk-${i}`} height={rowHeight} />
+        <Bone key={`sk-${i}`} height={rowHeight} boneStyle={styles.bone} />
       ))}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { gap: signalGlass.spacing.sm, padding: signalGlass.spacing.lg },
-  bone: {
-    width: '100%',
-    backgroundColor: signalGlass.colors.borderSubtle,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    container: { gap: theme.spacing.sm, padding: theme.spacing.lg },
+    bone: {
+      width: '100%',
+      backgroundColor: theme.colors.borderSubtle,
+      borderRadius: theme.radius.sm,
+    },
+  });

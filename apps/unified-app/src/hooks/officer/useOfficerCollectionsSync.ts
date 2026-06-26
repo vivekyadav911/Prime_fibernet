@@ -3,7 +3,6 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { useOfficerId } from '@/hooks/useOfficerId';
 import { paymentCollectionApi } from '@/services/api/paymentCollectionApi';
-import { portalNotificationsApi } from '@/services/api/portalNotificationsApi';
 import { getSupabase } from '@/services/supabase';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 
@@ -66,13 +65,6 @@ function ensureChannel(
         ) {
           invalidate();
         }
-      },
-    )
-    .on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'portal_notifications' },
-      () => {
-        dispatch(portalNotificationsApi.util.invalidateTags(['PortalNotifications']));
       },
     )
     .subscribe();

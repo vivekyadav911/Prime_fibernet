@@ -92,6 +92,7 @@ export type NotificationCategory =
   | 'payment'
   | 'plan'
   | 'ticket'
+  | 'request'
   | 'outage'
   | 'promo'
   | 'system'

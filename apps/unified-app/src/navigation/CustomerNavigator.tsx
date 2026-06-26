@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { Linking } from 'react-native';
+import { Linking, StatusBar } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
+import { CustomerThemeProvider, useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { useRealtimeCustomer } from '@/hooks/useRealtimeCustomer';
 import { DashboardScreen } from '@/screens/customer/dashboard/DashboardScreen';
 import { ChatbotScreen } from '@/screens/customer/ChatbotScreen';
@@ -28,7 +29,6 @@ import { CreateCustomerTicketScreen } from '@/screens/customer/tickets/CreateCus
 import type { CustomerStackParamList, CustomerTabParamList } from '@/types/navigation';
 import { MyBillsScreen } from '@/screens/customer/bills/MyBillsScreen';
 import { InvoiceScreen } from '@/screens/officer/InvoiceScreen';
-import { signalGlass } from '@/theme/customer/signalGlass';
 
 import {
   AboutScreen,
@@ -68,31 +68,11 @@ function CustomerTabs() {
         tabBarStyle: { display: 'none' },
       }}
     >
-      <Tab.Screen
-        name="Home"
-        component={DashboardScreen}
-        options={{ title: 'Home' }}
-      />
-      <Tab.Screen
-        name="Plans"
-        component={PlansScreen}
-        options={{ title: 'Plans' }}
-      />
-      <Tab.Screen
-        name="Payments"
-        component={CustomerBillScreen}
-        options={{ title: 'Payments' }}
-      />
-      <Tab.Screen
-        name="Support"
-        component={CustomerSupportHubScreen}
-        options={{ title: 'Support' }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{ title: 'Profile' }}
-      />
+      <Tab.Screen name="Home" component={DashboardScreen} options={{ title: 'Home' }} />
+      <Tab.Screen name="Plans" component={PlansScreen} options={{ title: 'Plans' }} />
+      <Tab.Screen name="Payments" component={CustomerBillScreen} options={{ title: 'Payments' }} />
+      <Tab.Screen name="Support" component={CustomerSupportHubScreen} options={{ title: 'Support' }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );
 }
@@ -125,44 +105,60 @@ function CustomerTabsWithDeepLinks() {
   return <CustomerTabs />;
 }
 
+function CustomerStackNavigator() {
+  const { theme } = useCustomerTheme();
+
+  return (
+    <>
+      <StatusBar
+        barStyle={theme.appearance === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.colors.bgDeep}
+      />
+      <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: theme.colors.bgSurface },
+        headerTintColor: theme.colors.textPrimary,
+        contentStyle: { backgroundColor: theme.colors.bgDeep },
+      }}
+    >
+      <Stack.Screen name="CustomerTabs" component={CustomerTabsWithDeepLinks} options={{ headerShown: false }} />
+      <Stack.Screen name="PlanDetails" component={PlanDetailsScreen} options={{ title: 'Plan details' }} />
+      <Stack.Screen name="PlanChangeRequest" component={PlanChangeRequestScreen} options={{ title: 'Plan change' }} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
+      <Stack.Screen name="PaymentGateway" component={PaymentGatewayScreen} options={{ title: 'Payment gateway' }} />
+      <Stack.Screen name="GatewayWebView" component={GatewayWebViewScreen} options={{ title: 'Payment' }} />
+      <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} options={{ title: 'Payment method', headerShown: false, presentation: 'transparentModal' }} />
+      <Stack.Screen name="CustomerBill" component={CustomerBillScreen} options={{ title: 'My bill' }} />
+      <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt' }} />
+      <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ title: 'Success', headerShown: false }} />
+      <Stack.Screen name="MakePayment" component={MakePaymentScreen} options={{ title: 'Make payment' }} />
+      <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreenV2} options={{ title: 'Payment history' }} />
+      <Stack.Screen name="MyBills" component={MyBillsScreen} options={{ title: 'My bills' }} />
+      <Stack.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Invoice' }} />
+      <Stack.Screen name="Notifications" component={CustomerNotificationsScreen} options={{ title: 'Notifications' }} />
+      <Stack.Screen name="About" component={AboutScreen} options={{ title: 'About' }} />
+      <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms' }} />
+      <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ title: 'Privacy' }} />
+      <Stack.Screen name="Refund" component={RefundScreen} options={{ title: 'Refund policy' }} />
+      <Stack.Screen name="CustomerLiveChat" component={CustomerLiveChatScreen} options={{ title: 'Live Chat' }} />
+      <Stack.Screen name="CustomerFaqList" component={CustomerFaqListScreen} options={{ title: 'FAQs' }} />
+      <Stack.Screen name="CustomerFaqDetail" component={CustomerFaqDetailScreen} options={{ title: 'FAQ' }} />
+      <Stack.Screen name="CustomerSupportHub" component={CustomerSupportHubScreen as never} options={{ title: 'Support' }} />
+      <Stack.Screen name="SupportScreen" component={ChatbotScreen} options={{ title: 'Prima AI' }} />
+      <Stack.Screen name="CustomerTicketList" component={CustomerTicketListScreen} options={{ title: 'My tickets' }} />
+      <Stack.Screen name="CustomerTicketDetail" component={CustomerTicketDetailScreen} options={{ title: 'Ticket' }} />
+      <Stack.Screen name="CreateCustomerTicket" component={CreateCustomerTicketScreen} options={{ title: 'New ticket' }} />
+    </Stack.Navigator>
+    </>
+  );
+}
+
 export function CustomerNavigator() {
   return (
-    <CustomerFontProvider>
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: { backgroundColor: signalGlass.colors.bgSurface },
-          headerTintColor: signalGlass.colors.textPrimary,
-          contentStyle: { backgroundColor: signalGlass.colors.bgDeep },
-        }}
-      >
-        <Stack.Screen name="CustomerTabs" component={CustomerTabsWithDeepLinks} options={{ headerShown: false }} />
-        <Stack.Screen name="PlanDetails" component={PlanDetailsScreen} options={{ title: 'Plan details' }} />
-        <Stack.Screen name="PlanChangeRequest" component={PlanChangeRequestScreen} options={{ title: 'Plan change' }} />
-        <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
-        <Stack.Screen name="PaymentGateway" component={PaymentGatewayScreen} options={{ title: 'Payment gateway' }} />
-        <Stack.Screen name="GatewayWebView" component={GatewayWebViewScreen} options={{ title: 'Payment' }} />
-        <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} options={{ title: 'Payment method', headerShown: false, presentation: 'transparentModal' }} />
-        <Stack.Screen name="CustomerBill" component={CustomerBillScreen} options={{ title: 'My bill' }} />
-        <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt' }} />
-        <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ title: 'Success', headerShown: false }} />
-        <Stack.Screen name="MakePayment" component={MakePaymentScreen} options={{ title: 'Make payment' }} />
-        <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreenV2} options={{ title: 'Payment history' }} />
-        <Stack.Screen name="MyBills" component={MyBillsScreen} options={{ title: 'My bills' }} />
-        <Stack.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Invoice' }} />
-        <Stack.Screen name="Notifications" component={CustomerNotificationsScreen} options={{ title: 'Notifications' }} />
-        <Stack.Screen name="About" component={AboutScreen} options={{ title: 'About' }} />
-        <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms' }} />
-        <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ title: 'Privacy' }} />
-        <Stack.Screen name="Refund" component={RefundScreen} options={{ title: 'Refund policy' }} />
-        <Stack.Screen name="CustomerLiveChat" component={CustomerLiveChatScreen} options={{ title: 'Live Chat' }} />
-        <Stack.Screen name="CustomerFaqList" component={CustomerFaqListScreen} options={{ title: 'FAQs' }} />
-        <Stack.Screen name="CustomerFaqDetail" component={CustomerFaqDetailScreen} options={{ title: 'FAQ' }} />
-        <Stack.Screen name="CustomerSupportHub" component={CustomerSupportHubScreen as never} options={{ title: 'Support' }} />
-        <Stack.Screen name="SupportScreen" component={ChatbotScreen} options={{ title: 'Prima AI' }} />
-        <Stack.Screen name="CustomerTicketList" component={CustomerTicketListScreen} options={{ title: 'My tickets' }} />
-        <Stack.Screen name="CustomerTicketDetail" component={CustomerTicketDetailScreen} options={{ title: 'Ticket' }} />
-        <Stack.Screen name="CreateCustomerTicket" component={CreateCustomerTicketScreen} options={{ title: 'New ticket' }} />
-      </Stack.Navigator>
-    </CustomerFontProvider>
+    <CustomerThemeProvider>
+      <CustomerFontProvider>
+        <CustomerStackNavigator />
+      </CustomerFontProvider>
+    </CustomerThemeProvider>
   );
 }

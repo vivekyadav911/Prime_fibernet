@@ -10,7 +10,9 @@ import type { BillingCycle, Plan } from '@prime/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CustomerButton } from '@/components/customer/ui';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 import { formatCurrencyInr } from '@/utils/formatCurrency';
 
 type PlanDetailSheetProps = {
@@ -29,6 +31,8 @@ export const PlanDetailSheet = forwardRef<BottomSheet, PlanDetailSheetProps>(
     ref,
   ) {
     const insets = useSafeAreaInsets();
+    const { theme } = useCustomerTheme();
+    const styles = useThemedStyles(createStyles);
     const snapPoints = useMemo(() => ['60%'], []);
 
     const renderBackdrop = useCallback(
@@ -42,7 +46,7 @@ export const PlanDetailSheet = forwardRef<BottomSheet, PlanDetailSheetProps>(
       (props: BottomSheetHandleProps) => (
         <BottomSheetHandle {...props} indicatorStyle={styles.handleIndicator} />
       ),
-      [],
+      [styles.handleIndicator],
     );
 
     if (!plan) return null;
@@ -62,7 +66,7 @@ export const PlanDetailSheet = forwardRef<BottomSheet, PlanDetailSheetProps>(
         handleComponent={renderHandle}
         backgroundStyle={styles.sheetBg}
       >
-        <View style={[styles.content, { paddingBottom: insets.bottom + signalGlass.spacing.lg }]}>
+        <View style={[styles.content, { paddingBottom: insets.bottom + theme.spacing.lg }]}>
           <Text style={styles.name}>{plan.name}</Text>
           <Text style={styles.meta}>
             {plan.speedMbps} Mbps · {billingCycle} billing
@@ -94,30 +98,31 @@ export const PlanDetailSheet = forwardRef<BottomSheet, PlanDetailSheetProps>(
   },
 );
 
-const styles = StyleSheet.create({
-  sheetBg: { backgroundColor: signalGlass.colors.bgSurface },
-  handleIndicator: { backgroundColor: signalGlass.colors.textMuted, width: 40 },
-  content: { padding: signalGlass.spacing.lg, gap: signalGlass.spacing.xs },
-  name: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-  },
-  meta: { color: signalGlass.colors.textSecondary, fontSize: 14 },
-  price: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: signalGlass.colors.accentPrimary,
-    fontFamily: signalGlass.fonts.mono,
-    marginVertical: signalGlass.spacing.sm,
-  },
-  savings: { color: signalGlass.colors.accentSuccess, fontSize: 13, fontWeight: '600' },
-  feature: { color: signalGlass.colors.textSecondary, fontSize: 14 },
-  cta: { marginTop: signalGlass.spacing.lg },
-  currentNote: {
-    marginTop: signalGlass.spacing.lg,
-    color: signalGlass.colors.accentSuccess,
-    fontWeight: '600',
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    sheetBg: { backgroundColor: theme.colors.bgSurface },
+    handleIndicator: { backgroundColor: theme.colors.textMuted, width: 40 },
+    content: { padding: theme.spacing.lg, gap: theme.spacing.xs },
+    name: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.display,
+    },
+    meta: { color: theme.colors.textSecondary, fontSize: 14 },
+    price: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: theme.colors.accentPrimary,
+      fontFamily: theme.fonts.mono,
+      marginVertical: theme.spacing.sm,
+    },
+    savings: { color: theme.colors.accentSuccess, fontSize: 13, fontWeight: '600' },
+    feature: { color: theme.colors.textSecondary, fontSize: 14 },
+    cta: { marginTop: theme.spacing.lg },
+    currentNote: {
+      marginTop: theme.spacing.lg,
+      color: theme.colors.accentSuccess,
+      fontWeight: '600',
+    },
+  });

@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 import type { PlanFilterCategory } from '@/utils/planTier';
 
 type PlanFilterChipsProps = {
@@ -10,6 +11,8 @@ type PlanFilterChipsProps = {
 };
 
 export function PlanFilterChips({ categories, selected, onSelect }: PlanFilterChipsProps) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
       {categories.map((category) => {
@@ -29,22 +32,23 @@ export function PlanFilterChips({ categories, selected, onSelect }: PlanFilterCh
   );
 }
 
-const styles = StyleSheet.create({
-  row: { gap: signalGlass.spacing.sm, paddingVertical: signalGlass.spacing.sm },
-  chip: {
-    paddingHorizontal: signalGlass.spacing.md,
-    paddingVertical: signalGlass.spacing.sm,
-    borderRadius: signalGlass.radius.pill,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-    backgroundColor: signalGlass.colors.bgSurface,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  chipActive: {
-    backgroundColor: signalGlass.colors.accentPrimaryMuted,
-    borderColor: signalGlass.colors.accentPrimary,
-  },
-  text: { color: signalGlass.colors.textSecondary, fontSize: 13, fontWeight: '500' },
-  textActive: { color: signalGlass.colors.accentGlow, fontWeight: '700' },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    row: { gap: theme.spacing.sm, paddingVertical: theme.spacing.sm },
+    chip: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.radius.pill,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+      backgroundColor: theme.colors.bgSurface,
+      minHeight: 44,
+      justifyContent: 'center',
+    },
+    chipActive: {
+      backgroundColor: theme.colors.accentPrimaryMuted,
+      borderColor: theme.colors.accentPrimary,
+    },
+    text: { color: theme.colors.textSecondary, fontSize: 13, fontWeight: '500' },
+    textActive: { color: theme.colors.accentGlow, fontWeight: '700' },
+  });

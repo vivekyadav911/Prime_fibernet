@@ -10,15 +10,17 @@ import {
   PressableScale,
 } from '@/components/customer/ui';
 import { useGetFaqsAdminQuery, useGetFaqCategoriesQuery } from '@/services/api/adminSupportApi';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { Faq } from '@/types/support';
+import type { CustomerTheme } from '@/theme/customer';
 import { queryErrorMessage } from '@/utils/queryError';
 import { DismissKeyboardFlatList } from '@/components/common';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'CustomerFaqList'>;
 
 export function CustomerFaqListScreen({ navigation }: Props) {
+  const styles = useThemedStyles(createStyles);
   const { data: faqs, isLoading, isError, error, refetch } = useGetFaqsAdminQuery({ publishedOnly: true });
   const { data: categories } = useGetFaqCategoriesQuery();
 
@@ -38,7 +40,7 @@ export function CustomerFaqListScreen({ navigation }: Props) {
         </PressableScale>
       );
     },
-    [navigation, categories],
+    [navigation, categories, styles],
   );
 
   if (isLoading) {
@@ -72,21 +74,22 @@ export function CustomerFaqListScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  list: { padding: signalGlass.spacing.lg, paddingBottom: signalGlass.spacing.xxxl },
-  cardWrap: { marginBottom: signalGlass.spacing.sm },
-  card: { gap: signalGlass.spacing.xs },
-  category: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: signalGlass.colors.accentGlow,
-    textTransform: 'uppercase',
-  },
-  question: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.bodyMedium,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    list: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxxl },
+    cardWrap: { marginBottom: theme.spacing.sm },
+    card: { gap: theme.spacing.xs },
+    category: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.colors.accentGlow,
+      textTransform: 'uppercase',
+    },
+    question: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.bodyMedium,
+    },
+  });

@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CustomerButton } from './CustomerButton';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 type CustomerEmptyStateProps = {
   title: string;
@@ -18,6 +19,8 @@ export function CustomerEmptyState({
   onAction,
   icon,
 }: CustomerEmptyStateProps) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={styles.wrap} accessibilityRole="text">
       {icon ? <Text style={styles.icon}>{icon}</Text> : null}
@@ -41,6 +44,8 @@ export function CustomerErrorState({
   onRetry,
   retryLabel = 'Try again',
 }: CustomerErrorStateProps) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={styles.errorWrap} accessibilityRole="alert">
       <Text style={styles.errorTitle}>Something went wrong</Text>
@@ -52,52 +57,53 @@ export function CustomerErrorState({
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    alignItems: 'center',
-    paddingVertical: signalGlass.spacing.xxl,
-    paddingHorizontal: signalGlass.spacing.lg,
-  },
-  icon: { fontSize: 32, marginBottom: signalGlass.spacing.md },
-  title: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-    fontSize: signalGlass.typography.displayMd.fontSize,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: signalGlass.spacing.sm,
-  },
-  subtitle: {
-    color: signalGlass.colors.textSecondary,
-    fontFamily: signalGlass.fonts.body,
-    fontSize: signalGlass.typography.body.fontSize,
-    textAlign: 'center',
-    lineHeight: signalGlass.typography.body.lineHeight,
-  },
-  btn: { marginTop: signalGlass.spacing.lg },
-  errorWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: signalGlass.spacing.xl,
-    backgroundColor: signalGlass.colors.bgSurface,
-    borderRadius: signalGlass.radius.md,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-    margin: signalGlass.spacing.lg,
-  },
-  errorTitle: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-    fontSize: signalGlass.typography.displayMd.fontSize,
-    fontWeight: '700',
-    marginBottom: signalGlass.spacing.sm,
-  },
-  errorMessage: {
-    color: signalGlass.colors.textSecondary,
-    fontFamily: signalGlass.fonts.body,
-    fontSize: signalGlass.typography.body.fontSize,
-    textAlign: 'center',
-    marginBottom: signalGlass.spacing.lg,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    wrap: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xxl,
+      paddingHorizontal: theme.spacing.lg,
+    },
+    icon: { fontSize: 32, marginBottom: theme.spacing.md },
+    title: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.display,
+      fontSize: theme.typography.displayMd.fontSize,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginBottom: theme.spacing.sm,
+    },
+    subtitle: {
+      color: theme.colors.textSecondary,
+      fontFamily: theme.fonts.body,
+      fontSize: theme.typography.body.fontSize,
+      textAlign: 'center',
+      lineHeight: theme.typography.body.lineHeight,
+    },
+    btn: { marginTop: theme.spacing.lg },
+    errorWrap: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: theme.spacing.xl,
+      backgroundColor: theme.colors.bgSurface,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+      margin: theme.spacing.lg,
+    },
+    errorTitle: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.display,
+      fontSize: theme.typography.displayMd.fontSize,
+      fontWeight: '700',
+      marginBottom: theme.spacing.sm,
+    },
+    errorMessage: {
+      color: theme.colors.textSecondary,
+      fontFamily: theme.fonts.body,
+      fontSize: theme.typography.body.fontSize,
+      textAlign: 'center',
+      marginBottom: theme.spacing.lg,
+    },
+  });

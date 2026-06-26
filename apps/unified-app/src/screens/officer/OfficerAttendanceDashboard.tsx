@@ -23,7 +23,7 @@ import { enqueueToast } from '@/store/slices/uiSlice';
 import type { OfficerDrawerParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { radius, spacing } from '@/theme/spacing';
 import type { ApprovalType } from '@/types/attendance';
 import { queryErrorMessage } from '@/utils/queryError';
 
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   todayLabel: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: spacing.xxs },
   statusCard: {
     backgroundColor: colors.surfaceWhite,
-    borderRadius: 12,
+    borderRadius: radius.md,
     padding: spacing.md,
     gap: spacing.sm,
     borderWidth: 1,

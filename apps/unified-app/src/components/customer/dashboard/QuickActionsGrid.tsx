@@ -1,8 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { GlassCard, PressableScale } from '@/components/customer/ui';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 export type QuickAction = {
   id: string;
@@ -16,6 +18,9 @@ type QuickActionsGridProps = {
 };
 
 export function QuickActionsGrid({ actions }: QuickActionsGridProps) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useCustomerTheme();
+
   return (
     <View style={styles.grid}>
       {actions.map((action) => (
@@ -27,7 +32,7 @@ export function QuickActionsGrid({ actions }: QuickActionsGridProps) {
         >
           <GlassCard style={styles.card} padded>
             <View style={styles.iconWrap}>
-              <MaterialCommunityIcons name={action.icon} size={24} color={signalGlass.colors.onSurfaceVariant} />
+              <MaterialCommunityIcons name={action.icon} size={24} color={theme.colors.onSurfaceVariant} />
             </View>
             <Text style={styles.label} numberOfLines={1}>
               {action.label}
@@ -39,35 +44,36 @@ export function QuickActionsGrid({ actions }: QuickActionsGridProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: signalGlass.spacing.gutter,
-    marginTop: signalGlass.spacing.md,
-  },
-  cell: {
-    width: '47%',
-    flexGrow: 1,
-  },
-  card: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 120,
-    borderRadius: signalGlass.radius.lg,
-    gap: signalGlass.spacing.sm,
-  },
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: signalGlass.colors.surfaceContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    ...signalGlass.typography.caption,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.bodyMedium,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.gutter,
+      marginTop: theme.spacing.md,
+    },
+    cell: {
+      width: '47%',
+      flexGrow: 1,
+    },
+    card: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 120,
+      borderRadius: theme.radius.lg,
+      gap: theme.spacing.sm,
+    },
+    iconWrap: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme.colors.surfaceContainer,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    label: {
+      ...theme.typography.caption,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodyMedium,
+    },
+  });

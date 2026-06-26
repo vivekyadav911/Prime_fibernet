@@ -5,17 +5,19 @@ import type { BillingCycle } from '@prime/types';
 
 import { CustomerButton, CustomerInput } from '@/components/customer/ui';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useGetActiveSubscriptionQuery, useGetPlanByIdQuery } from '@/services/api';
 import { usePlanChangeRequest } from '@/hooks/usePlanChangeRequest';
 import { useAppSelector } from '@/store/hooks';
-import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
+import type { CustomerTheme } from '@/theme/customer';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'PlanChangeRequest'>;
 
 const CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual'];
 
 function PlanChangeContent({ route, navigation }: Props) {
+  const styles = useThemedStyles(createStyles);
   const user = useAppSelector((s) => s.auth.user);
   const { planId } = route.params;
   const { data: plan } = useGetPlanByIdQuery(planId);
@@ -82,22 +84,23 @@ export function PlanChangeRequestScreen(props: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  content: { padding: signalGlass.spacing.lg, gap: signalGlass.spacing.md },
-  heading: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  sub: { color: signalGlass.colors.textSecondary, fontSize: 14 },
-  label: {
-    color: signalGlass.colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    marginTop: signalGlass.spacing.sm,
-  },
-  textarea: { minHeight: 100, textAlignVertical: 'top' },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    content: { padding: theme.spacing.lg, gap: theme.spacing.md },
+    heading: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.display,
+      fontSize: 22,
+      fontWeight: '700',
+    },
+    sub: { color: theme.colors.textSecondary, fontSize: 14 },
+    label: {
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '600',
+      textTransform: 'uppercase',
+      marginTop: theme.spacing.sm,
+    },
+    textarea: { minHeight: 100, textAlignVertical: 'top' },
+  });

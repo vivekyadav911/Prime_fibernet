@@ -452,6 +452,21 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             agent_id: officerId.data,
           });
 
+          await client.from('audit_logs').insert({
+            actor_role: 'officer',
+            action: 'cash_collected',
+            target_entity: 'payments',
+            new_values: {
+              payment_id: data.id,
+              amount: body.amount,
+              method,
+              customer_id: body.customerId,
+              customer_name: body.customerName,
+              collected_by: officerId.data,
+            },
+            status: 'SUCCESS',
+          });
+
           return mapPayment(data as Record<string, unknown>);
         },
       }),
@@ -521,10 +536,11 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
     getCustomerPaymentHistoryV2: builder.query<PaymentRecord[], string | void>({
       query: (authUserId) => ({
         handler: async (client) => {
-          await resolveCustomerUserId(client, authUserId ?? undefined);
+          const customerId = await resolveCustomerUserId(client, authUserId ?? undefined);
           const { data, error } = await client
             .from('payments')
             .select('*')
+            .eq('customer_id', customerId)
             .order('created_at', { ascending: false })
             .limit(50);
           if (error) throw error;

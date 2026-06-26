@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@prime/ui';
 import { Ionicons } from '@expo/vector-icons';
 
-import { ScreenWrapper } from '@/components/common';
+import { ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
 import { useOfficerProfile, usePendingContractSignature } from '@/hooks/officer';
 import { signOut } from '@/hooks/useAuth';
 import { useOfficerId } from '@/hooks/useOfficerId';
@@ -20,12 +20,14 @@ export function OfficerProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<OfficerProfileStackParamList>>();
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
-  const { profile, refetch } = useOfficerProfile();
+  const { profile, isLoading: profileLoading, isError: profileError, refetch } = useOfficerProfile();
   const officerId = useOfficerId();
   const { needsSignature, navigateToSign } = usePendingContractSignature();
   const [displayName, setDisplayName] = useState(profile?.name ?? '');
   const [editingName, setEditingName] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.name) setDisplayName(profile.name);
@@ -34,6 +36,7 @@ export function OfficerProfileScreen() {
   const onSaveName = useCallback(async () => {
     if (!officerId || !displayName.trim()) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const { error } = await getSupabase()
         .from('officers')
@@ -42,6 +45,8 @@ export function OfficerProfileScreen() {
       if (error) throw error;
       setEditingName(false);
       refetch();
+    } catch (err) {
+      setSaveError((err as Error).message ?? 'Failed to save name. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -49,30 +54,52 @@ export function OfficerProfileScreen() {
 
   const onAvatar = useCallback(async () => {
     if (!officerId) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-    if (result.canceled || !result.assets[0]) return;
+    setAvatarError(null);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      if (result.canceled || !result.assets[0]) return;
 
-    const uri = result.assets[0].uri;
-    const fileName = `avatars/${officerId}_${Date.now()}.jpg`;
-    const response = await fetch(uri);
-    const blob = await response.blob();
+      const uri = result.assets[0].uri;
+      const fileName = `avatars/${officerId}_${Date.now()}.jpg`;
+      const response = await fetch(uri);
+      const blob = await response.blob();
 
-    const { error: uploadError } = await getSupabase().storage
-      .from('officer-avatars')
-      .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
-    if (uploadError) return;
+      const { error: uploadError } = await getSupabase().storage
+        .from('officer-avatars')
+        .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) throw uploadError;
 
-    const { data: urlData } = getSupabase().storage.from('officer-avatars').getPublicUrl(fileName);
-    await getSupabase()
-      .from('officers')
-      .update({ profile_photo_url: urlData.publicUrl })
-      .eq('id', officerId);
-    refetch();
+      const { data: urlData } = getSupabase().storage.from('officer-avatars').getPublicUrl(fileName);
+      const { error: updateError } = await getSupabase()
+        .from('officers')
+        .update({ profile_photo_url: urlData.publicUrl })
+        .eq('id', officerId);
+      if (updateError) throw updateError;
+      refetch();
+    } catch (err) {
+      setAvatarError((err as Error).message ?? 'Photo upload failed. Please try again.');
+    }
   }, [officerId, refetch]);
+
+  if (profileLoading) {
+    return (
+      <ScreenWrapper>
+        <SkeletonLoader rows={6} />
+      </ScreenWrapper>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <ScreenWrapper>
+        <ErrorState message="Could not load profile. Please try again." onRetry={refetch} />
+      </ScreenWrapper>
+    );
+  }
 
   return (
     <ScreenWrapper>
@@ -98,13 +125,15 @@ export function OfficerProfileScreen() {
               value={displayName}
               onChangeText={setDisplayName}
             />
-            <Button label={saving ? '…' : 'Save'} onPress={() => void onSaveName()} />
+            <Button label={saving ? '…' : 'Save'} onPress={() => void onSaveName()} disabled={saving} />
           </View>
         ) : (
           <Pressable style={styles.editLink} onPress={() => setEditingName(true)}>
             <Text style={styles.editLinkText}>✏️ Edit display name</Text>
           </Pressable>
         )}
+        {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
+        {avatarError ? <Text style={styles.errorText}>{avatarError}</Text> : null}
       </View>
 
       <Text style={styles.sectionLabel}>ACCOUNT INFO</Text>
@@ -233,4 +262,5 @@ const styles = StyleSheet.create({
   signBadgeText: { fontSize: 10, fontWeight: '700', color: colors.white, textTransform: 'uppercase' },
   appSection: { marginBottom: spacing.lg },
   version: { color: colors.textSecondary },
+  errorText: { color: colors.errorRed, fontSize: 12, marginTop: spacing.xs, textAlign: 'center' },
 });

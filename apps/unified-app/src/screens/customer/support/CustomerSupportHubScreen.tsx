@@ -5,9 +5,11 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerButton, GlassCard } from '@/components/customer/ui';
 import { CustomerTopBar } from '@/components/customer/shell';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 import type { CustomerStackParamList, CustomerTabParamList } from '@/types/navigation';
 
 type Props = BottomTabScreenProps<CustomerTabParamList, 'Support'>;
@@ -32,6 +34,8 @@ const FAQS = [
 
 export function CustomerSupportHubScreen(_props: Props) {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useCustomerTheme();
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [search, setSearch] = useState('');
 
@@ -49,7 +53,7 @@ export function CustomerSupportHubScreen(_props: Props) {
         <View style={styles.cardsRow}>
           <GlassCard style={[styles.card, styles.primaCard]} glow padded>
             <View style={styles.cardIconWrap}>
-              <MaterialCommunityIcons name="robot-outline" size={28} color={signalGlass.colors.primary} />
+              <MaterialCommunityIcons name="robot-outline" size={28} color={theme.colors.primary} />
             </View>
             <Text style={styles.cardTitle}>Ask Prima</Text>
             <Text style={styles.cardSub}>
@@ -65,7 +69,7 @@ export function CustomerSupportHubScreen(_props: Props) {
 
           <GlassCard style={styles.card} padded>
             <View style={[styles.cardIconWrap, styles.agentIconWrap]}>
-              <MaterialCommunityIcons name="headset" size={28} color={signalGlass.colors.onSurface} />
+              <MaterialCommunityIcons name="headset" size={28} color={theme.colors.onSurface} />
             </View>
             <Text style={styles.cardTitle}>Live Support</Text>
             <Text style={styles.cardSub}>
@@ -84,11 +88,11 @@ export function CustomerSupportHubScreen(_props: Props) {
         <GlassCard style={styles.faqCard} padded>
           <Text style={styles.faqTitle}>Frequently Asked Questions</Text>
           <View style={styles.searchWrap}>
-            <MaterialCommunityIcons name="magnify" size={20} color={signalGlass.colors.onSurfaceVariant} style={styles.searchIcon} />
+            <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.onSurfaceVariant} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search FAQs..."
-              placeholderTextColor={signalGlass.colors.textMuted}
+              placeholderTextColor={theme.colors.textMuted}
               value={search}
               onChangeText={setSearch}
               accessibilityLabel="Search FAQs"
@@ -107,7 +111,7 @@ export function CustomerSupportHubScreen(_props: Props) {
                   <MaterialCommunityIcons
                     name={expanded ? 'chevron-up' : 'chevron-down'}
                     size={22}
-                    color={signalGlass.colors.onSurfaceVariant}
+                    color={theme.colors.onSurfaceVariant}
                   />
                 </Pressable>
                 {expanded ? <Text style={styles.faqAnswer}>{faq.answer}</Text> : null}
@@ -127,119 +131,120 @@ export function CustomerSupportHubScreen(_props: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  content: {
-    paddingHorizontal: signalGlass.spacing.marginMobile,
-    paddingTop: signalGlass.spacing.md,
-    paddingBottom: signalGlass.spacing.xxxl,
-  },
-  heading: {
-    ...signalGlass.typography.displayLg,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.display,
-  },
-  subheading: {
-    ...signalGlass.typography.body,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.body,
-    marginTop: signalGlass.spacing.xs,
-    marginBottom: signalGlass.spacing.lg,
-  },
-  cardsRow: { gap: signalGlass.spacing.sm, marginBottom: signalGlass.spacing.lg },
-  card: { borderRadius: signalGlass.radius.lg },
-  primaCard: {
-    borderColor: 'rgba(173,198,255,0.3)',
-  },
-  cardIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: signalGlass.colors.accentPrimaryMuted,
-    borderWidth: 1,
-    borderColor: 'rgba(173,198,255,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: signalGlass.spacing.sm,
-  },
-  agentIconWrap: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: signalGlass.colors.borderGlass,
-  },
-  cardTitle: {
-    ...signalGlass.typography.displayMd,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-    marginBottom: signalGlass.spacing.xs,
-  },
-  cardSub: {
-    ...signalGlass.typography.body,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.body,
-    marginBottom: signalGlass.spacing.md,
-  },
-  cardBtn: { width: '100%' },
-  faqCard: { borderRadius: signalGlass.radius.lg, marginBottom: signalGlass.spacing.md },
-  faqTitle: {
-    ...signalGlass.typography.displayMd,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-    marginBottom: signalGlass.spacing.sm,
-  },
-  searchWrap: {
-    position: 'relative',
-    marginBottom: signalGlass.spacing.md,
-  },
-  searchIcon: { position: 'absolute', left: signalGlass.spacing.sm, top: 14, zIndex: 1 },
-  searchInput: {
-    backgroundColor: signalGlass.colors.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-    borderRadius: signalGlass.radius.sm,
-    paddingVertical: signalGlass.spacing.sm,
-    paddingLeft: 40,
-    paddingRight: signalGlass.spacing.sm,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.body,
-    minHeight: 48,
-  },
-  faqItem: {
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-    borderRadius: signalGlass.radius.sm,
-    marginBottom: signalGlass.spacing.sm,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.02)',
-  },
-  faqQuestion: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: signalGlass.spacing.sm,
-    minHeight: 48,
-  },
-  faqQuestionText: {
-    ...signalGlass.typography.bodyMedium,
-    color: signalGlass.colors.onSurface,
-    fontFamily: signalGlass.fonts.bodySemiBold,
-    flex: 1,
-    paddingRight: signalGlass.spacing.sm,
-  },
-  faqAnswer: {
-    ...signalGlass.typography.body,
-    color: signalGlass.colors.onSurfaceVariant,
-    fontFamily: signalGlass.fonts.body,
-    paddingHorizontal: signalGlass.spacing.sm,
-    paddingBottom: signalGlass.spacing.sm,
-  },
-  ticketsLink: { alignItems: 'center', marginBottom: signalGlass.spacing.sm },
-  ticketsLinkText: { color: signalGlass.colors.primary, fontFamily: signalGlass.fonts.bodyMedium },
-  raiseCta: {
-    padding: signalGlass.spacing.lg,
-    borderRadius: signalGlass.radius.md,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.primary,
-    alignItems: 'center',
-  },
-  raiseText: { color: signalGlass.colors.primary, fontWeight: '600', fontFamily: signalGlass.fonts.bodyMedium },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    content: {
+      paddingHorizontal: theme.spacing.marginMobile,
+      paddingTop: theme.spacing.md,
+      paddingBottom: theme.spacing.xxxl,
+    },
+    heading: {
+      ...theme.typography.displayLg,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.display,
+    },
+    subheading: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+      marginTop: theme.spacing.xs,
+      marginBottom: theme.spacing.lg,
+    },
+    cardsRow: { gap: theme.spacing.sm, marginBottom: theme.spacing.lg },
+    card: { borderRadius: theme.radius.lg },
+    primaCard: {
+      borderColor: 'rgba(173,198,255,0.3)',
+    },
+    cardIconWrap: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: theme.colors.accentPrimaryMuted,
+      borderWidth: 1,
+      borderColor: 'rgba(173,198,255,0.3)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: theme.spacing.sm,
+    },
+    agentIconWrap: {
+      backgroundColor: 'rgba(255,255,255,0.1)',
+      borderColor: theme.colors.borderGlass,
+    },
+    cardTitle: {
+      ...theme.typography.displayMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+      marginBottom: theme.spacing.xs,
+    },
+    cardSub: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+      marginBottom: theme.spacing.md,
+    },
+    cardBtn: { width: '100%' },
+    faqCard: { borderRadius: theme.radius.lg, marginBottom: theme.spacing.md },
+    faqTitle: {
+      ...theme.typography.displayMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+      marginBottom: theme.spacing.sm,
+    },
+    searchWrap: {
+      position: 'relative',
+      marginBottom: theme.spacing.md,
+    },
+    searchIcon: { position: 'absolute', left: theme.spacing.sm, top: 14, zIndex: 1 },
+    searchInput: {
+      backgroundColor: theme.colors.surfaceContainerLow,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+      borderRadius: theme.radius.sm,
+      paddingVertical: theme.spacing.sm,
+      paddingLeft: 40,
+      paddingRight: theme.spacing.sm,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.body,
+      minHeight: 48,
+    },
+    faqItem: {
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+      borderRadius: theme.radius.sm,
+      marginBottom: theme.spacing.sm,
+      overflow: 'hidden',
+      backgroundColor: 'rgba(255,255,255,0.02)',
+    },
+    faqQuestion: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: theme.spacing.sm,
+      minHeight: 48,
+    },
+    faqQuestionText: {
+      ...theme.typography.bodyMedium,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+      flex: 1,
+      paddingRight: theme.spacing.sm,
+    },
+    faqAnswer: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+      paddingHorizontal: theme.spacing.sm,
+      paddingBottom: theme.spacing.sm,
+    },
+    ticketsLink: { alignItems: 'center', marginBottom: theme.spacing.sm },
+    ticketsLinkText: { color: theme.colors.primary, fontFamily: theme.fonts.bodyMedium },
+    raiseCta: {
+      padding: theme.spacing.lg,
+      borderRadius: theme.radius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+      alignItems: 'center',
+    },
+    raiseText: { color: theme.colors.primary, fontWeight: '600', fontFamily: theme.fonts.bodyMedium },
+  });

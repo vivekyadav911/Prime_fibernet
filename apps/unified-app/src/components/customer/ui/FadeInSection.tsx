@@ -7,8 +7,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { useReduceMotion } from '@/hooks/useReduceMotion';
-import { signalGlass } from '@/theme/customer/signalGlass';
 
 type FadeInSectionProps = {
   children: ReactNode;
@@ -16,6 +16,7 @@ type FadeInSectionProps = {
 };
 
 export function FadeInSection({ children, delayMs = 0 }: FadeInSectionProps) {
+  const { theme } = useCustomerTheme();
   const reduceMotion = useReduceMotion();
   const opacity = useSharedValue(reduceMotion ? 1 : 0);
   const translateY = useSharedValue(reduceMotion ? 0 : 20);
@@ -26,10 +27,10 @@ export function FadeInSection({ children, delayMs = 0 }: FadeInSectionProps) {
       translateY.value = 0;
       return;
     }
-    const duration = signalGlass.motion.fadeDurationMs;
+    const duration = theme.motion.fadeDurationMs;
     opacity.value = withDelay(delayMs, withTiming(1, { duration }));
     translateY.value = withDelay(delayMs, withTiming(0, { duration }));
-  }, [delayMs, opacity, reduceMotion, translateY]);
+  }, [delayMs, opacity, reduceMotion, theme.motion.fadeDurationMs, translateY]);
 
   const style = useAnimatedStyle(() => ({
     opacity: opacity.value,

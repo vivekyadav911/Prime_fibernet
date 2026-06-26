@@ -6,9 +6,10 @@ import { z } from 'zod';
 import { CustomerButton, CustomerInput } from '@/components/customer/ui';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
 import { DismissKeyboardScrollView } from '@/components/common';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useCreateCustomerTicketMutation } from '@/services/api/customerTicketsApi';
-import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
+import type { CustomerTheme } from '@/theme/customer';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'CreateCustomerTicket'>;
 
@@ -28,6 +29,7 @@ const CATEGORIES = [
 ] as const;
 
 function CreateTicketContent({ navigation }: Props) {
+  const styles = useThemedStyles(createStyles);
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]['id']>('technical');
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
@@ -108,16 +110,17 @@ export function CreateCustomerTicketScreen(props: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  content: { padding: signalGlass.spacing.lg, gap: signalGlass.spacing.md, paddingBottom: signalGlass.spacing.xxxl },
-  heading: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  categories: { flexDirection: 'row', flexWrap: 'wrap', gap: signalGlass.spacing.xs },
-  catBtn: { paddingHorizontal: signalGlass.spacing.sm },
-  textarea: { minHeight: 120, textAlignVertical: 'top' },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    content: { padding: theme.spacing.lg, gap: theme.spacing.md, paddingBottom: theme.spacing.xxxl },
+    heading: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.display,
+      fontSize: 22,
+      fontWeight: '700',
+    },
+    categories: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.xs },
+    catBtn: { paddingHorizontal: theme.spacing.sm },
+    textarea: { minHeight: 120, textAlignVertical: 'top' },
+  });

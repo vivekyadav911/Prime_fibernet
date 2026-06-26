@@ -13,8 +13,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassCard } from '@/components/customer/ui';
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { useReduceMotion } from '@/hooks/useReduceMotion';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 type ConnectionStatus = 'active' | 'suspended' | 'expired';
 
@@ -27,13 +29,8 @@ type SignalHeroProps = {
   onNotificationsPress: () => void;
 };
 
-const statusColors: Record<ConnectionStatus, string> = {
-  active: signalGlass.colors.accentSuccess,
-  suspended: signalGlass.colors.accentWarning,
-  expired: signalGlass.colors.accentDanger,
-};
-
 function PulseRing({ delay, size }: { delay: number; size: number }) {
+  const styles = useThemedStyles(createPulseRingStyles);
   const reduceMotion = useReduceMotion();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(reduceMotion ? 0.35 : 0.6);
@@ -80,13 +77,21 @@ export function SignalHero({
 }: SignalHeroProps) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { theme } = useCustomerTheme();
+  const styles = useThemedStyles(createStyles);
   const meterSize = Math.min(120, Math.max(96, width * 0.28));
+
+  const statusColors: Record<ConnectionStatus, string> = {
+    active: theme.colors.accentSuccess,
+    suspended: theme.colors.accentWarning,
+    expired: theme.colors.accentDanger,
+  };
 
   return (
     <GlassCard glow padded={false} style={styles.card}>
       <LinearGradient
-        colors={[...signalGlass.gradients.hero]}
-        style={[styles.gradient, { paddingTop: insets.top + signalGlass.spacing.lg }]}
+        colors={[theme.gradients.hero[0], theme.gradients.hero[1]]}
+        style={[styles.gradient, { paddingTop: insets.top + theme.spacing.lg }]}
       >
         <View style={styles.topRow}>
           <Text style={styles.brand}>Prime Fibernet</Text>
@@ -96,7 +101,7 @@ export function SignalHero({
             style={styles.bell}
             hitSlop={8}
           >
-            <Ionicons name="notifications-outline" size={24} color={signalGlass.colors.textPrimary} />
+            <Ionicons name="notifications-outline" size={24} color={theme.colors.textPrimary} />
             {unreadCount > 0 ? (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
@@ -134,93 +139,98 @@ export function SignalHero({
   );
 }
 
-const styles = StyleSheet.create({
-  card: { marginBottom: signalGlass.spacing.lg, marginHorizontal: -signalGlass.spacing.lg },
-  gradient: {
-    padding: signalGlass.spacing.xl,
-    paddingTop: signalGlass.spacing.xl,
-    borderRadius: signalGlass.radius.md,
-  },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: signalGlass.spacing.xl,
-  },
-  brand: {
-    color: signalGlass.colors.textSecondary,
-    fontFamily: signalGlass.fonts.bodyMedium,
-    fontSize: 13,
-    letterSpacing: 0.5,
-  },
-  bell: {
-    position: 'relative',
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: signalGlass.colors.accentDanger,
-    borderRadius: signalGlass.radius.pill,
-    minWidth: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  badgeText: { color: signalGlass.colors.white, fontSize: 10, fontWeight: '700' },
-  meterWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: signalGlass.spacing.lg,
-  },
-  ring: {
-    position: 'absolute',
-    borderWidth: 2,
-    borderColor: signalGlass.colors.accentPrimary,
-  },
-  meter: {
-    backgroundColor: signalGlass.colors.bgGlass,
-    borderWidth: 2,
-    borderColor: signalGlass.colors.accentGlow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  speed: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.monoBold,
-    fontWeight: '700',
-  },
-  unit: {
-    color: signalGlass.colors.accentGlow,
-    fontFamily: signalGlass.fonts.mono,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  name: {
-    color: signalGlass.colors.textPrimary,
-    fontFamily: signalGlass.fonts.display,
-    fontSize: 20,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: signalGlass.spacing.sm,
-    gap: signalGlass.spacing.xs,
-    paddingHorizontal: signalGlass.spacing.sm,
-  },
-  dot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  meta: {
-    color: signalGlass.colors.textSecondary,
-    fontFamily: signalGlass.fonts.body,
-    fontSize: 12,
-    flexShrink: 1,
-  },
-});
+const createPulseRingStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    ring: {
+      position: 'absolute',
+      borderWidth: 2,
+      borderColor: theme.colors.accentPrimary,
+    },
+  });
+
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    card: { marginBottom: theme.spacing.lg, marginHorizontal: -theme.spacing.lg },
+    gradient: {
+      padding: theme.spacing.xl,
+      paddingTop: theme.spacing.xl,
+      borderRadius: theme.radius.md,
+    },
+    topRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.xl,
+    },
+    brand: {
+      color: theme.colors.textSecondary,
+      fontFamily: theme.fonts.bodyMedium,
+      fontSize: 13,
+      letterSpacing: 0.5,
+    },
+    bell: {
+      position: 'relative',
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    badge: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      backgroundColor: theme.colors.accentDanger,
+      borderRadius: theme.radius.pill,
+      minWidth: 18,
+      height: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+    },
+    badgeText: { color: theme.colors.white, fontSize: 10, fontWeight: '700' },
+    meterWrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: theme.spacing.lg,
+    },
+    meter: {
+      backgroundColor: theme.colors.bgGlass,
+      borderWidth: 2,
+      borderColor: theme.colors.accentGlow,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    speed: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.monoBold,
+      fontWeight: '700',
+    },
+    unit: {
+      color: theme.colors.accentGlow,
+      fontFamily: theme.fonts.mono,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    name: {
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.display,
+      fontSize: 20,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: theme.spacing.sm,
+      gap: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.sm,
+    },
+    dot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+    meta: {
+      color: theme.colors.textSecondary,
+      fontFamily: theme.fonts.body,
+      fontSize: 12,
+      flexShrink: 1,
+    },
+  });

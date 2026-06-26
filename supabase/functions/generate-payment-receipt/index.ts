@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 function receiptHtml(payment: Record<string, unknown>, company: Record<string, unknown>): string {
@@ -31,17 +32,56 @@ function receiptHtml(payment: Record<string, unknown>, company: Record<string, u
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  const json401 = (msg: string) =>
+    new Response(JSON.stringify({ error: msg }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  const json403 = () =>
+    new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   try {
+    // Identify the caller — every authenticated role (admin or officer) must supply a JWT.
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) return json401('Authorization header required');
+
+    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authErr } = await userClient.auth.getUser();
+    if (authErr || !user) return json401('Invalid or expired token');
+
     const { paymentId } = await req.json();
     if (!paymentId) throw new Error('paymentId required');
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Resolve caller role via profiles (uses service role so no RLS interference).
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+    const callerIsAdmin = profile?.role === 'admin';
 
     const { data: payment, error: payErr } = await supabase
       .from('payments')
       .select('*')
       .eq('id', paymentId)
       .single();
+
+    if (!payErr && payment && !callerIsAdmin) {
+      // Officer can only generate receipts for payments they collected.
+      const { data: officer } = await supabase
+        .from('officers')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+      if (!officer || payment.collected_by !== officer.id) return json403();
+    }
 
     if (payErr || !payment) throw new Error('Payment not found');
     if (payment.status !== 'confirmed') throw new Error('Payment must be confirmed to generate receipt');

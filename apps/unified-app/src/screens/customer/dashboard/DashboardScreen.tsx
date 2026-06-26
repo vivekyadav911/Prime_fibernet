@@ -11,16 +11,17 @@ import {
   QuickActionsGrid,
   SpeedGauge,
 } from '@/components/customer/dashboard';
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerTopBar } from '@/components/customer/shell';
-import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
 import { CustomerEmptyState, CustomerSkeletonLoader, CustomerToast, CustomerErrorState, FadeInSection } from '@/components/customer/ui';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import {
   useGetCustomerDashboardQuery,
   useGetCustomerProfileQuery,
 } from '@/services/api';
 import { useCustomerUiStore } from '@/store/customerUiStore';
 import { useAppSelector } from '@/store/hooks';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import type { CustomerTheme } from '@/theme/customer';
 import type { CustomerStackParamList, CustomerTabParamList } from '@/types/navigation';
 
 type Nav = CompositeNavigationProp<
@@ -28,8 +29,10 @@ type Nav = CompositeNavigationProp<
   NativeStackNavigationProp<CustomerStackParamList>
 >;
 
-function DashboardContent() {
+export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useCustomerTheme();
   const authUser = useAppSelector((s) => s.auth.user);
   const { data: profile } = useGetCustomerProfileQuery(undefined, { skip: !authUser });
   const userId = profile?.id ?? authUser?.id ?? '';
@@ -88,7 +91,7 @@ function DashboardContent() {
       />
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={signalGlass.colors.primary} />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={theme.colors.primary} />}
         showsVerticalScrollIndicator={false}
       >
         <FadeInSection delayMs={0}>
@@ -145,31 +148,24 @@ function DashboardContent() {
   );
 }
 
-export function DashboardScreen() {
-  return (
-    <CustomerFontProvider>
-      <DashboardContent />
-    </CustomerFontProvider>
-  );
-}
-
-const styles = StyleSheet.create({
-  canvas: {
-    flex: 1,
-    backgroundColor: signalGlass.colors.bgDeep,
-  },
-  body: {
-    flex: 1,
-    padding: signalGlass.spacing.marginMobile,
-  },
-  scroll: {
-    paddingHorizontal: signalGlass.spacing.marginMobile,
-    paddingTop: signalGlass.spacing.md,
-    paddingBottom: signalGlass.spacing.xxxl,
-  },
-  heroRow: {
-    gap: signalGlass.spacing.gutter,
-  },
-  gaugeCol: {},
-  planCol: {},
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: {
+      flex: 1,
+      backgroundColor: theme.colors.bgDeep,
+    },
+    body: {
+      flex: 1,
+      padding: theme.spacing.marginMobile,
+    },
+    scroll: {
+      paddingHorizontal: theme.spacing.marginMobile,
+      paddingTop: theme.spacing.md,
+      paddingBottom: theme.spacing.xxxl,
+    },
+    heroRow: {
+      gap: theme.spacing.gutter,
+    },
+    gaugeCol: {},
+    planCol: {},
+  });

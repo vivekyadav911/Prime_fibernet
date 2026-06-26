@@ -4,7 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useAttendanceHistory } from '@/hooks/attendance/useAttendance';
 import type { AttendanceRecord } from '@/types/attendance';
 import type { OfficerDrawerParamList } from '@/types/navigation';
@@ -78,7 +78,12 @@ export function AttendanceHistoryScreen(_props: Props) {
         data={records}
         keyExtractor={(r) => r.id}
         renderItem={renderItem}
-        ListEmptyComponent={<Text style={styles.empty}>No records this month</Text>}
+        ListEmptyComponent={
+          <EmptyState
+            title="No records this month"
+            subtitle="Attendance records will appear here after check-in."
+          />
+        }
       />
     </Screen>
   );

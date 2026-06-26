@@ -1,7 +1,8 @@
 import { StyleSheet, Text } from 'react-native';
 import React from 'react';
 
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 type TabIconProps = {
   label: string;
@@ -9,6 +10,8 @@ type TabIconProps = {
 };
 
 export const TabIcon = React.memo(function TabIcon({ label, focused }: TabIconProps) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <Text
       style={[styles.icon, focused ? styles.focused : styles.unfocused]}
@@ -20,8 +23,9 @@ export const TabIcon = React.memo(function TabIcon({ label, focused }: TabIconPr
   );
 });
 
-const styles = StyleSheet.create({
-  icon: { fontSize: 18, minWidth: 44, minHeight: 44, textAlign: 'center', lineHeight: 44 },
-  focused: { opacity: 1, color: signalGlass.colors.accentPrimary },
-  unfocused: { opacity: 0.5, color: signalGlass.colors.textMuted },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    icon: { fontSize: 18, minWidth: 44, minHeight: 44, textAlign: 'center', lineHeight: 44 },
+    focused: { opacity: 1, color: theme.colors.accentPrimary },
+    unfocused: { opacity: 0.5, color: theme.colors.textMuted },
+  });

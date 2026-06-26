@@ -11,11 +11,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CustomerButton, CustomerErrorState, CustomerSkeletonLoader } from '@/components/customer/ui';
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { DismissKeyboardFlatList } from '@/components/common';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useGetCustomerDashboardQuery, useGetCustomerProfileQuery } from '@/services/api';
 import { getSupabase } from '@/services/supabase';
 import { useAppSelector } from '@/store/hooks';
-import { signalGlass } from '@/theme/customer/signalGlass';
+import type { CustomerTheme } from '@/theme/customer';
 
 import { ChatBubble, type ChatMessage } from './components/ChatBubble';
 
@@ -35,6 +37,8 @@ const QUICK_REPLIES = [
 
 export function ChatbotScreen() {
   const insets = useSafeAreaInsets();
+  const { theme } = useCustomerTheme();
+  const styles = useThemedStyles(createStyles);
   const authUser = useAppSelector((s) => s.auth.user);
   const { data: profile } = useGetCustomerProfileQuery(undefined, { skip: !authUser });
   const userId = profile?.id ?? authUser?.id ?? '';
@@ -143,11 +147,11 @@ export function ChatbotScreen() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => <ChatBubble message={item} />}
       />
-      <View style={[styles.composer, { paddingBottom: insets.bottom + signalGlass.spacing.md }]}>
+      <View style={[styles.composer, { paddingBottom: insets.bottom + theme.spacing.md }]}>
         <TextInput
           style={styles.input}
           placeholder="Ask Prima..."
-          placeholderTextColor={signalGlass.colors.textMuted}
+          placeholderTextColor={theme.colors.textMuted}
           value={message}
           onChangeText={setMessage}
           returnKeyType="send"
@@ -163,44 +167,45 @@ export function ChatbotScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  errorBanner: { padding: signalGlass.spacing.sm },
-  faqRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: signalGlass.spacing.xs,
-    padding: signalGlass.spacing.md,
-  },
-  faqChip: {
-    backgroundColor: signalGlass.colors.bgGlass,
-    borderRadius: signalGlass.radius.pill,
-    paddingHorizontal: signalGlass.spacing.md,
-    paddingVertical: signalGlass.spacing.sm,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  faqText: { color: signalGlass.colors.textSecondary, fontSize: 12 },
-  list: { padding: signalGlass.spacing.md, paddingBottom: signalGlass.spacing.lg },
-  composer: {
-    flexDirection: 'row',
-    gap: signalGlass.spacing.sm,
-    padding: signalGlass.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: signalGlass.colors.borderSubtle,
-    backgroundColor: signalGlass.colors.bgSurface,
-    alignItems: 'center',
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: signalGlass.colors.borderSubtle,
-    borderRadius: signalGlass.radius.sm,
-    padding: signalGlass.spacing.sm,
-    minHeight: 44,
-    color: signalGlass.colors.textPrimary,
-    backgroundColor: signalGlass.colors.bgDeep,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    errorBanner: { padding: theme.spacing.sm },
+    faqRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.xs,
+      padding: theme.spacing.md,
+    },
+    faqChip: {
+      backgroundColor: theme.colors.bgGlass,
+      borderRadius: theme.radius.pill,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+      minHeight: 44,
+      justifyContent: 'center',
+    },
+    faqText: { color: theme.colors.textSecondary, fontSize: 12 },
+    list: { padding: theme.spacing.md, paddingBottom: theme.spacing.lg },
+    composer: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+      padding: theme.spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.borderSubtle,
+      backgroundColor: theme.colors.bgSurface,
+      alignItems: 'center',
+    },
+    input: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+      borderRadius: theme.radius.sm,
+      padding: theme.spacing.sm,
+      minHeight: 44,
+      color: theme.colors.textPrimary,
+      backgroundColor: theme.colors.bgDeep,
+    },
+  });

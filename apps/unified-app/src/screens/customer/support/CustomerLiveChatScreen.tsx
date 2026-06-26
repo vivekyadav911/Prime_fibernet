@@ -7,19 +7,21 @@ import { ChatBubble, ChatInputBar, CsatModal } from '@/components/support';
 import { DismissKeyboardFlatList } from '@/components/common';
 import { CustomerErrorState, CustomerSkeletonLoader } from '@/components/customer/ui';
 import { useChatMessages } from '@/hooks/useChatSession';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import {
   createChatSession,
   sendChatMessage,
   submitChatCsat,
 } from '@/services/chatService';
 import { useAppSelector } from '@/store/hooks';
-import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
+import type { CustomerTheme } from '@/theme/customer';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'CustomerLiveChat'>;
 
 export function CustomerLiveChatScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const styles = useThemedStyles(createStyles);
   const user = useAppSelector((s) => s.auth.user);
   const [sessionId, setSessionId] = useState(route.params?.sessionId ?? '');
   const [text, setText] = useState('');
@@ -153,16 +155,17 @@ export function CustomerLiveChatScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  container: { flex: 1 },
-  list: { flex: 1 },
-  queueBanner: {
-    backgroundColor: signalGlass.colors.accentPrimaryMuted,
-    padding: signalGlass.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: signalGlass.colors.borderSubtle,
-  },
-  queueText: { fontSize: 13, color: signalGlass.colors.textPrimary, textAlign: 'center' },
-  messages: { padding: signalGlass.spacing.lg, flexGrow: 1 },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    container: { flex: 1 },
+    list: { flex: 1 },
+    queueBanner: {
+      backgroundColor: theme.colors.accentPrimaryMuted,
+      padding: theme.spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.borderSubtle,
+    },
+    queueText: { fontSize: 13, color: theme.colors.textPrimary, textAlign: 'center' },
+    messages: { padding: theme.spacing.lg, flexGrow: 1 },
+  });

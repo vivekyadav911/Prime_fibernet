@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { signalGlass } from '@/theme/customer/signalGlass';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import type { CustomerTheme } from '@/theme/customer';
 
 type UsageBarProps = {
   usedGb: number;
@@ -8,7 +9,9 @@ type UsageBarProps = {
 };
 
 export function UsageBar({ usedGb, limitGb }: UsageBarProps) {
+  const styles = useThemedStyles(createStyles);
   const pct = Math.min(100, Math.round((usedGb / limitGb) * 100));
+
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>
@@ -21,23 +24,24 @@ export function UsageBar({ usedGb, limitGb }: UsageBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { marginVertical: signalGlass.spacing.sm },
-  label: {
-    color: signalGlass.colors.textSecondary,
-    fontFamily: signalGlass.fonts.body,
-    fontSize: 12,
-    marginBottom: signalGlass.spacing.xs,
-  },
-  track: {
-    height: 8,
-    borderRadius: signalGlass.radius.pill,
-    backgroundColor: signalGlass.colors.borderSubtle,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-    backgroundColor: signalGlass.colors.accentPrimary,
-    borderRadius: signalGlass.radius.pill,
-  },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    wrap: { marginVertical: theme.spacing.sm },
+    label: {
+      color: theme.colors.textSecondary,
+      fontFamily: theme.fonts.body,
+      fontSize: 12,
+      marginBottom: theme.spacing.xs,
+    },
+    track: {
+      height: 8,
+      borderRadius: theme.radius.pill,
+      backgroundColor: theme.colors.borderSubtle,
+      overflow: 'hidden',
+    },
+    fill: {
+      height: '100%',
+      backgroundColor: theme.colors.accentPrimary,
+      borderRadius: theme.radius.pill,
+    },
+  });

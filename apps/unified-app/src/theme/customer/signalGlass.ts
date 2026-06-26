@@ -1,5 +1,7 @@
+import type { CustomerTheme } from './types';
+
 /** Signal Glass — Stitch M3 dark glass design tokens (customer app) */
-export const signalGlass = {
+export const signalGlass: CustomerTheme = {
   colors: {
     background: '#10131A',
     surface: '#10131A',
@@ -108,6 +110,9 @@ export const signalGlass = {
     mono: 'JetBrainsMono_400Regular',
     monoBold: 'JetBrainsMono_700Bold',
   },
-} as const;
+  appearance: 'dark',
+  blurTint: 'dark',
+  useGlassBlur: true,
+};
 
 export type SignalGlassColors = typeof signalGlass.colors;
