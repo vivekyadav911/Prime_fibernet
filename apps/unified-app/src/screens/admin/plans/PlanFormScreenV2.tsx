@@ -13,7 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
-import { DismissKeyboardScrollView, KeyboardDismissView, ToggleSwitch } from '@/components/common';
+import { DismissKeyboardScrollView, ToggleSwitch } from '@/components/common';
 import { usePlanForm } from '@/hooks/usePlanForm';
 import { fetchPlanById } from '@/services/planService';
 import { adminColors } from '@/theme/admin';
@@ -130,12 +130,12 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission={mode === 'edit' ? 'plans.edit' : 'plans.create'}>
-      <Screen style={adminScreenStyles.canvas} padded={false}>
+      <Screen keyboardDismiss={false} style={adminScreenStyles.canvas} padded={false}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <KeyboardDismissView style={styles.flex}>
+          <View style={styles.flex}>
             <DismissKeyboardScrollView ref={scrollRef} contentContainerStyle={styles.scroll}>
             <Text style={styles.screenTitle}>{mode === 'edit' ? 'Edit Plan' : 'New Plan'}</Text>
 
@@ -320,7 +320,7 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
               style={styles.saveBtn}
             />
           </View>
-          </KeyboardDismissView>
+          </View>
         </KeyboardAvoidingView>
       </Screen>
     </RoleGuard>

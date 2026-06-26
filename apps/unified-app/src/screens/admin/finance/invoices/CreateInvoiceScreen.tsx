@@ -4,7 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
-import { DismissKeyboardScrollView, KeyboardDismissView, ToggleSwitch } from '@/components/common';
+import { DismissKeyboardScrollView, ToggleSwitch } from '@/components/common';
 import {
   InvoiceDeliverySection,
   InvoiceLineItemsEditor,
@@ -183,8 +183,7 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="invoices.create">
-      <Screen>
-        <KeyboardDismissView>
+      <Screen keyboardDismiss={false}>
           <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
           <SectionCard title="Customer details">
             <Button
@@ -248,7 +247,6 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
             <Button label="Send invoice" onPress={() => void onSend()} disabled={creating || sending} />
           </View>
           </DismissKeyboardScrollView>
-        </KeyboardDismissView>
 
         <SelectCustomerModal
           visible={customerModalVisible}

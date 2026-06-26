@@ -11,7 +11,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { DateField, FormField, RoleGuard, SectionLabel, SelectField } from '@/components/admin';
-import { DismissKeyboardScrollView, ErrorState, KeyboardDismissView } from '@/components/common';
+import { DismissKeyboardScrollView, ErrorState } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
 import { useKeyboardBottomInset } from '@/hooks/useKeyboardBottomInset';
 import { GENDER_OPTIONS, MARITAL_STATUS_OPTIONS } from '@/schemas/adminCreateOfficer';
@@ -281,9 +281,12 @@ export function EditOfficerScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="officers.edit">
-      <Screen style={adminScreenStyles.canvas}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={keyboardInset}>
-          <KeyboardDismissView>
+      <Screen keyboardDismiss={false} style={adminScreenStyles.canvas} padded={false}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={keyboardInset}
+        >
             <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
               <View style={styles.tabs}>
                 {(['personal', 'contact', 'role'] as EditSection[]).map((s) => (
@@ -499,7 +502,6 @@ export function EditOfficerScreen({ route, navigation }: Props) {
 
               <Button label={officerStrings.form.cancel} variant="ghost" onPress={() => navigation.goBack()} style={styles.cancel} />
             </DismissKeyboardScrollView>
-          </KeyboardDismissView>
         </KeyboardAvoidingView>
       </Screen>
     </RoleGuard>
@@ -507,6 +509,7 @@ export function EditOfficerScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   scroll: { padding: spacing.md, paddingBottom: spacing.xxl },
   tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
   tabBtn: { flexGrow: 1 },

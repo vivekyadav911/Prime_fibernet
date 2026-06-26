@@ -27,7 +27,7 @@ export const adminStackScreenOptions: NativeStackNavigationOptions = {
   headerTitleAlign: 'center',
   headerLeft: (props: NativeStackHeaderBackProps) => <AdminDrawerHeaderLeft {...props} />,
   headerRight: () => <AdminDrawerProfileButton />,
-  contentStyle: { backgroundColor: adminColors.canvasBg },
+  contentStyle: { backgroundColor: adminColors.canvasBg, flex: 1 },
 };
 
 /** Drawer screens that show the header directly (no nested stack). */

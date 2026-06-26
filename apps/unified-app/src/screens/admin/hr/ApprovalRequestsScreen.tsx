@@ -1,12 +1,20 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
+import { Button, Screen } from '@prime/ui';
 
 import { AdminEmptyState, FilterChips, RoleGuard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
-import { useApprovalRequests, useReviewApproval } from '@/hooks/attendance/useAdminAttendance';
-import type { ApprovalRequest } from '@/types/attendance';
+import {
+  useApprovalRequests,
+  useReviewApproval,
+} from '@/hooks/attendance/useAdminAttendance';
+import {
+  useBulkReviewApprovalsMutation,
+  useGetApprovalAuditLogQuery,
+  useGetApprovalRequestsQuery,
+} from '@/services/api/attendanceApi';
+import type { ApprovalAuditEntry, ApprovalRequest } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -48,13 +56,55 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)} km from zone`;
 }
 
+function AuditLogPanel({ requestId }: { requestId: string }) {
+  const { data, isLoading, isError, error } = useGetApprovalAuditLogQuery(requestId);
+
+  if (isLoading) {
+    return <Text style={styles.auditLoading}>Loading audit log…</Text>;
+  }
+
+  if (isError) {
+    return <Text style={styles.auditError}>{queryErrorMessage(error)}</Text>;
+  }
+
+  const entries = data ?? [];
+  if (entries.length === 0) {
+    return <Text style={styles.auditEmpty}>No audit entries yet.</Text>;
+  }
+
+  return (
+    <View style={styles.auditPanel}>
+      <Text style={styles.auditTitle}>Audit log</Text>
+      {entries.map((entry: ApprovalAuditEntry) => (
+        <View key={entry.id} style={styles.auditRow}>
+          <Text style={styles.auditAction}>
+            {entry.action === 'approve' ? 'Approved' : 'Rejected'} by {entry.performedByName}
+          </Text>
+          <Text style={styles.auditMeta}>{formatDateTime(entry.createdAt)}</Text>
+          {entry.notes ? <Text style={styles.auditNotes}>{entry.notes}</Text> : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function ApprovalRequestCard({
   item,
+  selected,
+  expanded,
+  selectionMode,
+  onToggleSelect,
+  onToggleExpand,
   onApprove,
   onReject,
   reviewing,
 }: {
   item: ApprovalRequest;
+  selected: boolean;
+  expanded: boolean;
+  selectionMode: boolean;
+  onToggleSelect: (id: string) => void;
+  onToggleExpand: (id: string) => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   reviewing: boolean;
@@ -63,11 +113,25 @@ function ApprovalRequestCard({
   const locationLabel = item.geofenceName || 'Unassigned zone';
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      onPress={() => {
+        if (selectionMode && item.status === 'pending') {
+          onToggleSelect(item.id);
+          return;
+        }
+        onToggleExpand(item.id);
+      }}
+      style={[styles.card, selected && styles.cardSelected]}
+    >
       <View style={styles.cardHeader}>
         <View style={styles.cardTitleBlock}>
-          <Text style={styles.officerName}>{item.officerName}</Text>
-          <Text style={styles.requestType}>{formatRequestType(item.type)}</Text>
+          {selectionMode && item.status === 'pending' ? (
+            <Text style={styles.selectMark}>{selected ? '☑' : '☐'}</Text>
+          ) : null}
+          <View style={styles.cardTitleText}>
+            <Text style={styles.officerName}>{item.officerName || 'Unknown officer'}</Text>
+            <Text style={styles.requestType}>{formatRequestType(item.type)}</Text>
+          </View>
         </View>
         <StatusBadge status={item.status} />
       </View>
@@ -91,7 +155,9 @@ function ApprovalRequestCard({
         <Text style={styles.reviewNotes}>Review note: {item.reviewNotes}</Text>
       ) : null}
 
-      {item.status === 'pending' ? (
+      {expanded ? <AuditLogPanel requestId={item.id} /> : null}
+
+      {item.status === 'pending' && !selectionMode ? (
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"
@@ -113,21 +179,38 @@ function ApprovalRequestCard({
           </Pressable>
         </View>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 
-function SummaryStrip({ pending, total }: { pending: number; total: number }) {
+function SummaryStrip({
+  tab,
+  filteredCount,
+  pendingTotal,
+  allTotal,
+}: {
+  tab: FilterTab;
+  filteredCount: number;
+  pendingTotal: number;
+  allTotal: number;
+}) {
+  const label =
+    tab === 'pending'
+      ? `Showing ${filteredCount} of ${pendingTotal} pending`
+      : tab === 'all'
+        ? `Showing ${filteredCount} of ${allTotal} total`
+        : `Showing ${filteredCount} ${tab}`;
+
   return (
     <View style={styles.summaryStrip}>
       <View style={styles.summaryCell}>
-        <Text style={[styles.summaryValue, styles.summaryValuePending]}>{pending}</Text>
+        <Text style={[styles.summaryValue, styles.summaryValuePending]}>{pendingTotal}</Text>
         <Text style={styles.summaryLabel}>Pending</Text>
       </View>
       <View style={styles.summaryDivider} />
       <View style={styles.summaryCell}>
-        <Text style={styles.summaryValue}>{total}</Text>
-        <Text style={styles.summaryLabel}>Showing</Text>
+        <Text style={styles.summaryValue}>{filteredCount}</Text>
+        <Text style={styles.summaryLabel}>{label}</Text>
       </View>
     </View>
   );
@@ -135,10 +218,23 @@ function SummaryStrip({ pending, total }: { pending: number; total: number }) {
 
 export function ApprovalRequestsScreen(_props: Props) {
   const [tab, setTab] = useState<FilterTab>('pending');
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const { data: allData } = useGetApprovalRequestsQuery({});
   const { data, isLoading, isError, error, refetch, isFetching } = useApprovalRequests({
     status: tab === 'all' ? undefined : tab,
   });
   const [review, { isLoading: reviewing }] = useReviewApproval();
+  const [bulkReview, { isLoading: bulkReviewing }] = useBulkReviewApprovalsMutation();
+
+  const records = data ?? [];
+  const allRecords = allData ?? [];
+  const pendingTotal = useMemo(
+    () => allRecords.filter((r) => r.status === 'pending').length,
+    [allRecords],
+  );
 
   const handleApprove = useCallback(
     async (id: string) => {
@@ -156,32 +252,129 @@ export function ApprovalRequestsScreen(_props: Props) {
     [refetch, review],
   );
 
-  const records = data ?? [];
-  const pendingCount = useMemo(
-    () => records.filter((r) => r.status === 'pending').length,
-    [records],
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  }, []);
+
+  const runBulkAction = useCallback(
+    (action: 'approve' | 'reject') => {
+      if (selectedIds.length === 0) return;
+
+      Alert.alert(
+        action === 'approve' ? 'Bulk approve' : 'Bulk reject',
+        `${action === 'approve' ? 'Approve' : 'Reject'} ${selectedIds.length} selected request(s)?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: action === 'approve' ? 'Approve all' : 'Reject all',
+            style: action === 'reject' ? 'destructive' : 'default',
+            onPress: () => {
+              void bulkReview({
+                ids: selectedIds,
+                action,
+                reason: action === 'reject' ? 'Bulk rejected by admin' : undefined,
+              })
+                .unwrap()
+                .then((result) => {
+                  if (result.failed.length > 0) {
+                    Alert.alert(
+                      'Partial success',
+                      `${result.succeeded.length} updated, ${result.failed.length} failed.`,
+                    );
+                  }
+                  setSelectedIds([]);
+                  setSelectionMode(false);
+                  refetch();
+                })
+                .catch((e) => Alert.alert('Bulk action failed', queryErrorMessage(e)));
+            },
+          },
+        ],
+      );
+    },
+    [bulkReview, refetch, selectedIds],
   );
 
   const renderItem = useCallback(
     ({ item }: { item: ApprovalRequest }) => (
       <ApprovalRequestCard
         item={item}
-        reviewing={reviewing}
+        selected={selectedIds.includes(item.id)}
+        expanded={expandedId === item.id}
+        selectionMode={selectionMode}
+        onToggleSelect={toggleSelect}
+        onToggleExpand={toggleExpand}
+        reviewing={reviewing || bulkReviewing}
         onApprove={(id) => void handleApprove(id)}
         onReject={(id) => void handleReject(id)}
       />
     ),
-    [handleApprove, handleReject, reviewing],
+    [
+      bulkReviewing,
+      expandedId,
+      handleApprove,
+      handleReject,
+      reviewing,
+      selectedIds,
+      selectionMode,
+      toggleExpand,
+      toggleSelect,
+    ],
   );
 
   const listHeader = useMemo(
     () => (
       <View style={styles.listHeader}>
-        <SummaryStrip pending={pendingCount} total={records.length} />
+        <SummaryStrip
+          tab={tab}
+          filteredCount={records.length}
+          pendingTotal={pendingTotal}
+          allTotal={allRecords.length}
+        />
         <FilterChips options={FILTER_OPTIONS} selected={tab} onSelect={setTab} />
+        {tab === 'pending' ? (
+          <View style={styles.bulkToolbar}>
+            <Button
+              label={selectionMode ? 'Cancel selection' : 'Select multiple'}
+              variant="ghost"
+              onPress={() => {
+                setSelectionMode((v) => !v);
+                setSelectedIds([]);
+              }}
+            />
+            {selectionMode ? (
+              <>
+                <Button
+                  label={`Approve (${selectedIds.length})`}
+                  onPress={() => runBulkAction('approve')}
+                  disabled={selectedIds.length === 0 || bulkReviewing}
+                />
+                <Button
+                  label={`Reject (${selectedIds.length})`}
+                  variant="secondary"
+                  onPress={() => runBulkAction('reject')}
+                  disabled={selectedIds.length === 0 || bulkReviewing}
+                />
+              </>
+            ) : null}
+          </View>
+        ) : null}
       </View>
     ),
-    [pendingCount, records.length, tab],
+    [
+      allRecords.length,
+      bulkReviewing,
+      pendingTotal,
+      records.length,
+      runBulkAction,
+      selectedIds.length,
+      selectionMode,
+      tab,
+    ],
   );
 
   if (isLoading) {
@@ -212,7 +405,7 @@ export function ApprovalRequestsScreen(_props: Props) {
           ListHeaderComponent={listHeader}
           contentContainerStyle={adminScreenStyles.listContent}
           showsVerticalScrollIndicator={false}
-          refreshing={isFetching || reviewing}
+          refreshing={isFetching || reviewing || bulkReviewing}
           onRefresh={refetch}
           ListEmptyComponent={
             <View style={styles.emptyCard}>
@@ -235,6 +428,7 @@ export function ApprovalRequestsScreen(_props: Props) {
 
 const styles = StyleSheet.create({
   listHeader: { gap: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  bulkToolbar: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, alignItems: 'center' },
   summaryStrip: {
     flexDirection: 'row',
     backgroundColor: adminColors.cardBg,
@@ -261,11 +455,13 @@ const styles = StyleSheet.create({
   },
   summaryValuePending: { color: adminColors.badgePending },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xs,
   },
   card: {
     backgroundColor: adminColors.cardBg,
@@ -276,13 +472,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     gap: spacing.sm,
   },
+  cardSelected: {
+    borderColor: adminColors.primary,
+    backgroundColor: adminColors.primaryTint,
+  },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: spacing.sm,
   },
-  cardTitleBlock: { flex: 1, gap: 2 },
+  cardTitleBlock: { flex: 1, flexDirection: 'row', gap: spacing.xs, alignItems: 'flex-start' },
+  cardTitleText: { flex: 1, gap: 2 },
+  selectMark: { fontSize: 18, color: adminColors.primary, marginTop: 2 },
   officerName: {
     fontSize: 17,
     fontWeight: '700',
@@ -312,6 +514,26 @@ const styles = StyleSheet.create({
   },
   reasonText: { fontSize: 14, color: colors.textPrimary, lineHeight: 20 },
   reviewNotes: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic' },
+  auditPanel: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  auditTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  auditRow: { gap: 2, paddingVertical: 4, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderDefault },
+  auditAction: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  auditMeta: { fontSize: 12, color: colors.textSecondary },
+  auditNotes: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic' },
+  auditLoading: { fontSize: 12, color: colors.textSecondary },
+  auditError: { fontSize: 12, color: colors.errorRed },
+  auditEmpty: { fontSize: 12, color: colors.textSecondary },
   actions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',

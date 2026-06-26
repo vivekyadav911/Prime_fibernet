@@ -10,6 +10,16 @@ import type {
 
 export type PermissionLevel = 'granted' | 'denied' | 'restricted' | 'undetermined';
 
+export type AdminRecordsViewMode = 'list' | 'calendar';
+
+export type AdminRecordsPrefs = {
+  viewMode: AdminRecordsViewMode;
+  selectedDate: string;
+  dateFrom: string;
+  dateTo: string;
+  useDateRange: boolean;
+};
+
 type AttendanceState = {
   currentLocation: Coordinates | null;
   isInsideGeofence: boolean;
@@ -23,7 +33,23 @@ type AttendanceState = {
   backgroundPermissionStatus: PermissionLevel;
   assignedGeofences: Geofence[];
   prevGeofenceStatus: { isInside: boolean; geofenceId?: string };
+  adminRecordsPrefs: AdminRecordsPrefs;
 };
+
+function defaultAdminRecordsPrefs(): AdminRecordsPrefs {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const iso = `${year}-${month}-${day}`;
+  return {
+    viewMode: 'list',
+    selectedDate: iso,
+    dateFrom: iso,
+    dateTo: iso,
+    useDateRange: false,
+  };
+}
 
 const initialState: AttendanceState = {
   currentLocation: null,
@@ -38,6 +64,7 @@ const initialState: AttendanceState = {
   backgroundPermissionStatus: 'undetermined',
   assignedGeofences: [],
   prevGeofenceStatus: { isInside: false },
+  adminRecordsPrefs: defaultAdminRecordsPrefs(),
 };
 
 export const attendanceSlice = createSlice({
@@ -78,6 +105,9 @@ export const attendanceSlice = createSlice({
     setAssignedGeofences(state, action: PayloadAction<Geofence[]>) {
       state.assignedGeofences = action.payload;
     },
+    setAdminRecordsPrefs(state, action: PayloadAction<Partial<AdminRecordsPrefs>>) {
+      state.adminRecordsPrefs = { ...state.adminRecordsPrefs, ...action.payload };
+    },
     clearAttendanceState() {
       return initialState;
     },
@@ -93,5 +123,6 @@ export const {
   setLocationPermissionStatus,
   setBackgroundPermissionStatus,
   setAssignedGeofences,
+  setAdminRecordsPrefs,
   clearAttendanceState,
 } = attendanceSlice.actions;

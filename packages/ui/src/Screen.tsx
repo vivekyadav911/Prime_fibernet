@@ -1,4 +1,4 @@
-import { StyleSheet, View, type ViewProps } from 'react-native';
+import { Platform, StyleSheet, View, type ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from './theme';
@@ -45,9 +45,11 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.surface,
+    ...(Platform.OS === 'web' ? { minHeight: 0 } : null),
   },
   container: {
     flex: 1,
+    ...(Platform.OS === 'web' ? { minHeight: 0 } : null),
   },
   padded: {
     padding: 16,

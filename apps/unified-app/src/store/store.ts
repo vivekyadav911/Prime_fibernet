@@ -30,6 +30,12 @@ const authPersistConfig = {
   whitelist: ['user', 'isAuthenticated', 'requires2FA'],
 };
 
+const attendancePersistConfig = {
+  key: 'attendance',
+  storage: securePersistStorage,
+  whitelist: ['adminRecordsPrefs'],
+};
+
 const rootReducer = combineReducers({
   auth: persistReducer(authPersistConfig, authSlice.reducer),
   user: userSlice.reducer,
@@ -37,7 +43,7 @@ const rootReducer = combineReducers({
   requests: requestsSlice.reducer,
   payments: paymentsSlice.reducer,
   office: officeSlice.reducer,
-  attendance: attendanceSlice.reducer,
+  attendance: persistReducer(attendancePersistConfig, attendanceSlice.reducer),
   ui: uiSlice.reducer,
   [baseApi.reducerPath]: baseApi.reducer,
 });

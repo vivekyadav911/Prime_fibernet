@@ -18,6 +18,8 @@ import {
   useGetLiveOfficerLocationsQuery,
   useGetOfficerAttendanceRecordsQuery,
   useGetShiftDefinitionsQuery,
+  useBulkReviewApprovalsMutation,
+  useGetApprovalAuditLogQuery,
   useReviewApprovalMutation,
   useReviewLeaveMutation,
   useToggleGeofenceMutation,
@@ -134,7 +136,13 @@ export function useReviewLeave() {
   return useReviewLeaveMutation();
 }
 
-export function useAdminAttendance(filters: { date?: string; officerId?: string; status?: string }) {
+export function useAdminAttendance(filters: {
+  date?: string;
+  from?: string;
+  to?: string;
+  officerId?: string;
+  status?: string;
+}) {
   return useGetAdminAttendanceQuery(filters);
 }
 

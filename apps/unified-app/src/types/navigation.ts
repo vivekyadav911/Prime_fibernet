@@ -255,6 +255,7 @@ export type AdminAttendanceStackParamList = {
   AttendanceHub: undefined;
   CheckInExceptions: undefined;
   AttendanceRecords: undefined;
+  ManualAttendanceEntry: undefined;
   CompletedShifts: undefined;
   GeofenceManagement: undefined;
   CreateGeofence: { geofenceId?: string } | undefined;

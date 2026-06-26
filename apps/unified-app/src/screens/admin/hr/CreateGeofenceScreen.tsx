@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
@@ -15,7 +15,12 @@ import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
-import { validateGeofence } from '@/utils/geofenceUtils';
+import { resolveGeofenceAddressFields } from '@/utils/geofenceDisplay';
+import {
+  GEOFENCE_RADIUS_MAX_M,
+  GEOFENCE_RADIUS_MIN_M,
+  validateGeofence,
+} from '@/utils/geofenceUtils';
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'CreateGeofence'>;
 
@@ -35,6 +40,11 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
   const [radius, setRadius] = useState(200);
   const [center, setCenter] = useState(DEFAULT_CENTER);
   const [error, setError] = useState<string | null>(null);
+
+  const radiusValidation = useMemo(
+    () => validateGeofence({ shape: 'circle', center, radius }),
+    [center, radius],
+  );
 
   useEffect(() => {
     if (existing) {
@@ -58,7 +68,7 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
         if (!city.trim() && result.city) setCity(result.city);
         if (!state.trim() && result.state) setState(result.state);
       } catch {
-        // Best-effort reverse geocoding; manual entry remains available.
+        // Best-effort reverse geocoding; coordinate fallback applied on save.
       }
     },
     [address, city, state],
@@ -84,11 +94,13 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
       return;
     }
 
+    const resolved = resolveGeofenceAddressFields(address, city, state, center);
+
     const payload = {
       name: name.trim(),
-      address,
-      city,
-      state,
+      address: resolved.address,
+      city: resolved.city,
+      state: resolved.state,
       geometry,
       assignedOfficers: existing?.assignedOfficers ?? [],
     };
@@ -116,6 +128,9 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
           <ScrollView contentContainerStyle={styles.scroll}>
             <Text style={styles.title}>{isEdit ? 'Edit geofence' : 'Add geofence'}</Text>
             {error ? <Text style={styles.error}>{error}</Text> : null}
+            {radiusValidation.warning ? (
+              <Text style={styles.warning}>{radiusValidation.warning}</Text>
+            ) : null}
 
             <Text style={styles.hint}>Tap the map or drag the pin to set the exact location.</Text>
             <GeofenceLocationPicker
@@ -124,10 +139,20 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
               onCenterChange={handleMapCenterChange}
             />
 
-            <Text style={styles.sliderLabel}>Radius: {radius}m</Text>
+            <Text style={styles.sliderLabel}>
+              Radius: {radius}m ({GEOFENCE_RADIUS_MIN_M}–{GEOFENCE_RADIUS_MAX_M}m)
+            </Text>
             <View style={styles.radiusRow}>
-              <Button label="−" variant="ghost" onPress={() => setRadius((r) => Math.max(50, r - 50))} />
-              <Button label="+" variant="ghost" onPress={() => setRadius((r) => Math.min(5000, r + 50))} />
+              <Button
+                label="−"
+                variant="ghost"
+                onPress={() => setRadius((r) => Math.max(GEOFENCE_RADIUS_MIN_M, r - 25))}
+              />
+              <Button
+                label="+"
+                variant="ghost"
+                onPress={() => setRadius((r) => Math.min(GEOFENCE_RADIUS_MAX_M, r + 25))}
+              />
             </View>
 
             <GeofenceLocationControls
@@ -146,7 +171,7 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
             <Button
               label={creating || updating ? 'Saving…' : 'Save geofence'}
               onPress={() => void handleSave()}
-              disabled={creating || updating}
+              disabled={creating || updating || !radiusValidation.valid}
             />
           </ScrollView>
         </KeyboardAvoidingView>
@@ -162,4 +187,5 @@ const styles = StyleSheet.create({
   sliderLabel: { fontSize: 13, color: colors.textSecondary },
   radiusRow: { flexDirection: 'row', gap: spacing.sm },
   error: { color: colors.errorRed, fontSize: 13 },
+  warning: { color: adminColors.badgePending, fontSize: 13 },
 });

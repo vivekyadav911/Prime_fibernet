@@ -2,15 +2,23 @@ import { forwardRef } from 'react';
 import { FlatList, type FlatListProps } from 'react-native';
 
 import { KEYBOARD_AWARE_LIST_PROPS, dismissKeyboardOnScrollBeginDrag } from './keyboardBehavior';
+import { scrollLayoutStyles } from './scrollLayoutStyles';
 
 export const DismissKeyboardFlatList = forwardRef(function DismissKeyboardFlatList<ItemT>(
-  { keyboardShouldPersistTaps, keyboardDismissMode, onScrollBeginDrag, ...rest }: FlatListProps<ItemT>,
+  {
+    keyboardShouldPersistTaps,
+    keyboardDismissMode,
+    onScrollBeginDrag,
+    style,
+    ...rest
+  }: FlatListProps<ItemT>,
   ref: React.Ref<FlatList<ItemT>>,
 ) {
   return (
     <FlatList
       ref={ref}
       {...KEYBOARD_AWARE_LIST_PROPS}
+      style={[scrollLayoutStyles.scrollContainer, style]}
       {...rest}
       keyboardShouldPersistTaps={keyboardShouldPersistTaps ?? KEYBOARD_AWARE_LIST_PROPS.keyboardShouldPersistTaps}
       keyboardDismissMode={keyboardDismissMode ?? KEYBOARD_AWARE_LIST_PROPS.keyboardDismissMode}

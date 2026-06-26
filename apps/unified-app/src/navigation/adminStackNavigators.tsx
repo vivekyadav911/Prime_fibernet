@@ -32,6 +32,7 @@ import { CreateGeofenceScreen } from '@/screens/admin/hr/CreateGeofenceScreen';
 import { GeofenceManagementScreen } from '@/screens/admin/hr/GeofenceManagementScreen';
 import { LeaveManagementScreen } from '@/screens/admin/hr/LeaveManagementScreen';
 import { LiveAttendanceScreen } from '@/screens/admin/hr/LiveAttendanceScreen';
+import { ManualAttendanceEntryScreen } from '@/screens/admin/hr/ManualAttendanceEntryScreen';
 import { ShiftManagementScreen } from '@/screens/admin/hr/ShiftManagementScreen';
 import { RoleManagementScreen } from '@/screens/admin/hr/RoleManagementScreen';
 import { PayrollScreen } from '@/screens/admin/hr/payroll/PayrollScreen';
@@ -251,6 +252,7 @@ export function AdminAttendanceStackNav() {
       <AttendanceStack.Screen name="ApprovalRequests" component={ApprovalRequestsScreen} options={{ title: 'Approval requests' }} />
       <AttendanceStack.Screen name="CheckInExceptions" component={CheckInExceptionsScreen} options={{ title: 'Check-in exceptions' }} />
       <AttendanceStack.Screen name="AttendanceRecords" component={AttendanceRecordsScreen} options={{ title: 'Attendance records' }} />
+      <AttendanceStack.Screen name="ManualAttendanceEntry" component={ManualAttendanceEntryScreen} options={{ title: 'Manual entry', presentation: 'modal' }} />
       <AttendanceStack.Screen name="ShiftManagement" component={ShiftManagementScreen} options={{ title: 'Shift management' }} />
       <AttendanceStack.Screen name="LeaveManagement" component={LeaveManagementScreen} options={{ title: 'Leave management' }} />
       <AttendanceStack.Screen name="AttendanceReports" component={AttendanceReportsScreen} options={{ title: 'Attendance reports' }} />

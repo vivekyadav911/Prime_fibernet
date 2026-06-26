@@ -84,6 +84,9 @@ export interface AttendanceRecord {
   approvalRequestId?: string;
   locationMocked?: boolean;
   createdAt: string;
+  manualEntryByName?: string;
+  manualEntryReason?: string;
+  manualEntryAt?: string;
 }
 
 export interface AttendanceSummary {
@@ -132,6 +135,16 @@ export interface ApprovalRequest {
   reviewedAt?: string;
   reviewNotes?: string;
   date: string;
+}
+
+export interface ApprovalAuditEntry {
+  id: string;
+  approvalRequestId: string;
+  action: 'approve' | 'reject';
+  performedBy?: string;
+  performedByName: string;
+  notes?: string;
+  createdAt: string;
 }
 
 // ─── Shifts ──────────────────────────────────────────────────────────────────
@@ -255,6 +268,10 @@ export type DbAttendanceRow = {
   attendance_status: string | null;
   status: string | null;
   created_at?: string;
+  manual_entry_by?: string | null;
+  manual_entry_by_name?: string | null;
+  manual_entry_reason?: string | null;
+  manual_entry_at?: string | null;
   officers?: { full_name?: string; profile_photo_url?: string };
   geofences?: { name?: string };
 };

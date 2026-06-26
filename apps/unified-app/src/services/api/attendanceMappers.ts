@@ -1,4 +1,5 @@
 import type {
+  ApprovalAuditEntry,
   ApprovalRequest,
   ApprovalStatus,
   ApprovalType,
@@ -21,6 +22,7 @@ import type {
 
 import { getOfficerIdForUser, parseGeographyPoint } from './mappers';
 import type { TypedSupabaseClient } from './supabase';
+import { checkGeofenceStatus } from '@/utils/geofenceUtils';
 
 export const APPROVAL_OFFICER_EMBED = 'full_name, profile_photo_url';
 export const APPROVAL_BASE_SELECT = `*, officers(${APPROVAL_OFFICER_EMBED})`;
@@ -48,7 +50,7 @@ async function enrichAndMapApprovalRows(
     mapApprovalRow({
       ...row,
       geofences: row.geofence_id
-        ? { name: geofenceNames.get(row.geofence_id) ?? '' }
+        ? { name: geofenceNames.get(row.geofence_id) ?? 'Unassigned zone' }
         : undefined,
     }),
   );
@@ -118,10 +120,10 @@ export function mapAttendanceRow(row: DbAttendanceRow): AttendanceRecord {
   return {
     id: row.id,
     officerId: row.officer_id,
-    officerName: row.officers?.full_name ?? 'Officer',
+    officerName: row.officers?.full_name?.trim() || 'Unknown officer',
     officerAvatar: row.officers?.profile_photo_url,
     geofenceId: row.geofence_id ?? '',
-    geofenceName: row.geofences?.name ?? '',
+    geofenceName: row.geofences?.name?.trim() || 'Unassigned zone',
     date: row.shift_date ?? new Date().toISOString().slice(0, 10),
     checkInTime: row.check_in_time ?? undefined,
     checkOutTime: row.check_out_time ?? undefined,
@@ -140,6 +142,9 @@ export function mapAttendanceRow(row: DbAttendanceRow): AttendanceRecord {
     approvalRequestId: row.approval_request_id ?? undefined,
     locationMocked: Boolean(row.location_mocked),
     createdAt: row.created_at ?? new Date().toISOString(),
+    manualEntryByName: row.manual_entry_by_name ?? undefined,
+    manualEntryReason: row.manual_entry_reason ?? undefined,
+    manualEntryAt: row.manual_entry_at ?? undefined,
   };
 }
 
@@ -151,10 +156,10 @@ export function mapApprovalRow(row: DbApprovalRow): ApprovalRequest {
   return {
     id: row.id,
     officerId: row.officer_id,
-    officerName: row.officers?.full_name ?? 'Officer',
+    officerName: row.officers?.full_name?.trim() || 'Unknown officer',
     officerAvatar: row.officers?.profile_photo_url,
     geofenceId: row.geofence_id ?? '',
-    geofenceName: row.geofences?.name ?? '',
+    geofenceName: row.geofences?.name?.trim() || 'Unassigned zone',
     type: (row.type ?? 'manual_correction') as ApprovalType,
     requestedAt: row.requested_at ?? legacy.created_at ?? new Date().toISOString(),
     requestedLocation: {
@@ -192,7 +197,7 @@ export function mapLeaveRow(row: DbLeaveRow): LeaveRequestRecord {
   return {
     id: row.id,
     officerId: row.officer_id,
-    officerName: row.officers?.full_name ?? 'Officer',
+    officerName: row.officers?.full_name?.trim() || 'Unknown officer',
     leaveType: row.leave_type as LeaveType,
     fromDate: row.start_date,
     toDate: row.end_date,
@@ -208,29 +213,88 @@ export function mapLeaveRow(row: DbLeaveRow): LeaveRequestRecord {
   };
 }
 
-export function mapLiveOfficerRow(row: Record<string, unknown>): OfficerLiveLocation {
-  const activeStatus = row.active_shift_status as string | null | undefined;
-  const activeCheckIn = row.active_shift_check_in as string | null | undefined;
-  const activeCheckOut = row.active_shift_check_out as string | null | undefined;
-  const attendanceStatus: OfficerLiveLocation['attendanceStatus'] =
-    activeStatus === 'active' && activeCheckIn && !activeCheckOut
-      ? 'checked_in'
-      : activeCheckOut
-        ? 'checked_out'
-        : 'not_started';
+type ActiveShiftSnapshot = {
+  status?: string | null;
+  check_in_time?: string | null;
+  check_out_time?: string | null;
+};
+
+function resolveAttendanceStatus(
+  activeStatus?: string | null,
+  activeCheckIn?: string | null,
+  activeCheckOut?: string | null,
+): OfficerLiveLocation['attendanceStatus'] {
+  if (activeStatus === 'active' && activeCheckIn && !activeCheckOut) return 'checked_in';
+  if (activeCheckOut) return 'checked_out';
+  return 'not_started';
+}
+
+export function mapLiveOfficerFromLocationRow(
+  row: Record<string, unknown>,
+  activeShift?: ActiveShiftSnapshot | null,
+  activeGeofences: Geofence[] = [],
+): OfficerLiveLocation {
+  const officerEmbed = row.officers as Record<string, unknown> | Record<string, unknown>[] | null;
+  const officerRow = Array.isArray(officerEmbed) ? officerEmbed[0] : officerEmbed;
+  const coordinates = {
+    latitude: Number(row.latitude),
+    longitude: Number(row.longitude),
+  };
+  const geofenceStatus = checkGeofenceStatus(coordinates, activeGeofences);
+
+  return {
+    officerId: (row.officer_id ?? officerRow?.id) as string,
+    officerName: (officerRow?.full_name as string)?.trim() || 'Unknown officer',
+    officerAvatar: (officerRow?.profile_photo_url as string) ?? undefined,
+    coordinates,
+    accuracy: Number(row.accuracy ?? 0),
+    isInsideGeofence: geofenceStatus.isInside,
+    geofenceId: geofenceStatus.geofence?.id,
+    lastUpdated: (row.last_seen_at as string) ?? new Date().toISOString(),
+    attendanceStatus: resolveAttendanceStatus(
+      activeShift?.status,
+      activeShift?.check_in_time,
+      activeShift?.check_out_time,
+    ),
+  };
+}
+
+export function mapLiveOfficerRow(
+  row: Record<string, unknown>,
+  activeGeofences: Geofence[] = [],
+): OfficerLiveLocation {
+  const coordinates = {
+    latitude: Number(row.current_latitude),
+    longitude: Number(row.current_longitude),
+  };
+  const geofenceStatus = checkGeofenceStatus(coordinates, activeGeofences);
 
   return {
     officerId: row.id as string,
-    officerName: (row.full_name as string) ?? 'Officer',
+    officerName: (row.full_name as string)?.trim() || 'Unknown officer',
     officerAvatar: (row.profile_photo_url as string) ?? undefined,
-    coordinates: {
-      latitude: Number(row.current_latitude),
-      longitude: Number(row.current_longitude),
-    },
+    coordinates,
     accuracy: 0,
-    isInsideGeofence: false,
+    isInsideGeofence: geofenceStatus.isInside,
+    geofenceId: geofenceStatus.geofence?.id,
     lastUpdated: (row.last_location_update as string) ?? new Date().toISOString(),
-    attendanceStatus,
+    attendanceStatus: resolveAttendanceStatus(
+      row.active_shift_status as string | null | undefined,
+      row.active_shift_check_in as string | null | undefined,
+      row.active_shift_check_out as string | null | undefined,
+    ),
+  };
+}
+
+export function mapApprovalAuditRow(row: Record<string, unknown>): ApprovalAuditEntry {
+  return {
+    id: row.id as string,
+    approvalRequestId: row.approval_request_id as string,
+    action: row.action as 'approve' | 'reject',
+    performedBy: (row.performed_by as string) ?? undefined,
+    performedByName: (row.performed_by_name as string)?.trim() || 'Unknown admin',
+    notes: (row.notes as string) ?? undefined,
+    createdAt: row.created_at as string,
   };
 }
 

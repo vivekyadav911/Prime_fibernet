@@ -4,7 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { FormField, RoleGuard, SectionCard } from '@/components/admin';
-import { DismissKeyboardScrollView, ErrorState, KeyboardDismissView, SkeletonLoader } from '@/components/common';
+import { DismissKeyboardScrollView, ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useGetFullAdminSettingsQuery,
   useGetInvoiceSettingsQuery,
@@ -68,8 +68,7 @@ export function InvoiceSettingsScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="invoices.edit">
-      <Screen>
-        <KeyboardDismissView>
+      <Screen keyboardDismiss={false}>
           <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
           <SectionCard title="Company tax details">
             <FormField label="Company GSTIN" value={gstin} onChangeText={setGstin} />
@@ -80,7 +79,6 @@ export function InvoiceSettingsScreen(_props: Props) {
           </SectionCard>
           <Button label="Save settings" onPress={() => void onSave()} />
           </DismissKeyboardScrollView>
-        </KeyboardDismissView>
       </Screen>
     </RoleGuard>
   );

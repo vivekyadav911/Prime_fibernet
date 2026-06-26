@@ -15,7 +15,7 @@ import { Button, Screen } from '@prime/ui';
 
 import { CollapsibleFormSection } from '@/components/admin/employment/CollapsibleFormSection';
 import { DateField, FilterChips, FormField, RoleGuard, SelectField } from '@/components/admin';
-import { DismissKeyboardScrollView, ErrorState, KeyboardDismissView, SkeletonLoader, ToggleSwitch } from '@/components/common';
+import { DismissKeyboardScrollView, ErrorState, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import { buildDefaultFormValues, EMPLOYMENT_TYPE_OPTIONS, WEEKLY_OFF_OPTIONS } from '@/constants/employmentContractDefaults';
 import { useCompanyDefaults } from '@/hooks/useCompanyDefaults';
 import { useEmploymentContract } from '@/hooks/useEmploymentContract';
@@ -165,12 +165,12 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="officers.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <Screen keyboardDismiss={false} padded={false} style={adminScreenStyles.canvas}>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <KeyboardDismissView style={styles.flex}>
+          <View style={styles.flex}>
             <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
             <Text style={styles.pageTitle}>Employment Contract</Text>
             <Text style={styles.subtitle}>{profile.fullName}</Text>
@@ -392,7 +392,7 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
               disabled={(!canGenerate && submitting !== 'generate') || submitting === 'generate' || finalizing}
             />
           </View>
-          </KeyboardDismissView>
+          </View>
         </KeyboardAvoidingView>
       </Screen>
     </RoleGuard>
