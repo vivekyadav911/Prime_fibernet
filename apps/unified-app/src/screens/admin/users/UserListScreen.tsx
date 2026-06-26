@@ -2,12 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
-  FlatList,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -15,6 +12,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import type { ScrollView, FlatList } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
@@ -28,7 +26,7 @@ import {
   StatusBadge,
   useAdminPermission,
 } from '@/components/admin';
-import { ErrorState, KeyboardDismissView, SkeletonLoader } from '@/components/common';
+import { DismissKeyboardFlatList, DismissKeyboardScrollView, ErrorState, KeyboardDismissView, SkeletonLoader } from '@/components/common';
 import { useGetAdminUsersQuery } from '@/store/api/endpoints';
 import { fetchPlanById } from '@/services/planService';
 import type { AdminUserListItem } from '@/types/api/admin';
@@ -565,7 +563,7 @@ export function UserListScreen({ navigation, route }: Props) {
                     />
                   </View>
                 ) : viewMode === 'list' ? (
-                  <FlatList
+                  <DismissKeyboardFlatList
                     ref={listRef}
                     data={users}
                     keyExtractor={(item) => item.id}
@@ -576,19 +574,16 @@ export function UserListScreen({ navigation, route }: Props) {
                       listInsetTop > 0 ? { paddingTop: listInsetTop } : null,
                     ]}
                     showsVerticalScrollIndicator
-                    keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="on-drag"
                     scrollEventThrottle={16}
                     onScroll={handleListScroll}
                     onScrollEndDrag={pinCollapseAtBottom}
                     onMomentumScrollEnd={pinCollapseAtBottom}
                     onScrollBeginDrag={() => {
-                      Keyboard.dismiss();
                       closeDropdown();
                     }}
                   />
                 ) : (
-                  <ScrollView
+                  <DismissKeyboardScrollView
                     ref={gridScrollRef}
                     style={styles.listBody}
                     contentContainerStyle={[
@@ -598,19 +593,16 @@ export function UserListScreen({ navigation, route }: Props) {
                     ]}
                     nestedScrollEnabled
                     showsVerticalScrollIndicator
-                    keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="on-drag"
                     scrollEventThrottle={16}
                     onScroll={handleListScroll}
                     onScrollEndDrag={pinCollapseAtBottom}
                     onMomentumScrollEnd={pinCollapseAtBottom}
                     onScrollBeginDrag={() => {
-                      Keyboard.dismiss();
                       closeDropdown();
                     }}
                   >
                     {users.map(renderGridCard)}
-                  </ScrollView>
+                  </DismissKeyboardScrollView>
                 )}
               </View>
 

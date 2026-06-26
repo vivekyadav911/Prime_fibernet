@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { radius, spacing } from '@/theme/spacing';
+import { radius } from '@/theme/spacing';
 import type { StockStatus } from '@/types/inventory';
 import { getStockStatusConfig } from '@/utils/inventoryUtils';
 

@@ -13,7 +13,7 @@ import type {
   TicketStatus,
 } from '@/types/tickets';
 import { getSupabase } from '@/services/supabase';
-import { sendAutoNotification } from '@/services/broadcastNotificationService';
+import { triggerAutoNotification } from '@/services/broadcastNotificationService';
 import { fetchOfficers } from '@/services/requestsService';
 import {
   buildSlaInsertFields,
@@ -23,7 +23,8 @@ import {
   mapDbRowToTicket,
   mapNoteRow,
 } from '@/utils/ticketViewMappers';
-import { computeSLADeadlines, isSLABreached } from '@/utils/slaUtils';
+import { isSLABreached } from '@/utils/slaUtils';
+import { insertOfficerPortalNotification } from '@/utils/officerPortalNotification';
 
 async function requireSession() {
   const client = getSupabase();
@@ -200,6 +201,15 @@ export async function createTicket(
       performedBy: admin.name,
       performedByRole: admin.role,
     });
+
+    await insertOfficerPortalNotification(client, {
+      officerId: form.assignedOfficerId,
+      type: 'ticket_assigned',
+      title: 'New ticket assigned',
+      body: `You have been assigned a new support ticket by ${admin.name}.`,
+      data: { ticketId },
+      category: 'ticket',
+    });
   }
 
   if (form.linkedRequestId) {
@@ -252,12 +262,14 @@ export async function updateTicketStatus(
 
   if (status === 'Resolved' && ticket.customerId) {
     try {
-      await sendAutoNotification({
+      await triggerAutoNotification('ticket_update', {
+        audience: { type: 'specific_users', userIds: [ticket.customerId] },
+        templateVars: {
+          ticketNumber: ticket.ticketNumber,
+          message: resolutionSummary ?? ticket.resolutionSummary ?? 'Your issue has been resolved.',
+        },
         title: 'Your complaint has been resolved',
         message: `Ticket #${ticket.ticketNumber} — ${resolutionSummary ?? ticket.resolutionSummary ?? 'Your issue has been resolved.'}`,
-        priority: 'Normal',
-        eventType: 'ticketUpdate',
-        audience: { type: 'specific_users', userIds: [ticket.customerId] },
         linkedTicketId: ticketId,
         deepLinkUrl: `primefiber://tickets/${ticketId}`,
       });
@@ -317,6 +329,15 @@ export async function assignOfficer(
     performedBy: adminName,
     performedByRole: 'Admin',
   });
+
+  await insertOfficerPortalNotification(client, {
+    officerId: officer.id,
+    type: 'ticket_assigned',
+    title: 'New ticket assigned',
+    body: `You have been assigned a support ticket by ${adminName}.`,
+    data: { ticketId },
+    category: 'ticket',
+  });
 }
 
 export async function reassignOfficer(
@@ -343,6 +364,15 @@ export async function reassignOfficer(
     description: `Reassigned to ${officer.name}`,
     performedBy: adminName,
     performedByRole: 'Admin',
+  });
+
+  await insertOfficerPortalNotification(client, {
+    officerId: officer.id,
+    type: 'ticket_assigned',
+    title: 'Ticket reassigned to you',
+    body: `A support ticket has been reassigned to you by ${adminName}.`,
+    data: { ticketId },
+    category: 'ticket',
   });
 }
 

@@ -14,7 +14,7 @@ import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { spacing } from '@/theme/spacing';
 import type { AdminOfficerDetail } from '@/types/api/admin';
 import { queryErrorMessage } from '@/utils/queryError';
 

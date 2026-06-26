@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  Keyboard,
   Modal,
   Pressable,
   StyleSheet,
@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pagination, SearchBar } from '@/components/admin';
-import { ErrorState } from '@/components/common';
+import { DismissKeyboardFlatList, ErrorState } from '@/components/common';
 import { useGetAdminUsersQuery } from '@/store/api/endpoints';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -123,11 +123,23 @@ export function SelectCustomerModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <View style={[styles.backdrop, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        <View style={styles.card}>
+      <Pressable
+        style={[styles.backdrop, { paddingTop: insets.top }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          handleClose();
+        }}
+      >
+        <Pressable
+          style={[styles.card, { paddingBottom: insets.bottom + spacing.md }]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <View style={styles.header}>
             <Text style={styles.title}>Select Customer</Text>
-            <Pressable onPress={handleClose} hitSlop={8}>
+            <Pressable
+              onPress={handleClose}
+              hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+            >
               <Text style={styles.close}>✕</Text>
             </Pressable>
           </View>
@@ -165,11 +177,10 @@ export function SelectCustomerModal({
               onRetry={refetch}
             />
           ) : (
-            <FlatList
+            <DismissKeyboardFlatList
               data={customers}
               keyExtractor={(item) => item.id}
               style={styles.list}
-              keyboardShouldPersistTaps="handled"
               ListEmptyComponent={
                 <Text style={styles.empty}>
                   {search.trim()
@@ -181,8 +192,8 @@ export function SelectCustomerModal({
               renderItem={renderCustomerRow}
             />
           )}
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

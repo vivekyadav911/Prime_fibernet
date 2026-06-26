@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { radius } from '@/theme/spacing';
 
 const PAGE_BTN_SIZE = 36;
 const PAGE_BTN_GAP = 6;

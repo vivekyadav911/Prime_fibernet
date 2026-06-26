@@ -2,6 +2,7 @@ import { serve } from 'https://deno.land/std@0.178.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.42.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { encryptPassword, generatePassword } from '../_shared/officerCredentials.ts';
+import { encryptValue } from '../_shared/officerPii.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -393,8 +394,8 @@ serve(async (req) => {
           officer_id: officerId,
           bank_name: bankName?.trim() || null,
           account_holder_name: accountHolderName?.trim() || null,
-          account_number: accountNumber?.trim() || null,
-          ifsc_code: ifscCode?.trim() || null,
+          account_number: await encryptValue(accountNumber?.trim() || null),
+          ifsc_code: await encryptValue(ifscCode?.trim() || null),
         });
         if (bankError) throw bankError;
       }

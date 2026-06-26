@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { adminColors } from '@/theme/admin';
-import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { TicketPriority } from '@/types/tickets';
 

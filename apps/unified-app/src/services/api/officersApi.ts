@@ -2,7 +2,6 @@ import type {
   InventoryItem,
   LeaveRequest,
   Officer,
-  Payslip,
   RequestActivity,
   ServiceRequest,
   Shift,

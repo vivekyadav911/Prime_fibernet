@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_700Bold,
+  HankenGrotesk_400Regular,
+  HankenGrotesk_500Medium,
+  HankenGrotesk_600SemiBold,
+  HankenGrotesk_700Bold,
   useFonts,
-} from '@expo-google-fonts/inter';
+} from '@expo-google-fonts/hanken-grotesk';
 import {
   JetBrainsMono_400Regular,
   JetBrainsMono_700Bold,
@@ -19,9 +20,10 @@ type CustomerFontProviderProps = {
 
 export function CustomerFontProvider({ children }: CustomerFontProviderProps) {
   const [loaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_700Bold,
+    HankenGrotesk_400Regular,
+    HankenGrotesk_500Medium,
+    HankenGrotesk_600SemiBold,
+    HankenGrotesk_700Bold,
     JetBrainsMono_400Regular,
     JetBrainsMono_700Bold,
   });
@@ -29,7 +31,7 @@ export function CustomerFontProvider({ children }: CustomerFontProviderProps) {
   if (!loaded) {
     return (
       <View style={{ flex: 1, backgroundColor: signalGlass.colors.bgDeep, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator color={signalGlass.colors.accentPrimary} />
+        <ActivityIndicator color={signalGlass.colors.primary} />
       </View>
     );
   }

@@ -41,7 +41,7 @@ import {
   RefundScreen,
   TermsScreen,
 } from './customerStackScreens';
-import { TabIcon } from './TabIcon';
+import { CustomerTabBar } from '@/components/customer/shell/CustomerTabBar';
 
 function parsePaymentDeepLink(url: string): { status?: string; paymentId?: string; amount?: string; planName?: string } {
   const query = url.includes('?') ? url.split('?')[1] : '';
@@ -62,51 +62,36 @@ function CustomerTabs() {
 
   return (
     <Tab.Navigator
+      tabBar={(props) => <CustomerTabBar {...props} />}
       screenOptions={{
-        headerStyle: { backgroundColor: signalGlass.colors.bgSurface },
-        headerTintColor: signalGlass.colors.textPrimary,
-        tabBarStyle: {
-          backgroundColor: signalGlass.colors.bgSurface,
-          borderTopColor: signalGlass.colors.borderSubtle,
-        },
-        tabBarActiveTintColor: signalGlass.colors.accentPrimary,
-        tabBarInactiveTintColor: signalGlass.colors.textMuted,
+        headerShown: false,
+        tabBarStyle: { display: 'none' },
       }}
     >
       <Tab.Screen
         name="Home"
         component={DashboardScreen}
-        options={{
-          title: 'Dashboard',
-          headerShown: false,
-          tabBarIcon: ({ focused }) => <TabIcon label="⌂" focused={focused} />,
-        }}
+        options={{ title: 'Home' }}
       />
       <Tab.Screen
         name="Plans"
         component={PlansScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon label="◎" focused={focused} /> }}
+        options={{ title: 'Plans' }}
       />
       <Tab.Screen
         name="Payments"
         component={CustomerBillScreen}
-        options={{
-          title: 'Pay',
-          tabBarIcon: ({ focused }) => <TabIcon label="₹" focused={focused} />,
-        }}
+        options={{ title: 'Payments' }}
       />
       <Tab.Screen
         name="Support"
         component={CustomerSupportHubScreen}
-        options={{
-          title: 'Support',
-          tabBarIcon: ({ focused }) => <TabIcon label="💬" focused={focused} />,
-        }}
+        options={{ title: 'Support' }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon label="👤" focused={focused} /> }}
+        options={{ title: 'Profile' }}
       />
     </Tab.Navigator>
   );
@@ -156,7 +141,7 @@ export function CustomerNavigator() {
         <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
         <Stack.Screen name="PaymentGateway" component={PaymentGatewayScreen} options={{ title: 'Payment gateway' }} />
         <Stack.Screen name="GatewayWebView" component={GatewayWebViewScreen} options={{ title: 'Payment' }} />
-        <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} options={{ title: 'Payment method' }} />
+        <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} options={{ title: 'Payment method', headerShown: false, presentation: 'transparentModal' }} />
         <Stack.Screen name="CustomerBill" component={CustomerBillScreen} options={{ title: 'My bill' }} />
         <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt' }} />
         <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ title: 'Success', headerShown: false }} />

@@ -69,7 +69,7 @@ export function OfficerListScreen({ navigation }: Props) {
     accountStatus,
   });
   const [blockOfficer, { isLoading: blocking }] = useBlockOfficerMutation();
-  const [unblockOfficer, { isLoading: unblocking }] = useUnblockOfficerMutation();
+  const [unblockOfficer] = useUnblockOfficerMutation();
   const [deleteOfficer, { isLoading: deleting }] = useDeleteOfficerMutation();
 
   const officers = useMemo(() => data ?? [], [data]);

@@ -1,7 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
-import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { signalGlass } from '@/theme/customer/signalGlass';
 import type { PlanFilterCategory } from '@/utils/planTier';
 
 type PlanFilterChipsProps = {
@@ -20,6 +19,7 @@ export function PlanFilterChips({ categories, selected, onSelect }: PlanFilterCh
             key={category}
             style={[styles.chip, active && styles.chipActive]}
             onPress={() => onSelect(category)}
+            accessibilityLabel={`Filter ${category}`}
           >
             <Text style={[styles.text, active && styles.textActive]}>{category}</Text>
           </Pressable>
@@ -30,16 +30,21 @@ export function PlanFilterChips({ categories, selected, onSelect }: PlanFilterCh
 }
 
 const styles = StyleSheet.create({
-  row: { gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  row: { gap: signalGlass.spacing.sm, paddingVertical: signalGlass.spacing.sm },
   chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
+    paddingHorizontal: signalGlass.spacing.md,
+    paddingVertical: signalGlass.spacing.sm,
+    borderRadius: signalGlass.radius.pill,
     borderWidth: 1,
-    borderColor: colors.borderDefault,
-    backgroundColor: colors.surfaceWhite,
+    borderColor: signalGlass.colors.borderSubtle,
+    backgroundColor: signalGlass.colors.bgSurface,
+    minHeight: 44,
+    justifyContent: 'center',
   },
-  chipActive: { backgroundColor: colors.primaryNavy, borderColor: colors.primaryNavy },
-  text: { color: colors.textPrimary, fontSize: 13, fontWeight: '500' },
-  textActive: { color: colors.white, fontWeight: '700' },
+  chipActive: {
+    backgroundColor: signalGlass.colors.accentPrimaryMuted,
+    borderColor: signalGlass.colors.accentPrimary,
+  },
+  text: { color: signalGlass.colors.textSecondary, fontSize: 13, fontWeight: '500' },
+  textActive: { color: signalGlass.colors.accentGlow, fontWeight: '700' },
 });

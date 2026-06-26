@@ -77,7 +77,7 @@ export function parseIndianAddress(address: string): ParsedAddressFields {
   }
 
   if (!result.district && result.city) {
-    const districtMatch = trimmed.match(/(?:district|dist\.?)\s*[:\-]?\s*([^,\n]+)/i);
+    const districtMatch = trimmed.match(/(?:district|dist\.?)\s*[:-]?\s*([^,\n]+)/i);
     if (districtMatch?.[1]) {
       result.district = districtMatch[1].trim();
     }

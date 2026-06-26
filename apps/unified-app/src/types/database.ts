@@ -1929,49 +1929,115 @@ export type Database = {
       invoices: {
         Row: {
           amount: number
+          billing_address: string | null
+          cgst_amount: number | null
           created_at: string | null
+          created_by: string | null
           currency: string | null
+          customer_email: string | null
+          customer_gstin: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          customer_state: string | null
+          delivery_channel: string | null
+          delivery_status: string | null
           due_date: string | null
+          gst_amount: number | null
           id: string
           invoice_number: string | null
+          invoice_type: string | null
           issue_date: string | null
+          line_items: Json | null
           notes: string | null
           paid_at: string | null
+          payment_id: string | null
+          pdf_storage_path: string | null
           pdf_url: string | null
+          recipient_email: string | null
+          recipient_phone: string | null
+          sent_at: string | null
+          sent_to: string | null
+          sgst_amount: number | null
           status: string | null
+          subtotal: number | null
           subscription_id: string | null
+          total_amount: number | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           amount: number
+          billing_address?: string | null
+          cgst_amount?: number | null
           created_at?: string | null
+          created_by?: string | null
           currency?: string | null
+          customer_email?: string | null
+          customer_gstin?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_state?: string | null
+          delivery_channel?: string | null
+          delivery_status?: string | null
           due_date?: string | null
+          gst_amount?: number | null
           id?: string
           invoice_number?: string | null
+          invoice_type?: string | null
           issue_date?: string | null
+          line_items?: Json | null
           notes?: string | null
           paid_at?: string | null
+          payment_id?: string | null
+          pdf_storage_path?: string | null
           pdf_url?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          sent_at?: string | null
+          sent_to?: string | null
+          sgst_amount?: number | null
           status?: string | null
+          subtotal?: number | null
           subscription_id?: string | null
+          total_amount?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           amount?: number
+          billing_address?: string | null
+          cgst_amount?: number | null
           created_at?: string | null
+          created_by?: string | null
           currency?: string | null
+          customer_email?: string | null
+          customer_gstin?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_state?: string | null
+          delivery_channel?: string | null
+          delivery_status?: string | null
           due_date?: string | null
+          gst_amount?: number | null
           id?: string
           invoice_number?: string | null
+          invoice_type?: string | null
           issue_date?: string | null
+          line_items?: Json | null
           notes?: string | null
           paid_at?: string | null
+          payment_id?: string | null
+          pdf_storage_path?: string | null
           pdf_url?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          sent_at?: string | null
+          sent_to?: string | null
+          sgst_amount?: number | null
           status?: string | null
+          subtotal?: number | null
           subscription_id?: string | null
+          total_amount?: number | null
           updated_at?: string | null
           user_id?: string | null
         }

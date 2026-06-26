@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { FormField, RoleGuard, SelectField } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { DismissKeyboardScrollView, ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetOfficersQuery } from '@/services/api/officersApi';
 import { useGetAdminUserDetailQuery, useUpdateAdminUserMutation } from '@/store/api/endpoints';
 import type { AdminUsersStackParamList } from '@/types/navigation';
@@ -69,29 +69,38 @@ export function UserEditScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="users.edit">
-      <Screen style={adminScreenStyles.canvas}>
-        <FormField label="Name" value={name} onChangeText={setName} />
-        <FormField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
-        <FormField label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-        <FormField label="Address" value={address} onChangeText={setAddress} multiline />
-        <SelectField
-          label="Collection officer"
-          value={assignedOfficerId}
-          options={officerOptions}
-          onSelect={setAssignedOfficerId}
-          placeholder="Select officer"
-        />
-        <Text style={styles.helper}>
-          Only the assigned officer can view this customer and collect payments in the field app.
-        </Text>
-        <Button label={saving ? 'Saving…' : 'Save'} onPress={() => void onSave()} style={styles.btn} />
-        <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
+      <Screen style={adminScreenStyles.canvas} keyboardDismiss={false}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
+            <FormField label="Name" value={name} onChangeText={setName} />
+            <FormField label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" />
+            <FormField label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            <FormField label="Address" value={address} onChangeText={setAddress} multiline />
+            <SelectField
+              label="Collection officer"
+              value={assignedOfficerId}
+              options={officerOptions}
+              onSelect={setAssignedOfficerId}
+              placeholder="Select officer"
+            />
+            <Text style={styles.helper}>
+              Only the assigned officer can view this customer and collect payments in the field app.
+            </Text>
+            <Button label={saving ? 'Saving…' : 'Save'} onPress={() => void onSave()} style={styles.btn} />
+            <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
+          </DismissKeyboardScrollView>
+        </KeyboardAvoidingView>
       </Screen>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  scroll: { padding: spacing.md, paddingBottom: spacing.xl },
   btn: { marginTop: spacing.md },
   helper: {
     fontSize: 12,

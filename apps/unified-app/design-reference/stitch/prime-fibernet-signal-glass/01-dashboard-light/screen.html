@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FiberFlow - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#1d4ed8",
+                        "surface-variant": "#d3e4fe",
+                        "on-primary-fixed": "#001551",
+                        "inverse-surface": "#213145",
+                        "on-surface": "#0b1c30",
+                        "outline": "#747686",
+                        "on-tertiary-container": "#ffc9b7",
+                        "primary-fixed": "#dce1ff",
+                        "on-error-container": "#93000a",
+                        "surface": "#f8f9ff",
+                        "on-tertiary-fixed": "#390c00",
+                        "on-primary-fixed-variant": "#0039b5",
+                        "outline-variant": "#c4c5d7",
+                        "on-secondary-container": "#6f5900",
+                        "error": "#ba1a1a",
+                        "surface-container": "#e5eeff",
+                        "on-tertiary-fixed-variant": "#832700",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb59c",
+                        "error-container": "#ffdad6",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#eff4ff",
+                        "primary": "#0037b0",
+                        "inverse-on-surface": "#eaf1ff",
+                        "tertiary": "#7f2500",
+                        "on-secondary-fixed-variant": "#574500",
+                        "tertiary-fixed": "#ffdbcf",
+                        "surface-container-highest": "#d3e4fe",
+                        "background": "#f8f9ff",
+                        "surface-tint": "#2151da",
+                        "on-secondary": "#ffffff",
+                        "on-surface-variant": "#434655",
+                        "on-primary-container": "#cad3ff",
+                        "on-background": "#0b1c30",
+                        "surface-bright": "#f8f9ff",
+                        "on-error": "#ffffff",
+                        "secondary-fixed": "#ffe083",
+                        "secondary": "#735c00",
+                        "tertiary-container": "#a73400",
+                        "secondary-fixed-dim": "#eec200",
+                        "on-secondary-fixed": "#231b00",
+                        "surface-dim": "#cbdbf5",
+                        "secondary-container": "#fed01b",
+                        "primary-fixed-dim": "#b7c4ff",
+                        "inverse-primary": "#b7c4ff",
+                        "surface-container-high": "#dce9ff",
+                        "on-tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "2xl": "1.5rem"
+                    },
+                    "spacing": {
+                        "sm": "16px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "base": "4px",
+                        "xs": "8px",
+                        "xl": "64px",
+                        "md": "24px",
+                        "margin-desktop": "auto",
+                        "max-width": "1280px",
+                        "lg": "40px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "display-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-sm": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display-lg-mobile": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .speed-meter {
+            background: conic-gradient(from 225deg, theme('colors.primary') 0%, theme('colors.primary') 75%, theme('colors.surface-container') 75%, theme('colors.surface-container') 100%);
+            border-radius: 50%;
+            transform: rotate(-135deg);
+        }
+        .speed-meter-inner {
+            transform: rotate(135deg);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface font-body-md min-h-screen flex flex-col pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-on-background w-full top-0 sticky border-b border-outline-variant dark:border-outline z-40">
+<div class="flex justify-between items-center px-margin-mobile md:px-gutter h-16 w-full max-w-max-width mx-margin-desktop">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed text-2xl" style="font-variation-settings: 'FILL' 1;">signal_cellular_alt</span>
+<span class="font-display-lg-mobile text-display-lg-mobile font-bold text-primary dark:text-primary-fixed text-2xl md:text-3xl">FiberFlow</span>
+</div>
+<!-- Desktop Nav -->
+<nav class="hidden md:flex gap-gutter items-center">
+<a class="font-label-md text-label-md text-primary dark:text-primary-fixed hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors px-4 py-2 rounded-full" href="#">Home</a>
+<a class="font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors px-4 py-2 rounded-full" href="#">Plans</a>
+<a class="font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors px-4 py-2 rounded-full" href="#">Payments</a>
+<a class="font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors px-4 py-2 rounded-full" href="#">Support</a>
+</nav>
+<button class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full max-w-max-width mx-margin-desktop px-margin-mobile md:px-gutter py-md md:py-xl flex flex-col gap-md md:gap-xl">
+<!-- User Welcome Section -->
+<section class="flex flex-col md:flex-row justify-between items-start md:items-center gap-sm">
+<div>
+<h1 class="font-headline-md text-headline-md text-on-surface">Hello, Arjun Sharma</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Account ID: 987654321</p>
+</div>
+<div class="inline-flex items-center gap-2 bg-[#dcfce7] text-[#166534] px-4 py-2 rounded-full font-label-md text-label-md border border-[#bbf7d0]">
+<span class="w-2 h-2 rounded-full bg-[#16a34a]"></span>
+                Active
+            </div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-md md:gap-gutter">
+<!-- Hero Speed Meter Card -->
+<div class="lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-[24px] p-md md:p-lg flex flex-col items-center justify-center shadow-[0px_4px_20px_rgba(0,0,0,0.03)] relative overflow-hidden">
+<!-- Subtle background decoration -->
+<div class="absolute top-0 right-0 w-64 h-64 bg-surface-container rounded-bl-full opacity-50 -z-10"></div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface w-full text-center md:text-left mb-xl z-10">Current Speed</h2>
+<div class="relative w-64 h-64 flex items-center justify-center mb-md">
+<!-- Semi-circle meter -->
+<div class="absolute inset-0 speed-meter rounded-full shadow-sm z-10"></div>
+<div class="absolute inset-4 bg-surface-container-lowest rounded-full z-20 shadow-[inset_0px_2px_10px_rgba(0,0,0,0.05)]"></div>
+<!-- Inner Content -->
+<div class="speed-meter-inner z-30 flex flex-col items-center justify-center h-full pt-12">
+<span class="font-display-lg text-display-lg-mobile md:text-display-lg text-primary">300</span>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest mt-1">Mbps</span>
+<div class="flex items-center gap-4 mt-6">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-outline text-sm">arrow_downward</span>
+<span class="font-label-sm text-label-sm text-on-surface">310.2</span>
+</div>
+<div class="w-px h-6 bg-outline-variant"></div>
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-outline text-sm">arrow_upward</span>
+<span class="font-label-sm text-label-sm text-on-surface">289.5</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Side Panel (Current Plan & Actions) -->
+<div class="lg:col-span-4 flex flex-col gap-md">
+<!-- Current Plan Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-[24px] p-md shadow-[0px_4px_20px_rgba(0,0,0,0.03)] flex flex-col justify-between hover:shadow-[0px_8px_30px_rgba(0,0,0,0.06)] transition-shadow">
+<div>
+<div class="flex justify-between items-start mb-4">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Prime 300</h3>
+<span class="material-symbols-outlined text-secondary-container bg-surface-container p-2 rounded-full">router</span>
+</div>
+<p class="font-display-lg-mobile text-display-lg-mobile text-on-surface mb-1">$59.99<span class="font-body-md text-body-md text-on-surface-variant">/mo</span></p>
+<p class="font-label-sm text-label-sm text-error flex items-center gap-1 mb-md">
+<span class="material-symbols-outlined text-sm">warning</span>
+                            Due in 3 days
+                        </p>
+</div>
+<button class="w-full bg-primary-container text-on-primary hover:bg-primary transition-colors py-3 px-6 rounded-2xl font-label-md text-label-md flex justify-center items-center gap-2">
+                        Pay Now
+                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<!-- Quick Actions Grid -->
+<div class="grid grid-cols-2 gap-sm">
+<button class="bg-surface-container-lowest border border-outline-variant rounded-[24px] p-4 flex flex-col items-center justify-center gap-2 hover:bg-surface-container-low transition-colors shadow-[0px_4px_20px_rgba(0,0,0,0.02)] aspect-square">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<span class="font-label-md text-label-md text-on-surface text-center">Pay Bill</span>
+</button>
+<button class="bg-surface-container-lowest border border-outline-variant rounded-[24px] p-4 flex flex-col items-center justify-center gap-2 hover:bg-surface-container-low transition-colors shadow-[0px_4px_20px_rgba(0,0,0,0.02)] aspect-square">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">confirmation_number</span>
+<span class="font-label-md text-label-md text-on-surface text-center">My Tickets</span>
+</button>
+<button class="bg-surface-container-lowest border border-outline-variant rounded-[24px] p-4 flex flex-col items-center justify-center gap-2 hover:bg-surface-container-low transition-colors shadow-[0px_4px_20px_rgba(0,0,0,0.02)] aspect-square">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">sync_alt</span>
+<span class="font-label-md text-label-md text-on-surface text-center">Change Plan</span>
+</button>
+<button class="bg-surface-container-lowest border border-outline-variant rounded-[24px] p-4 flex flex-col items-center justify-center gap-2 hover:bg-surface-container-low transition-colors shadow-[0px_4px_20px_rgba(0,0,0,0.02)] aspect-square">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">headset_mic</span>
+<span class="font-label-md text-label-md text-on-surface text-center">Support</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl border-t border-outline-variant dark:border-outline shadow-sm flex justify-around items-center bg-surface dark:bg-on-background px-margin-mobile py-xs pb-6">
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container dark:bg-secondary dark:text-on-secondary rounded-full px-4 py-1 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-sm text-label-sm mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">speed</span>
+<span class="font-label-sm text-label-sm mt-1">Plans</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">payments</span>
+<span class="font-label-sm text-label-sm mt-1">Payments</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">headset_mic</span>
+<span class="font-label-sm text-label-sm mt-1">Support</span>
+</a>
+</nav>
+</body></html>

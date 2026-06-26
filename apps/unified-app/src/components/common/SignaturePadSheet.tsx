@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Keyboard,
   Modal,
   Pressable,
   StyleSheet,
@@ -61,13 +62,22 @@ export function SignaturePadSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable
+        style={[styles.backdrop, { paddingTop: insets.top }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          onClose();
+        }}
+      >
         <Pressable
           style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]}
           onPress={(e) => e.stopPropagation()}
         >
           <View style={styles.header}>
-            <Pressable onPress={onClose} hitSlop={8}>
+            <Pressable
+              onPress={onClose}
+              hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+            >
               <Text style={styles.cancel}>Cancel</Text>
             </Pressable>
             <Text style={styles.title}>{title}</Text>

@@ -2,7 +2,7 @@ import { Linking, Platform, Pressable, StyleSheet, Text } from 'react-native';
 import { Button } from '@prime/ui';
 
 import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { spacing } from '@/theme/spacing';
 
 type NavigationButtonProps = {
   address: string;

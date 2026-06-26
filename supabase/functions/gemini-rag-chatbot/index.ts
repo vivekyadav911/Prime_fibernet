@@ -5,6 +5,11 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  formatUserMemoryContext,
+  persistChatTurn,
+  recallUserMemory,
+} from "../_shared/supermemory.ts";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 // Use the correct Gemini API endpoint
@@ -111,10 +116,14 @@ serve(async (req) => {
       }
     }
 
-    // Step 2: Generate embedding for the user's question
+    // Step 2: Recall long-term user memory (Supermemory)
+    const userMemory = await recallUserMemory(userId, message);
+    const userMemoryContext = userMemory ? formatUserMemoryContext(userMemory) : "";
+
+    // Step 3: Generate embedding for the user's question
     const questionEmbedding = await generateEmbedding(message);
 
-    // Step 3: Search for similar knowledge chunks
+    // Step 4: Search for similar knowledge chunks
     const { data: similarKnowledge, error: searchError } = await supabaseClient.rpc(
       "search_similar_knowledge",
       {
@@ -128,14 +137,22 @@ serve(async (req) => {
       console.error("Search error:", searchError);
     }
 
-    // Step 4: Build context from retrieved knowledge
+    // Step 5: Build context from retrieved knowledge
     let contextString = "";
     const knowledgeIds: string[] = [];
 
+    if (userMemoryContext) {
+      contextString = `[Customer memory]\n${userMemoryContext}`;
+    }
+
     if (similarKnowledge && similarKnowledge.length > 0) {
-      contextString = similarKnowledge
+      const knowledgeBlock = similarKnowledge
         .map((k: any) => `[Source: ${k.source_type}] ${k.content}`)
         .join("\n\n");
+
+      contextString = contextString
+        ? `${contextString}\n\n[Company knowledge]\n${knowledgeBlock}`
+        : knowledgeBlock;
       
       knowledgeIds.push(...similarKnowledge.map((k: any) => k.id));
     } else {
@@ -147,7 +164,10 @@ serve(async (req) => {
         .limit(3);
 
       if (generalInfo) {
-        contextString = generalInfo.map((k: any) => k.content).join("\n\n");
+        const generalBlock = generalInfo.map((k: any) => k.content).join("\n\n");
+        contextString = contextString
+          ? `${contextString}\n\n[Company knowledge]\n${generalBlock}`
+          : generalBlock;
         knowledgeIds.push(...generalInfo.map((k: any) => k.id));
       }
     }
@@ -254,6 +274,11 @@ serve(async (req) => {
       cachedResponse: false,
       processingTimeMs: processingTime,
     });
+
+    persistChatTurn(userId, message, answer, {
+      channel: "gemini-rag-chatbot",
+      cached: "false",
+    }).catch(console.error);
 
     return new Response(
       JSON.stringify({

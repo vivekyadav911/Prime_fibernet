@@ -2,7 +2,7 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 import type { Session, User } from '@supabase/supabase-js';
 
-import { DEV_MOCK_USERS, type AppRole } from '@prime/types';
+import { type AppRole } from '@prime/types';
 
 export type AuthUser = {
   id: string;
@@ -17,7 +17,6 @@ type AuthState = {
   isAuthenticated: boolean;
   isLoading: boolean;
   requires2FA: boolean;
-  isDevSession: boolean;
   error: string | null;
 };
 
@@ -27,7 +26,6 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isLoading: true,
   requires2FA: false,
-  isDevSession: false,
   error: null,
 };
 
@@ -57,7 +55,6 @@ export const authSlice = createSlice({
     setCredentials(state, action: PayloadAction<AuthCredentialsPayload>) {
       const { session, user } = action.payload;
       state.session = session;
-      state.isDevSession = (user.email ?? '').endsWith('@prime.local');
       state.user = mapUser(user);
       state.isAuthenticated = true;
       state.requires2FA = state.user.role === 'admin' && !user.app_metadata?.totp_verified;
@@ -69,7 +66,6 @@ export const authSlice = createSlice({
       state.user = null;
       state.isAuthenticated = false;
       state.requires2FA = false;
-      state.isDevSession = false;
       state.error = null;
       state.isLoading = false;
     },
@@ -77,7 +73,6 @@ export const authSlice = createSlice({
       const { session, user } = action.payload;
       state.session = session;
       if (session && user) {
-        state.isDevSession = (user.email ?? '').endsWith('@prime.local');
         state.user = mapUser(user);
         state.isAuthenticated = true;
         state.requires2FA = state.user.role === 'admin' && !user.app_metadata?.totp_verified;
@@ -94,22 +89,11 @@ export const authSlice = createSlice({
     setRequires2FA(state, action: PayloadAction<boolean>) {
       state.requires2FA = action.payload;
     },
-    signInDevUser(state, action: PayloadAction<AppRole>) {
-      const mock = DEV_MOCK_USERS[action.payload];
-      state.session = null;
-      state.user = mock;
-      state.isAuthenticated = true;
-      state.isDevSession = true;
-      state.requires2FA = false;
-      state.isLoading = false;
-      state.error = null;
-    },
     logout(state) {
       state.session = null;
       state.user = null;
       state.isAuthenticated = false;
       state.requires2FA = false;
-      state.isDevSession = false;
       state.error = null;
       state.isLoading = false;
     },
@@ -123,6 +107,5 @@ export const {
   setSession,
   setError,
   setRequires2FA,
-  signInDevUser,
   logout,
 } = authSlice.actions;

@@ -1,16 +1,20 @@
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import { ErrorState, MarkdownText, SkeletonLoader } from '@/components/common';
+import { MarkdownText } from '@/components/common';
+import { DismissKeyboardScrollView } from '@/components/common';
+import {
+  CustomerErrorState,
+  CustomerSkeletonLoader,
+  GlassCard,
+} from '@/components/customer/ui';
 import {
   useGetFaqsAdminQuery,
   useIncrementFaqViewMutation,
   useVoteFaqHelpfulMutation,
 } from '@/services/api/adminSupportApi';
-import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { signalGlass } from '@/theme/customer/signalGlass';
 import type { CustomerStackParamList } from '@/types/navigation';
 import { queryErrorMessage } from '@/utils/queryError';
 
@@ -24,37 +28,89 @@ export function CustomerFaqDetailScreen({ route }: Props) {
 
   const faq = useMemo(() => faqs?.find((f) => f.id === faqId), [faqs, faqId]);
 
-  if (isLoading) return <Screen><SkeletonLoader rows={4} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-  if (!faq) return <Screen><ErrorState message="FAQ not found" onRetry={refetch} /></Screen>;
+  if (isLoading) {
+    return (
+      <View style={styles.canvas}>
+        <CustomerSkeletonLoader rows={4} />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.canvas}>
+        <CustomerErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </View>
+    );
+  }
+
+  if (!faq) {
+    return (
+      <View style={styles.canvas}>
+        <CustomerErrorState message="This FAQ could not be found." onRetry={refetch} />
+      </View>
+    );
+  }
 
   void incrementView(faqId);
 
   return (
-    <Screen style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+    <View style={styles.canvas}>
+      <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
         <Text style={styles.question}>{faq.question}</Text>
-        <MarkdownText>{faq.answer}</MarkdownText>
+        <GlassCard style={styles.answerCard}>
+          <MarkdownText>{faq.answer}</MarkdownText>
+        </GlassCard>
         <View style={styles.voteRow}>
           <Text style={styles.voteLabel}>Was this helpful?</Text>
-          <Pressable style={styles.voteBtn} onPress={() => void vote({ id: faqId, helpful: true })}>
-            <Text style={styles.voteText}>👍 Yes</Text>
+          <Pressable
+            style={styles.voteBtn}
+            onPress={() => void vote({ id: faqId, helpful: true })}
+            accessibilityLabel="Yes, helpful"
+          >
+            <Text style={styles.voteText}>Yes</Text>
           </Pressable>
-          <Pressable style={styles.voteBtn} onPress={() => void vote({ id: faqId, helpful: false })}>
-            <Text style={styles.voteText}>👎 No</Text>
+          <Pressable
+            style={styles.voteBtn}
+            onPress={() => void vote({ id: faqId, helpful: false })}
+            accessibilityLabel="No, not helpful"
+          >
+            <Text style={styles.voteText}>No</Text>
           </Pressable>
         </View>
-      </ScrollView>
-    </Screen>
+      </DismissKeyboardScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.background },
-  scroll: { padding: spacing.md },
-  question: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.md },
-  voteRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.xl },
-  voteLabel: { fontSize: 14, color: colors.textSecondary },
-  voteBtn: { padding: spacing.sm, backgroundColor: colors.surfaceWhite, borderRadius: 8, borderWidth: 1, borderColor: colors.borderDefault },
-  voteText: { fontSize: 14, color: colors.textPrimary },
+  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
+  scroll: { padding: signalGlass.spacing.lg, paddingBottom: signalGlass.spacing.xxxl },
+  question: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: signalGlass.colors.textPrimary,
+    fontFamily: signalGlass.fonts.display,
+    marginBottom: signalGlass.spacing.md,
+  },
+  answerCard: { marginBottom: signalGlass.spacing.lg },
+  voteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: signalGlass.spacing.md,
+    marginTop: signalGlass.spacing.lg,
+    flexWrap: 'wrap',
+  },
+  voteLabel: { fontSize: 14, color: signalGlass.colors.textSecondary },
+  voteBtn: {
+    minHeight: 44,
+    minWidth: 44,
+    paddingHorizontal: signalGlass.spacing.md,
+    justifyContent: 'center',
+    backgroundColor: signalGlass.colors.bgSurface,
+    borderRadius: signalGlass.radius.sm,
+    borderWidth: 1,
+    borderColor: signalGlass.colors.borderSubtle,
+  },
+  voteText: { fontSize: 14, color: signalGlass.colors.textPrimary, fontWeight: '600', textAlign: 'center' },
 });

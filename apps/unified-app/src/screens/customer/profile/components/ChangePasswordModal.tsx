@@ -1,8 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { Modal, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
 import { z } from 'zod';
+
+import { KeyboardDismissView } from '@/components/common';
 
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
@@ -27,6 +30,7 @@ type ChangePasswordModalProps = {
 };
 
 export function ChangePasswordModal({ visible, loading, onClose, onSubmit }: ChangePasswordModalProps) {
+  const insets = useSafeAreaInsets();
   const { control, handleSubmit, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { newPassword: '', confirmPassword: '' },
@@ -40,9 +44,19 @@ export function ChangePasswordModal({ visible, loading, onClose, onSubmit }: Cha
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.sheet}>
-          <Text style={styles.title}>Change password</Text>
+      <Pressable
+        style={[styles.overlay, { paddingTop: insets.top }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          onClose();
+        }}
+      >
+        <Pressable
+          style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}
+          onPress={(e) => e.stopPropagation()}
+        >
+          <KeyboardDismissView>
+            <Text style={styles.title}>Change password</Text>
           <Controller
             control={control}
             name="newPassword"
@@ -79,8 +93,9 @@ export function ChangePasswordModal({ visible, loading, onClose, onSubmit }: Cha
           />
           <Button label={loading ? 'Updating…' : 'Update password'} onPress={submit} />
           <Button label="Cancel" variant="secondary" onPress={onClose} style={styles.cancel} />
-        </View>
-      </View>
+          </KeyboardDismissView>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

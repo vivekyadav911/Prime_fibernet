@@ -7,19 +7,29 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { useReduceMotion } from '@/hooks/useReduceMotion';
+import { signalGlass } from '@/theme/customer/signalGlass';
+
 type FadeInSectionProps = {
   children: ReactNode;
   delayMs?: number;
 };
 
 export function FadeInSection({ children, delayMs = 0 }: FadeInSectionProps) {
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(20);
+  const reduceMotion = useReduceMotion();
+  const opacity = useSharedValue(reduceMotion ? 1 : 0);
+  const translateY = useSharedValue(reduceMotion ? 0 : 20);
 
   useEffect(() => {
-    opacity.value = withDelay(delayMs, withTiming(1, { duration: 350 }));
-    translateY.value = withDelay(delayMs, withTiming(0, { duration: 350 }));
-  }, [delayMs, opacity, translateY]);
+    if (reduceMotion) {
+      opacity.value = 1;
+      translateY.value = 0;
+      return;
+    }
+    const duration = signalGlass.motion.fadeDurationMs;
+    opacity.value = withDelay(delayMs, withTiming(1, { duration }));
+    translateY.value = withDelay(delayMs, withTiming(0, { duration }));
+  }, [delayMs, opacity, reduceMotion, translateY]);
 
   const style = useAnimatedStyle(() => ({
     opacity: opacity.value,

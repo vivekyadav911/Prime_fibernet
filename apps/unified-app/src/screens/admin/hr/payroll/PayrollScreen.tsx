@@ -16,7 +16,7 @@ import { formatCurrencyInrPrecise } from '@/utils/formatCurrency';
 import { payslipPdfViewerParams } from '@/utils/payslipNavigation';
 import { queryErrorMessage } from '@/utils/queryError';
 
-type Props = NativeStackScreenProps<AdminPayrollStackParamList, 'Payroll'>;
+type Props = NativeStackScreenProps<AdminPayrollStackParamList, 'PayrollHome'>;
 
 export function PayrollScreen({ navigation }: Props) {
   const {

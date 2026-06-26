@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
 
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
-import { getPlanDeactivationNotificationPrefill } from '@/services/planService';
 import type { Plan } from '@/types/plans';
 
 type DeletePlanModalProps = {
@@ -26,6 +26,7 @@ export function DeletePlanModal({
   onMigrate,
   onNotifySubscribers,
 }: DeletePlanModalProps) {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
 
   if (!plan) return null;
@@ -34,7 +35,13 @@ export function DeletePlanModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable
+        style={[styles.backdrop, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          onClose();
+        }}
+      >
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.title}>Delete Plan</Text>
           <Ionicons name="warning" size={48} color={adminColors.deleteIcon} style={styles.icon} />

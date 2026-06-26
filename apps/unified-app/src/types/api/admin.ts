@@ -271,11 +271,26 @@ export type AdminInvoice = {
   id: string;
   invoiceNumber: string;
   customerName: string;
+  customerEmail: string | null;
   amount: number;
   gstAmount: number;
   totalAmount: number;
   date: string;
-  status: 'paid' | 'unpaid' | 'overdue';
+  status: 'paid' | 'unpaid' | 'overdue' | 'draft' | 'pending' | 'sent';
+  invoiceType: 'non_gst' | 'gst' | 'custom_gst';
+  deliveryStatus: 'draft' | 'pending' | 'sent';
+  deliveryChannel: 'email' | 'whatsapp' | 'manual' | null;
+  pdfStoragePath: string | null;
+  sentAt: string | null;
+  sentTo: string | null;
+  lineItems: {
+    description: string;
+    hsnSac?: string;
+    quantity: number;
+    unit?: string;
+    unitPrice: number;
+    gstRate: number;
+  }[];
 };
 
 export type AttendanceRecord = {

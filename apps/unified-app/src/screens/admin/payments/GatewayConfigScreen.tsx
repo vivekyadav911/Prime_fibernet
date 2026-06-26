@@ -1,16 +1,15 @@
 import { useCallback, useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { Button, Screen } from '@prime/ui';
 
 import { FormField } from '@/components/admin';
 import { GatewayCard } from '@/components/payments';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { DismissKeyboardScrollView, ErrorState, FullScreenModalShell, KeyboardDismissView, SkeletonLoader } from '@/components/common';
 import { useGateways } from '@/hooks/usePayments';
 import type { GatewaySlug, PaymentGatewayRecord } from '@/types/payments';
-import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 
 const CREDENTIAL_FIELDS: Record<GatewaySlug, { key: string; label: string; secret?: boolean }[]> = {
@@ -94,14 +93,14 @@ export function GatewayConfigScreen() {
     }
   };
 
-  if (isLoading) return <Screen><SkeletonLoader rows={5} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <Screen style={adminScreenStyles.canvas}><SkeletonLoader rows={5} /></Screen>;
+  if (isError) return <Screen style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
 
   return (
     <Screen style={[adminScreenStyles.canvas, styles.screenPadding]}>
       <Text style={styles.title}>Payment Gateways</Text>
       <Text style={styles.sub}>Configure your payment providers</Text>
-      <ScrollView>
+      <DismissKeyboardScrollView>
         {(data ?? []).map((gw) => (
           <GatewayCard
             key={gw.id}
@@ -110,43 +109,50 @@ export function GatewayConfigScreen() {
             onToggleActive={(active) => onToggleActive(gw, active)}
           />
         ))}
-      </ScrollView>
+      </DismissKeyboardScrollView>
 
-      <Modal visible={!!editing} animationType="slide" onRequestClose={() => setEditing(null)}>
-        <View style={styles.modal}>
-          <Text style={styles.title}>{editing?.name}</Text>
-          {editing
-            ? CREDENTIAL_FIELDS[editing.slug].map((field) => (
-                <FormField
-                  key={field.key}
-                  label={field.label}
-                  value={form[field.key] ?? ''}
-                  onChangeText={(v) => setField(field.key, v)}
-                  secureTextEntry={field.secret}
-                />
-              ))
-            : null}
-          <View style={styles.row}>
-            <Text style={styles.label}>Test mode</Text>
-            <Switch value={testMode} onValueChange={setTestMode} />
-          </View>
-          {editing?.webhook_url ? (
-            <Text style={styles.webhook}>Webhook: {editing.webhook_url}</Text>
-          ) : null}
-          <Button label="Test connection" variant="secondary" onPress={() => runSave({ testOnly: true })} disabled={busy} />
-          <Button label="Save & activate" onPress={() => runSave({ activate: true })} disabled={busy} />
-          <Button label="Set as default" variant="ghost" onPress={() => runSave({ activate: true, setDefault: true })} />
-          <Button label="Close" variant="ghost" onPress={() => setEditing(null)} />
-        </View>
-      </Modal>
+      <FullScreenModalShell
+        visible={!!editing}
+        onRequestClose={() => setEditing(null)}
+        title={editing?.name ?? 'Gateway'}
+        onCancel={() => setEditing(null)}
+      >
+        <KeyboardDismissView style={styles.modalBody}>
+          <DismissKeyboardScrollView contentContainerStyle={styles.modalScroll}>
+            {editing
+              ? CREDENTIAL_FIELDS[editing.slug].map((field) => (
+                  <FormField
+                    key={field.key}
+                    label={field.label}
+                    value={form[field.key] ?? ''}
+                    onChangeText={(v) => setField(field.key, v)}
+                    secureTextEntry={field.secret}
+                  />
+                ))
+              : null}
+            <View style={styles.row}>
+              <Text style={styles.label}>Test mode</Text>
+              <Switch value={testMode} onValueChange={setTestMode} />
+            </View>
+            {editing?.webhook_url ? (
+              <Text style={styles.webhook}>Webhook: {editing.webhook_url}</Text>
+            ) : null}
+            <Button label="Test connection" variant="secondary" onPress={() => runSave({ testOnly: true })} disabled={busy} />
+            <Button label="Save & activate" onPress={() => runSave({ activate: true })} disabled={busy} />
+            <Button label="Set as default" variant="ghost" onPress={() => runSave({ activate: true, setDefault: true })} />
+          </DismissKeyboardScrollView>
+        </KeyboardDismissView>
+      </FullScreenModalShell>
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({  screenPadding: { padding: spacing.md },
+const styles = StyleSheet.create({
+  screenPadding: { padding: spacing.md },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   sub: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.md },
-  modal: { flex: 1, padding: spacing.lg, paddingTop: 48, backgroundColor: adminColors.canvasBg },
+  modalBody: { flex: 1 },
+  modalScroll: { padding: spacing.lg, paddingBottom: spacing.xxl },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: spacing.sm },
   label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   webhook: { fontSize: 11, color: colors.textSecondary, marginVertical: spacing.sm },

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateField, TimeField } from '@/components/common/pickers';
+import { KeyboardDismissView } from '@/components/common';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
@@ -37,6 +39,7 @@ export function SchedulePickerModal({
   onClose,
   onConfirm,
 }: SchedulePickerModalProps) {
+  const insets = useSafeAreaInsets();
   const initial = value ?? new Date(Date.now() + 30 * 60 * 1000);
   const [dateStr, setDateStr] = useState(
     `${initial.getFullYear()}-${String(initial.getMonth() + 1).padStart(2, '0')}-${String(initial.getDate()).padStart(2, '0')}`,
@@ -60,18 +63,27 @@ export function SchedulePickerModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+      <Pressable
+        style={styles.backdrop}
+        onPress={() => {
+          Keyboard.dismiss();
+          onClose();
+        }}
+      >
+        <Pressable
+          style={[styles.sheet, { paddingBottom: spacing.xxl + insets.bottom }]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <View style={styles.header}>
-            <Pressable onPress={onClose}>
+            <Pressable onPress={onClose} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
               <Text style={styles.cancel}>Cancel</Text>
             </Pressable>
             <Text style={styles.title}>Schedule</Text>
-            <Pressable onPress={() => onConfirm(combined)}>
+            <Pressable onPress={() => onConfirm(combined)} hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}>
               <Text style={styles.done}>Done</Text>
             </Pressable>
           </View>
-          <View style={styles.body}>
+          <KeyboardDismissView style={styles.body}>
             <DateField
               label="Date"
               value={dateStr}
@@ -87,7 +99,7 @@ export function SchedulePickerModal({
             />
             <Text style={styles.preview}>{formatDisplayDate(combined)}</Text>
             <Text style={styles.tz}>IST ({timezone})</Text>
-          </View>
+          </KeyboardDismissView>
         </Pressable>
       </Pressable>
     </Modal>

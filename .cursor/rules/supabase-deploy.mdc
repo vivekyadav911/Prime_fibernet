@@ -1,0 +1,44 @@
+---
+description: Always deploy Supabase schema and edge functions via MCP — never defer to the user
+alwaysApply: true
+---
+
+# Supabase Deploy via MCP
+
+When any task adds or changes Supabase resources, **deploy them yourself** using the `user-supabase` MCP server. Do not tell the user to run `supabase db push`, `supabase functions deploy`, or apply migrations manually unless MCP fails after retry.
+
+## Required workflow
+
+1. **Migrations** — After adding/editing `supabase/migrations/*.sql`:
+   - Call `list_migrations` to see what is already applied.
+   - Call `apply_migration` with the migration `name` (snake_case) and full SQL `query`.
+   - Confirm success with `list_migrations` or `list_tables` before marking the task done.
+
+2. **Edge Functions** — After adding/editing `supabase/functions/<name>/`:
+   - Call `deploy_edge_function` with `name`, `entrypoint_path`, `verify_jwt`, and **all** dependency files (`index.ts`, `_shared/cors.ts`, `_shared/notificationDelivery.ts`, etc.). Rewrite `../_shared/` imports to `./_shared/` in the bundled `index.ts` if needed.
+   - If MCP bundling fails, fall back to `supabase functions deploy <name>` from the repo root, then report which method was used.
+   - Deploy every function touched in the change, not only the primary one.
+
+3. **Types** — After schema changes, call `generate_typescript_types` and update `apps/unified-app/src/types/database.ts` when types are part of the task.
+
+4. **Verification** — Use `execute_sql` or `get_advisors` (security) to confirm tables, policies, and functions exist.
+
+## Definition of done
+
+A Supabase-backed feature is **not complete** until:
+
+- Migration is applied on the linked project via MCP
+- New/changed edge functions are deployed via MCP
+- You report what was deployed (migration name, function names)
+
+## On MCP failure
+
+- Retry once after checking the tool schema.
+- If auth fails, tell the user to authorize Supabase MCP in Cursor Settings, then retry yourself.
+- Only as a last resort, give the user the exact failed command and error — never as the default handoff.
+
+## Never
+
+- End a task with "run `supabase db push`" as the only deploy step
+- Leave migrations only in the repo without applying them
+- Assume prod schema matches the repo without checking `list_migrations`

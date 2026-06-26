@@ -1,0 +1,141 @@
+{
+  "designSystem": {
+    "displayName": "Prime Light Broadband",
+    "styleGuidelines": "## Brand & Style\n\nThe design system is engineered to project a persona of unwavering reliability, speed, and transparency\u2014essential traits for a modern broadband provider. The target audience ranges from tech-savvy remote workers to families requiring simple, dependable home connectivity.\n\nThe visual style is **Corporate Modern with a Minimalist execution**. It prioritizes clarity and whitespace to reduce cognitive load during complex tasks like plan selection or billing. By utilizing a high-contrast palette against pure white surfaces, the UI evokes a sense of efficiency and professional hygiene, ensuring users feel their digital infrastructure is in capable hands.\n\n## Layout & Spacing\n\nThis design system employs a **Fluid-Fixed Hybrid Grid**. Content is housed within a 12-column grid with a maximum width of 1280px. \n\n- **Desktop:** 24px gutters with flexible column widths. \n- **Tablet:** 8-column grid with 24px margins.\n- **Mobile:** 4-column grid with 16px margins.\n\nThe spacing rhythm is built on a **4px base unit**. Component internal padding should favor the \"Medium\" (24px) unit to maintain the airy, premium feel. Vertical rhythm is established through consistent stack spacing\u201464px between major page sections and 24px between related content blocks.\n\n## Elevation & Depth\n\nTo maintain the \"Light\" persona, the system avoids heavy, dark shadows. Instead, it utilizes **Tonal Layering and Soft Ambient Depth**:\n\n- **Level 0 (Base):** Pure White (#FFFFFF) background.\n- **Level 1 (Sub-surface):** Soft Slate (#F8FAFC) used for inset sections or dashboard backgrounds.\n- **Level 2 (Raised):** Cards and floating elements use a subtle, 1px border (#E2E8F0) and an ultra-diffused shadow: `0px 4px 20px rgba(0, 0, 0, 0.03)`.\n- **Interactions:** Hover states on interactive cards should transition to a slightly more pronounced shadow to provide tactile feedback without looking \"heavy.\"\n\n## Components\n\n### Buttons\n- **Primary:** Primary Blue background, white text. 16px corner radius.\n- **Secondary:** Secondary Yellow background, black text (#0F172A) for maximum accessibility. Used for \"Conversion\" moments.\n- **Ghost:** Transparent background with Primary Blue border and text.\n\n### Inputs & Forms\n- Input fields use a 1px border (#E2E8F0) and a 16px corner radius. On focus, the border transitions to Primary Blue with a 2px stroke. Label text is always placed above the field in Label-MD styling.\n\n### Cards\n- Standard cards feature a white background, 24px corner radius, and a 1px Slate border. For pricing plans, the \"Recommended\" plan should feature a 2px Primary Blue border to draw focus.\n\n### Chips & Badges\n- Used for \"Plan Features\" or \"Status\" (e.g., Active, Pending). These utilize a 50% opacity version of the primary or status color for the background, with full-opacity bold text on top for a modern, glass-like appearance without the blur.\n\n### Lists\n- Data lists (usage logs) use 1px bottom borders in Slate (#E2E8F0). Items have a subtle hover state using the Soft Slate (#F8FAFC) background.",
+    "theme": {
+      "bodyFont": "INTER",
+      "bodyFontFamily": "Inter",
+      "colorMode": "LIGHT",
+      "colorVariant": "FIDELITY",
+      "customColor": "#1d4ed8",
+      "designMd": "---\nname: Prime Light Broadband\ncolors:\n  surface: '#f8f9ff'\n  surface-dim: '#cbdbf5'\n  surface-bright: '#f8f9ff'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#eff4ff'\n  surface-container: '#e5eeff'\n  surface-container-high: '#dce9ff'\n  surface-container-highest: '#d3e4fe'\n  on-surface: '#0b1c30'\n  on-surface-variant: '#434655'\n  inverse-surface: '#213145'\n  inverse-on-surface: '#eaf1ff'\n  outline: '#747686'\n  outline-variant: '#c4c5d7'\n  surface-tint: '#2151da'\n  primary: '#0037b0'\n  on-primary: '#ffffff'\n  primary-container: '#1d4ed8'\n  on-primary-container: '#cad3ff'\n  inverse-primary: '#b7c4ff'\n  secondary: '#735c00'\n  on-secondary: '#ffffff'\n  secondary-container: '#fed01b'\n  on-secondary-container: '#6f5900'\n  tertiary: '#7f2500'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#a73400'\n  on-tertiary-container: '#ffc9b7'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#dce1ff'\n  primary-fixed-dim: '#b7c4ff'\n  on-primary-fixed: '#001551'\n  on-primary-fixed-variant: '#0039b5'\n  secondary-fixed: '#ffe083'\n  secondary-fixed-dim: '#eec200'\n  on-secondary-fixed: '#231b00'\n  on-secondary-fixed-variant: '#574500'\n  tertiary-fixed: '#ffdbcf'\n  tertiary-fixed-dim: '#ffb59c'\n  on-tertiary-fixed: '#390c00'\n  on-tertiary-fixed-variant: '#832700'\n  background: '#f8f9ff'\n  on-background: '#0b1c30'\n  surface-variant: '#d3e4fe'\ntypography:\n  display-lg:\n    fontFamily: Inter\n    fontSize: 48px\n    fontWeight: '700'\n    lineHeight: 56px\n    letterSpacing: -0.02em\n  display-lg-mobile:\n    fontFamily: Inter\n    fontSize: 36px\n    fontWeight: '700'\n    lineHeight: 44px\n    letterSpacing: -0.02em\n  headline-md:\n    fontFamily: Inter\n    fontSize: 30px\n    fontWeight: '600'\n    lineHeight: 38px\n    letterSpacing: -0.01em\n  headline-sm:\n    fontFamily: Inter\n    fontSize: 24px\n    fontWeight: '600'\n    lineHeight: 32px\n  body-lg:\n    fontFamily: Inter\n    fontSize: 18px\n    fontWeight: '400'\n    lineHeight: 28px\n  body-md:\n    fontFamily: Inter\n    fontSize: 16px\n    fontWeight: '400'\n    lineHeight: 24px\n  label-md:\n    fontFamily: Inter\n    fontSize: 14px\n    fontWeight: '500'\n    lineHeight: 20px\n    letterSpacing: 0.01em\n  label-sm:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '600'\n    lineHeight: 16px\nrounded:\n  sm: 0.25rem\n  DEFAULT: 0.5rem\n  md: 0.75rem\n  lg: 1rem\n  xl: 1.5rem\n  full: 9999px\nspacing:\n  base: 4px\n  xs: 8px\n  sm: 16px\n  md: 24px\n  lg: 40px\n  xl: 64px\n  gutter: 24px\n  margin-mobile: 16px\n  margin-desktop: auto\n  max-width: 1280px\n---\n\n## Brand & Style\n\nThe design system is engineered to project a persona of unwavering reliability, speed, and transparency\u2014essential traits for a modern broadband provider. The target audience ranges from tech-savvy remote workers to families requiring simple, dependable home connectivity.\n\nThe visual style is **Corporate Modern with a Minimalist execution**. It prioritizes clarity and whitespace to reduce cognitive load during complex tasks like plan selection or billing. By utilizing a high-contrast palette against pure white surfaces, the UI evokes a sense of efficiency and professional hygiene, ensuring users feel their digital infrastructure is in capable hands.\n\n## Colors\n\nThe palette is anchored by **Primary Blue (#1D4ED8)**, a deep, authoritative \"Broadband Blue\" that signifies stability and high-speed data transmission. This is used for primary actions, navigational anchors, and brand-heavy components.\n\n**Secondary Yellow (#FACC15)** acts as a high-visibility accent. Its use is disciplined\u2014reserved for critical calls-to-action (CTAs) like \"Upgrade Now\" or \"Check Availability\" to provide immediate visual contrast without overwhelming the clean aesthetic.\n\nSurfaces follow a strict hierarchy:\n- **Base:** Pure White (#FFFFFF) for maximum readability and a crisp, airy feel.\n- **Secondary Surfaces:** Soft Slate (#F8FAFC) used to differentiate page sections or group content within cards.\n- **Borders:** Thin, hairline Slate (#E2E8F0) to define boundaries without adding visual noise.\n\n## Typography\n\nThe typography utilizes **Inter**, a typeface designed for screens, to ensure exceptional legibility at all scales. The system relies on a mathematical scale to create clear information hierarchy.\n\n- **Headlines:** Use Bold and Semi-Bold weights with slight negative letter-spacing to appear compact and impactful.\n- **Body Text:** Set in Regular weight with generous line-height to facilitate comfortable reading of service agreements and plan details.\n- **Labels:** Use Medium and Semi-Bold weights to provide clear \"scannability\" for data-heavy views like usage statistics or billing dates. \n- **Accessibility:** Text on white or light gray backgrounds must maintain a minimum contrast ratio of 4.5:1, utilizing the neutral slate tones only for secondary information.\n\n## Layout & Spacing\n\nThis design system employs a **Fluid-Fixed Hybrid Grid**. Content is housed within a 12-column grid with a maximum width of 1280px. \n\n- **Desktop:** 24px gutters with flexible column widths. \n- **Tablet:** 8-column grid with 24px margins.\n- **Mobile:** 4-column grid with 16px margins.\n\nThe spacing rhythm is built on a **4px base unit**. Component internal padding should favor the \"Medium\" (24px) unit to maintain the airy, premium feel. Vertical rhythm is established through consistent stack spacing\u201464px between major page sections and 24px between related content blocks.\n\n## Elevation & Depth\n\nTo maintain the \"Light\" persona, the system avoids heavy, dark shadows. Instead, it utilizes **Tonal Layering and Soft Ambient Depth**:\n\n- **Level 0 (Base):** Pure White (#FFFFFF) background.\n- **Level 1 (Sub-surface):** Soft Slate (#F8FAFC) used for inset sections or dashboard backgrounds.\n- **Level 2 (Raised):** Cards and floating elements use a subtle, 1px border (#E2E8F0) and an ultra-diffused shadow: `0px 4px 20px rgba(0, 0, 0, 0.03)`.\n- **Interactions:** Hover states on interactive cards should transition to a slightly more pronounced shadow to provide tactile feedback without looking \"heavy.\"\n\n## Shapes\n\nThe shape language is defined by **pronounced, friendly curves**. \n\n- **Default Corners:** 16px (1rem) for standard components like buttons and input fields.\n- **Large Containers:** 24px (1.5rem) for main cards and pricing tables to emphasize a soft, modern approachable feel.\n- **Small Components:** 8px (0.5rem) for tooltips or tags to maintain harmony without sacrificing space.\n\nThe use of \"Rounded\" (Value 2) ensures that even technical information feels accessible and non-intimidating to the end user.\n\n## Components\n\n### Buttons\n- **Primary:** Primary Blue background, white text. 16px corner radius.\n- **Secondary:** Secondary Yellow background, black text (#0F172A) for maximum accessibility. Used for \"Conversion\" moments.\n- **Ghost:** Transparent background with Primary Blue border and text.\n\n### Inputs & Forms\n- Input fields use a 1px border (#E2E8F0) and a 16px corner radius. On focus, the border transitions to Primary Blue with a 2px stroke. Label text is always placed above the field in Label-MD styling.\n\n### Cards\n- Standard cards feature a white background, 24px corner radius, and a 1px Slate border. For pricing plans, the \"Recommended\" plan should feature a 2px Primary Blue border to draw focus.\n\n### Chips & Badges\n- Used for \"Plan Features\" or \"Status\" (e.g., Active, Pending). These utilize a 50% opacity version of the primary or status color for the background, with full-opacity bold text on top for a modern, glass-like appearance without the blur.\n\n### Lists\n- Data lists (usage logs) use 1px bottom borders in Slate (#E2E8F0). Items have a subtle hover state using the Soft Slate (#F8FAFC) background.",
+      "font": "INTER",
+      "headlineFont": "INTER",
+      "headlineFontFamily": "Inter",
+      "labelFont": "INTER",
+      "labelFontFamily": "Inter",
+      "namedColors": {
+        "background": "#f8f9ff",
+        "error": "#ba1a1a",
+        "error_container": "#ffdad6",
+        "inverse_on_surface": "#eaf1ff",
+        "inverse_primary": "#b7c4ff",
+        "inverse_surface": "#213145",
+        "on_background": "#0b1c30",
+        "on_error": "#ffffff",
+        "on_error_container": "#93000a",
+        "on_primary": "#ffffff",
+        "on_primary_container": "#cad3ff",
+        "on_primary_fixed": "#001551",
+        "on_primary_fixed_variant": "#0039b5",
+        "on_secondary": "#ffffff",
+        "on_secondary_container": "#6f5900",
+        "on_secondary_fixed": "#231b00",
+        "on_secondary_fixed_variant": "#574500",
+        "on_surface": "#0b1c30",
+        "on_surface_variant": "#434655",
+        "on_tertiary": "#ffffff",
+        "on_tertiary_container": "#ffc9b7",
+        "on_tertiary_fixed": "#390c00",
+        "on_tertiary_fixed_variant": "#832700",
+        "outline": "#747686",
+        "outline_variant": "#c4c5d7",
+        "primary": "#0037b0",
+        "primary_container": "#1d4ed8",
+        "primary_fixed": "#dce1ff",
+        "primary_fixed_dim": "#b7c4ff",
+        "secondary": "#735c00",
+        "secondary_container": "#fed01b",
+        "secondary_fixed": "#ffe083",
+        "secondary_fixed_dim": "#eec200",
+        "surface": "#f8f9ff",
+        "surface_bright": "#f8f9ff",
+        "surface_container": "#e5eeff",
+        "surface_container_high": "#dce9ff",
+        "surface_container_highest": "#d3e4fe",
+        "surface_container_low": "#eff4ff",
+        "surface_container_lowest": "#ffffff",
+        "surface_dim": "#cbdbf5",
+        "surface_tint": "#2151da",
+        "surface_variant": "#d3e4fe",
+        "tertiary": "#7f2500",
+        "tertiary_container": "#a73400",
+        "tertiary_fixed": "#ffdbcf",
+        "tertiary_fixed_dim": "#ffb59c"
+      },
+      "overrideNeutralColor": "#64748b",
+      "overridePrimaryColor": "#1d4ed8",
+      "overrideSecondaryColor": "#facc15",
+      "roundness": "ROUND_EIGHT",
+      "spacing": {
+        "base": "4px",
+        "gutter": "24px",
+        "lg": "40px",
+        "margin-desktop": "auto",
+        "margin-mobile": "16px",
+        "max-width": "1280px",
+        "md": "24px",
+        "sm": "16px",
+        "xl": "64px",
+        "xs": "8px"
+      },
+      "spacingScale": 2,
+      "typography": {
+        "body-lg": {
+          "fontFamily": "Inter",
+          "fontSize": "18px",
+          "fontWeight": "400",
+          "lineHeight": "28px"
+        },
+        "body-md": {
+          "fontFamily": "Inter",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px"
+        },
+        "display-lg": {
+          "fontFamily": "Inter",
+          "fontSize": "48px",
+          "fontWeight": "700",
+          "letterSpacing": "-0.02em",
+          "lineHeight": "56px"
+        },
+        "display-lg-mobile": {
+          "fontFamily": "Inter",
+          "fontSize": "36px",
+          "fontWeight": "700",
+          "letterSpacing": "-0.02em",
+          "lineHeight": "44px"
+        },
+        "headline-md": {
+          "fontFamily": "Inter",
+          "fontSize": "30px",
+          "fontWeight": "600",
+          "letterSpacing": "-0.01em",
+          "lineHeight": "38px"
+        },
+        "headline-sm": {
+          "fontFamily": "Inter",
+          "fontSize": "24px",
+          "fontWeight": "600",
+          "lineHeight": "32px"
+        },
+        "label-md": {
+          "fontFamily": "Inter",
+          "fontSize": "14px",
+          "fontWeight": "500",
+          "letterSpacing": "0.01em",
+          "lineHeight": "20px"
+        },
+        "label-sm": {
+          "fontFamily": "Inter",
+          "fontSize": "12px",
+          "fontWeight": "600",
+          "lineHeight": "16px"
+        }
+      }
+    }
+  },
+  "name": "assets/1a99a816b0b440d39f160d05f41d6f3b",
+  "version": "1"
+}

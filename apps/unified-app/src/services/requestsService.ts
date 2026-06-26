@@ -6,11 +6,12 @@ import {
   loadAdminRequestBoard,
 } from '@/services/api/adminRequestsBoardApi';
 import { requestsApi } from '@/services/api/requestsApi';
-import { sendAutoNotification } from '@/services/broadcastNotificationService';
+import { triggerAutoNotification } from '@/services/broadcastNotificationService';
 import { getSupabase } from '@/services/supabase';
 import { store } from '@/store/store';
 import type { Officer, RequestFilters, ServiceRequest } from '@/types/requests';
 import { mapDbRowToServiceRequest, officerInitials } from '@/utils/requestViewMappers';
+import { insertOfficerPortalNotification } from '@/utils/officerPortalNotification';
 
 export async function fetchRequests(_filters?: Partial<RequestFilters>): Promise<ServiceRequest[]> {
   const client = getSupabase();
@@ -103,18 +104,28 @@ export async function assignOfficer(
     .unwrap();
 
   try {
+    const client = getSupabase();
     const request = await fetchRequestById(requestId);
     if (request.customerId) {
-      await sendAutoNotification({
+      await triggerAutoNotification('request_update', {
+        audience: { type: 'specific_users', userIds: [request.customerId] },
+        templateVars: {
+          message: `${officer.name} has been assigned to handle your ${request.type} request.`,
+        },
         title: 'Officer assigned to your request',
         message: `${officer.name} has been assigned to handle your ${request.type} request.`,
-        priority: 'Normal',
-        eventType: 'requestUpdate',
-        audience: { type: 'specific_users', userIds: [request.customerId] },
         linkedRequestId: requestId,
         deepLinkUrl: `primefiber://requests/${requestId}`,
       });
     }
+    await insertOfficerPortalNotification(client, {
+      officerId: officer.id,
+      type: 'request_assigned',
+      title: 'New service request assigned',
+      body: `A ${request.type} service request has been assigned to you by ${adminName}.`,
+      data: { requestId },
+      category: 'request',
+    });
   } catch {
     /* non-blocking */
   }
@@ -147,17 +158,27 @@ export async function reassignOfficer(
     .unwrap();
 
   try {
+    const client = getSupabase();
     const request = await fetchRequestById(requestId);
     if (request.customerId) {
-      await sendAutoNotification({
+      await triggerAutoNotification('request_update', {
+        audience: { type: 'specific_users', userIds: [request.customerId] },
+        templateVars: {
+          message: `${officer.name} has been assigned to handle your ${request.type} request.`,
+        },
         title: 'Officer assigned to your request',
         message: `${officer.name} has been assigned to handle your ${request.type} request.`,
-        priority: 'Normal',
-        eventType: 'requestUpdate',
-        audience: { type: 'specific_users', userIds: [request.customerId] },
         linkedRequestId: requestId,
       });
     }
+    await insertOfficerPortalNotification(client, {
+      officerId: officer.id,
+      type: 'request_assigned',
+      title: 'Service request reassigned to you',
+      body: `A ${request.type} service request has been reassigned to you by ${adminName}.`,
+      data: { requestId },
+      category: 'request',
+    });
   } catch {
     /* non-blocking */
   }
@@ -178,12 +199,13 @@ export async function updateRequestStatusWithNotification(
   try {
     const request = await fetchRequestById(id);
     if (request.customerId) {
-      await sendAutoNotification({
+      await triggerAutoNotification('request_update', {
+        audience: { type: 'specific_users', userIds: [request.customerId] },
+        templateVars: {
+          message: `Your ${request.type} request has been resolved by our team.`,
+        },
         title: 'Your request has been completed',
         message: `Your ${request.type} request has been resolved by our team.`,
-        priority: 'Normal',
-        eventType: 'requestUpdate',
-        audience: { type: 'specific_users', userIds: [request.customerId] },
         linkedRequestId: id,
         deepLinkUrl: `primefiber://requests/${id}`,
       });

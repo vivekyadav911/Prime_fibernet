@@ -1,4 +1,5 @@
-import { Modal, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Modal, Pressable, StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
 
 import { colors } from '@/theme/colors';
@@ -12,10 +13,18 @@ type DeleteAccountModalProps = {
 };
 
 export function DeleteAccountModal({ visible, loading, onClose, onConfirm }: DeleteAccountModalProps) {
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
+      <Pressable
+        style={[styles.overlay, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          onClose();
+        }}
+      >
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.title}>Delete account?</Text>
           <Text style={styles.body}>
             Your account will be scheduled for deletion. Personal data is retained for up to 90 days per
@@ -27,8 +36,8 @@ export function DeleteAccountModal({ visible, loading, onClose, onConfirm }: Del
             style={styles.danger}
           />
           <Button label="Keep account" variant="secondary" onPress={onClose} />
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }

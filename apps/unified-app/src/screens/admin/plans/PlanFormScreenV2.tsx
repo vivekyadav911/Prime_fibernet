@@ -4,16 +4,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
   View,
 } from 'react-native';
+import type { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
+import { DismissKeyboardScrollView, KeyboardDismissView } from '@/components/common';
 import { usePlanForm } from '@/hooks/usePlanForm';
 import { fetchPlanById } from '@/services/planService';
 import { adminColors } from '@/theme/admin';
@@ -134,7 +135,8 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <KeyboardDismissView style={styles.flex}>
+            <DismissKeyboardScrollView ref={scrollRef} contentContainerStyle={styles.scroll}>
             <Text style={styles.screenTitle}>{mode === 'edit' ? 'Edit Plan' : 'New Plan'}</Text>
 
             <SectionCard title="Basic Info">
@@ -299,7 +301,7 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
                 helperText="Controls display order in plan lists. Leave 0 for auto."
               />
             </SectionCard>
-          </ScrollView>
+            </DismissKeyboardScrollView>
 
           <View style={styles.footer}>
             <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
@@ -318,6 +320,7 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
               style={styles.saveBtn}
             />
           </View>
+          </KeyboardDismissView>
         </KeyboardAvoidingView>
       </Screen>
     </RoleGuard>

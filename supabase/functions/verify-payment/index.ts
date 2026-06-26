@@ -147,6 +147,39 @@ serve(async (req) => {
 
     await supabase.functions.invoke('invoice-generator', { body: { paymentId } });
 
+    const { data: gs } = await supabase.from('general_settings').select('feature_auto_invoice').limit(1).maybeSingle();
+    if (gs?.feature_auto_invoice !== false) {
+      const amount = Number(payment.amount ?? 0);
+      const gst = Math.round(amount * 0.18 * 100) / 100;
+      const { data: numRow } = await supabase.rpc('generate_invoice_number');
+      await supabase.from('invoices').insert({
+        user_id: payment.user_id,
+        payment_id: paymentId,
+        invoice_number: numRow ?? `INV-${Date.now()}`,
+        invoice_type: 'gst',
+        delivery_status: 'pending',
+        customer_name: payment.user_name ?? 'Customer',
+        customer_email: payment.user_email ?? null,
+        customer_phone: payment.user_phone ?? null,
+        amount,
+        subtotal: amount,
+        gst_amount: gst,
+        cgst_amount: gst / 2,
+        sgst_amount: gst / 2,
+        total_amount: amount + gst,
+        line_items: [{
+          description: payment.plan_name ? `Internet service — ${payment.plan_name}` : 'Internet service',
+          hsn_sac: '998422',
+          quantity: 1,
+          unit: 'Nos',
+          unit_price: amount,
+          gst_rate: 18,
+        }],
+        status: 'paid',
+        issue_date: new Date().toISOString().slice(0, 10),
+      });
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

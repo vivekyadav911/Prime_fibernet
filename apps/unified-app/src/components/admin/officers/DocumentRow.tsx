@@ -3,7 +3,7 @@ import type { OfficerDocument } from '@/types/api/officer';
 import { officerStrings } from '@/constants/officerStrings';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { spacing } from '@/theme/spacing';
 
 type DocumentRowProps = {
   document: OfficerDocument;

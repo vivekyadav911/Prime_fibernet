@@ -4,7 +4,6 @@ import {
   Alert,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -18,6 +17,7 @@ import { Button } from '@prime/ui';
 
 import { AssignOfficerModal } from '@/components/Requests/AssignOfficerModal';
 import { AvatarIcon, FormField, RoleGuard } from '@/components/admin';
+import { DismissKeyboardScrollView } from '@/components/common';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
@@ -140,7 +140,11 @@ export function RequestDetailModal({
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
         <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
           <View style={styles.header}>
-            <Pressable onPress={onClose} hitSlop={12} style={styles.closeBtn}>
+            <Pressable
+              onPress={onClose}
+              hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+              style={styles.closeBtn}
+            >
               <Ionicons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <View style={styles.headerCenter}>
@@ -152,7 +156,7 @@ export function RequestDetailModal({
             </View>
           </View>
 
-          <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+          <DismissKeyboardScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
             <View style={styles.customerCard}>
               <AvatarIcon name={request.customerName} size={48} />
               <View style={styles.customerInfo}>
@@ -247,7 +251,7 @@ export function RequestDetailModal({
                 </View>
               </View>
             ) : null}
-          </ScrollView>
+          </DismissKeyboardScrollView>
 
           <View style={styles.footer}>
             <RoleGuard requiredPermission="requests.edit">

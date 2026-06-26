@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  Keyboard,
   Modal,
   Pressable,
   StyleSheet,
@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdminEmptyState, AvatarIcon } from '@/components/admin';
+import { DismissKeyboardFlatList } from '@/components/common';
 import { fetchOfficers } from '@/services/requestsService';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -57,7 +58,13 @@ export function AssignOfficerModal({ visible, onClose, onSelect, loading }: Assi
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable
+        style={[styles.backdrop, { paddingTop: insets.top }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          onClose();
+        }}
+      >
         <Pressable
           style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]}
           onPress={(e) => e.stopPropagation()}
@@ -75,7 +82,7 @@ export function AssignOfficerModal({ visible, onClose, onSelect, loading }: Assi
               iconName="shield-outline"
             />
           ) : (
-            <FlatList
+            <DismissKeyboardFlatList
               data={officers}
               keyExtractor={(o) => o.id}
               style={styles.list}

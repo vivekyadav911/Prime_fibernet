@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>FiberFlow - Support Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#1d4ed8",
+                        "surface-variant": "#d3e4fe",
+                        "on-primary-fixed": "#001551",
+                        "inverse-surface": "#213145",
+                        "on-surface": "#0b1c30",
+                        "outline": "#747686",
+                        "on-tertiary-container": "#ffc9b7",
+                        "primary-fixed": "#dce1ff",
+                        "on-error-container": "#93000a",
+                        "surface": "#f8f9ff",
+                        "on-tertiary-fixed": "#390c00",
+                        "on-primary-fixed-variant": "#0039b5",
+                        "outline-variant": "#c4c5d7",
+                        "on-secondary-container": "#6f5900",
+                        "error": "#ba1a1a",
+                        "surface-container": "#e5eeff",
+                        "on-tertiary-fixed-variant": "#832700",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb59c",
+                        "error-container": "#ffdad6",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#eff4ff",
+                        "primary": "#0037b0",
+                        "inverse-on-surface": "#eaf1ff",
+                        "tertiary": "#7f2500",
+                        "on-secondary-fixed-variant": "#574500",
+                        "tertiary-fixed": "#ffdbcf",
+                        "surface-container-highest": "#d3e4fe",
+                        "background": "#f8f9ff",
+                        "surface-tint": "#2151da",
+                        "on-secondary": "#ffffff",
+                        "on-surface-variant": "#434655",
+                        "on-primary-container": "#cad3ff",
+                        "on-background": "#0b1c30",
+                        "surface-bright": "#f8f9ff",
+                        "on-error": "#ffffff",
+                        "secondary-fixed": "#ffe083",
+                        "secondary": "#735c00",
+                        "tertiary-container": "#a73400",
+                        "secondary-fixed-dim": "#eec200",
+                        "on-secondary-fixed": "#231b00",
+                        "surface-dim": "#cbdbf5",
+                        "secondary-container": "#fed01b",
+                        "primary-fixed-dim": "#b7c4ff",
+                        "inverse-primary": "#b7c4ff",
+                        "surface-container-high": "#dce9ff",
+                        "on-tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "16px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px",
+                        "base": "4px",
+                        "xs": "8px",
+                        "xl": "64px",
+                        "md": "24px",
+                        "margin-desktop": "auto",
+                        "max-width": "1280px",
+                        "lg": "40px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "display-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-sm": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display-lg-mobile": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9ff; }
+        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid #E2E8F0; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-on-background docked full-width top-0 sticky border-b border-outline-variant dark:border-outline flat no shadows z-50 hidden md:block">
+<div class="flex justify-between items-center px-margin-mobile h-16 w-full max-w-max-width mx-margin-desktop">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="signal_cellular_alt">signal_cellular_alt</span>
+<span class="font-display-lg-mobile text-display-lg-mobile font-bold text-primary dark:text-primary-fixed">FiberFlow</span>
+</div>
+<div class="hidden md:flex gap-md">
+<a class="font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors active:scale-95 transition-transform duration-150 px-3 py-2 rounded-md" href="#">Home</a>
+<a class="font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors active:scale-95 transition-transform duration-150 px-3 py-2 rounded-md" href="#">Plans</a>
+<a class="font-label-md text-label-md text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors active:scale-95 transition-transform duration-150 px-3 py-2 rounded-md" href="#">Payments</a>
+<a class="font-label-md text-label-md text-primary dark:text-primary-fixed hover:bg-surface-container-low dark:hover:bg-inverse-surface transition-colors active:scale-95 transition-transform duration-150 px-3 py-2 rounded-md" href="#">Support</a>
+</div>
+<div>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="user_profile_avatar">account_circle</span>
+</div>
+</div>
+</header>
+<main class="max-w-max-width mx-margin-desktop px-margin-mobile md:px-gutter py-md">
+<div class="mb-xl">
+<h1 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-on-background mb-base">Support Hub</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">How can we help you stay connected today?</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter mb-xl">
+<!-- Ask Prima Card -->
+<div class="md:col-span-8 glass-card rounded-[24px] p-gutter relative overflow-hidden flex flex-col justify-between">
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-primary-container opacity-10 rounded-full blur-3xl"></div>
+<div class="flex items-start gap-md mb-md relative z-10">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center border-2 border-primary overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A friendly, modern 3D avatar of an AI assistant named Prima. The avatar is designed in a sleek, minimalist corporate style, primarily featuring soft white and bright primary blue colors. The lighting is bright and inviting, perfect for a modern light-mode web interface. The overall mood is helpful, efficient, and technologically advanced." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6QXeNREfifmo6KCKHYuEm3j2HU474qalOiuFq_gj0pcaC7u09mMyBURinQrHiLmNFiu4o5CxYfyenmRRRXLa0Cb-0YgEwR8MtxwjrrYOyEIdSDLdszzao3RixzmFidkUU0477LdwhWzYQtzVM6ezcR_CdV8rW_QWYub9syJ2t1_23PycgFzwxo7tal04Wt74x4ztuFEmVgXs7mV4pueGfkZcY0fLxWyvL4CN-miVziQcLGTjCa_lsZjATwDoUQO71pNBViUBjsA"/>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface mb-base">Ask Prima</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Our intelligent assistant can instantly diagnose network issues, help with router setup, or explain your bill.</p>
+</div>
+</div>
+<div class="relative z-10 mt-auto pt-md border-t border-outline-variant/30 flex justify-end">
+<button class="bg-primary text-on-primary font-label-md text-label-md px-lg py-xs rounded-[16px] hover:bg-on-primary-fixed-variant transition-colors shadow-sm flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]" data-icon="forum">forum</span>
+                        Start Chat
+                    </button>
+</div>
+</div>
+<!-- Human Support Card -->
+<div class="md:col-span-4 glass-card rounded-[24px] p-gutter flex flex-col justify-between">
+<div>
+<div class="w-12 h-12 rounded-full bg-surface-container mb-md flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[24px]" data-icon="support_agent">support_agent</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-xs">Live Agent</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Need to speak with a human? Our support team is online and ready to assist you.</p>
+</div>
+<div class="mt-md">
+<button class="w-full bg-surface-container-lowest border border-primary text-primary font-label-md text-label-md px-md py-xs rounded-[16px] hover:bg-surface-container-low transition-colors flex items-center justify-center gap-xs">
+                        Chat with Agent
+                    </button>
+<p class="text-center font-label-sm text-label-sm text-outline mt-xs">Wait time: ~2 mins</p>
+</div>
+</div>
+</div>
+<!-- FAQ Section -->
+<div class="mb-xl">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-md gap-sm">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Frequently Asked Questions</h2>
+<div class="relative w-full md:w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-[16px] font-body-md text-body-md focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="Search topics..." type="text"/>
+</div>
+</div>
+<div class="space-y-sm">
+<!-- FAQ Item 1 -->
+<div class="glass-card rounded-[16px] overflow-hidden">
+<button class="w-full px-md py-sm flex justify-between items-center text-left hover:bg-surface-container-low transition-colors" onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.material-symbols-outlined').classList.toggle('rotate-180')">
+<span class="font-label-md text-label-md text-on-surface">Experiencing slow internet speeds?</span>
+<span class="material-symbols-outlined text-outline transition-transform duration-200" data-icon="expand_more">expand_more</span>
+</button>
+<div class="hidden px-md pb-md font-body-md text-body-md text-on-surface-variant">
+                        First, try restarting your Prime Fibernet router by unplugging it for 30 seconds. If speeds are still slow, check for local outages on our network map, or Ask Prima to run a remote diagnostic test on your connection.
+                    </div>
+</div>
+<!-- FAQ Item 2 -->
+<div class="glass-card rounded-[16px] overflow-hidden">
+<button class="w-full px-md py-sm flex justify-between items-center text-left hover:bg-surface-container-low transition-colors" onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.material-symbols-outlined').classList.toggle('rotate-180')">
+<span class="font-label-md text-label-md text-on-surface">How do I set up my new router?</span>
+<span class="material-symbols-outlined text-outline transition-transform duration-200" data-icon="expand_more">expand_more</span>
+</button>
+<div class="hidden px-md pb-md font-body-md text-body-md text-on-surface-variant">
+                        Connect the power cable and plug the Ethernet cable from your wall terminal into the WAN port on the router. Wait for the light to turn solid green. Then, download the FiberFlow app to complete the network configuration.
+                    </div>
+</div>
+<!-- FAQ Item 3 -->
+<div class="glass-card rounded-[16px] overflow-hidden">
+<button class="w-full px-md py-sm flex justify-between items-center text-left hover:bg-surface-container-low transition-colors" onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.material-symbols-outlined').classList.toggle('rotate-180')">
+<span class="font-label-md text-label-md text-on-surface">Understanding your first bill</span>
+<span class="material-symbols-outlined text-outline transition-transform duration-200" data-icon="expand_more">expand_more</span>
+</button>
+<div class="hidden px-md pb-md font-body-md text-body-md text-on-surface-variant">
+                        Your first bill may be slightly higher as it includes prorated charges for the initial days of service before your regular billing cycle begins, plus any one-time setup fees.
+                    </div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center bg-surface dark:bg-on-background px-margin-mobile py-xs border-t border-outline-variant dark:border-outline shadow-sm md:hidden rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="speed">speed</span>
+<span class="font-label-sm text-label-sm">Plans</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="payments">payments</span>
+<span class="font-label-sm text-label-sm">Payments</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container dark:bg-secondary dark:text-on-secondary rounded-full px-4 py-1 hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="headset_mic">headset_mic</span>
+<span class="font-label-sm text-label-sm">Support</span>
+</a>
+</nav>
+</body></html>

@@ -1,9 +1,8 @@
-import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Device from 'expo-device';
 
-export function isExpoGo(): boolean {
-  return Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-}
+import { isExpoGo } from '@/utils/expoRuntime';
+
+export { isExpoGo };
 
 export function isPushNotificationsSupported(): boolean {
   return Device.isDevice && !isExpoGo();

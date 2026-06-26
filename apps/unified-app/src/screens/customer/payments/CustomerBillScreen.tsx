@@ -1,21 +1,32 @@
 import { useCallback } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Share, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Sharing from 'expo-sharing';
 
-import { AmountDisplay, BillingStatusBadge, type BillingStatus } from '@/components/payments';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import {
+  CustomerButton,
+  CustomerEmptyState,
+  CustomerErrorState,
+  CustomerSkeletonLoader,
+  GlassCard,
+  PressableScale,
+} from '@/components/customer/ui';
+import { CustomerTopBar } from '@/components/customer/shell';
+import { DismissKeyboardScrollView } from '@/components/common';
 import { useAppSelector } from '@/store/hooks';
 import {
   useGetActivePaymentGatewayQuery,
   useGetCustomerBillQuery,
+  useGetCustomerPaymentHistoryV2Query,
+  useLazyGetPaymentReceiptQuery,
 } from '@/services/api/paymentCollectionApi';
 import { PAYMENT_METHOD_CONFIG, type PaymentMethod } from '@/types/payments';
+import type { PaymentRecord } from '@/types/payments';
 import { formatINR } from '@/utils/currencyFormat';
 import type { CustomerStackParamList } from '@/types/navigation';
-import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { signalGlass } from '@/theme/customer/signalGlass';
 import { queryErrorMessage } from '@/utils/queryError';
 
 const QUICK_METHODS: PaymentMethod[] = ['upi', 'card', 'netbanking', 'wallet'];
@@ -23,6 +34,16 @@ const QUICK_METHODS: PaymentMethod[] = ['upi', 'card', 'netbanking', 'wallet'];
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function formatMonthYear(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+}
+
+function statusTone(status: PaymentRecord['status']): 'paid' | 'failed' | 'pending' {
+  if (status === 'confirmed') return 'paid';
+  if (status === 'failed' || status === 'cancelled') return 'failed';
+  return 'pending';
 }
 
 export function CustomerBillScreen() {
@@ -33,221 +54,314 @@ export function CustomerBillScreen() {
   const { data: bill, isLoading, isError, error, refetch } = useGetCustomerBillQuery(authId, {
     skip: !authId,
   });
+  const { data: history = [], isLoading: historyLoading } = useGetCustomerPaymentHistoryV2Query(authId, {
+    skip: !authId,
+  });
   const { data: activeGateway } = useGetActivePaymentGatewayQuery();
+  const [fetchReceipt] = useLazyGetPaymentReceiptQuery();
 
   const onPay = useCallback(
     (method?: PaymentMethod) => {
       if (!bill) return;
-      if (!activeGateway) {
-        navigation.navigate('PaymentMethod', {
-          amount: bill.totalPayable,
-          planName: bill.planName ?? 'Broadband',
-          customerId: bill.customerId,
-          paymentMethod: method,
-        });
-        return;
-      }
-      if (method) {
-        navigation.navigate('GatewayWebView', {
-          amount: bill.totalPayable,
-          planName: bill.planName ?? 'Broadband',
-          customerId: bill.customerId,
-          paymentMethod: method,
-        });
-        return;
-      }
       navigation.navigate('PaymentMethod', {
         amount: bill.totalPayable,
         planName: bill.planName ?? 'Broadband',
         customerId: bill.customerId,
+        paymentMethod: method,
       });
     },
-    [activeGateway, bill, navigation],
+    [bill, navigation],
+  );
+
+  const onReceipt = useCallback(
+    async (paymentId: string) => {
+      try {
+        const result = await fetchReceipt(paymentId).unwrap();
+        if (result.url && (await Sharing.isAvailableAsync())) {
+          await Share.share({ url: result.url, message: `Receipt ${result.receiptNumber}` });
+        } else {
+          navigation.navigate('Receipt', { paymentId });
+        }
+      } catch (e) {
+        Alert.alert('Receipt unavailable', e instanceof Error ? e.message : 'Try again in a moment.');
+      }
+    },
+    [fetchReceipt, navigation],
   );
 
   if (!authId) {
     return (
-      <Screen>
-        <ErrorState message="Sign in to view your bill." />
-      </Screen>
+      <View style={styles.canvas}>
+        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
+        <CustomerErrorState message="Sign in to view payments." />
+      </View>
     );
   }
 
-  if (isLoading) {
+  if (isLoading || historyLoading) {
     return (
-      <Screen>
-        <SkeletonLoader rows={6} />
-      </Screen>
+      <View style={styles.canvas}>
+        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
+        <View style={styles.body}>
+          <CustomerSkeletonLoader rows={6} rowHeight={72} />
+        </View>
+      </View>
     );
   }
 
   if (isError || !bill) {
     return (
-      <Screen>
-        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      <View style={styles.canvas}>
+        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
+        <CustomerErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </View>
     );
   }
 
-  const billingStatus = (bill.paymentStatus as BillingStatus) || 'pending';
-  const overdue = billingStatus === 'overdue';
-
   return (
-    <Screen style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>My Bill</Text>
-            <Text style={styles.account}>Account {bill.accountNumber}</Text>
-          </View>
-          <BillingStatusBadge status={billingStatus} />
-        </View>
-
-        <View style={styles.hero}>
-          <Text style={styles.heroLabel}>Amount due</Text>
-          <AmountDisplay amount={bill.totalPayable} large />
+    <View style={styles.canvas}>
+      <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
+      <DismissKeyboardScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <GlassCard style={styles.balanceCard} glow padded>
+          <Text style={styles.balanceTitle}>Outstanding Balance</Text>
           {bill.dueDate ? (
-            <Text style={[styles.due, overdue && styles.overdue]}>
-              Due {formatDate(bill.dueDate)}
-              {overdue ? ' · Please pay to avoid suspension' : ''}
-            </Text>
+            <Text style={styles.balanceDue}>Due by {formatDate(bill.dueDate)}</Text>
           ) : null}
-        </View>
+          <Text style={styles.balanceAmount}>{formatINR(bill.totalPayable)}</Text>
+          <CustomerButton label="Pay Now" icon="credit-card-outline" onPress={() => onPay()} />
+        </GlassCard>
 
-        <View style={styles.card}>
-          <Text style={styles.plan}>{bill.planName ?? 'Broadband plan'}</Text>
-          {bill.billingPeriodStart && bill.billingPeriodEnd ? (
-            <Text style={styles.muted}>
-              Billing period: {formatDate(bill.billingPeriodStart)} – {formatDate(bill.billingPeriodEnd)}
-            </Text>
-          ) : null}
-          <View style={styles.divider} />
-          <Row label="Plan amount" value={formatINR(bill.planAmount)} />
-          <Row label="GST (18%)" value={formatINR(bill.taxAmount)} />
-          {bill.lateFee > 0 ? <Row label="Late fee" value={formatINR(bill.lateFee)} /> : null}
-          <View style={styles.divider} />
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total payable</Text>
-            <AmountDisplay amount={bill.totalPayable} large />
+        <GlassCard style={styles.quickCard} padded>
+          <View style={styles.quickRow}>
+            {QUICK_METHODS.slice(0, 2).map((m) => {
+              const cfg = PAYMENT_METHOD_CONFIG[m];
+              return (
+                <PressableScale key={m} style={styles.quickAction} onPress={() => onPay(m)}>
+                  <MaterialCommunityIcons name="receipt" size={24} color={signalGlass.colors.primary} />
+                  <Text style={styles.quickLabel}>{cfg.label === 'UPI' ? 'Auto-Pay' : cfg.label}</Text>
+                </PressableScale>
+              );
+            })}
           </View>
-        </View>
+        </GlassCard>
 
-        {bill.lastPaidAt ? (
-          <View style={styles.lastPaid}>
-            <Text style={styles.lastPaidText}>
-              Last paid {formatINR(bill.lastPaidAmount ?? 0)} on {formatDate(bill.lastPaidAt)}
-            </Text>
+        <GlassCard style={styles.historyCard} padded>
+          <View style={styles.historyHeader}>
+            <Text style={styles.historyTitle}>Payment History</Text>
+            <PressableScale accessibilityLabel="Filter payments">
+              <View style={styles.filterBtn}>
+                <MaterialCommunityIcons name="filter-variant" size={18} color={signalGlass.colors.primary} />
+                <Text style={styles.filterText}>Filter</Text>
+              </View>
+            </PressableScale>
           </View>
-        ) : null}
 
-        <Text style={styles.sectionTitle}>Quick pay</Text>
-        <View style={styles.methodRow}>
-          {QUICK_METHODS.map((m) => {
-            const cfg = PAYMENT_METHOD_CONFIG[m];
-            return (
-              <Pressable key={m} style={styles.methodChip} onPress={() => onPay(m)}>
-                <Text style={styles.methodIcon}>{cfg.icon}</Text>
-                <Text style={styles.methodLabel}>{cfg.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+          {!history.length ? (
+            <CustomerEmptyState
+              title="No payments yet"
+              subtitle="Your payment history will appear here after you pay a bill"
+              icon="💳"
+            />
+          ) : (
+            history.map((item) => {
+              const tone = statusTone(item.status);
+              return (
+                <PressableScale
+                  key={item.id}
+                  style={styles.historyItem}
+                  onPress={() => item.status === 'confirmed' && void onReceipt(item.id)}
+                >
+                  <View style={styles.historyLeft}>
+                    <View style={[styles.historyIcon, tone === 'failed' && styles.historyIconError]}>
+                      <MaterialCommunityIcons
+                        name={tone === 'failed' ? 'alert' : 'file-document-outline'}
+                        size={20}
+                        color={tone === 'failed' ? signalGlass.colors.error : signalGlass.colors.primary}
+                      />
+                    </View>
+                    <View>
+                      <Text style={styles.historyMonth}>{formatMonthYear(item.created_at)}</Text>
+                      <Text style={styles.historyInv}>Inv #{item.payment_number}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.historyRight}>
+                    <Text style={styles.historyAmount}>{formatINR(item.total_amount)}</Text>
+                    <View style={[styles.statusPill, tone === 'paid' && styles.statusPaid, tone === 'failed' && styles.statusFailed]}>
+                      <View style={[styles.statusDot, tone === 'paid' && styles.statusDotPaid, tone === 'failed' && styles.statusDotFailed]} />
+                      <Text style={[styles.statusText, tone === 'paid' && styles.statusTextPaid, tone === 'failed' && styles.statusTextFailed]}>
+                        {tone === 'paid' ? 'Paid' : tone === 'failed' ? 'Failed' : 'Pending'}
+                      </Text>
+                    </View>
+                  </View>
+                </PressableScale>
+              );
+            })
+          )}
+        </GlassCard>
 
         {!activeGateway ? (
           <View style={styles.notice}>
             <Text style={styles.noticeTitle}>Online checkout coming soon</Text>
             <Text style={styles.noticeBody}>
-              Your admin is setting up the payment gateway. You can still pay cash to your field officer or at our
-              office.
+              Your admin is setting up the payment gateway. You can still pay cash to your field officer or at our office.
             </Text>
           </View>
         ) : (
           <Text style={styles.gatewayHint}>Secured by {activeGateway.display_name}</Text>
         )}
-
-        <Button label={`Pay ${formatINR(bill.totalPayable)} online`} onPress={() => onPay()} />
-        <Button
-          label="Payment history"
-          variant="ghost"
-          onPress={() => navigation.navigate('PaymentHistory')}
-        />
-      </ScrollView>
-    </Screen>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.row}>
-      <Text style={styles.muted}>{label}</Text>
-      <Text style={styles.value}>{value}</Text>
+      </DismissKeyboardScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.background },
-  scroll: { padding: spacing.md, paddingBottom: spacing.xl },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md },
-  title: { fontSize: 22, fontWeight: '700', color: colors.primaryNavy },
-  account: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  hero: {
-    backgroundColor: colors.primaryNavy,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+  canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
+  body: { flex: 1, padding: signalGlass.spacing.marginMobile },
+  scroll: {
+    paddingHorizontal: signalGlass.spacing.marginMobile,
+    paddingTop: signalGlass.spacing.md,
+    paddingBottom: signalGlass.spacing.xxxl,
+    gap: signalGlass.spacing.md,
+  },
+  balanceCard: {
+    borderRadius: signalGlass.radius.lg,
+    gap: signalGlass.spacing.sm,
+    overflow: 'hidden',
+  },
+  balanceTitle: {
+    ...signalGlass.typography.displayMd,
+    color: signalGlass.colors.onSurface,
+    fontFamily: signalGlass.fonts.bodySemiBold,
+  },
+  balanceDue: {
+    ...signalGlass.typography.body,
+    color: signalGlass.colors.onSurfaceVariant,
+    fontFamily: signalGlass.fonts.body,
+  },
+  balanceAmount: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: signalGlass.colors.primary,
+    fontFamily: signalGlass.fonts.monoBold,
+    marginVertical: signalGlass.spacing.sm,
+  },
+  quickCard: { borderRadius: signalGlass.radius.lg },
+  quickRow: { flexDirection: 'row', gap: signalGlass.spacing.sm },
+  quickAction: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: signalGlass.spacing.sm,
+    borderRadius: signalGlass.radius.sm,
+    gap: signalGlass.spacing.xs,
+    minHeight: 72,
   },
-  heroLabel: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase' },
-  due: { marginTop: spacing.sm, fontSize: 13, color: 'rgba(255,255,255,0.9)' },
-  overdue: { color: '#FFCDD2', fontWeight: '600' },
-  card: {
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+  quickLabel: {
+    ...signalGlass.typography.caption,
+    color: signalGlass.colors.onSurfaceVariant,
+    fontFamily: signalGlass.fonts.bodyMedium,
+  },
+  historyCard: { borderRadius: signalGlass.radius.lg },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: signalGlass.spacing.md,
+    paddingBottom: signalGlass.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: signalGlass.colors.borderSubtle,
+  },
+  historyTitle: {
+    ...signalGlass.typography.displayMd,
+    color: signalGlass.colors.onSurface,
+    fontFamily: signalGlass.fonts.bodySemiBold,
+  },
+  filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  filterText: {
+    ...signalGlass.typography.caption,
+    color: signalGlass.colors.primary,
+    fontFamily: signalGlass.fonts.bodyMedium,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: signalGlass.spacing.sm,
+    borderRadius: signalGlass.radius.sm,
+    backgroundColor: signalGlass.colors.surfaceContainerLow,
     borderWidth: 1,
-    borderColor: colors.borderDefault,
+    borderColor: 'rgba(255,255,255,0.05)',
+    marginBottom: signalGlass.spacing.sm,
   },
-  plan: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.xs },
-  muted: { fontSize: 13, color: colors.textSecondary },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs },
-  value: { fontWeight: '600', color: colors.textPrimary },
-  divider: { height: 1, backgroundColor: colors.borderDefault, marginVertical: spacing.sm },
-  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  totalLabel: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  lastPaid: {
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
+  historyLeft: { flexDirection: 'row', alignItems: 'center', gap: signalGlass.spacing.sm, flex: 1 },
+  historyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: signalGlass.colors.accentPrimaryMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyIconError: { backgroundColor: 'rgba(147,0,10,0.2)' },
+  historyMonth: {
+    ...signalGlass.typography.bodyLg,
+    color: signalGlass.colors.onSurface,
+    fontFamily: signalGlass.fonts.body,
+    fontSize: 16,
+  },
+  historyInv: {
+    ...signalGlass.typography.caption,
+    color: signalGlass.colors.onSurfaceVariant,
+    fontFamily: signalGlass.fonts.bodyMedium,
+  },
+  historyRight: { alignItems: 'flex-end', gap: signalGlass.spacing.xs },
+  historyAmount: {
+    ...signalGlass.typography.monoMd,
+    color: signalGlass.colors.onSurface,
+    fontFamily: signalGlass.fonts.mono,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: signalGlass.radius.pill,
     borderWidth: 1,
-    borderColor: colors.borderDefault,
-  },
-  lastPaidText: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.sm },
-  methodRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
-  methodChip: {
-    width: '22%',
     minWidth: 72,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    backgroundColor: colors.surfaceWhite,
-    alignItems: 'center',
+    justifyContent: 'center',
   },
-  methodIcon: { fontSize: 20 },
-  methodLabel: { marginTop: 4, fontSize: 10, fontWeight: '600', color: colors.textSecondary },
+  statusPaid: {
+    backgroundColor: 'rgba(0,165,114,0.2)',
+    borderColor: 'rgba(78,222,163,0.3)',
+  },
+  statusFailed: {
+    backgroundColor: 'rgba(147,0,10,0.2)',
+    borderColor: 'rgba(255,180,171,0.3)',
+  },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusDotPaid: { backgroundColor: signalGlass.colors.secondary },
+  statusDotFailed: { backgroundColor: signalGlass.colors.error },
+  statusText: { ...signalGlass.typography.caption, fontSize: 11 },
+  statusTextPaid: { color: signalGlass.colors.secondary },
+  statusTextFailed: { color: signalGlass.colors.error },
   notice: {
-    backgroundColor: '#FFF8E1',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    backgroundColor: signalGlass.colors.accentPrimaryMuted,
+    borderRadius: signalGlass.radius.md,
+    padding: signalGlass.spacing.md,
     borderWidth: 1,
-    borderColor: '#FFE082',
+    borderColor: signalGlass.colors.accentWarning,
   },
-  noticeTitle: { fontSize: 13, fontWeight: '700', color: '#F57F17', marginBottom: spacing.xs },
-  noticeBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
-  gatewayHint: { textAlign: 'center', fontSize: 11, color: colors.textSecondary, marginBottom: spacing.sm },
+  noticeTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: signalGlass.colors.accentWarning,
+    marginBottom: signalGlass.spacing.xs,
+  },
+  noticeBody: { fontSize: 12, color: signalGlass.colors.textSecondary, lineHeight: 18 },
+  gatewayHint: {
+    textAlign: 'center',
+    fontSize: 11,
+    color: signalGlass.colors.textMuted,
+  },
 });

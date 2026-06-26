@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CustomerButton, CustomerInput, CustomerSkeletonLoader } from '@/components/customer/ui';
+import {
+  CustomerButton,
+  CustomerErrorState,
+  CustomerInput,
+  CustomerSkeletonLoader,
+} from '@/components/customer/ui';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
-import { ErrorState } from '@/components/common';
+import { DismissKeyboardFlatList } from '@/components/common';
 import {
   useGetTicketMessagesQuery,
   useSendTicketReplyMutation,
@@ -16,6 +22,7 @@ import { formatRelativeIst } from '@/utils/formatDate';
 type Props = NativeStackScreenProps<CustomerStackParamList, 'CustomerTicketDetail'>;
 
 function TicketDetailContent({ route }: Props) {
+  const insets = useSafeAreaInsets();
   const { ticketId } = route.params;
   const { data: messages, isLoading, error, refetch } = useGetTicketMessagesQuery(ticketId);
   const [sendReply, { isLoading: sending }] = useSendTicketReplyMutation();
@@ -38,17 +45,22 @@ function TicketDetailContent({ route }: Props) {
   if (error) {
     return (
       <View style={styles.canvas}>
-        <ErrorState message="Could not load messages" onRetry={refetch} />
+        <CustomerErrorState message="Could not load messages. Try again." onRetry={refetch} />
       </View>
     );
   }
 
   return (
-    <View style={styles.canvas}>
-      <FlatList
+    <KeyboardAvoidingView
+      style={styles.canvas}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 56 : 0}
+    >
+      <DismissKeyboardFlatList
+        style={styles.list}
         data={messages ?? []}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 120 }]}
         renderItem={({ item }) => (
           <View
             style={[
@@ -61,7 +73,7 @@ function TicketDetailContent({ route }: Props) {
           </View>
         )}
       />
-      <View style={styles.composer}>
+      <View style={[styles.composer, { paddingBottom: insets.bottom + signalGlass.spacing.md }]}>
         <CustomerInput
           value={text}
           onChangeText={setText}
@@ -69,12 +81,12 @@ function TicketDetailContent({ route }: Props) {
           style={styles.input}
         />
         <CustomerButton
-          label={sending ? 'Sending...' : 'Send'}
+          label={sending ? 'Sending…' : 'Send Reply'}
           onPress={() => void onSend()}
           disabled={sending || !text.trim()}
         />
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -88,7 +100,8 @@ export function CustomerTicketDetailScreen(props: Props) {
 
 const styles = StyleSheet.create({
   canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
-  list: { padding: signalGlass.spacing.lg, paddingBottom: 120 },
+  list: { flex: 1 },
+  listContent: { padding: signalGlass.spacing.lg },
   bubble: {
     maxWidth: '85%',
     borderRadius: signalGlass.radius.md,
@@ -97,7 +110,7 @@ const styles = StyleSheet.create({
   },
   customerBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: 'rgba(59,130,246,0.35)',
+    backgroundColor: signalGlass.colors.accentPrimaryMuted,
   },
   agentBubble: {
     alignSelf: 'flex-start',
@@ -108,10 +121,6 @@ const styles = StyleSheet.create({
   message: { color: signalGlass.colors.textPrimary, fontSize: 14 },
   time: { color: signalGlass.colors.textMuted, fontSize: 10, marginTop: 4 },
   composer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     padding: signalGlass.spacing.lg,
     backgroundColor: signalGlass.colors.bgSurface,
     borderTopWidth: 1,

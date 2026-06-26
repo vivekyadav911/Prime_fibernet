@@ -4,7 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { RoleGuard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { SkeletonLoader } from '@/components/common';
 import { useAssignGeofence, useGeofence } from '@/hooks/attendance/useAdminAttendance';
 import { useGetOfficersQuery } from '@/store/api/endpoints';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
@@ -21,7 +21,7 @@ export function AssignGeofenceScreen({ route, navigation }: Props) {
   const { data: officers, isLoading: officersLoading } = useGetOfficersQuery();
   const [assign, { isLoading: saving }] = useAssignGeofence();
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
 
   useEffect(() => {
     if (geofence) setSelected(new Set(geofence.assignedOfficers));

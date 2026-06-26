@@ -1,7 +1,6 @@
 import type {
   ApprovalRequest,
   ApprovalStatus,
-  ApprovalType,
   AttendanceRecord,
   AttendanceStatus,
   AttendanceSummary,
@@ -12,7 +11,6 @@ import type {
   DbLeaveRow,
   DbShiftDefinitionRow,
   Geofence,
-  GeofenceCreatePayload,
   LeaveBalance,
   LeaveRequestRecord,
   LeaveType,

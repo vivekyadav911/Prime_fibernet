@@ -1,12 +1,18 @@
-import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
 
-import { CustomerBadge, CustomerSkeletonLoader } from '@/components/customer/ui';
+import {
+  CustomerEmptyState,
+  CustomerErrorState,
+  CustomerSkeletonLoader,
+  CustomerToast,
+  PressableScale,
+} from '@/components/customer/ui';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
-import { ErrorState } from '@/components/common';
+import { DismissKeyboardFlatList } from '@/components/common';
 import { useCustomerNotifications } from '@/hooks/useCustomerNotifications';
+import { useCustomerUiStore } from '@/store/customerUiStore';
 import { signalGlass } from '@/theme/customer/signalGlass';
 import type { NotificationCategory } from '@/types/payments';
 import type { CustomerStackParamList } from '@/types/navigation';
@@ -23,15 +29,37 @@ const FILTERS: Array<{ id: 'all' | NotificationCategory; label: string }> = [
   { id: 'promo', label: 'Promos' },
 ];
 
+const FILTER_EMPTY_LABELS: Partial<Record<'all' | NotificationCategory, string>> = {
+  all: 'No notifications yet',
+  payment: 'No payment notifications',
+  plan: 'No plan notifications',
+  ticket: 'No ticket notifications',
+  outage: 'No outage alerts',
+  promo: 'No promotions',
+};
+
 function NotificationsContent({ navigation }: Props) {
   const [filter, setFilter] = useState<'all' | NotificationCategory>('all');
   const { notifications, isLoading, error, refetch, markAsRead, markAllAsRead } =
     useCustomerNotifications();
+  const toast = useCustomerUiStore((s) => s.toast);
+  const clearToast = useCustomerUiStore((s) => s.clearToast);
+  const prevCountRef = useRef(notifications.length);
 
   const filtered = useMemo(() => {
     if (filter === 'all') return notifications;
     return notifications.filter((n) => n.category === filter);
   }, [filter, notifications]);
+
+  useEffect(() => {
+    if (notifications.length > prevCountRef.current && prevCountRef.current > 0) {
+      const latest = notifications[0];
+      if (latest) {
+        useCustomerUiStore.getState().showToast(latest.title, latest.body ?? undefined);
+      }
+    }
+    prevCountRef.current = notifications.length;
+  }, [notifications]);
 
   if (isLoading) {
     return (
@@ -44,38 +72,62 @@ function NotificationsContent({ navigation }: Props) {
   if (error) {
     return (
       <View style={styles.canvas}>
-        <ErrorState message="Could not load notifications" onRetry={refetch} />
+        <CustomerErrorState message="Could not load notifications. Try again." onRetry={refetch} />
       </View>
     );
   }
 
   return (
     <View style={styles.canvas}>
-      <View style={styles.filterRow}>
+      <CustomerToast
+        title={toast?.title ?? ''}
+        body={toast?.body}
+        visible={Boolean(toast)}
+        onDismiss={clearToast}
+      />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+        keyboardShouldPersistTaps="handled"
+      >
         {FILTERS.map((f) => (
           <Pressable
             key={f.id}
             onPress={() => setFilter(f.id)}
             style={[styles.chip, filter === f.id && styles.chipActive]}
+            accessibilityLabel={`Filter ${f.label}`}
           >
             <Text style={[styles.chipText, filter === f.id && styles.chipTextActive]}>
               {f.label}
             </Text>
           </Pressable>
         ))}
-        <Pressable onPress={() => void markAllAsRead()} style={styles.markAll}>
+        <Pressable
+          onPress={() => void markAllAsRead()}
+          style={styles.markAll}
+          accessibilityLabel="Mark all as read"
+        >
           <Text style={styles.markAllText}>Mark all read</Text>
         </Pressable>
-      </View>
-      <FlatList
+      </ScrollView>
+      <DismissKeyboardFlatList
         data={filtered}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.empty}>No notifications yet</Text>
+          <CustomerEmptyState
+            title={FILTER_EMPTY_LABELS[filter] ?? 'No notifications'}
+            subtitle={
+              filter === 'all'
+                ? 'Updates about payments, plans, and support will appear here'
+                : 'Try another filter to see more'
+            }
+            icon="🔔"
+          />
         }
         renderItem={({ item }) => (
-          <Pressable
+          <PressableScale
             style={[styles.row, !item.is_read && styles.unread]}
             onPress={() => {
               void markAsRead(item.id);
@@ -85,6 +137,7 @@ function NotificationsContent({ navigation }: Props) {
               else if (item.action_url?.includes('plans'))
                 navigation.navigate('CustomerTabs', { screen: 'Plans' });
             }}
+            accessibilityLabel={item.title}
           >
             {!item.is_read ? <View style={styles.dot} /> : <View style={styles.dotSpacer} />}
             <View style={styles.body}>
@@ -96,7 +149,7 @@ function NotificationsContent({ navigation }: Props) {
               ) : null}
               <Text style={styles.time}>{formatRelativeIst(item.created_at)}</Text>
             </View>
-          </Pressable>
+          </PressableScale>
         )}
       />
     </View>
@@ -115,25 +168,27 @@ const styles = StyleSheet.create({
   canvas: { flex: 1, backgroundColor: signalGlass.colors.bgDeep },
   filterRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: signalGlass.spacing.xs,
     padding: signalGlass.spacing.lg,
     alignItems: 'center',
+    paddingRight: signalGlass.spacing.xxxl,
   },
   chip: {
     borderRadius: signalGlass.radius.pill,
     borderWidth: 1,
     borderColor: signalGlass.colors.borderSubtle,
     paddingHorizontal: signalGlass.spacing.sm,
-    paddingVertical: signalGlass.spacing.xs,
+    paddingVertical: signalGlass.spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   chipActive: {
     borderColor: signalGlass.colors.accentPrimary,
-    backgroundColor: 'rgba(59,130,246,0.15)',
+    backgroundColor: signalGlass.colors.accentPrimaryMuted,
   },
   chipText: { color: signalGlass.colors.textSecondary, fontSize: 12 },
   chipTextActive: { color: signalGlass.colors.accentGlow },
-  markAll: { marginLeft: 'auto' },
+  markAll: { marginLeft: signalGlass.spacing.sm, minHeight: 44, justifyContent: 'center' },
   markAllText: { color: signalGlass.colors.accentGlow, fontSize: 12 },
   list: { paddingHorizontal: signalGlass.spacing.lg, paddingBottom: signalGlass.spacing.xxxl },
   row: {
@@ -152,7 +207,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   dotSpacer: { width: 8 },
-  body: { flex: 1 },
+  body: { flex: 1, minWidth: 0 },
   title: {
     color: signalGlass.colors.textPrimary,
     fontFamily: signalGlass.fonts.bodyMedium,
@@ -168,10 +223,5 @@ const styles = StyleSheet.create({
     color: signalGlass.colors.textMuted,
     fontSize: 11,
     marginTop: 4,
-  },
-  empty: {
-    color: signalGlass.colors.textSecondary,
-    textAlign: 'center',
-    marginTop: signalGlass.spacing.xxxl,
   },
 });

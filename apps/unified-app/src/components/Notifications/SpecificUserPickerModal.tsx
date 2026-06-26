@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { SearchBar } from '@/components/admin';
+import {
+  DismissKeyboardFlatList,
+  FullScreenModalShell,
+} from '@/components/common';
 import { useGetAdminOfficersQuery, useGetAdminUsersQuery } from '@/store/api/endpoints';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -78,87 +81,59 @@ export function SpecificUserPickerModal({
   };
 
   return (
-    <Modal
+    <FullScreenModalShell
       visible={visible}
-      animationType="slide"
-      presentationStyle="fullScreen"
       onRequestClose={onClose}
+      title="Select Users"
+      onCancel={onClose}
+      onDone={() => onConfirm([...selected.keys()], [...selected.values()])}
+      statusBarTranslucent={false}
     >
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-        <View style={styles.header}>
-          <Pressable onPress={onClose} hitSlop={8} style={styles.headerAction}>
-            <Text style={styles.cancel}>Cancel</Text>
-          </Pressable>
-          <Text style={styles.title}>Select Users</Text>
-          <Pressable
-            onPress={() => onConfirm([...selected.keys()], [...selected.values()])}
-            hitSlop={8}
-            style={styles.headerAction}
-          >
-            <Text style={styles.done}>Done</Text>
-          </Pressable>
-        </View>
+      <SearchBar
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search by name, phone, email..."
+        containerStyle={styles.search}
+      />
 
-        <SearchBar
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search by name, phone, email..."
-          containerStyle={styles.search}
-        />
+      <View style={styles.chips}>
+        {[...selected.entries()].map(([id, name]) => (
+          <Pressable key={id} style={styles.chip} onPress={() => removeChip(id)}>
+            <Text style={styles.chipText}>{name}</Text>
+            <Ionicons name="close" size={14} color={adminColors.primary} />
+          </Pressable>
+        ))}
+      </View>
+      <Text style={styles.count}>{selected.size} users selected</Text>
 
-        <View style={styles.chips}>
-          {[...selected.entries()].map(([id, name]) => (
-            <Pressable key={id} style={styles.chip} onPress={() => removeChip(id)}>
-              <Text style={styles.chipText}>{name}</Text>
-              <Ionicons name="close" size={14} color={adminColors.primary} />
+      <DismissKeyboardFlatList
+        data={items}
+        style={styles.list}
+        keyExtractor={(item) => `${item.type}-${item.id}`}
+        renderItem={({ item }) => {
+          const checked = selected.has(item.id);
+          return (
+            <Pressable style={styles.row} onPress={() => toggle(item)}>
+              <Ionicons
+                name={checked ? 'checkbox' : 'square-outline'}
+                size={22}
+                color={checked ? adminColors.primary : colors.textSecondary}
+              />
+              <View style={styles.rowBody}>
+                <Text style={styles.rowName}>{item.name}</Text>
+                <Text style={styles.rowSub}>{item.subtitle}</Text>
+              </View>
+              <Text style={styles.typeBadge}>{item.type}</Text>
             </Pressable>
-          ))}
-        </View>
-        <Text style={styles.count}>{selected.size} users selected</Text>
-
-        <FlatList
-          data={items}
-          style={styles.list}
-          keyExtractor={(item) => `${item.type}-${item.id}`}
-          renderItem={({ item }) => {
-            const checked = selected.has(item.id);
-            return (
-              <Pressable style={styles.row} onPress={() => toggle(item)}>
-                <Ionicons
-                  name={checked ? 'checkbox' : 'square-outline'}
-                  size={22}
-                  color={checked ? adminColors.primary : colors.textSecondary}
-                />
-                <View style={styles.rowBody}>
-                  <Text style={styles.rowName}>{item.name}</Text>
-                  <Text style={styles.rowSub}>{item.subtitle}</Text>
-                </View>
-                <Text style={styles.typeBadge}>{item.type}</Text>
-              </Pressable>
-            );
-          }}
-        />
-      </SafeAreaView>
-    </Modal>
+          );
+        }}
+      />
+    </FullScreenModalShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.surfaceWhite },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderDefault,
-  },
-  headerAction: { minWidth: 56, paddingVertical: spacing.xs },
   list: { flex: 1 },
-  cancel: { color: colors.textSecondary, fontSize: 15 },
-  title: { fontSize: 16, fontWeight: '700' },
-  done: { color: adminColors.primary, fontSize: 15, fontWeight: '600' },
   search: { margin: spacing.md },
   chips: {
     flexDirection: 'row',
@@ -183,7 +158,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.borderDefault,
   },
   rowBody: { flex: 1 },
   rowName: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },

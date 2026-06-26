@@ -27,7 +27,7 @@ import { userSlice } from './slices/userSlice';
 const authPersistConfig = {
   key: 'auth',
   storage: securePersistStorage,
-  whitelist: ['user', 'isAuthenticated', 'requires2FA', 'isDevSession'],
+  whitelist: ['user', 'isAuthenticated', 'requires2FA'],
 };
 
 const rootReducer = combineReducers({

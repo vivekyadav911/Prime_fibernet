@@ -1,8 +1,11 @@
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { Screen } from '@prime/ui';
 
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+
+import { DismissKeyboardScrollView } from './DismissKeyboardScrollView';
+import { KeyboardDismissView } from './KeyboardDismissView';
 
 type ScreenWrapperProps = {
   children: React.ReactNode;
@@ -29,16 +32,15 @@ export function ScreenWrapper({
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         {scrollable ? (
-          <ScrollView
+          <DismissKeyboardScrollView
             style={styles.flex}
             contentContainerStyle={[styles.scrollContent, padded && styles.scrollPadded]}
             showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
           >
             {inner}
-          </ScrollView>
+          </DismissKeyboardScrollView>
         ) : (
-          <View style={[styles.flex, padded && styles.inner]}>{children}</View>
+          <KeyboardDismissView style={[styles.flex, padded && styles.inner]}>{children}</KeyboardDismissView>
         )}
       </KeyboardAvoidingView>
     </Screen>

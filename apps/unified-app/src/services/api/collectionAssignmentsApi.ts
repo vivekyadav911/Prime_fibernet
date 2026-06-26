@@ -7,6 +7,7 @@ import type {
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { buildUserSearchOrFilter } from '@/utils/searchQuery';
+import { insertOfficerPortalNotification } from '@/utils/officerPortalNotification';
 
 import { baseApi } from './baseApi';
 import { fetchOfficerNameMap } from './mappers';
@@ -21,31 +22,48 @@ async function persistCollectionAssignments(
     p_officer_id: officerId,
   });
 
+  let updatedCount = 0;
+
   if (!error) {
     const result = data as { updated_count?: number };
-    const updatedCount = Number(result?.updated_count ?? 0);
-    if (updatedCount > 0) {
-      return { updatedCount };
-    }
+    updatedCount = Number(result?.updated_count ?? 0);
   } else if (!error.message?.includes('Admin access required')) {
     throw error;
   }
 
-  const { data: rows, error: updateError } = await client
-    .from('users')
-    .update({
-      assigned_officer_id: officerId,
-      claimed_by_officer_id: null,
-      claimed_at: null,
-      collection_status: officerId ? 'assigned' : 'open',
-      collection_updated_at: new Date().toISOString(),
-    })
-    .eq('role', 'customer')
-    .in('id', customerIds)
-    .select('id');
+  if (updatedCount === 0) {
+    const { data: rows, error: updateError } = await client
+      .from('users')
+      .update({
+        assigned_officer_id: officerId,
+        claimed_by_officer_id: null,
+        claimed_at: null,
+        collection_status: officerId ? 'assigned' : 'open',
+        collection_updated_at: new Date().toISOString(),
+      })
+      .eq('role', 'customer')
+      .in('id', customerIds)
+      .select('id');
 
-  if (updateError) throw updateError;
-  return { updatedCount: rows?.length ?? 0 };
+    if (updateError) throw updateError;
+    updatedCount = rows?.length ?? 0;
+  }
+
+  // Notify the assigned officer in-app when accounts are being assigned (not unassigned).
+  if (officerId && updatedCount > 0) {
+    const { data: sessionData } = await client.auth.getSession();
+    const adminName = sessionData?.session?.user?.email ?? 'Admin';
+    await insertOfficerPortalNotification(client, {
+      officerId,
+      type: 'collection_assigned',
+      title: 'New collection assignments',
+      body: `${updatedCount} customer account${updatedCount > 1 ? 's have' : ' has'} been assigned to you for collection by ${adminName}.`,
+      data: { count: updatedCount },
+      category: 'collection',
+    });
+  }
+
+  return { updatedCount };
 }
 
 function mapAssignmentRow(

@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { DismissKeyboardFlatList } from '@/components/common';
 
 import type { EventType } from '@/types/notifications';
 import { EVENT_TYPE_OPTIONS } from '@/types/notifications';
@@ -14,6 +17,7 @@ type EventTypeSelectorProps = {
 };
 
 export function EventTypeSelector({ value, onChange }: EventTypeSelectorProps) {
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const selected = EVENT_TYPE_OPTIONS.find((o) => o.value === value);
 
@@ -26,16 +30,28 @@ export function EventTypeSelector({ value, onChange }: EventTypeSelectorProps) {
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={[styles.backdrop, { paddingTop: insets.top }]}
+          onPress={() => {
+            Keyboard.dismiss();
+            setOpen(false);
+          }}
+        >
+          <Pressable
+            style={[styles.sheet, { paddingBottom: insets.bottom + spacing.md }]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <View style={styles.header}>
-              <Pressable onPress={() => setOpen(false)}>
+              <Pressable
+                onPress={() => setOpen(false)}
+                hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+              >
                 <Text style={styles.cancel}>Cancel</Text>
               </Pressable>
               <Text style={styles.title}>Event Type</Text>
-              <View style={{ width: 50 }} />
+              <View style={styles.headerSpacer} />
             </View>
-            <FlatList
+            <DismissKeyboardFlatList
               data={EVENT_TYPE_OPTIONS}
               keyExtractor={(item) => item.value}
               renderItem={({ item }) => (
@@ -98,6 +114,7 @@ const styles = StyleSheet.create({
   },
   cancel: { color: colors.textSecondary, fontSize: 15 },
   title: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  headerSpacer: { width: 50 },
   option: {
     flexDirection: 'row',
     alignItems: 'center',

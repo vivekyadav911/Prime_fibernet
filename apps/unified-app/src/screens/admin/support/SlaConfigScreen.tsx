@@ -16,7 +16,7 @@ import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminSupportStackParamList, 'SlaConfig'>;
 
-export function SlaConfigScreen({}: Props) {
+export function SlaConfigScreen(_props: Props) {
   const { data, isLoading, isError, error, refetch } = useGetSlaPoliciesQuery();
   const [updatePolicy, { isLoading: saving }] = useUpdateSlaPolicyMutation();
   const [edits, setEdits] = useState<Record<string, Partial<SlaPolicy>>>({});

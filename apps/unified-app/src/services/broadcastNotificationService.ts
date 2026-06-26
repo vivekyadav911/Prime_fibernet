@@ -15,10 +15,10 @@ import type {
 } from '@/types/notifications';
 import {
   formDataToDbPayload,
+  replaceTemplateVars,
   resolveAudienceCount,
-  resolveAudienceRecipients,
 } from '@/utils/notificationUtils';
-import { sendPushToTokens, type SendProgressCallback } from '@/utils/pushDelivery';
+import type { SendProgressCallback } from '@/utils/pushDelivery';
 
 type BroadcastRow = Record<string, unknown>;
 
@@ -308,115 +308,28 @@ export async function fetchDueScheduledNotifications(): Promise<AppNotification[
 
 export async function sendNotification(
   id: string,
-  admin: { id: string; name: string },
+  _admin: { id: string; name: string },
   onProgress?: SendProgressCallback,
 ): Promise<AppNotification> {
-  const startMs = Date.now();
   const { client } = await requireSession();
-
   const notification = await fetchNotificationById(id);
-  await client
-    .from('broadcast_notifications')
-    .update({ status: 'sending', is_draft: false, updated_at: new Date().toISOString() })
-    .eq('id', id);
+  const estimatedCount = notification.audience.estimatedCount || (await resolveAudienceCount(notification.audience));
 
-  const recipients = await resolveAudienceRecipients(notification.audience);
-  const totalTargeted = recipients.length;
-  const withTokens = recipients.filter((r) => r.pushToken);
-  const tokens = withTokens.map((r) => r.pushToken!);
+  onProgress?.(0, 0, estimatedCount);
 
-  const pushData: Record<string, string> = {
-    notificationId: id,
-    eventType: notification.eventType,
-  };
-  if (notification.deepLinkUrl) pushData.deepLinkUrl = notification.deepLinkUrl;
-
-  let sentCount = 0;
-  let failedCount = 0;
-  const failedTokens: string[] = [];
-
-  if (tokens.length) {
-    const result = await sendPushToTokens(
-      tokens,
-      notification.title,
-      notification.message,
-      notification.priority,
-      pushData,
-      (sent, failed) => onProgress?.(sent, failed, tokens.length),
-    );
-    sentCount = result.sent;
-    failedCount = result.failed;
-    failedTokens.push(...result.failedTokens);
-  }
-
-  const noTokenCount = recipients.filter((r) => !r.pushToken).length;
-  const now = new Date().toISOString();
-  const tokenIndex = new Map(withTokens.map((r, i) => [r.userId, i]));
-
-  const recipientRows = recipients.map((r) => {
-    let deliveryStatus = r.deliveryStatus;
-    let failureReason: string | undefined;
-    if (!r.pushToken) {
-      deliveryStatus = 'no_token';
-    } else {
-      const idx = tokenIndex.get(r.userId);
-      if (idx !== undefined && failedTokens.includes(r.pushToken)) {
-        deliveryStatus = 'failed';
-        failureReason = 'Push delivery failed';
-      } else {
-        deliveryStatus = 'delivered';
-      }
-    }
-    return {
-      notification_id: id,
-      user_id: r.userId,
-      user_name: r.userName,
-      user_type: r.userType,
-      push_token: r.pushToken,
-      delivery_status: deliveryStatus,
-      failure_reason: failureReason ?? null,
-      sent_at: r.pushToken ? now : null,
-    };
+  const { data, error } = await client.functions.invoke('send-broadcast-notification', {
+    body: { notificationId: id },
   });
-
-  await client.from('notification_recipients').delete().eq('notification_id', id);
-  if (recipientRows.length) {
-    const { error: recErr } = await client.from('notification_recipients').insert(recipientRows);
-    if (recErr) throw recErr;
+  if (error) throw new Error(error.message ?? 'Failed to send notification');
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
+    throw new Error(String(data.error));
   }
 
-  const totalDelivered = sentCount;
-  const totalFailed = failedCount + noTokenCount;
-  const deliveryRate = tokens.length ? totalDelivered / tokens.length : 0;
-  const processingMs = Date.now() - startMs;
+  const delivered = Number((data as { totalDelivered?: number })?.totalDelivered ?? 0);
+  const targeted = Number((data as { totalTargeted?: number })?.totalTargeted ?? estimatedCount);
+  onProgress?.(delivered, Math.max(0, targeted - delivered), targeted);
 
-  let status: NotificationStatus = 'sent';
-  if (totalDelivered === 0 && totalTargeted > 0) status = 'failed';
-  else if (totalFailed > 0 && totalDelivered > 0) status = 'partially_failed';
-
-  const { data: updated, error } = await client
-    .from('broadcast_notifications')
-    .update({
-      status,
-      is_draft: false,
-      sent_at: now,
-      total_targeted: totalTargeted,
-      total_sent: tokens.length,
-      total_delivered: totalDelivered,
-      total_failed: totalFailed,
-      delivery_rate: deliveryRate,
-      processing_ms: processingMs,
-      failed_tokens: failedTokens,
-      audience_estimated_count: totalTargeted,
-      updated_at: now,
-    })
-    .eq('id', id)
-    .select('*')
-    .single();
-  if (error) throw error;
-
-  void admin;
-  return mapRowToAppNotification(updated as BroadcastRow, recipients);
+  return fetchNotificationById(id);
 }
 
 export async function resendNotification(
@@ -451,6 +364,307 @@ export async function resendNotification(
   return sendNotification(created.id, admin);
 }
 
+export type AutomationChannels = {
+  push: boolean;
+  in_app: boolean;
+  email: boolean;
+  sms: boolean;
+};
+
+export type AutomationRule = {
+  id: string;
+  eventKey: string;
+  label: string;
+  description: string | null;
+  enabled: boolean;
+  channels: AutomationChannels;
+  titleTemplate: string;
+  messageTemplate: string;
+  priority: NotificationPriority;
+  audienceType: AudienceConfig['type'];
+  eventType: EventType;
+  updatedAt: Date;
+};
+
+export type RecurringSchedule = {
+  id: string;
+  name: string;
+  title: string;
+  message: string;
+  priority: NotificationPriority;
+  eventType: EventType;
+  audience: Omit<AudienceConfig, 'estimatedCount' | 'resolvedAt'>;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  timeOfDay: string;
+  dayOfWeek: number | null;
+  timezone: string;
+  enabled: boolean;
+  lastRunAt: Date | null;
+  nextRunAt: Date | null;
+  createdById: string;
+  createdByName: string;
+};
+
+function mapAutomationRuleRow(row: Record<string, unknown>): AutomationRule {
+  const channels = (row.channels as AutomationChannels) ?? {
+    push: true,
+    in_app: true,
+    email: false,
+    sms: false,
+  };
+  return {
+    id: String(row.id),
+    eventKey: String(row.event_key),
+    label: String(row.label),
+    description: row.description ? String(row.description) : null,
+    enabled: Boolean(row.enabled),
+    channels,
+    titleTemplate: String(row.title_template),
+    messageTemplate: String(row.message_template),
+    priority: String(row.priority ?? 'Normal') as NotificationPriority,
+    audienceType: String(row.audience_type ?? 'specific_users') as AudienceConfig['type'],
+    eventType: String(row.event_type ?? 'none') as EventType,
+    updatedAt: parseDate(row.updated_at) ?? new Date(),
+  };
+}
+
+function mapRecurringScheduleRow(row: Record<string, unknown>): RecurringSchedule {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    title: String(row.title),
+    message: String(row.message),
+    priority: String(row.priority ?? 'Normal') as NotificationPriority,
+    eventType: String(row.event_type ?? 'none') as EventType,
+    audience: {
+      type: String(row.audience_type ?? 'active_users') as AudienceConfig['type'],
+      planId: row.audience_plan_id ? String(row.audience_plan_id) : undefined,
+      planName: row.audience_plan_name ? String(row.audience_plan_name) : undefined,
+      area: row.audience_area ? String(row.audience_area) : undefined,
+      userIds: Array.isArray(row.audience_user_ids)
+        ? (row.audience_user_ids as string[]).map(String)
+        : undefined,
+      userNames: Array.isArray(row.audience_user_names)
+        ? (row.audience_user_names as string[]).map(String)
+        : undefined,
+    },
+    frequency: String(row.frequency ?? 'weekly') as RecurringSchedule['frequency'],
+    timeOfDay: String(row.time_of_day ?? '09:00'),
+    dayOfWeek: row.day_of_week != null ? Number(row.day_of_week) : null,
+    timezone: String(row.timezone ?? 'Asia/Kolkata'),
+    enabled: Boolean(row.enabled),
+    lastRunAt: parseDate(row.last_run_at),
+    nextRunAt: parseDate(row.next_run_at),
+    createdById: String(row.created_by_id),
+    createdByName: String(row.created_by_name),
+  };
+}
+
+function computeNextRunAtLocal(
+  frequency: RecurringSchedule['frequency'],
+  timeOfDay: string,
+  dayOfWeek: number | null,
+): Date {
+  const [hours, minutes] = timeOfDay.split(':').map(Number);
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(hours ?? 9, minutes ?? 0, 0, 0);
+
+  if (frequency === 'daily') {
+    if (next <= now) next.setDate(next.getDate() + 1);
+    return next;
+  }
+  if (frequency === 'weekly') {
+    const targetDow = dayOfWeek ?? 1;
+    const currentDow = next.getDay();
+    let daysUntil = (targetDow - currentDow + 7) % 7;
+    if (daysUntil === 0 && next <= now) daysUntil = 7;
+    next.setDate(next.getDate() + daysUntil);
+    return next;
+  }
+  const targetDay = dayOfWeek ?? 1;
+  next.setDate(targetDay);
+  if (next <= now) next.setMonth(next.getMonth() + 1);
+  return next;
+}
+
+export async function fetchAutomationRules(): Promise<AutomationRule[]> {
+  const { client } = await requireSession();
+  const { data, error } = await client
+    .from('notification_automation_rules')
+    .select('*')
+    .order('label', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row) => mapAutomationRuleRow(row as Record<string, unknown>));
+}
+
+export async function updateAutomationRule(
+  id: string,
+  patch: Partial<Pick<AutomationRule, 'enabled' | 'channels' | 'titleTemplate' | 'messageTemplate' | 'priority'>>,
+): Promise<AutomationRule> {
+  const { client } = await requireSession();
+  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.enabled !== undefined) payload.enabled = patch.enabled;
+  if (patch.channels !== undefined) payload.channels = patch.channels;
+  if (patch.titleTemplate !== undefined) payload.title_template = patch.titleTemplate;
+  if (patch.messageTemplate !== undefined) payload.message_template = patch.messageTemplate;
+  if (patch.priority !== undefined) payload.priority = patch.priority;
+
+  const { data, error } = await client
+    .from('notification_automation_rules')
+    .update(payload)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapAutomationRuleRow(data as Record<string, unknown>);
+}
+
+export async function fetchRecurringSchedules(): Promise<RecurringSchedule[]> {
+  const { client } = await requireSession();
+  const { data, error } = await client
+    .from('notification_recurring_schedules')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row) => mapRecurringScheduleRow(row as Record<string, unknown>));
+}
+
+export async function createRecurringSchedule(
+  input: Omit<RecurringSchedule, 'id' | 'lastRunAt' | 'nextRunAt' | 'createdById' | 'createdByName'> & {
+    createdBy: { id: string; name: string };
+  },
+): Promise<RecurringSchedule> {
+  const { client } = await requireSession();
+  const nextRunAt = computeNextRunAtLocal(input.frequency, input.timeOfDay, input.dayOfWeek);
+  const { data, error } = await client
+    .from('notification_recurring_schedules')
+    .insert({
+      name: input.name,
+      title: input.title,
+      message: input.message,
+      priority: input.priority,
+      event_type: input.eventType,
+      audience_type: input.audience.type,
+      audience_plan_id: input.audience.planId ?? null,
+      audience_plan_name: input.audience.planName ?? null,
+      audience_area: input.audience.area ?? null,
+      audience_user_ids: input.audience.userIds ?? null,
+      audience_user_names: input.audience.userNames ?? null,
+      frequency: input.frequency,
+      time_of_day: input.timeOfDay,
+      day_of_week: input.dayOfWeek,
+      timezone: input.timezone,
+      enabled: input.enabled,
+      next_run_at: nextRunAt.toISOString(),
+      created_by_id: input.createdBy.id,
+      created_by_name: input.createdBy.name,
+    })
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapRecurringScheduleRow(data as Record<string, unknown>);
+}
+
+export async function updateRecurringSchedule(
+  id: string,
+  patch: Partial<
+    Pick<
+      RecurringSchedule,
+      'name' | 'title' | 'message' | 'priority' | 'eventType' | 'audience' | 'frequency' | 'timeOfDay' | 'dayOfWeek' | 'timezone' | 'enabled'
+    >
+  >,
+): Promise<RecurringSchedule> {
+  const { client } = await requireSession();
+  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (patch.name !== undefined) payload.name = patch.name;
+  if (patch.title !== undefined) payload.title = patch.title;
+  if (patch.message !== undefined) payload.message = patch.message;
+  if (patch.priority !== undefined) payload.priority = patch.priority;
+  if (patch.eventType !== undefined) payload.event_type = patch.eventType;
+  if (patch.audience !== undefined) {
+    payload.audience_type = patch.audience.type;
+    payload.audience_plan_id = patch.audience.planId ?? null;
+    payload.audience_plan_name = patch.audience.planName ?? null;
+    payload.audience_area = patch.audience.area ?? null;
+    payload.audience_user_ids = patch.audience.userIds ?? null;
+    payload.audience_user_names = patch.audience.userNames ?? null;
+  }
+  if (patch.frequency !== undefined) payload.frequency = patch.frequency;
+  if (patch.timeOfDay !== undefined) payload.time_of_day = patch.timeOfDay;
+  if (patch.dayOfWeek !== undefined) payload.day_of_week = patch.dayOfWeek;
+  if (patch.timezone !== undefined) payload.timezone = patch.timezone;
+  if (patch.enabled !== undefined) payload.enabled = patch.enabled;
+
+  if (patch.frequency !== undefined || patch.timeOfDay !== undefined || patch.dayOfWeek !== undefined) {
+    const freq = patch.frequency ?? 'weekly';
+    const time = patch.timeOfDay ?? '09:00';
+    const dow = patch.dayOfWeek ?? null;
+    payload.next_run_at = computeNextRunAtLocal(freq, time, dow).toISOString();
+  }
+
+  const { data, error } = await client
+    .from('notification_recurring_schedules')
+    .update(payload)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return mapRecurringScheduleRow(data as Record<string, unknown>);
+}
+
+export async function deleteRecurringSchedule(id: string): Promise<void> {
+  const { client } = await requireSession();
+  const { error } = await client.from('notification_recurring_schedules').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function triggerAutoNotification(
+  eventKey: string,
+  context: {
+    audience: Omit<AudienceConfig, 'estimatedCount' | 'resolvedAt'>;
+    templateVars?: Record<string, string>;
+    title?: string;
+    message?: string;
+    priority?: NotificationPriority;
+    eventType?: EventType;
+    linkedRequestId?: string;
+    linkedTicketId?: string;
+    linkedPlanId?: string;
+    deepLinkUrl?: string;
+  },
+): Promise<AppNotification | null> {
+  const { client } = await requireSession();
+
+  const { data: ruleRow, error: ruleErr } = await client
+    .from('notification_automation_rules')
+    .select('*')
+    .eq('event_key', eventKey)
+    .maybeSingle();
+  if (ruleErr) throw ruleErr;
+  if (!ruleRow || !ruleRow.enabled) return null;
+
+  const rule = mapAutomationRuleRow(ruleRow as Record<string, unknown>);
+  const vars = context.templateVars ?? {};
+  const title = context.title ?? replaceTemplateVars(rule.titleTemplate, vars);
+  const message = context.message ?? replaceTemplateVars(rule.messageTemplate, vars);
+  const priority = context.priority ?? rule.priority;
+  const eventType = context.eventType ?? rule.eventType;
+
+  return sendAutoNotification({
+    title,
+    message,
+    priority,
+    eventType,
+    audience: context.audience,
+    linkedRequestId: context.linkedRequestId,
+    linkedTicketId: context.linkedTicketId,
+    linkedPlanId: context.linkedPlanId,
+    deepLinkUrl: context.deepLinkUrl,
+    channels: rule.channels,
+  });
+}
+
 export async function sendAutoNotification(params: {
   title: string;
   message: string;
@@ -461,10 +675,12 @@ export async function sendAutoNotification(params: {
   linkedTicketId?: string;
   linkedPlanId?: string;
   deepLinkUrl?: string;
+  channels?: AutomationChannels;
 }): Promise<AppNotification> {
   const { client, session } = await requireSession();
   const estimatedCount = await resolveAudienceCount(params.audience);
   const admin = { id: session.user.id, name: session.user.email ?? 'System' };
+  const channels = params.channels ?? { push: true, in_app: true, email: false, sms: false };
 
   const payload = {
     title: params.title,
@@ -494,7 +710,21 @@ export async function sendAutoNotification(params: {
 
   const { data: row, error } = await client.from('broadcast_notifications').insert(payload).select('*').single();
   if (error) throw error;
-  return sendNotification(String(row.id), admin);
+
+  const notificationId = String(row.id);
+  const { data, error: fnErr } = await client.functions.invoke('send-broadcast-notification', {
+    body: {
+      notificationId,
+      skipPush: !channels.push,
+      skipInApp: !channels.in_app,
+    },
+  });
+  if (fnErr) throw new Error(fnErr.message ?? 'Failed to send auto notification');
+  if (data && typeof data === 'object' && 'error' in data && data.error) {
+    throw new Error(String(data.error));
+  }
+
+  return fetchNotificationById(notificationId);
 }
 
 export async function fetchTemplates(): Promise<NotificationTemplate[]> {
@@ -717,6 +947,13 @@ export const broadcastNotificationService = {
   sendNotification,
   resendNotification,
   sendAutoNotification,
+  triggerAutoNotification,
+  fetchAutomationRules,
+  updateAutomationRule,
+  fetchRecurringSchedules,
+  createRecurringSchedule,
+  updateRecurringSchedule,
+  deleteRecurringSchedule,
   fetchTemplates,
   saveAsTemplate,
   deleteTemplate,

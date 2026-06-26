@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Keyboard, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
@@ -64,8 +64,14 @@ export function ExportRequestsModal({ visible, requests, onClose }: ExportReques
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={[styles.card, { marginBottom: insets.bottom }]} onPress={(e) => e.stopPropagation()}>
+      <Pressable
+        style={[styles.backdrop, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          onClose();
+        }}
+      >
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.title}>Export Requests</Text>
           <Text style={styles.subtitle}>Choose which requests to include in the PDF.</Text>
 

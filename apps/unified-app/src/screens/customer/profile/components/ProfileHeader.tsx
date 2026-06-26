@@ -1,14 +1,13 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { signalGlass } from '@/theme/customer/signalGlass';
 
 type ProfileHeaderProps = {
   name: string;
   email: string;
   photoUrl?: string | null;
+  memberSince?: string;
   isDev?: boolean;
   uploading?: boolean;
   onChangePhoto?: () => void;
@@ -28,63 +27,89 @@ export function ProfileHeader({
   name,
   email,
   photoUrl,
+  memberSince,
   isDev,
   uploading,
   onChangePhoto,
 }: ProfileHeaderProps) {
   return (
-    <LinearGradient colors={[colors.primaryNavy, colors.accentTeal]} style={styles.card}>
+    <View style={styles.wrap}>
+      <View style={styles.avatarGlow} />
       <View style={styles.avatarWrap}>
         {photoUrl ? (
-          <Image source={{ uri: photoUrl }} style={styles.avatar} />
+          <Image source={{ uri: photoUrl }} style={styles.avatar} accessibilityLabel="Profile photo" />
         ) : (
           <View style={styles.initials}>
             <Text style={styles.initialsText}>{initials(name)}</Text>
           </View>
         )}
         {onChangePhoto ? (
-          <Pressable style={styles.cameraBtn} onPress={onChangePhoto} disabled={uploading}>
+          <Pressable
+            style={styles.cameraBtn}
+            onPress={onChangePhoto}
+            disabled={uploading}
+            accessibilityLabel="Change profile photo"
+            hitSlop={8}
+          >
             {uploading ? (
-              <ActivityIndicator color={colors.primaryNavy} size="small" />
+              <ActivityIndicator color={signalGlass.colors.primary} size="small" />
             ) : (
-              <Text style={styles.cameraIcon}>📷</Text>
+              <MaterialCommunityIcons name="camera" size={16} color={signalGlass.colors.primary} />
             )}
           </Pressable>
         ) : null}
       </View>
-      <Text style={styles.name}>{name}</Text>
-      <Text style={styles.email}>{email}</Text>
-      {isDev ? <Text style={styles.devBadge}>Dev account</Text> : null}
-    </LinearGradient>
+      <Text style={styles.name} numberOfLines={2}>
+        {name}
+      </Text>
+      <View style={styles.memberBadge}>
+        <MaterialCommunityIcons name="check-decagram" size={14} color={signalGlass.colors.secondary} />
+        <Text style={styles.memberText}>Member since {memberSince ?? '2021'}</Text>
+      </View>
+      {isDev ? <Text style={styles.devBadge}>Dev account · {email}</Text> : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: radius.lg,
-    padding: spacing.xl,
+  wrap: {
     alignItems: 'center',
-    gap: spacing.xs,
+    marginBottom: signalGlass.spacing.lg,
+    position: 'relative',
   },
-  avatarWrap: { position: 'relative', marginBottom: spacing.sm },
+  avatarGlow: {
+    position: 'absolute',
+    top: 8,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: signalGlass.colors.accentPrimaryMuted,
+    opacity: 0.8,
+  },
+  avatarWrap: { position: 'relative', marginBottom: signalGlass.spacing.sm },
   avatar: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    borderWidth: 4,
-    borderColor: colors.white,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
+    borderColor: 'rgba(173,198,255,0.5)',
   },
   initials: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    borderWidth: 4,
-    borderColor: colors.white,
-    backgroundColor: `${colors.white}33`,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
+    borderColor: 'rgba(173,198,255,0.5)',
+    backgroundColor: signalGlass.colors.surfaceContainerHigh,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  initialsText: { fontSize: 36, fontWeight: '700', color: colors.white },
+  initialsText: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: signalGlass.colors.onSurface,
+    fontFamily: signalGlass.fonts.display,
+  },
   cameraBtn: {
     position: 'absolute',
     right: 0,
@@ -92,12 +117,35 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.white,
+    backgroundColor: signalGlass.colors.surfaceContainer,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: signalGlass.colors.borderGlass,
   },
-  cameraIcon: { fontSize: 16 },
-  name: { fontSize: 24, fontWeight: '700', color: colors.white },
-  email: { color: colors.white, opacity: 0.9, fontSize: 14 },
-  devBadge: { color: colors.warningAmber, fontSize: 12, marginTop: spacing.xxs },
+  name: {
+    ...signalGlass.typography.displayMd,
+    color: signalGlass.colors.onSurface,
+    fontFamily: signalGlass.fonts.bodySemiBold,
+    textAlign: 'center',
+  },
+  memberBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: signalGlass.spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: signalGlass.radius.pill,
+    backgroundColor: 'rgba(0,165,114,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(78,222,163,0.2)',
+  },
+  memberText: {
+    ...signalGlass.typography.label,
+    color: signalGlass.colors.secondary,
+    fontFamily: signalGlass.fonts.bodyMedium,
+    textTransform: 'uppercase',
+  },
+  devBadge: { color: signalGlass.colors.accentWarning, fontSize: 12, marginTop: signalGlass.spacing.xs },
 });

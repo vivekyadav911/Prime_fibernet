@@ -23,7 +23,20 @@ import {
 import { parseOfficerDocumentStoragePath } from '@/utils/uploadOfficerDocument';
 
 import { baseApi } from './baseApi';
+import type { TypedSupabaseClient } from './supabase';
 import { OFFICER_ADMIN_SELECT } from './mappers';
+
+const ENCRYPTED_PREFIX = 'encrypted:';
+
+// Officer bank account number / IFSC are encrypted at rest. The admin client
+// only ever receives ciphertext from a plain SELECT, so never expose it: render
+// a masked placeholder and fetch plaintext on demand via admin-officer-bank.
+function maskBankValue(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (value.startsWith(ENCRYPTED_PREFIX)) return '••••••';
+  // Legacy plaintext (pre-backfill): mask all but the last 4 characters.
+  return value.length <= 4 ? '••••' : `••••${value.slice(-4)}`;
+}
 
 type OfficerRow = {
   id: string;
@@ -59,8 +72,16 @@ type OfficerRow = {
 
 type OnboardingData = {
   emergencyContacts?: Array<{ name?: string; relationship?: string; phone?: string; address?: string }>;
-  education?: { highestQualification?: string; university?: string; graduationYear?: string };
-  backgroundInfo?: { criminalRecord?: boolean; healthIssues?: boolean; details?: string };
+  education?: {
+    highestQualification?: string | null;
+    university?: string | null;
+    graduationYear?: string | null;
+  };
+  backgroundInfo?: {
+    criminalRecord?: boolean;
+    healthIssues?: boolean;
+    details?: string | null;
+  };
   positionApplied?: string | null;
   expectedSalary?: number | null;
   joiningDatePreference?: string | null;
@@ -112,6 +133,35 @@ function mapOfficerRow(row: OfficerRow): AdminOfficerDetail {
 function parseOnboardingData(raw: unknown): OnboardingData {
   if (!raw || typeof raw !== 'object') return {};
   return raw as OnboardingData;
+}
+
+async function fetchOfficerOnboardingRow(
+  client: TypedSupabaseClient,
+  officerId: string,
+): Promise<{ id: string; data?: unknown } | null> {
+  const { data, error } = await client
+    .from('officer_onboarding')
+    .select('id, data')
+    .eq('officer_id', officerId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+async function saveOfficerOnboardingData(
+  client: TypedSupabaseClient,
+  officerId: string,
+  patch: Partial<OnboardingData>,
+): Promise<void> {
+  const { data, error } = await client.functions.invoke('admin-officer-onboarding', {
+    body: { action: 'save', officerId, patch },
+  });
+  if (error) throw error;
+  const result = data as { error?: string; success?: boolean };
+  if (result?.error) throw new Error(result.error);
 }
 
 function mapOfficerProfile(
@@ -193,8 +243,8 @@ function mapOfficerProfile(
     bankDetails: {
       bankName: bank?.bank_name ?? null,
       accountHolderName: bank?.account_holder_name ?? null,
-      accountNumber: bank?.account_number ?? null,
-      ifscCode: bank?.ifsc_code ?? null,
+      accountNumber: maskBankValue(bank?.account_number),
+      ifscCode: maskBankValue(bank?.ifsc_code),
     },
     emergencyContacts,
     education: {
@@ -271,8 +321,8 @@ function mapContractRow(
     bankDetails: {
       bankName: bank?.bank_name ?? null,
       accountHolderName: bank?.account_holder_name ?? null,
-      accountNumber: bank?.account_number ?? null,
-      ifscCode: bank?.ifsc_code ?? null,
+      accountNumber: maskBankValue(bank?.account_number),
+      ifscCode: maskBankValue(bank?.ifsc_code),
     },
     benefits: {
       healthInsurance: benefitsRaw.healthInsurance ?? false,
@@ -436,9 +486,9 @@ export const adminOfficersApi = baseApi.injectEndpoints({
           if (error) throw error;
           if (!row) throw new Error('Officer not found');
 
-          const [{ data: bank }, { data: onboarding }, { data: creds }] = await Promise.all([
+          const [{ data: bank }, onboarding, { data: creds }] = await Promise.all([
             client.from('officer_bank_details').select('*').eq('officer_id', officerId).maybeSingle(),
-            client.from('officer_onboarding').select('data').eq('officer_id', officerId).maybeSingle(),
+            fetchOfficerOnboardingRow(client, officerId),
             client.from('officer_credentials').select('login_email, visible_to_admin, password_set_method, rotated_at').eq('officer_id', officerId).maybeSingle(),
           ]);
 
@@ -577,27 +627,18 @@ export const adminOfficersApi = baseApi.injectEndpoints({
             if (error) throw error;
           }
 
-          const { data: existing } = await client
-            .from('officer_onboarding')
-            .select('data')
-            .eq('officer_id', id)
-            .maybeSingle();
+          const onboardingPatch: Partial<OnboardingData> = {};
+          if (education !== undefined) onboardingPatch.education = education;
+          if (backgroundInfo !== undefined) onboardingPatch.backgroundInfo = backgroundInfo;
+          if (positionApplied !== undefined) onboardingPatch.positionApplied = positionApplied;
+          if (expectedSalary !== undefined) onboardingPatch.expectedSalary = expectedSalary;
+          if (joiningDatePreference !== undefined) {
+            onboardingPatch.joiningDatePreference = joiningDatePreference;
+          }
 
-          const prev = parseOnboardingData(existing?.data);
-          const nextData = {
-            ...prev,
-            education: education ?? prev.education,
-            backgroundInfo: backgroundInfo ?? prev.backgroundInfo,
-            positionApplied: positionApplied ?? prev.positionApplied,
-            expectedSalary: expectedSalary ?? prev.expectedSalary,
-            joiningDatePreference: joiningDatePreference ?? prev.joiningDatePreference,
-          };
-
-          await client.from('officer_onboarding').upsert({
-            officer_id: id,
-            data: nextData,
-            updated_at: new Date().toISOString(),
-          });
+          if (Object.keys(onboardingPatch).length) {
+            await saveOfficerOnboardingData(client, id, onboardingPatch);
+          }
         },
       }),
       invalidatesTags: (_r, _e, { id }) => [{ type: 'Officers', id }, 'Officers'],
@@ -623,28 +664,16 @@ export const adminOfficersApi = baseApi.injectEndpoints({
           }
 
           if (bankDetails) {
-            await client.from('officer_bank_details').upsert({
-              officer_id: id,
-              bank_name: bankDetails.bankName,
-              account_holder_name: bankDetails.accountHolderName,
-              account_number: bankDetails.accountNumber,
-              ifsc_code: bankDetails.ifscCode,
-              updated_at: new Date().toISOString(),
+            const { data, error } = await client.functions.invoke('admin-officer-bank', {
+              body: { action: 'save', officerId: id, bankDetails },
             });
+            if (error) throw error;
+            const result = data as { error?: string };
+            if (result?.error) throw new Error(result.error);
           }
 
           if (emergencyContacts) {
-            const { data: existing } = await client
-              .from('officer_onboarding')
-              .select('data')
-              .eq('officer_id', id)
-              .maybeSingle();
-            const prev = parseOnboardingData(existing?.data);
-            await client.from('officer_onboarding').upsert({
-              officer_id: id,
-              data: { ...prev, emergencyContacts },
-              updated_at: new Date().toISOString(),
-            });
+            await saveOfficerOnboardingData(client, id, { emergencyContacts });
           }
         },
       }),
@@ -692,6 +721,14 @@ export const adminOfficersApi = baseApi.injectEndpoints({
           if (joiningDate !== undefined) updates.joining_date = joiningDate || null;
           const { error } = await client.from('officers').update(updates).eq('id', id);
           if (error) throw error;
+
+          // Role assignment is a privilege change — record it for the audit trail.
+          await client.from('audit_logs').insert({
+            action: 'officer_role_updated',
+            target_entity: id,
+            new_values: { role_id: roleId ?? null },
+            status: 'SUCCESS',
+          });
         },
       }),
       invalidatesTags: (_r, _e, { id }) => [{ type: 'Officers', id }, 'Officers'],
@@ -943,6 +980,43 @@ export const adminOfficersApi = baseApi.injectEndpoints({
       }),
     }),
 
+    revealOfficerBank: builder.mutation<
+      {
+        bankName: string | null;
+        accountHolderName: string | null;
+        accountNumber: string | null;
+        ifscCode: string | null;
+      },
+      { officerId: string }
+    >({
+      query: ({ officerId }) => ({
+        handler: async (client) => {
+          const { data, error } = await client.functions.invoke('admin-officer-bank', {
+            body: { action: 'reveal', officerId },
+          });
+          if (error) throw error;
+          const result = data as {
+            bankDetails?: {
+              bankName: string | null;
+              accountHolderName: string | null;
+              accountNumber: string | null;
+              ifscCode: string | null;
+            } | null;
+            error?: string;
+          };
+          if (result.error) throw new Error(result.error);
+          return (
+            result.bankDetails ?? {
+              bankName: null,
+              accountHolderName: null,
+              accountNumber: null,
+              ifscCode: null,
+            }
+          );
+        },
+      }),
+    }),
+
     resetOfficerPassword: builder.mutation<
       { loginEmail: string; password: string },
       { officerId: string; newPassword?: string }
@@ -1054,6 +1128,7 @@ export const {
   useUploadAdditionalOfficerDocumentMutation,
   useDeleteOfficerDocumentMutation,
   useRevealOfficerPasswordMutation,
+  useRevealOfficerBankMutation,
   useResetOfficerPasswordMutation,
   useGetOfficerPerformanceQuery,
   useGetOfficerPayslipsQuery,

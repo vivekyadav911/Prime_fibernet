@@ -36,7 +36,6 @@ export function useAdminRequests() {
   const {
     data: fetchedRequests,
     isLoading,
-    isFetching,
     isError,
     error,
     refetch,

@@ -129,7 +129,7 @@ function LiveOperationsSummary({
     <View style={styles.summaryCard}>
       <View style={styles.summaryHeader}>
         <View style={styles.summaryTitleRow}>
-          <Text style={styles.summaryTitle}>Today's Attendance</Text>
+          <Text style={styles.summaryTitle}>Today&apos;s Attendance</Text>
           <LivePulse />
         </View>
         <Text style={styles.summarySync}>{formatRelativeSync(lastSync)}</Text>

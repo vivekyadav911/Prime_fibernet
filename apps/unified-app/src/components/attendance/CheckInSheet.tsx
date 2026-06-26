@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
 } from 'react-native';
 import { Circle, Marker, Polygon } from 'react-native-maps';
 import { Button } from '@prime/ui';

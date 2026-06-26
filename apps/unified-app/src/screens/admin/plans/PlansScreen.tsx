@@ -65,7 +65,6 @@ export function PlansScreen({ navigation }: Props) {
     filters,
     updateFilters,
     resetFilters,
-    activeFilterCount,
     viewMode,
     setViewMode,
     loading,

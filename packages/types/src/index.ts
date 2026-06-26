@@ -244,30 +244,13 @@ export const CompanySettingsSchema = z.object({
 
 export type CompanySettings = z.infer<typeof CompanySettingsSchema>;
 
+/**
+ * Seeded development credentials for the dev-only "Login as <role>" buttons.
+ * These map to REAL Supabase auth users created by scripts/seed-dev-users.mjs.
+ * The buttons perform an actual sign-in — there is no mock/fake session.
+ */
 export const DEV_AUTH_CREDENTIALS = {
   customer: { email: 'dev-customer@prime.local', password: 'DevPassword123!' },
   officer: { email: 'dev-officer@prime.local', password: 'DevPassword123!' },
   admin: { email: 'dev-admin@prime.local', password: 'DevPassword123!' },
 } as const;
-
-/** Stable IDs aligned with scripts/seed-dev-users.mjs for when Supabase is wired up. */
-export const DEV_MOCK_USERS: Record<AppRole, { id: string; email: string; name: string; role: AppRole }> = {
-  customer: {
-    id: '11111111-1111-1111-1111-111111111101',
-    email: 'dev-customer@prime.local',
-    name: 'Dev Customer',
-    role: 'customer',
-  },
-  officer: {
-    id: '11111111-1111-1111-1111-111111111102',
-    email: 'dev-officer@prime.local',
-    name: 'Dev Officer',
-    role: 'officer',
-  },
-  admin: {
-    id: '11111111-1111-1111-1111-111111111103',
-    email: 'dev-admin@prime.local',
-    name: 'Dev Admin',
-    role: 'admin',
-  },
-};

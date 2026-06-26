@@ -50,7 +50,6 @@ export function NotificationsScreen({ navigation, route }: Props) {
     drafts,
     sentHistory,
     sentCount,
-    draftCount,
     filters,
     updateFilters,
     resetFilters,

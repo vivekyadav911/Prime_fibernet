@@ -252,7 +252,7 @@ export type AdminOfficersStackParamList = {
 
 export type AdminAttendanceStackParamList = {
   LiveAttendance: undefined;
-  Attendance: undefined;
+  AttendanceHub: undefined;
   CheckInExceptions: undefined;
   AttendanceRecords: undefined;
   CompletedShifts: undefined;
@@ -266,7 +266,7 @@ export type AdminAttendanceStackParamList = {
 };
 
 export type AdminPayrollStackParamList = {
-  Payroll: undefined;
+  PayrollHome: undefined;
   PayslipsManagement: undefined;
   PayslipReview: {
     officerId: string;
@@ -324,6 +324,7 @@ export type AdminNotificationsStackParamList = {
     prefill?: import('@/types/notifications').CreateNotificationFormData;
   };
   NotificationDetail: { notificationId: string };
+  AutomaticNotifications: undefined;
 };
 
 export type AdminPaymentsStackParamList = {
@@ -341,6 +342,9 @@ export type AdminInvoicesStackParamList = {
   InvoiceList: undefined;
   InvoiceHistory: undefined;
   ManualGstInvoice: undefined;
+  CreateInvoice: { invoiceType?: 'non_gst' | 'gst' | 'custom_gst' } | undefined;
+  InvoiceSettings: undefined;
+  InvoicePdfViewer: { storagePath: string; title?: string; fileName?: string };
 };
 
 export type AdminInventoryStackParamList = {
@@ -470,7 +474,9 @@ export type RootStackParamList = {
 };
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- required by React Navigation type augmentation
   namespace ReactNavigation {
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- augmentation merges RootStackParamList
     interface RootParamList extends RootStackParamList {}
   }
 }

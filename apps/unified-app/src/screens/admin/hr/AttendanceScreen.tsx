@@ -11,7 +11,7 @@ import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 
-type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'Attendance'>;
+type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'AttendanceHub'>;
 
 export function AttendanceScreen({ navigation }: Props) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));

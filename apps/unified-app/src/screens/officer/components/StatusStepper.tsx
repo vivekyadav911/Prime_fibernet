@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '@/theme/colors';
-import { radius, shadow, spacing } from '@/theme/spacing';
+import { spacing } from '@/theme/spacing';
 
 const STEPS = [
   { key: 'pending', label: 'Pending' },

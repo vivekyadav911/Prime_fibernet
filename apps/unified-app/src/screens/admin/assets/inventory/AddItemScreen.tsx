@@ -11,7 +11,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
 import { FormField, RoleGuard, SelectField } from '@/components/admin';
-import { SkeletonLoader } from '@/components/common';
 import { useInventoryForm } from '@/hooks/useInventoryForm';
 import { fetchCategories } from '@/services/inventoryService';
 import { useAppDispatch } from '@/store/hooks';

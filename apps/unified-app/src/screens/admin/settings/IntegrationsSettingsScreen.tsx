@@ -11,7 +11,6 @@ import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useGetFullAdminSettingsQuery,
   useTestEmailSettingsMutation,
-  useUpdateCompanySettingsMutation,
   useUpdateEmailSettingsMutation,
   useUpdateFeatureFlagsMutation,
   useUpdatePaymentGatewaySettingsMutation,

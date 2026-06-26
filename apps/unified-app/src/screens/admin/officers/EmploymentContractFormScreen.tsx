@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -17,7 +16,7 @@ import { Button, Screen } from '@prime/ui';
 
 import { CollapsibleFormSection } from '@/components/admin/employment/CollapsibleFormSection';
 import { DateField, FilterChips, FormField, RoleGuard, SelectField } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { DismissKeyboardScrollView, ErrorState, KeyboardDismissView, SkeletonLoader } from '@/components/common';
 import { buildDefaultFormValues, EMPLOYMENT_TYPE_OPTIONS, WEEKLY_OFF_OPTIONS } from '@/constants/employmentContractDefaults';
 import { useCompanyDefaults } from '@/hooks/useCompanyDefaults';
 import { useEmploymentContract } from '@/hooks/useEmploymentContract';
@@ -172,7 +171,8 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <KeyboardDismissView style={styles.flex}>
+            <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
             <Text style={styles.pageTitle}>Employment Contract</Text>
             <Text style={styles.subtitle}>{profile.fullName}</Text>
 
@@ -378,7 +378,7 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
             </CollapsibleFormSection>
 
             <View style={styles.bottomPad} />
-          </ScrollView>
+            </DismissKeyboardScrollView>
 
           <View style={styles.footer}>
             <Button
@@ -393,6 +393,7 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
               disabled={(!canGenerate && submitting !== 'generate') || submitting === 'generate' || finalizing}
             />
           </View>
+          </KeyboardDismissView>
         </KeyboardAvoidingView>
       </Screen>
     </RoleGuard>

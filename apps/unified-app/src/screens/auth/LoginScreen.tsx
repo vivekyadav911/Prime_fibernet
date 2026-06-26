@@ -16,12 +16,17 @@ import { devQuickSignIn, signInWithPassword, useBiometricLogin } from '@/hooks/u
 import { LoadingOverlay } from '@/components/common';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setError } from '@/store/slices/authSlice';
+import { getEnvConfig } from '@/services/env';
 
 const DEV_ROLES: { role: AppRole; label: string; description: string }[] = [
   { role: 'customer', label: 'Customer', description: 'Plans, payments & support' },
   { role: 'officer', label: 'Officer', description: 'Field jobs, shifts & inventory' },
   { role: 'admin', label: 'Admin', description: 'Users, analytics & settings' },
 ];
+
+// Dev-only role shortcuts are gated strictly to development builds. They perform
+// a REAL Supabase sign-in with seeded accounts — never a fake/skipped session.
+const showDevQuickSignIn = getEnvConfig().appEnv === 'development';
 
 type FormData = z.infer<typeof LoginSchema>;
 
@@ -53,9 +58,9 @@ export function LoginScreen() {
     setDevLoading(role);
     dispatch(setError(null));
     try {
-      await devQuickSignIn(dispatch, role);
+      await devQuickSignIn(role);
     } catch {
-      dispatch(setError(`Could not sign in as ${role}. Try again.`));
+      dispatch(setError(`Could not sign in as ${role}. Is the seeded account created (pnpm seed:dev-users)?`));
     } finally {
       setDevLoading(null);
     }
@@ -105,15 +110,15 @@ export function LoginScreen() {
       ) : null}
       <Button label="Create account" variant="ghost" onPress={() => navigation.navigate('Register')} />
       <Button label="Forgot password" variant="ghost" onPress={() => navigation.navigate('ForgotPassword')} />
-      {__DEV__ ? (
+      {showDevQuickSignIn ? (
         <View style={styles.devSection}>
-          <Text style={styles.devLabel}>Quick sign in by role</Text>
-          <Text style={styles.devHint}>Preview each app experience — no account setup needed yet.</Text>
+          <Text style={styles.devLabel}>Dev quick sign in</Text>
+          <Text style={styles.devHint}>Real sign-in with seeded test accounts (development only).</Text>
           <View style={styles.devButtons}>
             {DEV_ROLES.map(({ role, label, description }) => (
               <Button
                 key={role}
-                label={devLoading === role ? 'Opening…' : `${label} — ${description}`}
+                label={devLoading === role ? 'Signing in…' : `Login as ${label} — ${description}`}
                 variant="secondary"
                 onPress={() => onDevSignIn(role)}
                 style={styles.devBtn}

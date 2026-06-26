@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  Keyboard,
   Modal,
   Pressable,
   StyleSheet,
@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SearchBar, StatusBadge } from '@/components/admin';
-import { ErrorState } from '@/components/common';
+import { DismissKeyboardFlatList, ErrorState } from '@/components/common';
 import { fetchRequests } from '@/services/requestsService';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -81,11 +81,23 @@ export function LinkRequestModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={[styles.backdrop, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        <View style={styles.card}>
+      <Pressable
+        style={[styles.backdrop, { paddingTop: insets.top }]}
+        onPress={() => {
+          Keyboard.dismiss();
+          onClose();
+        }}
+      >
+        <Pressable
+          style={[styles.card, { paddingBottom: insets.bottom + spacing.md }]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <View style={styles.header}>
             <Text style={styles.title}>Link to Existing Request</Text>
-            <Pressable onPress={onClose} hitSlop={8}>
+            <Pressable
+              onPress={onClose}
+              hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+            >
               <Text style={styles.close}>✕</Text>
             </Pressable>
           </View>
@@ -109,7 +121,7 @@ export function LinkRequestModal({
           ) : error ? (
             <ErrorState message={error} onRetry={load} />
           ) : (
-            <FlatList
+            <DismissKeyboardFlatList
               data={filtered}
               keyExtractor={(item) => item.id}
               style={styles.list}
@@ -126,8 +138,8 @@ export function LinkRequestModal({
               )}
             />
           )}
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
