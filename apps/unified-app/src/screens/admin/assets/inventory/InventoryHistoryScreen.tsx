@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button, Screen } from '@prime/ui';
 
 import { HistoryCard, HistoryListRow } from '@/components/Inventory';
-import { AdminEmptyState, RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, AdminEmptyState, RoleGuard } from '@/components/admin';
 import { DateRangePicker } from '@/components/common/pickers';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useInventoryHistory } from '@/hooks/useInventoryHistory';
@@ -211,7 +211,7 @@ export function InventoryHistoryScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SectionList
           sections={sections}
           keyExtractor={(entry) => entry.id}
@@ -396,7 +396,7 @@ export function InventoryHistoryScreen({ navigation }: Props) {
             </Pressable>
           </Pressable>
         </Modal>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

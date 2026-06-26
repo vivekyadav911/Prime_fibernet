@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
-import { FormField } from '@/components/admin';
+import { AdminScreenLayout, FormField } from '@/components/admin';
 import { GatewayCard } from '@/components/payments';
 import { DismissKeyboardScrollView, ErrorState, FullScreenModalShell, KeyboardDismissView, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import { useGateways } from '@/hooks/usePayments';
@@ -93,11 +93,11 @@ export function GatewayConfigScreen() {
     }
   };
 
-  if (isLoading) return <Screen style={adminScreenStyles.canvas}><SkeletonLoader rows={5} /></Screen>;
-  if (isError) return <Screen style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <AdminScreenLayout><SkeletonLoader rows={5} /></AdminScreenLayout>;
+  if (isError) return <AdminScreenLayout><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></AdminScreenLayout>;
 
   return (
-    <Screen style={[adminScreenStyles.canvas, styles.screenPadding]}>
+    <AdminScreenLayout>
       <Text style={styles.title}>Payment Gateways</Text>
       <Text style={styles.sub}>Configure your payment providers</Text>
       <DismissKeyboardScrollView>
@@ -143,7 +143,7 @@ export function GatewayConfigScreen() {
           </DismissKeyboardScrollView>
         </KeyboardDismissView>
       </FullScreenModalShell>
-    </Screen>
+    </AdminScreenLayout>
   );
 }
 

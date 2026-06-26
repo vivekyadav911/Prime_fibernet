@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Screen } from '@prime/ui';
 
-import { FormField, RoleGuard } from '@/components/admin';
+
+import { AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
 import { SalaryTotalDisplay } from '@/components/admin/officers';
 import {
   SaveButton,
@@ -115,11 +115,11 @@ export function OfficerSalaryScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SettingsHubLayout activeRoute="OfficerSalary">
           <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
         </SettingsHubLayout>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

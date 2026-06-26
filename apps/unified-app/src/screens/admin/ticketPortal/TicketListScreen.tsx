@@ -11,11 +11,11 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Screen } from '@prime/ui';
+
 
 import { TicketCard, TicketFilterSheet } from '@/components/TicketPortal';
 import { StatsCard } from '@/components/support';
-import { AdminEmptyState, FilterChips, RoleGuard, SearchBar, SelectField } from '@/components/admin';
+import { AdminScreenLayout, AdminEmptyState, FilterChips, RoleGuard, SearchBar, SelectField } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useTickets } from '@/hooks/useTickets';
 import { useGetSupportDashboardStatsQuery } from '@/services/api/adminSupportApi';
@@ -101,23 +101,23 @@ export function TicketListScreen({ navigation }: Props) {
 
   if (loading && !refreshing) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (error && !allTickets.length) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={error} onRetry={onRefresh} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.header}>
           <Text style={styles.title}>All Tickets</Text>
           <View style={styles.countBadge}>
@@ -208,7 +208,7 @@ export function TicketListScreen({ navigation }: Props) {
             setFilterSheetVisible(false);
           }}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

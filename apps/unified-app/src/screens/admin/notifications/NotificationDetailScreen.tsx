@@ -12,10 +12,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
 import { DeliveryAnalyticsCard, formatScheduleDisplay } from '@/components/Notifications';
-import { RoleGuard, SectionCard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   deleteFromHistory,
@@ -116,17 +116,17 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
 
   if (loading) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (error || !notification) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={error ?? 'Not found'} onRetry={load} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -142,7 +142,7 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="notifications.view">
-      <Screen style={adminScreenStyles.canvas} padded={false}>
+      <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={styles.headerCard}>
             <Text style={styles.title}>{notification.title}</Text>
@@ -321,7 +321,7 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
             </SectionCard>
           ) : null}
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

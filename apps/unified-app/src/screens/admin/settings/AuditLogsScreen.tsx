@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { format } from 'date-fns';
-import { Screen } from '@prime/ui';
 
-import { DateRangePicker, ExportButton, RoleGuard, SearchBar, StatusBadge } from '@/components/admin';
+
+import { AdminScreenLayout, DateRangePicker, ExportButton, RoleGuard, SearchBar, StatusBadge } from '@/components/admin';
 import { SaveButton, SettingsHubLayout, SettingsSelect, SettingsSection } from '@/components/admin/settings';
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import {
@@ -98,7 +98,7 @@ export function AuditLogsScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SettingsHubLayout activeRoute="AuditLogs">
           <ScrollView contentContainerStyle={styles.content}>
             <SettingsSection title="Filters">
@@ -119,7 +119,7 @@ export function AuditLogsScreen() {
             <SettingsSection title="Activity Logs">{listBody}</SettingsSection>
           </ScrollView>
         </SettingsHubLayout>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

@@ -12,14 +12,12 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import {
-  DateField,
+
+import { AdminScreenLayout, DateField,
   RoleGuard,
   SalaryTotalDisplay,
-  SelectField,
-} from '@/components/admin';
+  SelectField, } from '@/components/admin';
 import { DismissKeyboardScrollView } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
 import {
@@ -314,7 +312,7 @@ export function AddOfficerScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="officers.create">
-      <Screen keyboardDismiss={false} padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -907,7 +905,7 @@ export function AddOfficerScreen({ navigation }: Props) {
               </View>
             </DismissKeyboardScrollView>
         </KeyboardAvoidingView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
-import { Screen } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import {
   SaveButton,
   SettingsHubLayout,
@@ -98,11 +98,11 @@ export function AppearanceSettingsScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SettingsHubLayout activeRoute="Appearance">
           <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
         </SettingsHubLayout>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

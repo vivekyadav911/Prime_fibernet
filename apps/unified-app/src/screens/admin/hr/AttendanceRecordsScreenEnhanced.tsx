@@ -4,7 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
-import { DateField, RoleGuard, StatusBadge } from '@/components/admin';
+import { AdminScreenLayout, DateField, RoleGuard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAdminAttendance } from '@/hooks/attendance/useAdminAttendance';
 import { setAdminRecordsPrefs } from '@/store/slices/attendanceSlice';
@@ -340,17 +340,17 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
 
   if (isError) {
     return (
-      <Screen safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.stateCard}>
           <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
         </View>
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="attendance.view">
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         {viewMode === 'calendar' ? (
           <FlatList
             data={[]}
@@ -382,7 +382,7 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
             }
           />
         )}
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

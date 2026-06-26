@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
 import { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
+
 
 import { CreateTicketForm } from '@/components/TicketPortal';
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { useTickets } from '@/hooks/useTickets';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import type { AdminSupportStackParamList } from '@/types/navigation';
@@ -21,7 +21,7 @@ export function CreateTicketScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView>
           <CreateTicketForm
             linkedRequestId={route.params?.linkedRequestId}
@@ -30,7 +30,7 @@ export function CreateTicketScreen({ navigation, route }: Props) {
             onCreated={handleCreated}
           />
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

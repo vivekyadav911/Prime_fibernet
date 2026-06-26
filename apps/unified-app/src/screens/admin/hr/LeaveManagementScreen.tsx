@@ -3,7 +3,7 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
-import { RoleGuard, StatusBadge } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useLeaveRequests, useReviewLeave } from '@/hooks/attendance/useAdminAttendance';
 import type { LeaveRequestRecord } from '@/types/attendance';
@@ -100,7 +100,7 @@ export function LeaveManagementScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <Text style={styles.title}>Leave management</Text>
         <View style={styles.tabs}>
           {tabs.map((t) => (
@@ -119,7 +119,7 @@ export function LeaveManagementScreen(_props: Props) {
           refreshing={reviewing}
           onRefresh={refetch}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

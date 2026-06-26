@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
-import { FormField, RoleGuard, StatusBadge } from '@/components/admin';
+import { AdminScreenLayout, FormField, RoleGuard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePayrollDashboard } from '@/hooks/usePayrollDashboard';
 import { adminColors } from '@/theme/admin';
@@ -124,23 +124,23 @@ export function PayrollScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="payroll.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.toolbar}>
           <FormField
             label="Month"
@@ -216,7 +216,7 @@ export function PayrollScreen({ navigation }: Props) {
             <Text style={styles.empty}>No officers found</Text>
           }
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { Button, Screen } from '@prime/ui';
+import { Button } from '@prime/ui';
 
-import { RoleGuard, SectionCard } from '@/components/admin';
+import { RoleGuard, AdminScreenLayout, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import { useGetAdminRolesQuery, useUpdateRolePermissionsMutation } from '@/store/api/endpoints';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -42,17 +42,17 @@ export function RoleManagementScreen() {
 
   if (isLoading) {
     return (
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={6} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -60,13 +60,7 @@ export function RoleManagementScreen() {
 
   return (
     <RoleGuard requiredPermission="roles.view">
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[adminScreenStyles.listContent, styles.scrollContent]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+      <AdminScreenLayout scroll>
           <ScrollView
             horizontal
             nestedScrollEnabled
@@ -102,19 +96,12 @@ export function RoleManagementScreen() {
           <RoleGuard requiredPermission="roles.edit">
             <Button label="Save changes" onPress={() => void onSave()} />
           </RoleGuard>
-        </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingTop: spacing.md,
-  },
   roleRow: {
     gap: spacing.sm,
     paddingBottom: spacing.md,

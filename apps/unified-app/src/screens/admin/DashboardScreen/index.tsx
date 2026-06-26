@@ -2,9 +2,9 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
-import { Screen } from '@prime/ui';
 
-import { QuickAccessGrid, type QuickAccessItem } from '@/components/admin';
+
+import { AdminScreenLayout, QuickAccessGrid, type QuickAccessItem } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useNotificationsDashboardStats } from '@/hooks/useNotificationHub';
 import { usePlansDashboardStats } from '@/hooks/usePlans';
@@ -247,22 +247,22 @@ export function DashboardScreen() {
 
   if (kpisLoading || rechargeLoading) {
     return (
-      <Screen safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} shape="card" />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (rechargeError) {
     return (
-      <Screen safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(rechargeError)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
-    <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+    <AdminScreenLayout>
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
@@ -326,7 +326,7 @@ export function DashboardScreen() {
           <RecentActivitiesSection activities={activities} />
         </AccordionRow>
       </ScrollView>
-    </Screen>
+    </AdminScreenLayout>
   );
 }
 

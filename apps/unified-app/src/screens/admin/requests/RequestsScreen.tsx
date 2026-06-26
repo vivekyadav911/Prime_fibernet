@@ -14,13 +14,11 @@ import { AssignOfficerModal } from '@/components/Requests/AssignOfficerModal';
 import { ExportRequestsModal } from '@/components/Requests/ExportRequestsModal';
 import { RequestCard } from '@/components/Requests/RequestCard';
 import { RequestDetailModal } from '@/screens/admin/requests/RequestDetailModal';
-import {
-  AdminEmptyState,
+import { AdminScreenLayout, AdminEmptyState,
   FilterChips,
   RoleGuard,
   SearchBar,
-  SelectField,
-} from '@/components/admin';
+  SelectField, } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAdminRequests } from '@/hooks/useAdminRequests';
 import { adminColors } from '@/theme/admin';
@@ -141,7 +139,7 @@ export function RequestsScreen() {
 
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Requests</Text>
         </View>
@@ -226,7 +224,7 @@ export function RequestsScreen() {
           requests={allRequests}
           onClose={() => setExportVisible(false)}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

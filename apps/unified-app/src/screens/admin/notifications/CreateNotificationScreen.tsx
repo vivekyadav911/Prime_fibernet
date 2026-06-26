@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
 import {
   AudiencePickerSheet,
@@ -23,7 +23,7 @@ import {
   SendProgressModal,
   formatScheduleDisplay,
 } from '@/components/Notifications';
-import { RoleGuard, SectionCard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { SkeletonLoader, DismissKeyboardScrollView, ToggleSwitch } from '@/components/common';
 import { useCreateNotification } from '@/hooks/useCreateNotification';
 import { fetchNotificationById } from '@/services/broadcastNotificationService';
@@ -129,15 +129,15 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
 
   if (loadingExisting) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="notifications.create">
-      <Screen keyboardDismiss={false} style={adminScreenStyles.canvas} padded={false}>
+      <AdminScreenLayout>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -358,7 +358,7 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
         />
 
         <SendProgressModal visible={!!sendProgress} progress={sendProgress} />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

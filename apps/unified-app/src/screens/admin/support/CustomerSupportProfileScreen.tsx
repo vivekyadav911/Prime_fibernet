@@ -3,7 +3,7 @@ import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
-import { RoleGuard, SectionCard, StatusBadge } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, SectionCard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useCustomerSupport } from '@/hooks/useCustomerSupport';
 import { logCustomerInteraction } from '@/services/complaintService';
@@ -36,7 +36,7 @@ export function CustomerSupportProfileScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="users.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView>
           <SectionCard title="Account Overview">
             <Text style={styles.name}>{user.name}</Text>
@@ -126,7 +126,7 @@ export function CustomerSupportProfileScreen({ route, navigation }: Props) {
             />
           ) : null}
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

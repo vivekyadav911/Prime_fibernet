@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
-import { FormField, RoleGuard, SelectField } from '@/components/admin';
+import { AdminScreenLayout, FormField, RoleGuard, SelectField } from '@/components/admin';
 import { DismissKeyboardScrollView, ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetOfficersQuery } from '@/services/api/officersApi';
 import { useGetAdminUserDetailQuery, useUpdateAdminUserMutation } from '@/store/api/endpoints';
@@ -64,12 +64,12 @@ export function UserEditScreen({ route, navigation }: Props) {
     }
   };
 
-  if (isLoading) return <Screen style={adminScreenStyles.canvas}><SkeletonLoader rows={4} /></Screen>;
-  if (isError) return <Screen style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <AdminScreenLayout><SkeletonLoader rows={4} /></AdminScreenLayout>;
+  if (isError) return <AdminScreenLayout><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></AdminScreenLayout>;
 
   return (
     <RoleGuard requiredPermission="users.edit">
-      <Screen style={adminScreenStyles.canvas} keyboardDismiss={false}>
+      <AdminScreenLayout>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -93,7 +93,7 @@ export function UserEditScreen({ route, navigation }: Props) {
             <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
           </DismissKeyboardScrollView>
         </KeyboardAvoidingView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

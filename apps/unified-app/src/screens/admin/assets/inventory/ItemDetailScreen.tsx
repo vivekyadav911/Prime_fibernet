@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@prime/ui';
 
 import { StockProgressBar, StockStatusBadge } from '@/components/Inventory';
-import { RoleGuard, SectionCard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useInventoryItem } from '@/hooks/useInventoryItem';
 import { adminColors } from '@/theme/admin';
@@ -94,7 +94,7 @@ export function ItemDetailScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.identityCard}>
             <View style={styles.identityHeader}>
@@ -172,7 +172,7 @@ export function ItemDetailScreen({ navigation, route }: Props) {
             <DetailRow label="Last Updated" value={formatDateTime(item.updatedAt)} />
           </SectionCard>
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

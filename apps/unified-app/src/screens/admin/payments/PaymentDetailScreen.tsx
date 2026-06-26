@@ -1,3 +1,4 @@
+import { AdminScreenLayout } from '@/components/admin';
 import { useCallback } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -36,7 +37,7 @@ export function PaymentDetailScreen({ route, navigation }: Props) {
   }
 
   return (
-    <Screen style={[adminScreenStyles.canvas, styles.screenPadding]}>
+    <AdminScreenLayout>
       <ScrollView>
         <View style={styles.header}>
           <Text style={styles.number}>{payment.payment_number}</Text>
@@ -82,7 +83,7 @@ export function PaymentDetailScreen({ route, navigation }: Props) {
           />
         )}
       </ScrollView>
-    </Screen>
+    </AdminScreenLayout>
   );
 }
 

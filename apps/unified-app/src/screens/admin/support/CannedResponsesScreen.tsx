@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen, Button } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetCannedResponsesQuery, useUpsertCannedResponseMutation } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
@@ -47,7 +47,7 @@ export function CannedResponsesScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <FlatList
           data={grouped}
           keyExtractor={([cat]) => cat}
@@ -84,7 +84,7 @@ export function CannedResponsesScreen(_props: Props) {
             </View>
           </View>
         ) : null}
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

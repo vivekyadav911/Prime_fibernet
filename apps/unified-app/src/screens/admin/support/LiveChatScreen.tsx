@@ -5,7 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Screen } from '@prime/ui';
 
 import { AgentStatusToggle } from '@/components/support';
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAgentAvailability } from '@/hooks/useAgentAvailability';
 import { useOfficerId } from '@/hooks/useOfficerId';
@@ -94,7 +94,7 @@ export function LiveChatScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas} padded={false} safeAreaTop={false}>
+      <AdminScreenLayout>
         <View style={styles.container}>
           <View style={styles.toolbar}>
             <AgentStatusToggle status={status} onChange={updateStatus} loading={statusLoading} />
@@ -124,7 +124,7 @@ export function LiveChatScreen({ navigation }: Props) {
             }
           />
         </View>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

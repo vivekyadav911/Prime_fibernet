@@ -19,7 +19,7 @@ import {
   InventoryTableRow,
   StatCard,
 } from '@/components/Inventory';
-import { AdminEmptyState, RoleGuard, SearchBar } from '@/components/admin';
+import { AdminScreenLayout, AdminEmptyState, RoleGuard, SearchBar } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useInventory } from '@/hooks/useInventory';
 import { fetchCategories } from '@/services/inventoryService';
@@ -122,7 +122,7 @@ export function InventoryListScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.tabBar}>
           <Pressable
             style={[styles.tab, activeTab === 'requests' && styles.tabActive]}
@@ -241,7 +241,7 @@ export function InventoryListScreen({ navigation }: Props) {
             </View>
           ) : null}
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

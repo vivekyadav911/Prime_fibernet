@@ -30,7 +30,7 @@ export function TotpScreen() {
   };
 
   return (
-    <Screen>
+    <Screen safeAreaTop>
       <Text style={styles.title}>Admin two-factor authentication</Text>
       <Text style={styles.subtitle}>Enter the 6-digit code from your authenticator app</Text>
       <TextInput

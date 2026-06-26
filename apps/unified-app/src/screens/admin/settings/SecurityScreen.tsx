@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Screen } from '@prime/ui';
 
-import { RoleGuard, SearchBar, StatusBadge } from '@/components/admin';
+
+import { AdminScreenLayout, RoleGuard, SearchBar, StatusBadge } from '@/components/admin';
 import { SaveButton, SettingsHubLayout, SettingsRow, SettingsSection } from '@/components/admin/settings';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
@@ -119,11 +119,11 @@ export function SecurityScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SettingsHubLayout activeRoute="Security">
           <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
         </SettingsHubLayout>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

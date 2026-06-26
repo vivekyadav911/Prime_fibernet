@@ -8,9 +8,9 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import { FormField, RoleGuard, SelectField } from '@/components/admin';
+
+import { AdminScreenLayout, FormField, RoleGuard, SelectField } from '@/components/admin';
 import { useInventoryForm } from '@/hooks/useInventoryForm';
 import { fetchCategories } from '@/services/inventoryService';
 import { useAppDispatch } from '@/store/hooks';
@@ -50,7 +50,7 @@ export function AddItemScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Information</Text>
@@ -104,7 +104,7 @@ export function AddItemScreen({ navigation }: Props) {
             )}
           </Pressable>
         </View>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

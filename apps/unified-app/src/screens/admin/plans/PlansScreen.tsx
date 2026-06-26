@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Screen } from '@prime/ui';
+import { Button } from '@prime/ui';
 
 import {
   PlanCard,
@@ -22,8 +22,9 @@ import {
   PlanListRow,
   PlanStatsBar,
 } from '@/components/Plans';
-import { AdminEmptyState, RoleGuard, SearchBar } from '@/components/admin';
+import { AdminEmptyState, AdminScreenLayout, RoleGuard, SearchBar } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
+import { scrollLayoutStyles } from '@/components/common/scrollLayoutStyles';
 import { usePlans } from '@/hooks/usePlans';
 import { getPlanDeactivationNotificationPrefill } from '@/services/planService';
 import { useAppDispatch } from '@/store/hooks';
@@ -357,9 +358,9 @@ export function PlansScreen({ navigation }: Props) {
   if (loading && !refreshing) {
     return (
       <RoleGuard requiredPermission="plans.view">
-        <Screen style={adminScreenStyles.canvas}>
+        <AdminScreenLayout>
           <SkeletonLoader rows={4} shape="card" />
-        </Screen>
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
@@ -367,25 +368,26 @@ export function PlansScreen({ navigation }: Props) {
   if (error && !allPlans.length) {
     return (
       <RoleGuard requiredPermission="plans.view">
-        <Screen style={adminScreenStyles.canvas}>
+        <AdminScreenLayout>
           <ErrorState message={error} onRetry={onRefresh} />
-        </Screen>
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
 
   return (
     <RoleGuard requiredPermission="plans.view">
-      <Screen style={adminScreenStyles.canvas} padded={false}>
+      <AdminScreenLayout>
         {viewMode === 'grid' ? (
           <FlatList
             key={`grid-${numColumns}`}
+            style={scrollLayoutStyles.scrollContainer}
             data={plans}
             numColumns={numColumns}
             keyExtractor={(item) => item.id}
             renderItem={renderGridItem}
             ListHeaderComponent={listHeader}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={adminScreenStyles.listContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             ListEmptyComponent={
               <AdminEmptyState
@@ -406,11 +408,12 @@ export function PlansScreen({ navigation }: Props) {
         ) : (
           <FlatList
             key="list"
+            style={scrollLayoutStyles.scrollContainer}
             data={plans}
             keyExtractor={(item) => item.id}
             renderItem={renderListItem}
             ListHeaderComponent={listHeader}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={adminScreenStyles.listContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             ListEmptyComponent={
               <AdminEmptyState
@@ -441,19 +444,17 @@ export function PlansScreen({ navigation }: Props) {
             setSearchInput('');
           }}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  listContent: { paddingBottom: spacing.xxl },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.sm,
-    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -470,7 +471,6 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
     gap: spacing.xs,
     marginBottom: spacing.xs,
   },

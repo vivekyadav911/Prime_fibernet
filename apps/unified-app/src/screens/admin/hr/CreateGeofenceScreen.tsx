@@ -5,7 +5,7 @@ import { Button, Screen } from '@prime/ui';
 
 import { GeofenceLocationControls } from '@/components/attendance/GeofenceLocationControls';
 import { GeofenceLocationPicker } from '@/components/attendance/GeofenceLocationPicker';
-import { FormField, RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
 import { SkeletonLoader } from '@/components/common';
 import { useCreateGeofence, useGeofence, useUpdateGeofence } from '@/hooks/attendance/useAdminAttendance';
 import { reverseGeocode } from '@/services/GeocodingService';
@@ -123,7 +123,7 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.scroll}>
             <Text style={styles.title}>{isEdit ? 'Edit geofence' : 'Add geofence'}</Text>
@@ -175,7 +175,7 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
             />
           </ScrollView>
         </KeyboardAvoidingView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

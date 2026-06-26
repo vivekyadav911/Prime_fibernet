@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
-import { FormField, RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
 import { PayslipTimesheetCalendar } from '@/components/payroll/PayslipTimesheetCalendar';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePayslipCalculation } from '@/hooks/usePayslipCalculation';
@@ -134,17 +134,17 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
 
   if (isLoading || isCalculating || !payslip) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={10} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -153,7 +153,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="payroll.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={styles.summaryCard}>
             <Text style={styles.employeeName}>{payslip.employeeName}</Text>
@@ -283,7 +283,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
             </View>
           </View>
         </Modal>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

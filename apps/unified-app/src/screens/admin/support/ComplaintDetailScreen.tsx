@@ -3,7 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen, Button } from '@prime/ui';
 
-import { RoleGuard, SectionCard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetComplaintQuery } from '@/services/api/adminSupportApi';
 import { updateComplaint } from '@/services/complaintService';
@@ -36,7 +36,7 @@ export function ComplaintDetailScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SectionCard title={complaint.complaintNumber}>
           <Text style={styles.label}>Customer</Text>
           <Text style={styles.value}>{complaint.customerName}</Text>
@@ -61,7 +61,7 @@ export function ComplaintDetailScreen({ route, navigation }: Props) {
             onPress={() => navigation.navigate('TicketDetail', { ticketId: complaint.linkedTicketId! })}
           />
         ) : null}
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

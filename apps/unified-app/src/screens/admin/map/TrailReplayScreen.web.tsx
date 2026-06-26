@@ -1,8 +1,9 @@
+import { AdminScreenLayout } from '@/components/admin';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { format } from 'date-fns';
-import { Screen } from '@prime/ui';
+
 
 import { useGetLocationHistoryQuery, useGetOfficerDwellsQuery } from '@/services/api/officerTrackingApi';
 import type { AdminMapStackParamList } from '@/types/navigation';
@@ -48,7 +49,7 @@ export function TrailReplayScreen({ route, navigation }: Props) {
   }, []);
 
   return (
-    <Screen padded={false} style={adminScreenStyles.canvas}>
+    <AdminScreenLayout>
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()}>
           <Text style={styles.back}>← Back</Text>
@@ -109,7 +110,7 @@ export function TrailReplayScreen({ route, navigation }: Props) {
           </Pressable>
         )}
       />
-    </Screen>
+    </AdminScreenLayout>
   );
 }
 

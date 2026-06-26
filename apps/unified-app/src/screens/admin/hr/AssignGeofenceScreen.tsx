@@ -3,7 +3,7 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { SkeletonLoader } from '@/components/common';
 import { useAssignGeofence, useGeofence } from '@/hooks/attendance/useAdminAttendance';
 import { useGetOfficersQuery } from '@/store/api/endpoints';
@@ -55,7 +55,7 @@ export function AssignGeofenceScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <Text style={styles.title}>Assign officers — {geofence?.name}</Text>
         <FlatList
           data={filtered}
@@ -72,7 +72,7 @@ export function AssignGeofenceScreen({ route, navigation }: Props) {
           )}
         />
         <Button label={saving ? 'Saving…' : 'Save'} onPress={() => void handleSave()} disabled={saving} />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

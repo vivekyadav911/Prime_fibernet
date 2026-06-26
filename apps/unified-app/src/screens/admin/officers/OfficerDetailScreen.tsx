@@ -10,11 +10,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
+
 
 import { AdminHeaderButton, ADMIN_HEADER_ICON_SIZE } from '@/navigation/AdminHeaderButton';
-import {
-  DocumentLabelModal,
+import { AdminScreenLayout, DocumentLabelModal,
   DocumentRow,
   DocumentViewerModal,
   InfoRow,
@@ -22,8 +21,7 @@ import {
   PermissionPills,
   RoleGuard,
   SectionHeader,
-  useAdminPermission,
-} from '@/components/admin';
+  useAdminPermission, } from '@/components/admin';
 import { EmploymentContractTab } from '@/components/admin/employment/EmploymentContractTab';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
@@ -352,14 +350,14 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
     );
   };
 
-  if (isLoading) return <Screen safeAreaTop={false} style={adminScreenStyles.canvas}><SkeletonLoader rows={8} showAvatar /></Screen>;
-  if (isError || !summary) return <Screen safeAreaTop={false} style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <AdminScreenLayout><SkeletonLoader rows={8} showAvatar /></AdminScreenLayout>;
+  if (isError || !summary) return <AdminScreenLayout><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></AdminScreenLayout>;
 
   const p = profile;
 
   return (
     <RoleGuard requiredPermission="officers.view">
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.tabBar}>
           {tabs.map((t) => (
             <Pressable key={t.key} style={styles.tabItem} onPress={() => setTab(t.key)}>
@@ -536,7 +534,7 @@ export function OfficerDetailScreen({ route, navigation }: Props) {
           onCancel={() => setLabelModalVisible(false)}
           onSubmit={(label) => void handleLabelModalSubmit(label)}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

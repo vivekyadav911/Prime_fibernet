@@ -3,7 +3,7 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-nati
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
-import { DateField } from '@/components/admin';
+import { AdminScreenLayout, DateField } from '@/components/admin';
 import { AmountDisplay, DenominationInput, MethodIcon } from '@/components/payments';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePaymentDetail } from '@/hooks/usePayments';
@@ -76,7 +76,7 @@ export function PaymentReviewScreen({ route, navigation }: Props) {
   }
 
   return (
-    <Screen style={adminScreenStyles.canvas}>
+    <AdminScreenLayout>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Review — {payment.payment_number}</Text>
         <View style={styles.card}>
@@ -136,7 +136,7 @@ export function PaymentReviewScreen({ route, navigation }: Props) {
           />
         </View>
       </ScrollView>
-    </Screen>
+    </AdminScreenLayout>
   );
 }
 

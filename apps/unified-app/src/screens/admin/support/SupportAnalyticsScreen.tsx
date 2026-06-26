@@ -7,7 +7,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen, Button } from '@prime/ui';
 
 import { StatsCard, SupportStatsRow } from '@/components/support';
-import { FilterChips, RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, FilterChips, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useSupportAnalytics } from '@/hooks/useSupportAnalytics';
 import { adminColors } from '@/theme/admin';
@@ -60,7 +60,7 @@ export function SupportAnalyticsScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
+      <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <FilterChips options={PERIOD_OPTIONS} selected={period} onSelect={(v) => setPeriod(v as SupportAnalyticsPeriod)} />
 
@@ -97,7 +97,7 @@ export function SupportAnalyticsScreen(_props: Props) {
 
           <Button label="Export Report (.csv)" onPress={() => void handleExport()} style={styles.exportBtn} />
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

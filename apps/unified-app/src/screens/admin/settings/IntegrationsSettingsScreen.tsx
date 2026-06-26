@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
 import { ToggleSwitch } from '@/components/common';
 import type { PaymentGateway } from '@prime/types';
 
-import { FormField, RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
 import { SaveButton, SettingsHubLayout, SettingsSection } from '@/components/admin/settings';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
@@ -165,11 +165,11 @@ export function IntegrationsSettingsScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SettingsHubLayout activeRoute="Integrations">
           <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
         </SettingsHubLayout>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

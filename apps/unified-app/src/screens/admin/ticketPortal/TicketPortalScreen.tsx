@@ -2,11 +2,11 @@ import { useCallback, useRef } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatDistanceToNow } from 'date-fns';
-import { Screen } from '@prime/ui';
+
 
 import { CreateTicketForm } from '@/components/TicketPortal';
 import { PoolBadge, TicketStatusBadge } from '@/components/TicketPortal/TicketStatusBadge';
-import { RoleGuard, SectionCard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { useTickets } from '@/hooks/useTickets';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -56,7 +56,7 @@ export function TicketPortalScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll}>
           <SectionCard title="">
             <CreateTicketForm
@@ -85,7 +85,7 @@ export function TicketPortalScreen({ navigation, route }: Props) {
             renderItem={renderRecent}
           />
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

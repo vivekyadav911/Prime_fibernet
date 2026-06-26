@@ -3,7 +3,7 @@ import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useGetFaqCategoriesQuery,
@@ -47,7 +47,7 @@ export function FaqCategoriesScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <FlatList
           data={categories ?? []}
           keyExtractor={(item) => item.id}
@@ -58,7 +58,7 @@ export function FaqCategoriesScreen(_props: Props) {
             </Pressable>
           }
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

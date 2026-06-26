@@ -11,17 +11,15 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import {
-  AdminEmptyState,
+
+import { AdminScreenLayout, AdminEmptyState,
   ConfirmModal,
   OfficerActionMenu,
   OfficerCard,
   RoleGuard,
   useAdminPermission,
-  type OfficerMenuAction,
-} from '@/components/admin';
+  type OfficerMenuAction, } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
 import {
@@ -39,6 +37,7 @@ import { queryErrorMessage } from '@/utils/queryError';
 import { OfficerKpiCarousel } from './components/OfficerKpiCarousel';
 import { OfficerSearchFilters } from './components/OfficerSearchFilters';
 import { FAB_SIZE, OFFICER_CARD_GAP, ui } from './officersUi';
+import { spacing } from '@/theme/spacing';
 
 type Props = NativeStackScreenProps<AdminOfficersStackParamList, 'OfficerList'>;
 
@@ -196,23 +195,23 @@ export function OfficerListScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={6} showAvatar />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="officers.view">
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.page}>
           <View style={styles.pageInset}>{screenHeader}</View>
 
@@ -280,7 +279,7 @@ export function OfficerListScreen({ navigation }: Props) {
           onConfirm={() => void handleDelete()}
           onCancel={() => setDeleteTarget(null)}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }
@@ -291,8 +290,8 @@ const styles = StyleSheet.create({
   },
   headerBlock: {
     gap: ui.sectionGap,
-    paddingTop: 12,
-    paddingBottom: 4,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
   },
   listBody: {
     flex: 1,

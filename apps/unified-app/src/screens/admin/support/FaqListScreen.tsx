@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
+
 
 import { FaqCard } from '@/components/support';
-import { AdminEmptyState, FilterChips, RoleGuard, SearchBar } from '@/components/admin';
+import { AdminScreenLayout, AdminEmptyState, FilterChips, RoleGuard, SearchBar } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useDeleteFaqMutation,
@@ -109,23 +109,23 @@ export function FaqListScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={6} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas} padded={false} safeAreaTop={false}>
+      <AdminScreenLayout>
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title} numberOfLines={1}>
@@ -176,7 +176,7 @@ export function FaqListScreen({ navigation }: Props) {
             />
           )}
         </View>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

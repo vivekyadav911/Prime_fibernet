@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import { AdminKPICard, FilterChips, RoleGuard, SearchBar } from '@/components/admin';
+
+import { AdminScreenLayout, AdminKPICard, FilterChips, RoleGuard, SearchBar } from '@/components/admin';
 import { InvoiceListRow, SendInvoiceRecipientModal } from '@/components/invoices';
 import type { SendInvoiceRecipientPayload } from '@/components/invoices';
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
@@ -78,17 +78,17 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
 
   if (isLoading && !data) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -96,7 +96,7 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="invoices.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.header}>
           {statsLoading || !stats ? (
             <SkeletonLoader rows={1} rowHeight={72} shape="card" />
@@ -157,7 +157,7 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
           onClose={() => setSendTarget(null)}
           onSend={(payload) => void handleSendConfirm(payload)}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BarChart } from 'react-native-gifted-charts';
 import { Screen } from '@prime/ui';
 
-import { AdminKPICard } from '@/components/admin';
+import { AdminScreenLayout, AdminKPICard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePaymentAnalytics } from '@/hooks/usePayments';
 import { formatINR } from '@/utils/currencyFormat';
@@ -55,7 +55,7 @@ export function PaymentAnalyticsScreen() {
     totals.initiated > 0 ? Math.round((totals.confirmed / totals.initiated) * 100) : 0;
 
   return (
-    <Screen style={[adminScreenStyles.canvas, styles.screenPadding]}>
+    <AdminScreenLayout>
       <ScrollView>
         <View style={styles.kpiRow}>
           <AdminKPICard label="Collected" value={formatINR(totals.confirmedRevenue)} />
@@ -76,7 +76,7 @@ export function PaymentAnalyticsScreen() {
         <Text style={styles.chartTitle}>Payment methods</Text>
         <BarChart data={methodData} barWidth={40} spacing={24} height={160} yAxisTextStyle={styles.axis} />
       </ScrollView>
-    </Screen>
+    </AdminScreenLayout>
   );
 }
 

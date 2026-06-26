@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
+
 
 import {
   AgentStatusToggle,
@@ -11,7 +11,7 @@ import {
   SupportStatsRow,
 } from '@/components/support';
 import { TicketCard } from '@/components/TicketPortal';
-import { RoleGuard, SectionCard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAgentAvailability } from '@/hooks/useAgentAvailability';
 import { useChatSession } from '@/hooks/useChatSession';
@@ -69,23 +69,23 @@ export function SupportDashboardScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas} padded={false} safeAreaTop={false}>
+      <AdminScreenLayout>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
@@ -150,7 +150,7 @@ export function SupportDashboardScreen({ navigation }: Props) {
             )}
           </SectionCard>
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

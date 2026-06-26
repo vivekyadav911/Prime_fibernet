@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import { RoleGuard, useAdminPermission } from '@/components/admin';
+
+import { AdminScreenLayout, RoleGuard, useAdminPermission } from '@/components/admin';
 import { SignaturePadSheet } from '@/components/common/SignaturePadSheet';
 import { useCompanyDefaults } from '@/hooks/useCompanyDefaults';
 import { useEmploymentContract } from '@/hooks/useEmploymentContract';
@@ -49,16 +49,12 @@ export function EmploymentContractSignScreen({ route, navigation }: Props) {
   );
 
   if (!canEdit) {
-    return (
-      <RoleGuard requiredPermission="officers.edit">
-        <Screen style={adminScreenStyles.canvas} />
-      </RoleGuard>
-    );
+    return <RoleGuard requiredPermission="officers.edit">{null}</RoleGuard>;
   }
 
   return (
     <RoleGuard requiredPermission="officers.edit">
-      <Screen style={[adminScreenStyles.canvas, styles.padded]}>
+      <AdminScreenLayout>
         <View style={styles.card}>
           <Text style={styles.title}>Sign for Company</Text>
           <Text style={styles.subtitle}>
@@ -80,7 +76,7 @@ export function EmploymentContractSignScreen({ route, navigation }: Props) {
           onConfirm={handleConfirm}
           submitting={submittingSignature}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
-import { ExportButton, RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, ExportButton, RoleGuard } from '@/components/admin';
 import {
   SaveButton,
   SettingsHubLayout,
@@ -169,11 +169,11 @@ export function BackupExportScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SettingsHubLayout activeRoute="BackupExport">
           <ScrollView contentContainerStyle={styles.content}>{body}</ScrollView>
         </SettingsHubLayout>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

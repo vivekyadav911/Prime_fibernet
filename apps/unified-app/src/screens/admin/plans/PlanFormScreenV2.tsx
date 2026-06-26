@@ -10,9 +10,9 @@ import {
 } from 'react-native';
 import type { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
-import { FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
+import { AdminScreenLayout, FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
 import { DismissKeyboardScrollView, ToggleSwitch } from '@/components/common';
 import { usePlanForm } from '@/hooks/usePlanForm';
 import { fetchPlanById } from '@/services/planService';
@@ -122,15 +122,15 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
 
   if (loadingPlan) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ActivityIndicator size="large" color={adminColors.primary} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission={mode === 'edit' ? 'plans.edit' : 'plans.create'}>
-      <Screen keyboardDismiss={false} style={adminScreenStyles.canvas} padded={false}>
+      <AdminScreenLayout>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -322,7 +322,7 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
           </View>
           </View>
         </KeyboardAvoidingView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

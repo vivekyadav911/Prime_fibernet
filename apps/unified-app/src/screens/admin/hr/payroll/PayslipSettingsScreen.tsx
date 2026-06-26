@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Alert, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
-import { FormField, RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePayslipSettings } from '@/hooks/usePayslipSettings';
 import { adminColors } from '@/theme/admin';
@@ -42,17 +42,17 @@ export function PayslipSettingsScreen(_props: Props) {
 
   if (isLoading) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message="Could not load payslip settings" onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -65,7 +65,7 @@ export function PayslipSettingsScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="payroll.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
           {tabs.map((t) => (
             <Button
@@ -209,7 +209,7 @@ export function PayslipSettingsScreen(_props: Props) {
             </>
           ) : null}
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

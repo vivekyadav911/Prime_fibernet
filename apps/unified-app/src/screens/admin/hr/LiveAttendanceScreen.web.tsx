@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import { RoleGuard, StatusBadge } from '@/components/admin';
+
+import { AdminScreenLayout, RoleGuard, StatusBadge } from '@/components/admin';
 import { DismissKeyboardScrollView } from '@/components/common/DismissKeyboardScrollView';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { LiveOfficerMap } from '@/components/map/LiveOfficerMap.web';
@@ -339,17 +339,17 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={handleRefresh} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -357,7 +357,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.view">
-      <Screen padded={false} keyboardDismiss={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <DismissKeyboardScrollView
           contentContainerStyle={styles.scrollContent}
           refreshControl={
@@ -429,7 +429,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
             </View>
           </View>
         </DismissKeyboardScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

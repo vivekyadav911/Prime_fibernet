@@ -1,3 +1,4 @@
+import { AdminScreenLayout } from '@/components/admin';
 import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -45,7 +46,7 @@ export function RefundScreen({ route, navigation }: Props) {
   }
 
   return (
-    <Screen style={[adminScreenStyles.canvas, styles.screenPadding]}>
+    <AdminScreenLayout>
       <Text style={styles.title}>Refund — {payment.payment_number}</Text>
       <AmountDisplay amount={payment.total_amount} large />
       <Text style={styles.label}>REFUND AMOUNT</Text>
@@ -65,7 +66,7 @@ export function RefundScreen({ route, navigation }: Props) {
         placeholderTextColor={colors.textSecondary}
       />
       <Button label="Initiate refund" onPress={onSubmit} disabled={refunding} />
-    </Screen>
+    </AdminScreenLayout>
   );
 }
 

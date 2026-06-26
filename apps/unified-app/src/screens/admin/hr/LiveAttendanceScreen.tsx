@@ -4,9 +4,9 @@ import { Circle } from 'react-native-maps';
 import type MapView from 'react-native-maps';
 import type { LongPressEvent, MapPressEvent, Region } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import { RoleGuard, StatusBadge } from '@/components/admin';
+
+import { AdminScreenLayout, RoleGuard, StatusBadge } from '@/components/admin';
 import {
   FreeMapView,
   LiveOfficerMarker,
@@ -683,23 +683,23 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="attendance.view">
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <FlatList
           data={attendance ?? []}
           keyExtractor={(r) => r.id}
@@ -737,7 +737,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
             <Text style={styles.toolbarBtnText}>Records</Text>
           </Pressable>
         </View>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

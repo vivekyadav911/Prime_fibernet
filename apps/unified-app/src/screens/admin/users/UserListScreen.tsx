@@ -14,18 +14,16 @@ import {
 } from 'react-native';
 import type { ScrollView, FlatList } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import {
-  AdminEmptyState,
+
+import { AdminScreenLayout, AdminEmptyState,
   AdminWebLayout,
   AvatarIcon,
   Pagination,
   RoleGuard,
   SearchBar,
   StatusBadge,
-  useAdminPermission,
-} from '@/components/admin';
+  useAdminPermission, } from '@/components/admin';
 import { DismissKeyboardFlatList, DismissKeyboardScrollView, ErrorState, KeyboardDismissView, SkeletonLoader } from '@/components/common';
 import { useGetAdminUsersQuery } from '@/store/api/endpoints';
 import { fetchPlanById } from '@/services/planService';
@@ -405,23 +403,23 @@ export function UserListScreen({ navigation, route }: Props) {
 
   if (isLoading) {
     return (
-      <Screen safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={10} showAvatar />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="users.view">
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -612,7 +610,7 @@ export function UserListScreen({ navigation, route }: Props) {
             </AdminWebLayout>
           </KeyboardDismissView>
         </KeyboardAvoidingView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

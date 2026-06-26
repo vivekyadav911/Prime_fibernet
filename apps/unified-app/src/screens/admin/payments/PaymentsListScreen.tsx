@@ -1,16 +1,17 @@
+import { AdminScreenLayout } from '@/components/admin';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput } from 'react-native';
+import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
+
 
 import { PaymentCard, PaymentFilterBar, type PaymentFilterState } from '@/components/payments';
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { useCollectionAssignmentsSync } from '@/hooks/admin/useCollectionAssignmentsSync';
 import { usePayments } from '@/hooks/usePayments';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
-import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
+import { adminDesign, adminInputStyle } from '@/theme/adminDesign';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -56,45 +57,67 @@ export function PaymentsListScreen() {
   );
 
   const listHeader = (
-    <>
+    <View style={adminScreenStyles.listHeader}>
       <PaymentsOverviewSection
         filters={filters}
         pendingSum={data?.pendingSum}
         onFilterPendingReview={onFilterPendingReview}
       />
-      <Text style={styles.sectionTitle}>Transactions</Text>
-      <Text style={styles.subtitle}>Review collections, confirm cash, and track online payments</Text>
-      <TextInput
-        style={styles.search}
-        placeholder="Search payment no., customer, account…"
-        value={filters.search}
-        onChangeText={(search) => setFilters((f) => ({ ...f, search }))}
-        placeholderTextColor={colors.textSecondary}
-      />
-      <PaymentFilterBar value={filters} onChange={setFilters} />
-    </>
+      <View style={styles.transactionsHeader}>
+        <Text style={styles.sectionTitle}>Transactions</Text>
+        <Text style={styles.subtitle}>Review collections, confirm cash, and track online payments</Text>
+        <TextInput
+          style={styles.search}
+          placeholder="Search payment no., customer, account…"
+          value={filters.search}
+          onChangeText={(search) => setFilters((f) => ({ ...f, search }))}
+          placeholderTextColor={adminDesign.colors.textMuted}
+        />
+        <PaymentFilterBar value={filters} onChange={setFilters} />
+      </View>
+    </View>
   );
 
   if (isLoading) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
-        {listHeader}
-        <SkeletonLoader rows={6} />
-      </Screen>
+      <AdminScreenLayout>
+        <FlatList
+          data={[]}
+          keyExtractor={() => 'loading'}
+          ListHeaderComponent={
+            <>
+              {listHeader}
+              <SkeletonLoader rows={6} />
+            </>
+          }
+          contentContainerStyle={adminScreenStyles.listContent}
+          renderItem={() => null}
+        />
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
-        {listHeader}
-        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      <AdminScreenLayout>
+        <FlatList
+          data={[]}
+          keyExtractor={() => 'error'}
+          ListHeaderComponent={
+            <>
+              {listHeader}
+              <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+            </>
+          }
+          contentContainerStyle={adminScreenStyles.listContent}
+          renderItem={() => null}
+        />
+      </AdminScreenLayout>
     );
   }
 
   return (
-    <Screen style={adminScreenStyles.canvas}>
+    <AdminScreenLayout>
       <FlatList
         data={rows}
         keyExtractor={(item) => item.id}
@@ -108,23 +131,22 @@ export function PaymentsListScreen() {
         renderItem={({ item }) => (
           <PaymentCard payment={item} onPress={() => onOpen(item.id, item.status)} />
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={adminScreenStyles.listContent}
+        showsVerticalScrollIndicator={false}
       />
-    </Screen>
+    </AdminScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  listContent: { padding: spacing.md, paddingTop: 0 },
-  sectionTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xs },
-  subtitle: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.md },
+  transactionsHeader: {
+    gap: spacing.sm,
+  },
+  sectionTitle: adminDesign.typography.sectionTitle,
+  subtitle: adminDesign.typography.meta,
   search: {
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    borderRadius: 8,
-    padding: spacing.sm,
-    marginBottom: spacing.sm,
-    backgroundColor: colors.surfaceWhite,
+    ...adminInputStyle,
+    fontSize: adminDesign.input.fontSize,
     color: colors.textPrimary,
   },
 });

@@ -3,7 +3,7 @@ import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
-import { AdminEmptyState, FilterChips, RoleGuard, StatusBadge } from '@/components/admin';
+import { AdminScreenLayout, AdminEmptyState, FilterChips, RoleGuard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useApprovalRequests,
@@ -387,17 +387,17 @@ export function ApprovalRequestsScreen(_props: Props) {
 
   if (isError) {
     return (
-      <Screen safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.stateCard}>
           <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
         </View>
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <FlatList
           data={records}
           keyExtractor={(r) => r.id}
@@ -421,7 +421,7 @@ export function ApprovalRequestsScreen(_props: Props) {
             </View>
           }
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

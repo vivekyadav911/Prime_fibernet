@@ -11,7 +11,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@prime/ui';
 
-import { FormField, RoleGuard, SelectField } from '@/components/admin';
+import { AdminScreenLayout, FormField, RoleGuard, SelectField } from '@/components/admin';
 import { SkeletonLoader } from '@/components/common';
 import { useInventoryForm } from '@/hooks/useInventoryForm';
 import { fetchCategories } from '@/services/inventoryService';
@@ -59,7 +59,7 @@ export function EditItemScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Information</Text>
@@ -117,7 +117,7 @@ export function EditItemScreen({ navigation, route }: Props) {
             )}
           </Pressable>
         </View>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

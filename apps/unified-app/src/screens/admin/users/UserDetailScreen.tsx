@@ -1,8 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
-import { AvatarIcon, RoleGuard, SectionCard, StatusBadge } from '@/components/admin';
+import { AdminScreenLayout, AvatarIcon, RoleGuard, SectionCard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useGetAdminUserDetailQuery,
@@ -23,12 +23,12 @@ export function UserDetailScreen({ route, navigation }: Props) {
   const { data: subs } = useGetUserSubscriptionsQuery(userId);
   const { data: payments } = useGetUserPaymentsQuery(userId);
 
-  if (isLoading) return <Screen style={adminScreenStyles.canvas}><SkeletonLoader rows={6} showAvatar /></Screen>;
-  if (isError || !user) return <Screen style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  if (isLoading) return <AdminScreenLayout><SkeletonLoader rows={6} showAvatar /></AdminScreenLayout>;
+  if (isError || !user) return <AdminScreenLayout><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></AdminScreenLayout>;
 
   return (
     <RoleGuard requiredPermission="users.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.profile}>
           <AvatarIcon name={user.name} size={64} />
           <Text style={styles.name}>{user.name}</Text>
@@ -66,7 +66,7 @@ export function UserDetailScreen({ route, navigation }: Props) {
             </Text>
           ))}
         </SectionCard>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

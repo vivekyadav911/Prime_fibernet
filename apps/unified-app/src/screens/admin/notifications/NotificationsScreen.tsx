@@ -12,14 +12,14 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Screen } from '@prime/ui';
+
 
 import {
   DraftCard,
   NotificationCard,
   NotificationFilterSheet,
 } from '@/components/Notifications';
-import { AdminEmptyState, RoleGuard, SearchBar } from '@/components/admin';
+import { AdminScreenLayout, AdminEmptyState, RoleGuard, SearchBar } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useNotificationHub } from '@/hooks/useNotificationHub';
 import {
@@ -184,9 +184,9 @@ export function NotificationsScreen({ navigation, route }: Props) {
   if (loading) {
     return (
       <RoleGuard requiredPermission="notifications.view">
-        <Screen style={adminScreenStyles.canvas} padded={false}>
+        <AdminScreenLayout>
           <SkeletonLoader rows={6} shape="card" />
-        </Screen>
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
@@ -194,9 +194,9 @@ export function NotificationsScreen({ navigation, route }: Props) {
   if (error) {
     return (
       <RoleGuard requiredPermission="notifications.view">
-        <Screen style={adminScreenStyles.canvas} padded={false}>
+        <AdminScreenLayout>
           <ErrorState message={error} onRetry={onRefresh} />
-        </Screen>
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
@@ -206,7 +206,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="notifications.view">
-      <Screen style={adminScreenStyles.canvas} padded={false}>
+      <AdminScreenLayout>
         <View style={styles.searchRow}>
           <SearchBar
             value={filters.searchQuery}
@@ -299,7 +299,7 @@ export function NotificationsScreen({ navigation, route }: Props) {
             setFilterOpen(false);
           }}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

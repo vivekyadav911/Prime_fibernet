@@ -1,10 +1,11 @@
+import { AdminScreenLayout } from '@/components/admin';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Marker } from 'react-native-maps';
 import type MapView from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { format } from 'date-fns';
-import { Screen } from '@prime/ui';
+
 
 import { DwellCircle, FreeMapView, TrailPolyline } from '@/components/map';
 import { getOfficerColor, getOfficerInitials } from '@/constants/mapTheme';
@@ -85,7 +86,7 @@ export function TrailReplayScreen({ route, navigation }: Props) {
   }, [navigation, officerName]);
 
   return (
-    <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+    <AdminScreenLayout>
       <FreeMapView ref={mapRef} style={styles.map} initialRegion={initialRegion}>
         <TrailPolyline officerId={officerId} points={replayPoints} />
         {dwells.map((d) => (
@@ -127,7 +128,7 @@ export function TrailReplayScreen({ route, navigation }: Props) {
           </Text>
         ) : null}
       </View>
-    </Screen>
+    </AdminScreenLayout>
   );
 }
 

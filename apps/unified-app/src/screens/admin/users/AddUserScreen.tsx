@@ -11,9 +11,9 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import { DateField, FormRow, RoleGuard, SelectField } from '@/components/admin';
+
+import { AdminScreenLayout, DateField, FormRow, RoleGuard, SelectField } from '@/components/admin';
 import { DismissKeyboardScrollView } from '@/components/common';
 import { AdminCreateUserSchema, type AdminCreateUserFormData } from '@/schemas/adminCreateUser';
 import { useCreateAdminUserMutation } from '@/store/api/endpoints';
@@ -139,7 +139,7 @@ export function AddUserScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="users.create">
-      <Screen keyboardDismiss={false} padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -440,7 +440,7 @@ export function AddUserScreen({ navigation }: Props) {
               </View>
             </DismissKeyboardScrollView>
         </KeyboardAvoidingView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

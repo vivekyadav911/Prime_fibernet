@@ -3,9 +3,9 @@ import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import { RoleGuard, useAdminPermission } from '@/components/admin';
+
+import { AdminScreenLayout, RoleGuard, useAdminPermission } from '@/components/admin';
 import { EmptyState, SkeletonLoader } from '@/components/common';
 import { useContractVersionHistory } from '@/hooks/useEmploymentContract';
 import type { ContractVersion } from '@/types/contract';
@@ -126,7 +126,7 @@ export function EmploymentContractVersionHistoryScreen({ route }: Props) {
 
   return (
     <RoleGuard requiredPermission="officers.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         {isLoading ? (
           <SkeletonLoader rows={5} />
         ) : versions.length === 0 ? (
@@ -139,7 +139,7 @@ export function EmploymentContractVersionHistoryScreen({ route }: Props) {
             contentContainerStyle={styles.list}
           />
         )}
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

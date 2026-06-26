@@ -11,10 +11,10 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Controller, useForm } from 'react-hook-form';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
 import { CollapsibleFormSection } from '@/components/admin/employment/CollapsibleFormSection';
-import { DateField, FilterChips, FormField, RoleGuard, SelectField } from '@/components/admin';
+import { AdminScreenLayout, DateField, FilterChips, FormField, RoleGuard, SelectField } from '@/components/admin';
 import { DismissKeyboardScrollView, ErrorState, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import { buildDefaultFormValues, EMPLOYMENT_TYPE_OPTIONS, WEEKLY_OFF_OPTIONS } from '@/constants/employmentContractDefaults';
 import { useCompanyDefaults } from '@/hooks/useCompanyDefaults';
@@ -149,23 +149,23 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
 
   if (profileLoading || contractLoading || !initialValues) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (!profile) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message="Officer profile not found." onRetry={() => navigation.goBack()} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="officers.edit">
-      <Screen keyboardDismiss={false} padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -394,7 +394,7 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
           </View>
           </View>
         </KeyboardAvoidingView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

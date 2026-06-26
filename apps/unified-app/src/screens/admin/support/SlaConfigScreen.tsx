@@ -3,7 +3,7 @@ import { Alert, FlatList, StyleSheet, Text, TextInput, View } from 'react-native
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen, Button } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetSlaPoliciesQuery, useUpdateSlaPolicyMutation } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
@@ -82,7 +82,7 @@ export function SlaConfigScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <FlatList
           data={data ?? []}
           keyExtractor={(item) => item.id}
@@ -91,7 +91,7 @@ export function SlaConfigScreen(_props: Props) {
           ListHeaderComponent={<Text style={styles.title}>SLA Policies</Text>}
         />
         {saving ? <Text style={styles.saving}>Saving…</Text> : null}
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

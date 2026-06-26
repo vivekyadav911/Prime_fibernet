@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Screen } from '@prime/ui';
 
-import { AdminWebLayout, RoleGuard } from '@/components/admin';
+
+import { AdminScreenLayout, AdminWebLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetTrackingOfficerLocationsQuery, useGetOpenRequestPinsQuery } from '@/store/api/endpoints';
 import { adminColors } from '@/theme/admin';
@@ -54,12 +54,12 @@ export function AdminMapScreen() {
     return rows;
   }, [officers, requests, showOfficers, showRequests]);
 
-  if (oLoad || rLoad) return <Screen style={adminScreenStyles.canvas}><SkeletonLoader rows={3} tall /></Screen>;
-  if (oErr || rErr) return <Screen style={adminScreenStyles.canvas}><ErrorState message={queryErrorMessage(oError ?? rError)} onRetry={() => { oRefetch(); rRefetch(); }} /></Screen>;
+  if (oLoad || rLoad) return <AdminScreenLayout><SkeletonLoader rows={3} tall /></AdminScreenLayout>;
+  if (oErr || rErr) return <AdminScreenLayout><ErrorState message={queryErrorMessage(oError ?? rError)} onRetry={() => { oRefetch(); rRefetch(); }} /></AdminScreenLayout>;
 
   return (
     <RoleGuard requiredPermission="map.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <AdminWebLayout>
           <View style={styles.notice}>
             <Text style={styles.noticeTitle}>Map view</Text>
@@ -101,7 +101,7 @@ export function AdminMapScreen() {
             )}
           />
         </AdminWebLayout>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

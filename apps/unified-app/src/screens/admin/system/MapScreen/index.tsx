@@ -11,9 +11,9 @@ import { Marker, type Region } from 'react-native-maps';
 import type MapView from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import {
   DwellCircle,
   FreeMapView,
@@ -141,16 +141,16 @@ export function AdminMapScreen() {
   if (isLoading && locations.length === 0) {
     return (
       <RoleGuard requiredPermission="map.view">
-        <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+        <AdminScreenLayout>
           <SkeletonLoader rows={3} tall />
-        </Screen>
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
 
   return (
     <RoleGuard requiredPermission="map.view">
-      <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         {isError || livePaused ? (
           <View style={styles.statusStrip}>
             {isError ? (
@@ -280,7 +280,7 @@ export function AdminMapScreen() {
             navigation={navigation}
           />
         ) : null}
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

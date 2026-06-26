@@ -3,7 +3,7 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useCreateShift, useDeleteShift, useShifts } from '@/hooks/attendance/useAdminAttendance';
 import type { ShiftDefinition } from '@/types/attendance';
@@ -88,7 +88,7 @@ export function ShiftManagementScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.header}>
           <Text style={styles.title}>Shift management</Text>
           <Button label={creating ? 'Adding…' : 'Add shift'} onPress={() => void handleAdd()} disabled={creating} />
@@ -99,7 +99,7 @@ export function ShiftManagementScreen(_props: Props) {
           renderItem={renderItem}
           contentContainerStyle={styles.list}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

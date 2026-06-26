@@ -4,7 +4,7 @@ import { Circle } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
-import { AdminEmptyState, RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, AdminEmptyState, RoleGuard } from '@/components/admin';
 import { FreeMapView } from '@/components/map';
 import { ErrorState, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import {
@@ -153,7 +153,7 @@ export function GeofenceManagementScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.header}>
           <Text style={styles.title}>Geofences</Text>
           <Button
@@ -192,7 +192,7 @@ export function GeofenceManagementScreen({ navigation }: Props) {
             />
           }
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

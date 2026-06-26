@@ -1,9 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
 
-import { AdminKPICard, FilterChips, RoleGuard, SearchBar } from '@/components/admin';
+import { AdminScreenLayout, AdminKPICard, FilterChips, RoleGuard, SearchBar } from '@/components/admin';
 import { BulkDispatchCard, InvoiceListRow, SendInvoiceRecipientModal } from '@/components/invoices';
 import type { SendInvoiceRecipientPayload } from '@/components/invoices';
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
@@ -20,7 +19,10 @@ import { useInvoicePDF } from '@/hooks/useInvoicePDF';
 import type { AdminInvoicesStackParamList } from '@/types/navigation';
 import type { AdminInvoice } from '@/types/api/admin';
 import type { InvoiceListFilter } from '@/types/invoice';
+import { adminColors } from '@/theme/admin';
+import { adminDesign } from '@/theme/adminDesign';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
+import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { formatINR } from '@/utils/currencyFormat';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -129,19 +131,88 @@ export function InvoiceListScreen({ navigation }: Props) {
     [handleDownload, openSendModal],
   );
 
+  const listHeader = (
+    <View style={adminScreenStyles.listHeader}>
+      <View style={styles.toolbar}>
+        <View style={styles.toolbarActions}>
+          <Pressable
+            style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}
+            onPress={() => navigation.navigate('InvoiceSettings')}
+          >
+            <Text style={styles.btnSecondaryText}>Edit templates</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}
+            onPress={() => navigation.navigate('InvoiceHistory')}
+          >
+            <Text style={styles.btnSecondaryText}>History</Text>
+          </Pressable>
+        </View>
+        <Pressable
+          style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPressed]}
+          onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'gst' })}
+        >
+          <Text style={styles.btnPrimaryText}>Create manual invoice</Text>
+        </Pressable>
+        <View style={styles.typeActions}>
+          <Pressable
+            style={({ pressed }) => [styles.btnGhost, pressed && styles.btnPressed]}
+            onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'non_gst' })}
+          >
+            <Text style={styles.btnGhostText}>Non-GST</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.btnGhost, pressed && styles.btnPressed]}
+            onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'custom_gst' })}
+          >
+            <Text style={styles.btnGhostText}>Custom GST</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {statsLoading || !stats ? (
+        <SkeletonLoader rows={1} rowHeight={72} shape="card" />
+      ) : (
+        <View style={styles.kpiRow}>
+          <AdminKPICard label="Total revenue" value={formatINR(stats.totalRevenue)} icon="₹" surface="blue" />
+          <AdminKPICard
+            label="Completed"
+            value={String(stats.completedPayments)}
+            icon="✅"
+            surface="teal"
+            status="healthy"
+          />
+        </View>
+      )}
+
+      <SearchBar value={search} onChangeText={setSearch} placeholder="Search customer or invoice ID…" />
+
+      <BulkDispatchCard
+        invoiceType={bulkType}
+        channel={bulkChannel}
+        onInvoiceTypeChange={setBulkType}
+        onChannelChange={setBulkChannel}
+        onSend={() => void handleBulkSend()}
+        sending={bulkSending}
+      />
+
+      <FilterChips options={filterOptions} selected={listFilter} onSelect={setListFilter} />
+    </View>
+  );
+
   if (isLoading && !data) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -149,67 +220,26 @@ export function InvoiceListScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="invoices.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={styles.toolbar}>
-            <View style={styles.toolbarActions}>
-              <Button label="Edit templates" variant="secondary" onPress={() => navigation.navigate('InvoiceSettings')} />
-              <Button label="History" variant="secondary" onPress={() => navigation.navigate('InvoiceHistory')} />
-            </View>
-            <Button label="Create manual invoice" onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'gst' })} />
-            <View style={styles.typeActions}>
-              <Button label="Non-GST" variant="ghost" onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'non_gst' })} />
-              <Button label="Custom GST" variant="ghost" onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'custom_gst' })} />
-            </View>
-          </View>
-
-          {statsLoading || !stats ? (
-            <SkeletonLoader rows={1} rowHeight={72} shape="card" />
-          ) : (
-            <View style={styles.kpiRow}>
-              <AdminKPICard label="Total revenue" value={formatINR(stats.totalRevenue)} icon="₹" surface="blue" />
-              <AdminKPICard label="Completed" value={String(stats.completedPayments)} icon="✅" surface="teal" status="healthy" />
-            </View>
-          )}
-
-          <View style={styles.searchWrap}>
-            <SearchBar value={search} onChangeText={setSearch} placeholder="Search customer or invoice ID…" />
-          </View>
-
-          <View style={styles.bulkWrap}>
-            <BulkDispatchCard
-              invoiceType={bulkType}
-              channel={bulkChannel}
-              onInvoiceTypeChange={setBulkType}
-              onChannelChange={setBulkChannel}
-              onSend={() => void handleBulkSend()}
-              sending={bulkSending}
+      <AdminScreenLayout>
+        <FlatList
+          data={invoices}
+          keyExtractor={(i) => i.id}
+          renderItem={renderItem}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={
+            <EmptyState
+              title="No invoices yet"
+              subtitle="Create a manual invoice or wait for payment records"
+              icon="🧾"
+              actionLabel="Create invoice"
+              onAction={() => navigation.navigate('CreateInvoice', { invoiceType: 'gst' })}
             />
-          </View>
-
-          <View style={styles.filters}>
-            <FilterChips options={filterOptions} selected={listFilter} onSelect={setListFilter} />
-          </View>
-        </ScrollView>
-
-        {invoices.length === 0 ? (
-          <EmptyState
-            title="No invoices yet"
-            subtitle="Create a manual invoice or wait for payment records"
-            icon="🧾"
-            actionLabel="Create invoice"
-            onAction={() => navigation.navigate('CreateInvoice', { invoiceType: 'gst' })}
-          />
-        ) : (
-          <FlatList
-            data={invoices}
-            keyExtractor={(i) => i.id}
-            renderItem={renderItem}
-            refreshing={isFetching}
-            onRefresh={refetch}
-            contentContainerStyle={styles.list}
-          />
-        )}
+          }
+          refreshing={isFetching}
+          onRefresh={refetch}
+          contentContainerStyle={adminScreenStyles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
         <SendInvoiceRecipientModal
           visible={sendTarget != null}
           invoiceNumber={sendTarget?.invoiceNumber ?? ''}
@@ -220,19 +250,71 @@ export function InvoiceListScreen({ navigation }: Props) {
           onClose={() => setSendTarget(null)}
           onSend={(payload) => void handleSendConfirm(payload)}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: spacing.sm },
-  toolbar: { padding: spacing.sm, gap: spacing.sm },
-  toolbarActions: { flexDirection: 'row', gap: spacing.sm },
-  typeActions: { flexDirection: 'row', gap: spacing.xs },
-  kpiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingHorizontal: spacing.sm },
-  searchWrap: { paddingHorizontal: spacing.sm },
-  bulkWrap: { paddingHorizontal: spacing.sm, marginTop: spacing.sm },
-  filters: { paddingHorizontal: spacing.sm, marginTop: spacing.sm },
-  list: { paddingBottom: spacing.xl },
+  toolbar: {
+    gap: spacing.sm,
+  },
+  toolbarActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  typeActions: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  kpiRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  btnPrimary: {
+    minHeight: adminDesign.button.minHeight,
+    borderRadius: adminDesign.radius.button,
+    backgroundColor: adminColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: adminDesign.button.paddingHorizontal,
+  },
+  btnPrimaryText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.surfaceWhite,
+  },
+  btnSecondary: {
+    flex: 1,
+    minHeight: adminDesign.button.minHeight,
+    borderRadius: adminDesign.radius.button,
+    backgroundColor: colors.surfaceWhite,
+    borderWidth: 1,
+    borderColor: adminColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  btnSecondaryText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: adminColors.primary,
+  },
+  btnGhost: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: adminDesign.radius.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  btnGhostText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: adminColors.primary,
+  },
+  btnPressed: {
+    opacity: 0.85,
+  },
 });

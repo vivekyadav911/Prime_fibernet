@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
-import { Screen } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { SettingsMobileNav } from '@/components/admin/settings';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetAppSettingsQuery } from '@/store/api/endpoints';
@@ -22,39 +22,39 @@ export function SettingsHubScreen() {
 
   if (isLoading) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isWide) {
     return (
       <RoleGuard requiredPermission="settings.view">
-        <Screen style={adminScreenStyles.canvas}>
+        <AdminScreenLayout>
           <ScrollView contentContainerStyle={styles.wideHint}>
             <SettingsMobileNav />
           </ScrollView>
-        </Screen>
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.mobileContent}>
           <SettingsMobileNav />
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

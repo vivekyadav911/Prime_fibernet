@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
 import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetPayrollDashboardQuery } from '@/services/api/payrollApi';
 import { colors } from '@/theme/colors';
@@ -87,17 +87,17 @@ export function PayslipsManagementScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={8} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -105,7 +105,7 @@ export function PayslipsManagementScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="payroll.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <FlatList
           data={withPayslips}
           keyExtractor={(r) => r.payslipId!}
@@ -120,7 +120,7 @@ export function PayslipsManagementScreen({ navigation }: Props) {
             />
           )}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

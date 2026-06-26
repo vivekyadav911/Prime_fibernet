@@ -3,7 +3,7 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleShee
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen, Button } from '@prime/ui';
 
-import { RoleGuard, SelectField } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, SelectField } from '@/components/admin';
 import { MarkdownText, SkeletonLoader } from '@/components/common';
 import {
   useGetFaqsAdminQuery,
@@ -73,7 +73,7 @@ export function FaqEditorScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas} safeAreaTop={false}>
+      <AdminScreenLayout>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -134,7 +134,7 @@ export function FaqEditorScreen({ route, navigation }: Props) {
             <Button label={isLoading ? 'Saving…' : 'Save'} onPress={() => void onSave()} />
           </ScrollView>
         </KeyboardAvoidingView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

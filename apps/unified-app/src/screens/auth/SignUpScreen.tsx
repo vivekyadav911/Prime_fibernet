@@ -42,7 +42,7 @@ export function SignUpScreen() {
   };
 
   return (
-    <Screen>
+    <Screen safeAreaTop>
       <Text style={styles.title}>Create account</Text>
       {(['name', 'email', 'phone', 'password', 'confirmPassword'] as const).map((field) => (
         <Controller

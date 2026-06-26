@@ -3,7 +3,7 @@ import { BarChart, LineChart, PieChart } from 'react-native-gifted-charts';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAttendanceReports } from '@/hooks/attendance/useAdminAttendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
@@ -53,7 +53,7 @@ export function AttendanceReportsScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="reports.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.scroll}>
           <Text style={styles.sectionTitle}>Daily attendance trend</Text>
           <LineChart
@@ -90,7 +90,7 @@ export function AttendanceReportsScreen(_props: Props) {
             <Text style={styles.empty}>No compliance data yet</Text>
           )}
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetComplaintsQuery } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
@@ -39,7 +39,7 @@ export function ComplaintsScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <FlatList
           data={data ?? []}
           keyExtractor={(item) => item.id}
@@ -47,7 +47,7 @@ export function ComplaintsScreen({ navigation }: Props) {
           contentContainerStyle={styles.list}
           ListEmptyComponent={<Text style={styles.empty}>No complaints</Text>}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
 import { AssignOfficerModal } from '@/components/Requests/AssignOfficerModal';
 import {
@@ -25,7 +25,7 @@ import {
   TicketTimeline,
 } from '@/components/TicketPortal';
 import { EscalationBanner } from '@/components/support';
-import { AvatarIcon, FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
+import { AdminScreenLayout, AvatarIcon, FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { RequestDetailModal } from '@/screens/admin/requests/RequestDetailModal';
 import {
@@ -249,17 +249,17 @@ export function TicketDetailScreen({ route }: Props) {
 
   if (loading) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <SkeletonLoader rows={10} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (error || !ticket) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={error ?? 'Ticket not found'} onRetry={load} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -267,7 +267,7 @@ export function TicketDetailScreen({ route }: Props) {
 
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 80 }]}>
           {ticket.escalationLevel > 0 ? (
             <EscalationBanner
@@ -577,7 +577,7 @@ export function TicketDetailScreen({ route }: Props) {
             onAddNote={async () => {}}
           />
         ) : null}
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

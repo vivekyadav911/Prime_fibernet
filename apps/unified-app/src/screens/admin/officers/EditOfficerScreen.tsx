@@ -8,9 +8,9 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import {  Button } from '@prime/ui';
 
-import { DateField, FormField, RoleGuard, SectionLabel, SelectField } from '@/components/admin';
+import { AdminScreenLayout, DateField, FormField, RoleGuard, SectionLabel, SelectField } from '@/components/admin';
 import { DismissKeyboardScrollView, ErrorState } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
 import { useKeyboardBottomInset } from '@/hooks/useKeyboardBottomInset';
@@ -234,14 +234,14 @@ export function EditOfficerScreen({ route, navigation }: Props) {
   };
 
   if (isLoading) {
-    return <Screen style={adminScreenStyles.canvas}><Text>Loading…</Text></Screen>;
+    return <AdminScreenLayout><Text>Loading…</Text></AdminScreenLayout>;
   }
 
   if (isError || !profile) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -281,7 +281,7 @@ export function EditOfficerScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="officers.edit">
-      <Screen keyboardDismiss={false} style={adminScreenStyles.canvas} padded={false}>
+      <AdminScreenLayout>
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -503,7 +503,7 @@ export function EditOfficerScreen({ route, navigation }: Props) {
               <Button label={officerStrings.form.cancel} variant="ghost" onPress={() => navigation.goBack()} style={styles.cancel} />
             </DismissKeyboardScrollView>
         </KeyboardAvoidingView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@prime/ui';
 
 import { BulkItemCard } from '@/components/Inventory';
-import { FormField, RoleGuard, SelectField } from '@/components/admin';
+import { AdminScreenLayout, FormField, RoleGuard, SelectField } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useInventory } from '@/hooks/useInventory';
 import { bulkAction } from '@/services/inventoryService';
@@ -121,7 +121,7 @@ export function BulkOperationsScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <Pressable style={styles.selectAll} onPress={toggleAll}>
           <Ionicons
             name={allSelected ? 'checkbox' : 'square-outline'}
@@ -199,7 +199,7 @@ export function BulkOperationsScreen({ navigation }: Props) {
             </View>
           </View>
         </Modal>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

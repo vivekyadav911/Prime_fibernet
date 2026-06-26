@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
+
 
 import { ChatBubble, ChatInputBar, CsatModal, CustomerQuickInfo } from '@/components/support';
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { useChatMessages } from '@/hooks/useChatSession';
 import {
   endChatSession,
@@ -101,7 +101,7 @@ export function ChatConversationScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen style={adminScreenStyles.canvas} padded={false} safeAreaTop={false}>
+      <AdminScreenLayout>
         <View style={styles.container}>
           <FlatList
             style={styles.list}
@@ -136,7 +136,7 @@ export function ChatConversationScreen({ route, navigation }: Props) {
             navigation.goBack();
           }}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

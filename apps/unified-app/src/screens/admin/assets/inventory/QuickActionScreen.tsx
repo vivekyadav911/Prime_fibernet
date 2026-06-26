@@ -4,7 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
 
 import { ActionTabSelector } from '@/components/Inventory';
-import { FormField, RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useInventoryItem } from '@/hooks/useInventoryItem';
 import { useQuickAction } from '@/hooks/useQuickAction';
@@ -69,7 +69,7 @@ export function QuickActionScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.summaryCard}>
             <Text style={styles.itemName}>{item.name}</Text>
@@ -126,7 +126,7 @@ export function QuickActionScreen({ navigation, route }: Props) {
             <Text style={styles.confirmText}>✓ Confirm Action</Text>
           )}
         </Pressable>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

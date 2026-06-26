@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button, Screen } from '@prime/ui';
 
 import { CategoryCard } from '@/components/Inventory';
-import { FormField, RoleGuard, SearchBar } from '@/components/admin';
+import { AdminScreenLayout, FormField, RoleGuard, SearchBar } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   createCategory,
@@ -180,7 +180,7 @@ export function CategoriesScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <View style={styles.searchWrap}>
           <SearchBar value={search} onChangeText={setSearch} placeholder="Search categories..." />
         </View>
@@ -247,7 +247,7 @@ export function CategoriesScreen({ navigation }: Props) {
             </Pressable>
           </Pressable>
         </Modal>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }
