@@ -115,9 +115,9 @@ export function TicketListScreen({ navigation }: Props) {
     );
   }
 
-  return (
-    <RoleGuard requiredPermission="requests.view">
-      <AdminScreenLayout>
+  const listHeader = useMemo(
+    () => (
+      <View style={adminScreenStyles.listHeader}>
         <View style={styles.header}>
           <Text style={styles.title}>All Tickets</Text>
           <View style={styles.countBadge}>
@@ -136,7 +136,12 @@ export function TicketListScreen({ navigation }: Props) {
             value={stats?.inProgressTickets ?? 0}
             onPress={() => updateFilters({ status: 'In Progress' })}
           />
-          <StatsCard label="SLA Breaches" value={stats?.slaBreaches ?? 0} tone="danger" onPress={() => updateFilters({ slaBreached: true })} />
+          <StatsCard
+            label="SLA Breaches"
+            value={stats?.slaBreaches ?? 0}
+            tone="danger"
+            onPress={() => updateFilters({ slaBreached: true })}
+          />
         </View>
 
         <View style={styles.toolbar}>
@@ -180,13 +185,35 @@ export function TicketListScreen({ navigation }: Props) {
           selected={filters.status}
           onSelect={(v) => updateFilters({ status: v as TicketStatus | 'All' })}
         />
+      </View>
+    ),
+    [
+      activeFilterCount,
+      exporting,
+      filters.searchQuery,
+      filters.sortBy,
+      filters.status,
+      handleExport,
+      stats?.inProgressTickets,
+      stats?.openTickets,
+      stats?.slaBreaches,
+      tickets.length,
+      updateFilters,
+    ],
+  );
 
+  return (
+    <RoleGuard requiredPermission="requests.view">
+      <AdminScreenLayout padded={false}>
         <FlatList
           data={tickets}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
+          ListHeaderComponent={listHeader}
+          contentContainerStyle={adminScreenStyles.listContent}
+          style={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <AdminEmptyState
               title="No tickets found"
@@ -214,12 +241,11 @@ export function TicketListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  list: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
   },
   title: {
     fontSize: 20,
@@ -229,8 +255,6 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.sm,
   },
   countBadge: {
     backgroundColor: `${adminColors.primary}22`,
@@ -244,7 +268,6 @@ const styles = StyleSheet.create({
     color: adminColors.primary,
   },
   toolbar: {
-    padding: spacing.md,
     gap: spacing.sm,
   },
   controls: {
@@ -294,9 +317,5 @@ const styles = StyleSheet.create({
     color: colors.surfaceWhite,
     fontWeight: '600',
     fontSize: 13,
-  },
-  list: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xxl,
   },
 });

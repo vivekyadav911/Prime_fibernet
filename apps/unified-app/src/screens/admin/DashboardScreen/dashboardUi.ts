@@ -1,96 +1,53 @@
+import { adminColors } from '@/theme/admin';
+import { adminDesign } from '@/theme/adminDesign';
+import { spacing } from '@/theme/spacing';
+
+/** Dashboard-local layout constants — colors reference shared admin tokens. */
 export const dash = {
-
-  bg: '#F4F5F7',
-
-  text: '#111827',
-
-  textSecondary: '#6B7280',
-
-  brand: '#5B4FE9',
-
-  success: '#10B981',
-
-  warning: '#F59E0B',
-
-  danger: '#EF4444',
-
-  card: '#FFFFFF',
-
-  border: '#E5E7EB',
-
+  bg: adminColors.canvasBg,
+  text: adminDesign.colors.textPrimary,
+  textSecondary: adminDesign.colors.textSecondary,
+  brand: adminColors.primary,
+  success: adminDesign.colors.success,
+  warning: adminDesign.colors.warning,
+  danger: adminDesign.colors.error,
+  card: adminColors.cardBg,
+  border: adminDesign.colors.border,
   searchFill: '#ECEEF2',
-
   pressed: '#F3F4F6',
-
-  pagePad: 20,
-
+  pagePad: adminDesign.layout.pagePadding,
   sectionGap: 18,
-
-  cardGap: 12,
-
-  cardPad: 16,
-
+  cardGap: spacing.sm,
+  cardPad: adminDesign.layout.cardPadding,
   compactPad: 14,
-
   heroPad: 14,
-
   tilePad: 10,
-
-  sectionHeaderMb: 8,
-
+  sectionHeaderMb: spacing.xs,
   metricGap: 6,
-
-  radiusHero: 22,
-
+  radiusHero: adminDesign.radius.card,
   radiusMd: 18,
-
-  radiusSm: 16,
-
-  radiusTile: 16,
-
-  radiusPill: 999,
-
-  btnRadius: 18,
-
+  radiusSm: adminDesign.radius.input,
+  radiusTile: adminDesign.radius.input,
+  radiusPill: adminDesign.radius.chip,
+  btnRadius: adminDesign.radius.button,
   heroMinH: 148,
-
   kpiH: 112,
-
   quickTileH: 88,
-
   accordionH: 74,
-
   searchH: 50,
-
-  btnH: 44,
-
+  btnH: adminDesign.button.minHeight,
   livePillH: 26,
-
   chipH: 36,
-
   expiryPillH: 28,
-
   rowH: 74,
-
   avatar: 40,
-
   iconBox: 34,
-
-  touch: 44,
-
+  touch: adminDesign.layout.minTouch,
   shadow: {
-
     shadowColor: '#111827',
-
     shadowOffset: { width: 0, height: 1 },
-
     shadowOpacity: 0.035,
-
     shadowRadius: 6,
-
     elevation: 2,
-
   },
-
 } as const;
-

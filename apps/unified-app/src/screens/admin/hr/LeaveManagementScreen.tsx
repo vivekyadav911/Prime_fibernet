@@ -98,26 +98,35 @@ export function LeaveManagementScreen(_props: Props) {
 
   const tabs: FilterTab[] = ['all', 'pending', 'approved', 'rejected'];
 
+  const listHeader = (
+    <View style={adminScreenStyles.listHeader}>
+      <Text style={styles.title}>Leave management</Text>
+      <View style={styles.tabs}>
+        {tabs.map((t) => (
+          <Button
+            key={t}
+            label={t}
+            variant={tab === t ? 'primary' : 'ghost'}
+            onPress={() => setTab(t)}
+          />
+        ))}
+      </View>
+    </View>
+  );
+
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <AdminScreenLayout>
-        <Text style={styles.title}>Leave management</Text>
-        <View style={styles.tabs}>
-          {tabs.map((t) => (
-            <Button
-              key={t}
-              label={t}
-              variant={tab === t ? 'primary' : 'ghost'}
-              onPress={() => setTab(t)}
-            />
-          ))}
-        </View>
+      <AdminScreenLayout padded={false}>
         <FlatList
           data={data ?? []}
           keyExtractor={(r) => r.id}
           renderItem={renderItem}
+          ListHeaderComponent={listHeader}
           refreshing={reviewing}
           onRefresh={refetch}
+          contentContainerStyle={adminScreenStyles.listContent}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
         />
       </AdminScreenLayout>
     </RoleGuard>
@@ -125,8 +134,9 @@ export function LeaveManagementScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 18, fontWeight: '700', padding: spacing.md, color: colors.textPrimary },
-  tabs: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.sm, gap: spacing.xs },
+  list: { flex: 1 },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   card: {
     backgroundColor: adminColors.cardBg,
     margin: spacing.sm,

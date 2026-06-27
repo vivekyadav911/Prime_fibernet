@@ -109,36 +109,36 @@ export function ItemDetailScreen({ navigation, route }: Props) {
             <StockQtyRow
               label="Total Quantity"
               value={item.totalQuantity}
-              bgColor="#EFF6FF"
-              textColor="#3B82F6"
+              bgColor={adminColors.inventoryStat.total.iconBgColor}
+              textColor={adminColors.inventoryStat.total.valueColor}
               icon="layers-outline"
             />
             <StockQtyRow
               label="Available"
               value={item.availableQuantity}
-              bgColor="#F0FDF4"
-              textColor="#10B981"
+              bgColor={adminColors.inventoryStat.stock.iconBgColor}
+              textColor={adminColors.inventoryStat.stock.valueColor}
               icon="checkmark-circle-outline"
             />
             <StockQtyRow
               label="Assigned"
               value={item.assignedQuantity}
-              bgColor="#FFFBEB"
-              textColor="#F59E0B"
+              bgColor={adminColors.inventoryStat.low.iconBgColor}
+              textColor={adminColors.inventoryStat.low.valueColor}
               icon="person-outline"
             />
             <StockQtyRow
               label="Sold"
               value={item.soldQuantity}
-              bgColor="#F3F4F6"
-              textColor="#6B7280"
+              bgColor={adminColors.chipTones.neutral.bg}
+              textColor={adminColors.chipTones.neutral.text}
               icon="pricetag-outline"
             />
             <StockQtyRow
               label="Damaged"
               value={item.damagedQuantity}
-              bgColor="#FEF2F2"
-              textColor="#EF4444"
+              bgColor={adminColors.inventoryStat.out.iconBgColor}
+              textColor={adminColors.inventoryStat.out.valueColor}
               icon="warning-outline"
             />
 
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   qtyBadge: { borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 4, minWidth: 40, alignItems: 'center' },
   qtyBadgeText: { fontSize: 14, fontWeight: '700' },
   breakdownBox: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: adminColors.surfaceMuted,
     borderRadius: radius.sm,
     padding: spacing.sm,
     marginBottom: spacing.sm,

@@ -11,7 +11,12 @@ type FilterChipsProps<T extends string> = {
 
 export function FilterChips<T extends string>({ options, selected, onSelect }: FilterChipsProps<T>) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.scroll}
+      contentContainerStyle={styles.row}
+    >
       {options.map((opt) => {
         const active = selected === opt.value;
         return (
@@ -29,6 +34,7 @@ export function FilterChips<T extends string>({ options, selected, onSelect }: F
 }
 
 const styles = StyleSheet.create({
+  scroll: { flexGrow: 0 },
   row: { gap: spacing.xs, paddingVertical: spacing.xs },
   chip: {
     borderWidth: 1,

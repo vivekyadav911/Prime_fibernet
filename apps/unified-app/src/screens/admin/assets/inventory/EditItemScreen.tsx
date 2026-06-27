@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   cancelText: { fontSize: 16, color: colors.textSecondary },
   saveBtn: {
     flex: 1,
-    backgroundColor: '#1E1B4B',
+    backgroundColor: adminColors.ctaDark,
     borderRadius: radius.sm,
     height: 48,
     alignItems: 'center',

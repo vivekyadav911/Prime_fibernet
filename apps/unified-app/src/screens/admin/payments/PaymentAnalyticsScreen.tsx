@@ -1,17 +1,13 @@
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { BarChart } from 'react-native-gifted-charts';
-import { Screen } from '@prime/ui';
 
-import { AdminScreenLayout, AdminKPICard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminScreenLayout, AdminKPICard, AdminStateShell } from '@/components/admin';
 import { usePaymentAnalytics } from '@/hooks/usePayments';
 import { formatINR } from '@/utils/currencyFormat';
 import { adminColors } from '@/theme/admin';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
-import { queryErrorMessage } from '@/utils/queryError';
 
 export function PaymentAnalyticsScreen() {
   const { data, isLoading, isError, error, refetch } = usePaymentAnalytics();
@@ -48,15 +44,19 @@ export function PaymentAnalyticsScreen() {
     ];
   }, [data]);
 
-  if (isLoading) return <Screen><SkeletonLoader rows={6} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-
   const collectionRate =
     totals.initiated > 0 ? Math.round((totals.confirmed / totals.initiated) * 100) : 0;
 
   return (
-    <AdminScreenLayout>
-      <ScrollView>
+    <AdminStateShell
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      onRetry={refetch}
+      loadingRows={6}
+      loadingShape="card"
+    >
+      <AdminScreenLayout scroll contentStyle={styles.content}>
         <View style={styles.kpiRow}>
           <AdminKPICard label="Collected" value={formatINR(totals.confirmedRevenue)} />
           <AdminKPICard label="Pending review" value={String(totals.pendingReview)} />
@@ -75,13 +75,14 @@ export function PaymentAnalyticsScreen() {
 
         <Text style={styles.chartTitle}>Payment methods</Text>
         <BarChart data={methodData} barWidth={40} spacing={24} height={160} yAxisTextStyle={styles.axis} />
-      </ScrollView>
-    </AdminScreenLayout>
+      </AdminScreenLayout>
+    </AdminStateShell>
   );
 }
 
-const styles = StyleSheet.create({  screenPadding: { padding: spacing.md },
-  kpiRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
-  chartTitle: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginVertical: spacing.md },
+const styles = StyleSheet.create({
+  content: { gap: spacing.sm },
+  kpiRow: { flexDirection: 'row', gap: spacing.sm },
+  chartTitle: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginTop: spacing.sm },
   axis: { fontSize: 10, color: colors.textSecondary },
 });

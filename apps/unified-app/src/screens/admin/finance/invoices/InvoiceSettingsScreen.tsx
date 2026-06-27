@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Alert, StyleSheet } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import { Button } from '@prime/ui';
 
-import { FormField, RoleGuard, SectionCard } from '@/components/admin';
-import { DismissKeyboardScrollView, ErrorState, SkeletonLoader } from '@/components/common';
+import { FormField, AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
+import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useGetFullAdminSettingsQuery,
   useGetInvoiceSettingsQuery,
@@ -52,24 +52,23 @@ export function InvoiceSettingsScreen(_props: Props) {
 
   if (isLoading) {
     return (
-      <Screen>
+      <AdminScreenLayout>
         <SkeletonLoader rows={6} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="invoices.edit">
-      <Screen keyboardDismiss={false}>
-          <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
+      <AdminScreenLayout scroll contentStyle={styles.scroll}>
           <SectionCard title="Company tax details">
             <FormField label="Company GSTIN" value={gstin} onChangeText={setGstin} />
           </SectionCard>
@@ -78,8 +77,7 @@ export function InvoiceSettingsScreen(_props: Props) {
             <FormField label="Footer note" value={footerNote} onChangeText={setFooterNote} multiline />
           </SectionCard>
           <Button label="Save settings" onPress={() => void onSave()} />
-          </DismissKeyboardScrollView>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

@@ -1,11 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import { Button } from '@prime/ui';
 
-import { AdminScreenLayout, DateField } from '@/components/admin';
+import { AdminScreenLayout, AdminStateShell, DateField } from '@/components/admin';
 import { AmountDisplay, DenominationInput, MethodIcon } from '@/components/payments';
-import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePaymentDetail } from '@/hooks/usePayments';
 import {
   useConfirmPaymentV2Mutation,
@@ -14,10 +13,8 @@ import {
 import { computeNextDueDate } from '@/utils/nextDueDate';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
-import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminPaymentsStackParamList, 'PaymentReview'>;
 
@@ -70,79 +67,80 @@ export function PaymentReviewScreen({ route, navigation }: Props) {
     }
   }, [navigation, paymentId, rejectPayment, reviewNotes]);
 
-  if (isLoading) return <Screen><SkeletonLoader rows={8} /></Screen>;
-  if (isError || !payment) {
-    return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-  }
-
   return (
-    <AdminScreenLayout>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Review — {payment.payment_number}</Text>
-        <View style={styles.card}>
-          <Text style={styles.customer}>{payment.customer_name} · {payment.account_number}</Text>
-          <AmountDisplay amount={payment.total_amount} large />
-          <MethodIcon method={payment.method} />
-        </View>
+    <AdminStateShell
+      isLoading={isLoading}
+      isError={isError || !payment}
+      error={error}
+      onRetry={refetch}
+      loadingRows={8}
+    >
+      <AdminScreenLayout scroll contentStyle={styles.content}>
+        <Text style={styles.title}>Review — {payment!.payment_number}</Text>
+      <View style={styles.card}>
+        <Text style={styles.customer}>{payment!.customer_name} · {payment!.account_number}</Text>
+        <AmountDisplay amount={payment!.total_amount} large />
+        <MethodIcon method={payment!.method} />
+      </View>
 
-        {isCash ? (
-          <View style={styles.card}>
-            <Text style={styles.section}>Denomination count</Text>
-            <DenominationInput
-              denominations={denominations}
-              expectedAmount={payment.total_amount}
-              onChange={setDenominations}
-            />
-            <Text style={styles.label}>PHYSICAL RECEIPT NUMBER</Text>
-            <TextInput
-              style={styles.input}
-              value={receiptNumber}
-              onChangeText={setReceiptNumber}
-              placeholder="RCT-2026-0421"
-              placeholderTextColor={colors.textSecondary}
-            />
-          </View>
-        ) : (
-          <View style={styles.card}>
-            <Text style={styles.section}>Gateway response</Text>
-            <Text style={styles.mono}>Order: {payment.gateway_order_id}</Text>
-            <Text style={styles.mono}>Payment ID: {payment.gateway_payment_id}</Text>
-          </View>
-        )}
-
+      {isCash ? (
         <View style={styles.card}>
-          <DateField
-            label="Next due date"
-            value={nextDueDate || defaultDue}
-            onChange={setNextDueDate}
-            accentColor={adminColors.primary}
+          <Text style={styles.section}>Denomination count</Text>
+          <DenominationInput
+            denominations={denominations}
+            expectedAmount={payment!.total_amount}
+            onChange={setDenominations}
           />
-          <Text style={styles.label}>REVIEW NOTES</Text>
+          <Text style={styles.label}>PHYSICAL RECEIPT NUMBER</Text>
           <TextInput
-            style={[styles.input, styles.notes]}
-            value={reviewNotes}
-            onChangeText={setReviewNotes}
-            multiline
+            style={styles.input}
+            value={receiptNumber}
+            onChangeText={setReceiptNumber}
+            placeholder="RCT-2026-0421"
             placeholderTextColor={colors.textSecondary}
           />
         </View>
-
-        <View style={styles.actions}>
-          <Button label="Reject" variant="secondary" onPress={onReject} disabled={rejecting} />
-          <Button
-            label={isCash ? 'Confirm & receipt' : 'Confirm payment'}
-            onPress={onConfirm}
-            disabled={confirming}
-          />
+      ) : (
+        <View style={styles.card}>
+          <Text style={styles.section}>Gateway response</Text>
+          <Text style={styles.mono}>Order: {payment!.gateway_order_id}</Text>
+          <Text style={styles.mono}>Payment ID: {payment!.gateway_payment_id}</Text>
         </View>
-      </ScrollView>
+      )}
+
+      <View style={styles.card}>
+        <DateField
+          label="Next due date"
+          value={nextDueDate || defaultDue}
+          onChange={setNextDueDate}
+          accentColor={adminColors.primary}
+        />
+        <Text style={styles.label}>REVIEW NOTES</Text>
+        <TextInput
+          style={[styles.input, styles.notes]}
+          value={reviewNotes}
+          onChangeText={setReviewNotes}
+          multiline
+          placeholderTextColor={colors.textSecondary}
+        />
+      </View>
+
+      <View style={styles.actions}>
+        <Button label="Reject" variant="secondary" onPress={onReject} disabled={rejecting} />
+        <Button
+          label={isCash ? 'Confirm & receipt' : 'Confirm payment'}
+          onPress={onConfirm}
+          disabled={confirming}
+        />
+      </View>
     </AdminScreenLayout>
+    </AdminStateShell>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.md, gap: spacing.sm },
-  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.sm },
+  content: { gap: spacing.sm },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   card: {
     backgroundColor: adminColors.cardBg,
     borderRadius: radius.md,
@@ -163,5 +161,5 @@ const styles = StyleSheet.create({
   },
   notes: { minHeight: 80, textAlignVertical: 'top' },
   mono: { fontFamily: 'monospace', fontSize: 12, color: colors.textPrimary },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
 });

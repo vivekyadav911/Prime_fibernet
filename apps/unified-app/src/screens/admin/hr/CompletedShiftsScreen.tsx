@@ -1,11 +1,12 @@
+import { useCallback } from 'react';
 import { FlatList, StyleSheet, Text } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
-import { RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetCompletedShiftsQuery } from '@/store/api/endpoints';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -15,26 +16,55 @@ type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'CompletedShi
 export function CompletedShiftsScreen(_props: Props) {
   const { data, isLoading, isError, error, refetch } = useGetCompletedShiftsQuery({});
 
-  if (isLoading) return <Screen><SkeletonLoader rows={8} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
+  const renderItem = useCallback(
+    ({ item }: { item: NonNullable<typeof data>[number] }) => (
+      <Text style={styles.row}>
+        {item.officerName} · {item.shiftDate} · {item.duration}h ·{' '}
+        {item.locationVerified ? '✓ GPS' : '✗ GPS'}
+      </Text>
+    ),
+    [],
+  );
+
+  if (isLoading) {
+    return (
+      <AdminScreenLayout>
+        <SkeletonLoader rows={8} />
+      </AdminScreenLayout>
+    );
+  }
+
+  if (isError) {
+    return (
+      <AdminScreenLayout>
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+      </AdminScreenLayout>
+    );
+  }
 
   return (
     <RoleGuard requiredPermission="attendance.view">
-      <Screen padded={false}>
+      <AdminScreenLayout padded={false}>
         <FlatList
           data={data ?? []}
           keyExtractor={(r) => r.id}
-          renderItem={({ item }) => (
-            <Text style={styles.row}>
-              {item.officerName} · {item.shiftDate} · {item.duration}h · {item.locationVerified ? '✓ GPS' : '✗ GPS'}
-            </Text>
-          )}
+          renderItem={renderItem}
+          contentContainerStyle={adminScreenStyles.listContent}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { padding: spacing.md, borderBottomWidth: 1, borderColor: colors.borderDefault, fontSize: 13 },
+  list: { flex: 1 },
+  row: {
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderColor: colors.borderDefault,
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
 });

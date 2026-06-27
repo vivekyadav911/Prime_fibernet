@@ -267,8 +267,14 @@ export function TicketDetailScreen({ route }: Props) {
 
   return (
     <RoleGuard requiredPermission="requests.view">
-      <AdminScreenLayout>
-        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 80 }]}>
+      <AdminScreenLayout padded={false}>
+        <View style={styles.page}>
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={[adminScreenStyles.listContent, { gap: spacing.md, paddingBottom: insets.bottom + 80 }]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
           {ticket.escalationLevel > 0 ? (
             <EscalationBanner
               ticketNumber={ticket.ticketNumber}
@@ -544,7 +550,7 @@ export function TicketDetailScreen({ route }: Props) {
               </RoleGuard>
             </SectionCard>
           ) : null}
-        </ScrollView>
+          </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.sm }]}>
           <Button
@@ -577,6 +583,7 @@ export function TicketDetailScreen({ route }: Props) {
             onAddNote={async () => {}}
           />
         ) : null}
+        </View>
       </AdminScreenLayout>
     </RoleGuard>
   );
@@ -592,10 +599,8 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    padding: spacing.md,
-    gap: spacing.md,
-  },
+  page: { flex: 1 },
+  flex: { flex: 1 },
   profileLink: {
     fontSize: 13,
     fontWeight: '600',

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Circle } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import { Button } from '@prime/ui';
 
 import { AdminScreenLayout, AdminEmptyState, RoleGuard } from '@/components/admin';
 import { FreeMapView } from '@/components/map';
@@ -125,17 +125,17 @@ export function GeofenceManagementScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen>
+      <AdminScreenLayout>
         <SkeletonLoader rows={6} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -151,37 +151,44 @@ export function GeofenceManagementScreen({ navigation }: Props) {
     longitudeDelta: 0.2,
   };
 
+  const listHeader = (
+    <View style={adminScreenStyles.listHeader}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Geofences</Text>
+        <Button
+          label="Add geofence"
+          onPress={() => navigation.navigate('CreateGeofence', {})}
+        />
+      </View>
+
+      <FreeMapView style={styles.map} initialRegion={mapRegion}>
+        {geofences.map((g) => {
+          if (g.geometry.shape !== 'circle') return null;
+          return (
+            <Circle
+              key={g.id}
+              center={g.geometry.center}
+              radius={g.geometry.radius}
+              strokeColor={g.id === selectedId ? adminColors.primary : colors.textSecondary}
+              fillColor={g.isActive ? 'rgba(91,79,207,0.2)' : 'rgba(150,150,150,0.2)'}
+            />
+          );
+        })}
+      </FreeMapView>
+    </View>
+  );
+
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <AdminScreenLayout>
-        <View style={styles.header}>
-          <Text style={styles.title}>Geofences</Text>
-          <Button
-            label="Add geofence"
-            onPress={() => navigation.navigate('CreateGeofence', {})}
-          />
-        </View>
-
-        <FreeMapView style={styles.map} initialRegion={mapRegion}>
-          {geofences.map((g) => {
-            if (g.geometry.shape !== 'circle') return null;
-            return (
-              <Circle
-                key={g.id}
-                center={g.geometry.center}
-                radius={g.geometry.radius}
-                strokeColor={g.id === selectedId ? adminColors.primary : colors.textSecondary}
-                fillColor={g.isActive ? 'rgba(91,79,207,0.2)' : 'rgba(150,150,150,0.2)'}
-              />
-            );
-          })}
-        </FreeMapView>
-
+      <AdminScreenLayout padded={false}>
         <FlatList
           data={geofences}
           keyExtractor={(g) => g.id}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
+          ListHeaderComponent={listHeader}
+          contentContainerStyle={adminScreenStyles.listContent}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <AdminEmptyState
               title="No geofences yet"
@@ -198,15 +205,14 @@ export function GeofenceManagementScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  list: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.md,
   },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   map: { height: 220 },
-  list: { padding: spacing.sm, flexGrow: 1 },
   card: {
     backgroundColor: adminColors.cardBg,
     borderRadius: 12,

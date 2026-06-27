@@ -86,18 +86,24 @@ export function ShiftManagementScreen(_props: Props) {
     );
   }
 
+  const listHeader = (
+    <View style={styles.header}>
+      <Text style={styles.title}>Shift management</Text>
+      <Button label={creating ? 'Adding…' : 'Add shift'} onPress={() => void handleAdd()} disabled={creating} />
+    </View>
+  );
+
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <AdminScreenLayout>
-        <View style={styles.header}>
-          <Text style={styles.title}>Shift management</Text>
-          <Button label={creating ? 'Adding…' : 'Add shift'} onPress={() => void handleAdd()} disabled={creating} />
-        </View>
+      <AdminScreenLayout padded={false}>
         <FlatList
           data={data ?? []}
           keyExtractor={(s) => s.id}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
+          ListHeaderComponent={listHeader}
+          contentContainerStyle={adminScreenStyles.listContent}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
         />
       </AdminScreenLayout>
     </RoleGuard>
@@ -105,14 +111,14 @@ export function ShiftManagementScreen(_props: Props) {
 }
 
 const styles = StyleSheet.create({
+  list: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.md,
+    paddingBottom: spacing.sm,
   },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-  list: { padding: spacing.sm },
   card: {
     backgroundColor: adminColors.cardBg,
     padding: spacing.md,

@@ -181,16 +181,19 @@ export function OfficerListScreen({ navigation }: Props) {
     </Text>
   ) : null;
 
-  const screenHeader = (
-    <View style={styles.headerBlock}>
-      <OfficerKpiCarousel stats={stats} />
-      <OfficerSearchFilters
-        search={search}
-        onSearchChange={setSearch}
-        accountStatus={accountStatus}
-        onAccountStatusChange={setAccountStatus}
-      />
-    </View>
+  const listHeader = (
+    <>
+      <View style={styles.headerBlock}>
+        <OfficerKpiCarousel stats={stats} />
+        <OfficerSearchFilters
+          search={search}
+          onSearchChange={setSearch}
+          accountStatus={accountStatus}
+          onAccountStatusChange={setAccountStatus}
+        />
+      </View>
+      {listEyebrow}
+    </>
   );
 
   if (isLoading) {
@@ -213,35 +216,32 @@ export function OfficerListScreen({ navigation }: Props) {
     <RoleGuard requiredPermission="officers.view">
       <AdminScreenLayout>
         <View style={styles.page}>
-          <View style={styles.pageInset}>{screenHeader}</View>
-
-          {!officers.length ? (
-            <AdminEmptyState
-              title={officerStrings.list.emptyTitle}
-              subtitle={officerStrings.list.emptySubtitle}
-              iconName="shield-outline"
-              actionLabel={canCreate ? officerStrings.list.addOfficer : undefined}
-              onAction={canCreate ? () => navigation.navigate('AddOfficer') : undefined}
-            />
-          ) : (
-            <FlatList
-              data={officers}
-              keyExtractor={(o) => o.id}
-              renderItem={renderItem}
-              ListHeaderComponent={listEyebrow}
-              ItemSeparatorComponent={ListSeparator}
-              style={styles.listBody}
-              contentContainerStyle={styles.list}
-              refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
-              }
-              onScroll={(e) => handleScroll(e.nativeEvent.contentOffset.y)}
-              scrollEventThrottle={16}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-              directionalLockEnabled
-            />
-          )}
+          <FlatList
+            data={officers}
+            keyExtractor={(o) => o.id}
+            renderItem={renderItem}
+            ListHeaderComponent={listHeader}
+            ListEmptyComponent={
+              <AdminEmptyState
+                title={officerStrings.list.emptyTitle}
+                subtitle={officerStrings.list.emptySubtitle}
+                iconName="shield-outline"
+                actionLabel={canCreate ? officerStrings.list.addOfficer : undefined}
+                onAction={canCreate ? () => navigation.navigate('AddOfficer') : undefined}
+              />
+            }
+            ItemSeparatorComponent={ListSeparator}
+            style={styles.listBody}
+            contentContainerStyle={styles.list}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={() => void onRefresh()} />
+            }
+            onScroll={(e) => handleScroll(e.nativeEvent.contentOffset.y)}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            directionalLockEnabled
+          />
         </View>
 
         {canCreate ? (
@@ -290,7 +290,6 @@ const styles = StyleSheet.create({
   },
   headerBlock: {
     gap: ui.sectionGap,
-    paddingTop: spacing.md,
     paddingBottom: spacing.xs,
   },
   listBody: {
@@ -305,14 +304,12 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: ui.pagePad,
+    paddingTop: spacing.md,
     paddingBottom: 104,
-    paddingTop: 4,
+    flexGrow: 1,
   },
   listSeparator: {
     height: OFFICER_CARD_GAP,
-  },
-  pageInset: {
-    paddingHorizontal: ui.pagePad,
   },
   fabWrap: {
     position: 'absolute',

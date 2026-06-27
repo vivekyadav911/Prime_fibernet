@@ -36,7 +36,9 @@ export function AdminKPICard({
 
 const styles = StyleSheet.create({
   wrap: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 0,
+    flexBasis: '48%',
     minWidth: 148,
   },
 });

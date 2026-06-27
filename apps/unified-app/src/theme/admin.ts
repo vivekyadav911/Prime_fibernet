@@ -70,6 +70,36 @@ export const adminColors = {
     available: { bg: '#E3F2FD', text: '#1565C0' },
     offline: { bg: '#F5F5F5', text: '#616161' },
   },
+  /** Semantic chip / badge surfaces — use instead of inline hex on screens */
+  chipTones: {
+    success: { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0' },
+    warning: { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A' },
+    error: { bg: '#FEF2F2', text: '#B91C1C', border: '#FECACA' },
+    info: { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
+    neutral: { bg: '#F3F4F6', text: '#4B5563', border: '#E5E7EB' },
+    primary: { bg: 'rgba(91, 79, 233, 0.08)', text: '#5B4FE9', border: '#C9C2F0' },
+  },
+  /** Muted row / table header backgrounds */
+  surfaceMuted: '#F9FAFB',
+  /** Dark indigo CTA (inventory add buttons) */
+  ctaDark: '#1E1B4B',
+  /** Inventory KPI stat card accents */
+  inventoryStat: {
+    total: { iconColor: '#3B82F6', iconBgColor: '#EFF6FF', valueColor: '#3B82F6' },
+    stock: { iconColor: '#10B981', iconBgColor: '#F0FDF4', valueColor: '#10B981' },
+    low: { iconColor: '#F59E0B', iconBgColor: '#FFFBEB', valueColor: '#F59E0B' },
+    out: { iconColor: '#EF4444', iconBgColor: '#FEF2F2', valueColor: '#EF4444' },
+  },
+  /** Live attendance KPI cell backgrounds */
+  attendanceKpiCell: {
+    present: '#F8FDFB',
+    absent: '#FEF8F8',
+    late: '#FFFCF5',
+  },
+  /** Notification hub — sent tab and FAB */
+  notificationHub: {
+    sentTabBg: '#3B3F8C',
+  },
 } as const;
 
 /** Gmail-style drawer: ~78% of screen on mobile, fixed width on desktop sidebar */

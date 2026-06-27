@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
-import { Button } from '@prime/ui';
 
+import { AdminButton } from '@/components/admin/AdminButton';
 import { useAdminPermission } from '@/components/admin/RoleGuard';
 import { spacing } from '@/theme/spacing';
 
@@ -20,10 +20,13 @@ export function SaveButton({
   const canEdit = useAdminPermission('settings.edit');
 
   return (
-    <Button
-      label={loading ? 'Saving…' : label}
+    <AdminButton
+      label={label}
+      loading={loading}
+      loadingLabel="Saving…"
       onPress={onPress}
-      disabled={disabled || !canEdit || loading}
+      disabled={disabled || !canEdit}
+      fullWidth
       style={styles.btn}
     />
   );

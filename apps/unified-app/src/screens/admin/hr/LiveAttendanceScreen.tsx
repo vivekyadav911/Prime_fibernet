@@ -26,6 +26,7 @@ import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
+import { pageLayout } from '@/theme/pageLayout';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 import { SHOW_SAVED_MAP_PLACES } from '@/constants/attendanceFeatures';
@@ -33,7 +34,8 @@ import { formatSyncLabel } from '@/utils/dateUtils';
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'LiveAttendance'>;
 
-const PAGE_PADDING = spacing.lg;
+const PAGE_PADDING = pageLayout.pagePadding;
+const TOOLBAR_INSET = 72;
 const CARD_RADIUS = radius.xl;
 const MAP_HEIGHT = 228;
 const DOUBLE_TAP_ZOOM_FACTOR = 0.5;
@@ -44,16 +46,7 @@ const DEFAULT_MAP_REGION: Region = {
   longitudeDelta: 0.15,
 };
 
-type ChipTone = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'primary';
-
-const CHIP_TONES: Record<ChipTone, { bg: string; text: string; border: string }> = {
-  success: { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0' },
-  warning: { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A' },
-  error: { bg: '#FEF2F2', text: '#B91C1C', border: '#FECACA' },
-  info: { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' },
-  neutral: { bg: '#F3F4F6', text: '#4B5563', border: '#E5E7EB' },
-  primary: { bg: adminColors.primaryTint, text: adminColors.primary, border: '#C9C2F0' },
-};
+type ChipTone = keyof typeof adminColors.chipTones;
 
 function formatTime(iso?: string): string {
   if (!iso) return '—';
@@ -88,7 +81,7 @@ function checkInMethodLabel(method: CheckInMethod): string {
 }
 
 function OperationalChip({ label, tone }: { label: string; tone: ChipTone }) {
-  const palette = CHIP_TONES[tone];
+  const palette = adminColors.chipTones[tone];
   return (
     <View style={[styles.chip, { backgroundColor: palette.bg, borderColor: palette.border }]}>
       <Text style={[styles.chipText, { color: palette.text }]}>{label}</Text>
@@ -699,25 +692,27 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.view">
-      <AdminScreenLayout>
-        <FlatList
-          data={attendance ?? []}
-          keyExtractor={(r) => r.id}
-          renderItem={renderItem}
-          ListHeaderComponent={listHeader}
-          ListEmptyComponent={
-            <RecordsEmptyState
-              onAddGeofence={() => navigation.navigate('CreateGeofence', {})}
-            />
-          }
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled
-          refreshing={userRefreshing}
-          onRefresh={handleRefresh}
-        />
+      <AdminScreenLayout padded={false}>
+        <View style={styles.page}>
+          <FlatList
+            data={attendance ?? []}
+            keyExtractor={(r) => r.id}
+            renderItem={renderItem}
+            ListHeaderComponent={listHeader}
+            ListEmptyComponent={
+              <RecordsEmptyState
+                onAddGeofence={() => navigation.navigate('CreateGeofence', {})}
+              />
+            }
+            contentContainerStyle={[adminScreenStyles.listContent, { paddingBottom: TOOLBAR_INSET }]}
+            style={styles.flex}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled
+            refreshing={userRefreshing}
+            onRefresh={handleRefresh}
+          />
 
-        <View style={styles.toolbar}>
+          <View style={styles.toolbar}>
           <Pressable
             style={({ pressed }) => [styles.toolbarBtn, pressed && styles.toolbarBtnPressed]}
             onPress={() => navigation.navigate('GeofenceManagement')}
@@ -737,18 +732,15 @@ export function LiveAttendanceScreen({ navigation }: Props) {
             <Text style={styles.toolbarBtnText}>Records</Text>
           </Pressable>
         </View>
+        </View>
       </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  listContent: {
-    paddingHorizontal: PAGE_PADDING,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    flexGrow: 1,
-  },
+  page: { flex: 1 },
+  flex: { flex: 1 },
   listHeader: {
     gap: spacing.md,
     marginBottom: spacing.sm,
@@ -809,7 +801,7 @@ const styles = StyleSheet.create({
   summaryMetrics: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: adminColors.surfaceMuted,
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderDefault,
@@ -854,12 +846,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: adminColors.chipTones.success.bg,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: adminColors.chipTones.success.border,
   },
   livePulseDot: {
     width: 7,
@@ -870,7 +862,7 @@ const styles = StyleSheet.create({
   livePulseText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#047857',
+    color: adminColors.chipTones.success.text,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
@@ -974,13 +966,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   kpiCellPresent: {
-    backgroundColor: '#F8FDFB',
+    backgroundColor: adminColors.attendanceKpiCell.present,
   },
   kpiCellAbsent: {
-    backgroundColor: '#FEF8F8',
+    backgroundColor: adminColors.attendanceKpiCell.absent,
   },
   kpiCellLate: {
-    backgroundColor: '#FFFCF5',
+    backgroundColor: adminColors.attendanceKpiCell.late,
   },
   kpiDivider: {
     width: StyleSheet.hairlineWidth,
@@ -1066,7 +1058,7 @@ const styles = StyleSheet.create({
   recordTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: adminColors.surfaceMuted,
     borderRadius: radius.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,

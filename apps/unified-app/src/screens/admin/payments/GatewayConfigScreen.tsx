@@ -7,7 +7,6 @@ import { GatewayCard } from '@/components/payments';
 import { DismissKeyboardScrollView, ErrorState, FullScreenModalShell, KeyboardDismissView, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import { useGateways } from '@/hooks/usePayments';
 import type { GatewaySlug, PaymentGatewayRecord } from '@/types/payments';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -97,19 +96,17 @@ export function GatewayConfigScreen() {
   if (isError) return <AdminScreenLayout><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></AdminScreenLayout>;
 
   return (
-    <AdminScreenLayout>
+    <AdminScreenLayout scroll contentStyle={styles.content}>
       <Text style={styles.title}>Payment Gateways</Text>
       <Text style={styles.sub}>Configure your payment providers</Text>
-      <DismissKeyboardScrollView>
-        {(data ?? []).map((gw) => (
-          <GatewayCard
-            key={gw.id}
-            gateway={gw}
-            onConfigure={() => openEdit(gw)}
-            onToggleActive={(active) => onToggleActive(gw, active)}
-          />
-        ))}
-      </DismissKeyboardScrollView>
+      {(data ?? []).map((gw) => (
+        <GatewayCard
+          key={gw.id}
+          gateway={gw}
+          onConfigure={() => openEdit(gw)}
+          onToggleActive={(active) => onToggleActive(gw, active)}
+        />
+      ))}
 
       <FullScreenModalShell
         visible={!!editing}
@@ -148,9 +145,9 @@ export function GatewayConfigScreen() {
 }
 
 const styles = StyleSheet.create({
-  screenPadding: { padding: spacing.md },
+  content: { gap: spacing.sm },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-  sub: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.md },
+  sub: { fontSize: 13, color: colors.textSecondary },
   modalBody: { flex: 1 },
   modalScroll: { padding: spacing.lg, paddingBottom: spacing.xxl },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: spacing.sm },

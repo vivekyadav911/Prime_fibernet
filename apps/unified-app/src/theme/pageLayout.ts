@@ -29,6 +29,7 @@ export const pageLayoutStyles = StyleSheet.create({
   listHeader: {
     gap: pageLayout.sectionGap,
     paddingBottom: spacing.sm,
+    width: '100%',
   },
   /** Static page body with standard gutters. */
   body: {

@@ -5,12 +5,12 @@ import {
   OfficerPayslipScreen,
 } from '@/screens/officer/OfficerPayslipScreen';
 import { PayslipPdfViewerScreen } from '@/screens/common/PayslipPdfViewerScreen';
-import { colors } from '@/theme/colors';
+import { colors, officerColors } from '@/theme/colors';
 import type { OfficerPayslipStackParamList } from '@/types/navigation';
 
 const Stack = createNativeStackNavigator<OfficerPayslipStackParamList>();
 
-const OFFICER_HEADER = colors.primaryNavy;
+const OFFICER_HEADER = officerColors.navBar;
 
 export function OfficerPayslipStackNav() {
   return (

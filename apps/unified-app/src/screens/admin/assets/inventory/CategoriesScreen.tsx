@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Screen } from '@prime/ui';
+import { Button } from '@prime/ui';
 
 import { CategoryCard } from '@/components/Inventory';
 import { AdminScreenLayout, FormField, RoleGuard, SearchBar } from '@/components/admin';
@@ -46,8 +46,8 @@ const EMPTY_FORM: CategoryForm = {
   name: '',
   description: '',
   iconName: 'cube-outline',
-  iconColor: '#3B82F6',
-  iconBgColor: '#EFF6FF',
+  iconColor: adminColors.inventoryStat.total.iconColor,
+  iconBgColor: adminColors.inventoryStat.total.iconBgColor,
 };
 
 export function CategoriesScreen({ navigation }: Props) {
@@ -165,7 +165,9 @@ export function CategoriesScreen({ navigation }: Props) {
   if (isLoading) {
     return (
       <RoleGuard requiredPermission="inventory.edit">
-        <Screen><SkeletonLoader rows={6} /></Screen>
+        <AdminScreenLayout>
+          <SkeletonLoader rows={6} />
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
@@ -173,41 +175,41 @@ export function CategoriesScreen({ navigation }: Props) {
   if (error) {
     return (
       <RoleGuard requiredPermission="inventory.edit">
-        <Screen><ErrorState message={error} onRetry={load} /></Screen>
+        <AdminScreenLayout>
+          <ErrorState message={error} onRetry={load} />
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
 
+  const listHeader = (
+    <View style={adminScreenStyles.listHeader}>
+      <SearchBar value={search} onChangeText={setSearch} placeholder="Search categories..." />
+      <Text style={styles.sectionLabel}>MAIN CATEGORIES ({filtered.length})</Text>
+    </View>
+  );
+
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <AdminScreenLayout>
-        <View style={styles.searchWrap}>
-          <SearchBar value={search} onChangeText={setSearch} placeholder="Search categories..." />
-        </View>
-
-        <View style={styles.sectionRow}>
-          <Text style={styles.sectionLabel}>MAIN CATEGORIES ({filtered.length})</Text>
-        </View>
-
-        {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="pricetag-outline" size={64} color={colors.borderDefault} />
-            <Text style={styles.emptyTitle}>No categories yet</Text>
-            <Button label="Add Category" onPress={openAdd} />
-          </View>
-        ) : (
-          <FlatList
-            data={filtered}
-            keyExtractor={(c) => c.id}
-            renderItem={({ item }) => (
-              <CategoryCard
-                category={item}
-                onEdit={openEdit}
-                onDelete={handleDelete}
-              />
-            )}
-          />
-        )}
+      <AdminScreenLayout padded={false}>
+        <FlatList
+          data={filtered}
+          keyExtractor={(c) => c.id}
+          renderItem={({ item }) => (
+            <CategoryCard category={item} onEdit={openEdit} onDelete={handleDelete} />
+          )}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="pricetag-outline" size={64} color={colors.borderDefault} />
+              <Text style={styles.emptyTitle}>No categories yet</Text>
+              <Button label="Add Category" onPress={openAdd} />
+            </View>
+          }
+          contentContainerStyle={[adminScreenStyles.listContent, filtered.length === 0 && styles.emptyList]}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
 
         <Modal visible={sheetVisible} transparent animationType="slide">
           <Pressable style={styles.modalBackdrop} onPress={() => setSheetVisible(false)}>
@@ -254,8 +256,8 @@ export function CategoriesScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   headerAddBtn: { marginRight: spacing.sm },
-  searchWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.sm },
-  sectionRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  list: { flex: 1 },
+  emptyList: { flexGrow: 1 },
   sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 1 },
   empty: { alignItems: 'center', padding: spacing.xl, gap: spacing.md },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },

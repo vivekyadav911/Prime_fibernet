@@ -55,11 +55,14 @@ export function AssignGeofenceScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <AdminScreenLayout>
-        <Text style={styles.title}>Assign officers — {geofence?.name}</Text>
+      <AdminScreenLayout padded={false}>
         <FlatList
           data={filtered}
           keyExtractor={(o) => o.id}
+          ListHeaderComponent={<Text style={styles.title}>Assign officers — {geofence?.name}</Text>}
+          ListFooterComponent={
+            <Button label={saving ? 'Saving…' : 'Save'} onPress={() => void handleSave()} disabled={saving} />
+          }
           renderItem={({ item }) => (
             <View style={styles.row}>
               <Text style={styles.name}>{item.name}</Text>
@@ -70,15 +73,18 @@ export function AssignGeofenceScreen({ route, navigation }: Props) {
               />
             </View>
           )}
+          contentContainerStyle={adminScreenStyles.listContent}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
         />
-        <Button label={saving ? 'Saving…' : 'Save'} onPress={() => void handleSave()} disabled={saving} />
       </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 16, fontWeight: '600', marginBottom: spacing.md, color: colors.textPrimary },
+  list: { flex: 1 },
+  title: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',

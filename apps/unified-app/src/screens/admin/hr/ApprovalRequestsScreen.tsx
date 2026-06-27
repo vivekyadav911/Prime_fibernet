@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
   metaBlock: { gap: 4 },
   metaLine: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
   reasonBlock: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: adminColors.surfaceMuted,
     borderRadius: radius.md,
     padding: spacing.sm,
     gap: 4,
@@ -515,7 +515,7 @@ const styles = StyleSheet.create({
   reasonText: { fontSize: 14, color: colors.textPrimary, lineHeight: 20 },
   reviewNotes: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic' },
   auditPanel: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: adminColors.surfaceMuted,
     borderRadius: radius.md,
     padding: spacing.sm,
     gap: spacing.xs,

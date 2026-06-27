@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {  Button } from '@prime/ui';
+import { AdminButton } from '@/components/admin/AdminButton';
 
 import { AdminScreenLayout, DateField, FormField, RoleGuard } from '@/components/admin';
 import { OfficerSearchField } from '@/components/payroll/OfficerSearchField';
@@ -20,7 +20,7 @@ import { getLocalDateString } from '@/utils/dateUtils';
 type Props = NativeStackScreenProps<AdminPayrollStackParamList, 'PayslipSettings'>;
 
 const STEPS = [
-  { id: 'salary', label: '1. Salary', hint: 'Set monthly salary per officer — used to compute hourly rate.' },
+  { id: 'salary', label: '1. Salary', hint: 'Set monthly salary per officer ÔÇö used to compute hourly rate.' },
   {
     id: 'rules',
     label: '2. Pay rules',
@@ -29,7 +29,7 @@ const STEPS = [
   {
     id: 'labels',
     label: '3. Labels',
-    hint: 'Clocked hours ÷ shift hours → attendance %. These bands become the display label on payslips.',
+    hint: 'Clocked hours ├À shift hours ÔåÆ attendance %. These bands become the display label on payslips.',
   },
   { id: 'holidays', label: '4. Holidays', hint: 'Company holidays are paid per the holiday pay rule.' },
 ] as const;
@@ -92,7 +92,7 @@ export function PayslipSettingsScreen(_props: Props) {
       <AdminScreenLayout>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.stepBar}>
           {STEPS.map((s) => (
-            <Button
+            <AdminButton
               key={s.id}
               label={s.label}
               variant={step === s.id ? 'primary' : 'ghost'}
@@ -134,7 +134,7 @@ export function PayslipSettingsScreen(_props: Props) {
                   value={compEffectiveFrom}
                   onChange={setCompEffectiveFrom}
                 />
-                <Button
+                <AdminButton
                   label="Save salary"
                   variant="secondary"
                   onPress={() => {
@@ -165,7 +165,7 @@ export function PayslipSettingsScreen(_props: Props) {
                     {officerNameById.get(item.officerId) ?? item.officerId.slice(0, 8)}
                   </Text>
                   <Text style={styles.cardMeta}>
-                    {formatCurrencyInrPrecise(item.monthlySalary)}/mo —{' '}
+                    {formatCurrencyInrPrecise(item.monthlySalary)}/mo ÔÇö{' '}
                     {formatCompensationRange(item.effectiveFrom, item.effectiveTo)}
                   </Text>
                 </View>
@@ -176,14 +176,14 @@ export function PayslipSettingsScreen(_props: Props) {
           {step === 'rules' ? (
             <>
               <Text style={styles.helper}>
-                Pay rules apply after a day&apos;s label/status is resolved. Fraction × hourly rate
-                × hours (scheduled or actual).
+                Pay rules apply after a day&apos;s label/status is resolved. Fraction ├ù hourly rate
+                ├ù hours (scheduled or actual).
               </Text>
               {payTypeRules.map((rule) => (
                 <View key={rule.id} style={styles.card}>
                   <Text style={styles.cardTitle}>{rule.attendanceStatus.replace(/_/g, ' ')}</Text>
                   <Text style={styles.cardMeta}>
-                    Pay fraction: {rule.payFraction} ·{' '}
+                    Pay fraction: {rule.payFraction} ┬À{' '}
                     {rule.usesScheduledHours ? 'Scheduled hours' : 'Actual hours'}
                   </Text>
                   {rule.description ? (
@@ -197,7 +197,7 @@ export function PayslipSettingsScreen(_props: Props) {
           {step === 'labels' ? (
             <>
               <Text style={styles.helper}>
-                Labels are assigned from attendance % = actual hours ÷ scheduled shift hours. The
+                Labels are assigned from attendance % = actual hours ├À scheduled shift hours. The
                 matching label then selects the pay rule above.
               </Text>
               {labelThresholds.map((th) => (
@@ -206,7 +206,7 @@ export function PayslipSettingsScreen(_props: Props) {
                   <Text style={styles.cardMeta}>
                     {(th.minHoursFraction * 100).toFixed(0)}%
                     {th.maxHoursFraction != null
-                      ? ` – ${(th.maxHoursFraction * 100).toFixed(0)}%`
+                      ? ` ÔÇô ${(th.maxHoursFraction * 100).toFixed(0)}%`
                       : '+'}{' '}
                     of shift hours
                   </Text>
@@ -221,7 +221,7 @@ export function PayslipSettingsScreen(_props: Props) {
                 <DateField label="Holiday date" value={holidayDate} onChange={setHolidayDate} />
                 <FormField label="Holiday name" value={holidayName} onChangeText={setHolidayName} />
                 <View style={styles.typeRow}>
-                  <Button
+                  <AdminButton
                     label="Company-wide"
                     variant={holidayScopeAll ? 'primary' : 'ghost'}
                     onPress={() => {
@@ -229,7 +229,7 @@ export function PayslipSettingsScreen(_props: Props) {
                       setHolidayScopeLabel('Company-wide');
                     }}
                   />
-                  <Button
+                  <AdminButton
                     label="Specific group"
                     variant={!holidayScopeAll ? 'primary' : 'ghost'}
                     onPress={() => {
@@ -248,7 +248,7 @@ export function PayslipSettingsScreen(_props: Props) {
                     placeholder="e.g. Delhi branch"
                   />
                 ) : null}
-                <Button
+                <AdminButton
                   label={editingHolidayId ? 'Save holiday' : 'Add holiday'}
                   variant="secondary"
                   onPress={() => {
@@ -283,7 +283,7 @@ export function PayslipSettingsScreen(_props: Props) {
                   }}
                 />
                 {editingHolidayId ? (
-                  <Button
+                  <AdminButton
                     label="Cancel edit"
                     variant="ghost"
                     onPress={() => {
@@ -304,10 +304,10 @@ export function PayslipSettingsScreen(_props: Props) {
                   <View key={h.id} style={styles.card}>
                     <Text style={styles.cardTitle}>{h.name}</Text>
                     <Text style={styles.cardMeta}>
-                      {h.holidayDate} · {h.scopeLabel}
+                      {h.holidayDate} ┬À {h.scopeLabel}
                     </Text>
                     <View style={styles.typeRow}>
-                      <Button
+                      <AdminButton
                         label="Edit"
                         variant="ghost"
                         onPress={() => {
@@ -318,7 +318,7 @@ export function PayslipSettingsScreen(_props: Props) {
                           setHolidayScopeLabel(h.scopeLabel);
                         }}
                       />
-                      <Button
+                      <AdminButton
                         label="Delete"
                         variant="ghost"
                         onPress={() =>
@@ -337,14 +337,14 @@ export function PayslipSettingsScreen(_props: Props) {
 
           <View style={styles.navRow}>
             {stepIndex > 0 ? (
-              <Button
+              <AdminButton
                 label="Previous"
                 variant="ghost"
                 onPress={() => setStep(STEPS[stepIndex - 1]!.id)}
               />
             ) : null}
             {stepIndex < STEPS.length - 1 ? (
-              <Button
+              <AdminButton
                 label="Next step"
                 variant="secondary"
                 onPress={() => setStep(STEPS[stepIndex + 1]!.id)}

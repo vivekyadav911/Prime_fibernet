@@ -1,18 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
-
+import { Screen } from '@prime/ui';
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
-import {
-  AdminScreenLayout,
-  DateField,
-  FilterChips,
-  RoleGuard,
-  SearchBar,
-  SelectField,
-  StatusBadge,
-} from '@/components/admin';
+import { AdminButton, AdminScreenLayout, DateField, FilterChips, RoleGuard, SearchBar, SelectField, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAdminAttendance } from '@/hooks/attendance/useAdminAttendance';
 import { setAdminRecordsPrefs } from '@/store/slices/attendanceSlice';
@@ -333,13 +324,13 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
           </View>
 
           <View style={styles.exportRow}>
-            <Button
+            <AdminButton
               label={exporting === 'csv' ? 'Exporting…' : 'Export CSV'}
               variant="secondary"
               onPress={handleExportCsv}
               disabled={Boolean(exporting) || filteredRecords.length === 0}
             />
-            <Button
+            <AdminButton
               label={exporting === 'pdf' ? 'Exporting…' : 'Export PDF'}
               variant="secondary"
               onPress={handleExportPdf}
@@ -539,9 +530,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     gap: 2,
   },
-  kpiCellPresent: { backgroundColor: '#F8FDFB' },
-  kpiCellAbsent: { backgroundColor: '#FEF8F8' },
-  kpiCellLate: { backgroundColor: '#FFFCF5' },
+  kpiCellPresent: { backgroundColor: adminColors.attendanceKpiCell.present },
+  kpiCellAbsent: { backgroundColor: adminColors.attendanceKpiCell.absent },
+  kpiCellLate: { backgroundColor: adminColors.attendanceKpiCell.late },
   kpiDivider: {
     width: StyleSheet.hairlineWidth,
     backgroundColor: colors.borderDefault,
@@ -603,21 +594,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
   },
-  chipWarning: { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
-  chipError: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
-  chipInfo: { backgroundColor: adminColors.primaryTint, borderColor: '#C9C2F0' },
-  chipText: { fontSize: 11, fontWeight: '600' },
-  chipTextWarning: { color: '#B45309' },
-  chipTextError: { color: '#B91C1C' },
+  chipWarning: { backgroundColor: adminColors.chipTones.warning.bg, borderColor: adminColors.chipTones.warning.border },
+  chipError: { backgroundColor: adminColors.chipTones.error.bg, borderColor: adminColors.chipTones.error.border },
+  chipInfo: { backgroundColor: adminColors.chipTones.primary.bg, borderColor: adminColors.chipTones.primary.border },
+  chipText: { fontSize: 12, fontWeight: '600' },
+  chipTextWarning: { color: adminColors.chipTones.warning.text },
+  chipTextError: { color: adminColors.chipTones.error.text },
   chipTextInfo: { color: adminColors.primary },
   manualNote: { fontSize: 11, color: colors.textSecondary, fontStyle: 'italic' },
   recordTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: radius.sm,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xxs,
+    backgroundColor: adminColors.surfaceMuted,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   recordTimeCell: { flex: 1, alignItems: 'center', gap: 1 },
   recordTimeDivider: {

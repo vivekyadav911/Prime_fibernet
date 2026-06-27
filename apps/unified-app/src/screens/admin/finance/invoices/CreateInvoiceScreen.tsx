@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import { Button } from '@prime/ui';
 
-import { FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
-import { DismissKeyboardScrollView, ToggleSwitch } from '@/components/common';
+import { FormField, AdminScreenLayout, RoleGuard, SectionCard, SelectField } from '@/components/admin';
+import { ToggleSwitch } from '@/components/common';
 import {
   InvoiceDeliverySection,
   InvoiceLineItemsEditor,
@@ -183,8 +183,8 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
 
   return (
     <RoleGuard requiredPermission="invoices.create">
-      <Screen keyboardDismiss={false}>
-          <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
+      <>
+        <AdminScreenLayout scroll contentStyle={styles.scroll}>
           <SectionCard title="Customer details">
             <Button
               label={selectedCustomer ? `Selected: ${selectedCustomer.name}` : 'Select customer'}
@@ -246,7 +246,7 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
             <Button label="Download PDF" variant="secondary" onPress={() => void onDownloadOnly()} disabled={creating} />
             <Button label="Send invoice" onPress={() => void onSend()} disabled={creating || sending} />
           </View>
-          </DismissKeyboardScrollView>
+        </AdminScreenLayout>
 
         <SelectCustomerModal
           visible={customerModalVisible}
@@ -257,7 +257,7 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
             setManualEntry(false);
           }}
         />
-      </Screen>
+      </>
     </RoleGuard>
   );
 }

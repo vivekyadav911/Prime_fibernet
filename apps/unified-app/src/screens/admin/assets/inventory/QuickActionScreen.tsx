@@ -75,13 +75,13 @@ export function QuickActionScreen({ navigation, route }: Props) {
             <Text style={styles.itemName}>{item.name}</Text>
             <Text style={styles.sku}>SKU: {item.sku || '—'}</Text>
             <View style={styles.statRow}>
-              <View style={[styles.statBox, { backgroundColor: '#F0FDF4' }]}>
+              <View style={[styles.statBox, { backgroundColor: adminColors.inventoryStat.stock.iconBgColor }]}>
                 <Text style={styles.statLabel}>Available</Text>
-                <Text style={[styles.statValue, { color: '#10B981' }]}>{item.availableQuantity}</Text>
+                <Text style={[styles.statValue, { color: adminColors.inventoryStat.stock.valueColor }]}>{item.availableQuantity}</Text>
               </View>
-              <View style={[styles.statBox, { backgroundColor: '#FFFBEB' }]}>
+              <View style={[styles.statBox, { backgroundColor: adminColors.inventoryStat.low.iconBgColor }]}>
                 <Text style={styles.statLabel}>Assigned</Text>
-                <Text style={[styles.statValue, { color: '#F59E0B' }]}>{item.assignedQuantity}</Text>
+                <Text style={[styles.statValue, { color: adminColors.inventoryStat.low.valueColor }]}>{item.assignedQuantity}</Text>
               </View>
             </View>
           </View>
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 22, fontWeight: '700', marginTop: 4 },
   sectionLabel: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: spacing.sm, marginTop: spacing.md },
   confirmBtn: {
-    backgroundColor: '#1E1B4B',
+    backgroundColor: adminColors.ctaDark,
     margin: spacing.md,
     borderRadius: radius.sm,
     height: 56,

@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-
 
 import { AdminScreenLayout, AdminKPICard, FilterChips, RoleGuard, SearchBar } from '@/components/admin';
 import { InvoiceListRow, SendInvoiceRecipientModal } from '@/components/invoices';
@@ -51,6 +50,27 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
     [stats],
   );
 
+  const handleDownload = useCallback(
+    async (item: NonNullable<typeof data>[number]) => {
+      try {
+        let path = item.pdfStoragePath;
+        if (!path) {
+          const invoice = await fetchInvoice(item.id).unwrap();
+          path = await generateAndUploadPDF(invoice);
+          refetch();
+        }
+        navigation.navigate('InvoicePdfViewer', {
+          storagePath: path,
+          title: `Invoice ${item.invoiceNumber}`,
+          fileName: `${item.invoiceNumber}.pdf`,
+        });
+      } catch (e) {
+        Alert.alert('Download failed', queryErrorMessage(e));
+      }
+    },
+    [fetchInvoice, generateAndUploadPDF, navigation, refetch],
+  );
+
   const openSendModal = useCallback((item: AdminInvoice, channel: 'email' | 'whatsapp') => {
     setSendChannel(channel);
     setSendTarget(item);
@@ -76,6 +96,35 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
     [dispatch, refetch, send, sendTarget],
   );
 
+  const renderItem = useCallback(
+    ({ item }: { item: NonNullable<typeof data>[number] }) => (
+      <InvoiceListRow
+        item={item}
+        onDownload={() => void handleDownload(item)}
+        onSendEmail={() => openSendModal(item, 'email')}
+        onSendWhatsApp={() => openSendModal(item, 'whatsapp')}
+      />
+    ),
+    [handleDownload, openSendModal],
+  );
+
+  const listHeader = (
+    <View style={adminScreenStyles.listHeader}>
+      {statsLoading || !stats ? (
+        <SkeletonLoader rows={1} rowHeight={72} shape="card" />
+      ) : (
+        <View style={styles.kpiRow}>
+          <AdminKPICard label="Total invoices" value={String(stats.totalInvoices)} icon="🧾" surface="blue" />
+          <AdminKPICard label="Non-GST" value={String(stats.nonGstCount)} icon="📋" surface="teal" />
+          <AdminKPICard label="GST" value={String(stats.gstCount)} icon="📄" surface="purple" />
+          <AdminKPICard label="Custom GST" value={String(stats.customGstCount)} icon="✏️" surface="amber" />
+        </View>
+      )}
+      <SearchBar value={search} onChangeText={setSearch} placeholder="Search customer or invoice ID…" />
+      <FilterChips options={typeOptions} selected={typeFilter} onSelect={setTypeFilter} />
+    </View>
+  );
+
   if (isLoading && !data) {
     return (
       <AdminScreenLayout>
@@ -97,56 +146,19 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
   return (
     <RoleGuard requiredPermission="invoices.view">
       <AdminScreenLayout>
-        <ScrollView contentContainerStyle={styles.header}>
-          {statsLoading || !stats ? (
-            <SkeletonLoader rows={1} rowHeight={72} shape="card" />
-          ) : (
-            <View style={styles.kpiRow}>
-              <AdminKPICard label="Total invoices" value={String(stats.totalInvoices)} icon="🧾" surface="blue" />
-              <AdminKPICard label="Non-GST" value={String(stats.nonGstCount)} icon="📋" surface="teal" />
-              <AdminKPICard label="GST" value={String(stats.gstCount)} icon="📄" surface="purple" />
-              <AdminKPICard label="Custom GST" value={String(stats.customGstCount)} icon="✏️" surface="amber" />
-            </View>
-          )}
-          <SearchBar value={search} onChangeText={setSearch} placeholder="Search customer or invoice ID…" />
-          <FilterChips options={typeOptions} selected={typeFilter} onSelect={setTypeFilter} />
-        </ScrollView>
-
-        {invoices.length === 0 ? (
-          <EmptyState title="No invoice history" subtitle="Sent invoices will appear here" icon="🧾" />
-        ) : (
-          <FlatList
-            data={invoices}
-            keyExtractor={(i) => i.id}
-            refreshing={isFetching}
-            onRefresh={refetch}
-            renderItem={({ item }) => (
-              <InvoiceListRow
-                item={item}
-                onDownload={() => {
-                  void (async () => {
-                    try {
-                      let path = item.pdfStoragePath;
-                      if (!path) {
-                        const invoice = await fetchInvoice(item.id).unwrap();
-                        path = await generateAndUploadPDF(invoice);
-                      }
-                      navigation.navigate('InvoicePdfViewer', {
-                        storagePath: path,
-                        title: `Invoice ${item.invoiceNumber}`,
-                        fileName: `${item.invoiceNumber}.pdf`,
-                      });
-                    } catch {
-                      // Error surfaced via alert in list screen pattern — keep history lightweight
-                    }
-                  })();
-                }}
-                onSendEmail={() => openSendModal(item, 'email')}
-                onSendWhatsApp={() => openSendModal(item, 'whatsapp')}
-              />
-            )}
-          />
-        )}
+        <FlatList
+          data={invoices}
+          keyExtractor={(i) => i.id}
+          renderItem={renderItem}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={
+            <EmptyState title="No invoice history" subtitle="Sent invoices will appear here" icon="🧾" />
+          }
+          refreshing={isFetching}
+          onRefresh={refetch}
+          contentContainerStyle={adminScreenStyles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
         <SendInvoiceRecipientModal
           visible={sendTarget != null}
           invoiceNumber={sendTarget?.invoiceNumber ?? ''}
@@ -163,6 +175,5 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  header: { padding: spacing.sm, gap: spacing.sm },
   kpiRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

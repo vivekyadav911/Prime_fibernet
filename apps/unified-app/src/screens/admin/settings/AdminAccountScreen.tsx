@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Screen } from '@prime/ui';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { AvatarIcon, RoleGuard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminScreenLayout } from '@/components/admin/AdminScreenLayout';
+import { AvatarIcon } from '@/components/admin/AvatarIcon';
+import { RoleGuard } from '@/components/admin/RoleGuard';
+import { DismissKeyboardScrollView, ErrorState, SkeletonLoader } from '@/components/common';
 import { SettingsHubLayout } from '@/components/admin/settings';
+import { pageLayout } from '@/theme/pageLayout';
 import {
   useGetAdminProfileQuery,
   useUpdateAdminDisplayNameMutation,
@@ -190,31 +192,28 @@ export function AdminAccountScreen() {
 
   return (
     <RoleGuard requiredPermission="settings.view">
-      <Screen padded={false} safeAreaTop={false} style={styles.screen}>
+      <AdminScreenLayout padded={false}>
         <SettingsHubLayout activeRoute="AdminAccount">
-          <ScrollView
+          <DismissKeyboardScrollView
             style={styles.flex}
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            nestedScrollEnabled
             showsVerticalScrollIndicator={false}
           >
             {body}
-          </ScrollView>
+          </DismissKeyboardScrollView>
         </SettingsHubLayout>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  screen: { backgroundColor: ui.bg, flex: 1 },
   content: {
-    paddingHorizontal: ui.pagePad,
-    paddingTop: 12,
-    paddingBottom: 32,
+    paddingHorizontal: pageLayout.pagePadding,
+    paddingTop: pageLayout.contentTop,
+    paddingBottom: pageLayout.contentBottom,
     gap: ui.sectionGap,
   },
   summaryCard: {

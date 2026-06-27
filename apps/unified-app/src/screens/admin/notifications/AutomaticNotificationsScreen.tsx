@@ -13,10 +13,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Screen } from '@prime/ui';
+import { Button } from '@prime/ui';
 
 import { AudiencePickerSheet } from '@/components/Notifications';
-import { RoleGuard, SectionCard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader, DismissKeyboardScrollView, KeyboardDismissView, ToggleSwitch } from '@/components/common';
 import type { AutomationRule, RecurringSchedule } from '@/services/broadcastNotificationService';
 import {
@@ -273,9 +273,9 @@ export function AutomaticNotificationsScreen(_props: Props) {
   if (loading) {
     return (
       <RoleGuard requiredPermission="notifications.view">
-        <Screen style={styles.canvas}>
+        <AdminScreenLayout>
           <SkeletonLoader rows={8} />
-        </Screen>
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
@@ -283,7 +283,7 @@ export function AutomaticNotificationsScreen(_props: Props) {
   if (isError) {
     return (
       <RoleGuard requiredPermission="notifications.view">
-        <Screen style={styles.canvas}>
+        <AdminScreenLayout>
           <ErrorState
             message={queryErrorMessage(error)}
             onRetry={() => {
@@ -291,15 +291,15 @@ export function AutomaticNotificationsScreen(_props: Props) {
               void refetchSchedules();
             }}
           />
-        </Screen>
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
 
   return (
     <RoleGuard requiredPermission="notifications.view">
-      <Screen style={styles.canvas} padded={false}>
-        <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
+      <>
+        <AdminScreenLayout scroll contentStyle={styles.content}>
           <SectionCard title="Event Triggers">
             <Text style={styles.sectionHint}>
               Automatic notifications fired by system events. Use {'{variable}'} placeholders in templates.
@@ -326,7 +326,7 @@ export function AutomaticNotificationsScreen(_props: Props) {
               ListEmptyComponent={<Text style={styles.empty}>No recurring schedules yet</Text>}
             />
           </SectionCard>
-        </DismissKeyboardScrollView>
+        </AdminScreenLayout>
 
         <Modal visible={!!editingRule} animationType="slide" transparent onRequestClose={() => setEditingRule(null)}>
           <Pressable
@@ -452,14 +452,13 @@ export function AutomaticNotificationsScreen(_props: Props) {
             setAudienceOpen(false);
           }}
         />
-      </Screen>
+      </>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  canvas: { flex: 1, backgroundColor: adminColors.canvasBg },
-  scroll: { padding: spacing.sm, paddingBottom: spacing.xxl },
+  content: { gap: spacing.md },
   sectionHint: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm },
   ruleCard: {
     backgroundColor: colors.surfaceWhite,

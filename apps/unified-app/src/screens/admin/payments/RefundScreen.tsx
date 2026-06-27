@@ -1,19 +1,15 @@
-import { AdminScreenLayout } from '@/components/admin';
+import { AdminScreenLayout, AdminStateShell } from '@/components/admin';
 import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import { Button } from '@prime/ui';
 
 import { AmountDisplay } from '@/components/payments';
-import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePaymentDetail } from '@/hooks/usePayments';
 import { useInitiateRefundV2Mutation } from '@/services/api/paymentCollectionApi';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
-import { adminColors } from '@/theme/admin';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
-import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminPaymentsStackParamList, 'Refund'>;
 
@@ -40,39 +36,43 @@ export function RefundScreen({ route, navigation }: Props) {
     }
   }, [amount, initiateRefund, navigation, payment, paymentId, reason]);
 
-  if (isLoading) return <Screen><SkeletonLoader rows={4} /></Screen>;
-  if (isError || !payment) {
-    return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-  }
-
   return (
-    <AdminScreenLayout>
-      <Text style={styles.title}>Refund — {payment.payment_number}</Text>
-      <AmountDisplay amount={payment.total_amount} large />
-      <Text style={styles.label}>REFUND AMOUNT</Text>
-      <TextInput
-        style={styles.input}
-        keyboardType="decimal-pad"
-        value={amount || String(payment.total_amount)}
-        onChangeText={setAmount}
-        placeholderTextColor={colors.textSecondary}
-      />
-      <Text style={styles.label}>REASON (min 20 chars)</Text>
-      <TextInput
-        style={[styles.input, styles.notes]}
-        multiline
-        value={reason}
-        onChangeText={setReason}
-        placeholderTextColor={colors.textSecondary}
-      />
-      <Button label="Initiate refund" onPress={onSubmit} disabled={refunding} />
-    </AdminScreenLayout>
+    <AdminStateShell
+      isLoading={isLoading}
+      isError={isError || !payment}
+      error={error}
+      onRetry={refetch}
+      loadingRows={4}
+    >
+      <AdminScreenLayout scroll contentStyle={styles.content}>
+        <Text style={styles.title}>Refund — {payment!.payment_number}</Text>
+        <AmountDisplay amount={payment!.total_amount} large />
+        <Text style={styles.label}>REFUND AMOUNT</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="decimal-pad"
+          value={amount || String(payment!.total_amount)}
+          onChangeText={setAmount}
+          placeholderTextColor={colors.textSecondary}
+        />
+        <Text style={styles.label}>REASON (min 20 chars)</Text>
+        <TextInput
+          style={[styles.input, styles.notes]}
+          multiline
+          value={reason}
+          onChangeText={setReason}
+          placeholderTextColor={colors.textSecondary}
+        />
+        <Button label="Initiate refund" onPress={onSubmit} disabled={refunding} style={styles.submit} />
+      </AdminScreenLayout>
+    </AdminStateShell>
   );
 }
 
-const styles = StyleSheet.create({  screenPadding: { padding: spacing.md },
-  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.md },
-  label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', marginTop: spacing.md, marginBottom: spacing.xs },
+const styles = StyleSheet.create({
+  content: { gap: spacing.sm },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', marginTop: spacing.sm },
   input: {
     borderWidth: 1,
     borderColor: colors.borderDefault,
@@ -81,5 +81,6 @@ const styles = StyleSheet.create({  screenPadding: { padding: spacing.md },
     backgroundColor: colors.surfaceWhite,
     color: colors.textPrimary,
   },
-  notes: { minHeight: 100, textAlignVertical: 'top' },
+  notes: { minHeight: 100, textAlignVertical: 'top', marginBottom: spacing.xs },
+  submit: { marginTop: spacing.sm, alignSelf: 'stretch' },
 });

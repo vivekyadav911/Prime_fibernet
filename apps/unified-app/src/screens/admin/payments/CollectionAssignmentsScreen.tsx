@@ -12,10 +12,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import { Button } from '@prime/ui';
 
 import {
   AdminEmptyState,
+  AdminScreenLayout,
   Pagination,
   RoleGuard,
   SearchBar,
@@ -43,7 +44,9 @@ import {
 } from '@/types/api/admin';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
+import { pageLayout } from '@/theme/pageLayout';
 import { radius, spacing } from '@/theme/spacing';
 import { formatINR } from '@/utils/currencyFormat';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -264,7 +267,7 @@ export function CollectionAssignmentsScreen() {
 
   const listHeader = useMemo(
     () => (
-      <View style={styles.toolbar}>
+      <View style={adminScreenStyles.listHeader}>
         <View style={styles.searchRow}>
           <View style={styles.searchWrap}>
             <SearchBar
@@ -330,23 +333,23 @@ export function CollectionAssignmentsScreen() {
 
   if (isLoading && page === 1) {
     return (
-      <Screen>
+      <AdminScreenLayout>
         <SkeletonLoader rows={6} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   if (isError) {
     return (
-      <Screen>
+      <AdminScreenLayout>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="payments.edit">
-      <Screen padded={false}>
+      <AdminScreenLayout padded={false}>
         <FlatList
           ref={listRef}
           data={rows}
@@ -361,7 +364,9 @@ export function CollectionAssignmentsScreen() {
               </View>
             ) : null
           }
-          contentContainerStyle={styles.list}
+          contentContainerStyle={adminScreenStyles.listContent}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
         />
 
         <View style={styles.footer}>
@@ -416,13 +421,13 @@ export function CollectionAssignmentsScreen() {
             </Pressable>
           </Pressable>
         </Modal>
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  toolbar: { padding: spacing.md, gap: spacing.sm },
+  list: { flex: 1 },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   searchWrap: { flex: 1 },
   filterBtn: {
@@ -455,9 +460,8 @@ const styles = StyleSheet.create({
   },
   sortWrap: { flex: 1, minWidth: 160 },
   summaryLine: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
-  list: { paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
   footer: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: pageLayout.pagePadding,
     paddingBottom: spacing.md,
     paddingTop: spacing.xs,
   },

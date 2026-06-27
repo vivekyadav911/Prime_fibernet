@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import { Button } from '@prime/ui';
 
-import { RoleGuard, StatusBadge } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   fetchAssignmentRequests,
@@ -11,6 +11,7 @@ import {
 } from '@/services/inventoryService';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminInventoryStackParamList } from '@/types/navigation';
@@ -62,10 +63,39 @@ export function AssignmentRequestsScreen(_props: Props) {
     }
   };
 
+  const renderItem = useCallback(
+    ({ item }: { item: AssignmentRequest }) => (
+      <View style={styles.row}>
+        <Text style={styles.name}>
+          {item.officerName} → {item.itemName} ×{item.quantity}
+        </Text>
+        {item.notes ? <Text style={styles.notes}>{item.notes}</Text> : null}
+        <StatusBadge status={item.status} />
+        <View style={styles.actions}>
+          <Button
+            label="Approve"
+            variant="secondary"
+            disabled={reviewingId === item.id}
+            onPress={() => void handleReview(item.id, 'approve')}
+          />
+          <Button
+            label="Reject"
+            variant="ghost"
+            disabled={reviewingId === item.id}
+            onPress={() => void handleReview(item.id, 'reject')}
+          />
+        </View>
+      </View>
+    ),
+    [reviewingId],
+  );
+
   if (isLoading) {
     return (
       <RoleGuard requiredPermission="inventory.edit">
-        <Screen><SkeletonLoader rows={6} /></Screen>
+        <AdminScreenLayout>
+          <SkeletonLoader rows={6} />
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
@@ -73,52 +103,42 @@ export function AssignmentRequestsScreen(_props: Props) {
   if (error) {
     return (
       <RoleGuard requiredPermission="inventory.edit">
-        <Screen><ErrorState message={error} onRetry={load} /></Screen>
+        <AdminScreenLayout>
+          <ErrorState message={error} onRetry={load} />
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
 
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <Screen padded={false}>
+      <AdminScreenLayout padded={false}>
         <FlatList
           data={requests}
           keyExtractor={(r) => r.id}
+          renderItem={renderItem}
           ListEmptyComponent={
             <Text style={styles.empty}>No pending assignment requests</Text>
           }
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <Text style={styles.name}>
-                {item.officerName} → {item.itemName} ×{item.quantity}
-              </Text>
-              {item.notes ? <Text style={styles.notes}>{item.notes}</Text> : null}
-              <StatusBadge status={item.status} />
-              <View style={styles.actions}>
-                <Button
-                  label="Approve"
-                  variant="secondary"
-                  disabled={reviewingId === item.id}
-                  onPress={() => void handleReview(item.id, 'approve')}
-                />
-                <Button
-                  label="Reject"
-                  variant="ghost"
-                  disabled={reviewingId === item.id}
-                  onPress={() => void handleReview(item.id, 'reject')}
-                />
-              </View>
-            </View>
-          )}
+          contentContainerStyle={[adminScreenStyles.listContent, requests.length === 0 && styles.emptyList]}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
         />
-      </Screen>
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { padding: spacing.md, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: spacing.xs },
-  name: { fontWeight: '600', fontSize: 15 },
+  list: { flex: 1 },
+  emptyList: { flexGrow: 1 },
+  row: {
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderColor: colors.borderDefault,
+    gap: spacing.xs,
+  },
+  name: { fontWeight: '600', fontSize: 15, color: colors.textPrimary },
   notes: { fontSize: 13, color: colors.textSecondary, fontStyle: 'italic' },
   actions: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.xs },
   empty: { padding: spacing.xl, textAlign: 'center', color: colors.textSecondary },

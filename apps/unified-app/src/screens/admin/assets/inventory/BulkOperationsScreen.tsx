@@ -10,8 +10,6 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Screen } from '@prime/ui';
-
 import { BulkItemCard } from '@/components/Inventory';
 import { AdminScreenLayout, FormField, RoleGuard, SelectField } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
@@ -106,7 +104,9 @@ export function BulkOperationsScreen({ navigation }: Props) {
   if (isLoading) {
     return (
       <RoleGuard requiredPermission="inventory.edit">
-        <Screen><SkeletonLoader rows={6} /></Screen>
+        <AdminScreenLayout>
+          <SkeletonLoader rows={6} />
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
@@ -114,26 +114,29 @@ export function BulkOperationsScreen({ navigation }: Props) {
   if (error) {
     return (
       <RoleGuard requiredPermission="inventory.edit">
-        <Screen><ErrorState message={error} onRetry={refresh} /></Screen>
+        <AdminScreenLayout>
+          <ErrorState message={error} onRetry={refresh} />
+        </AdminScreenLayout>
       </RoleGuard>
     );
   }
 
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <AdminScreenLayout>
-        <Pressable style={styles.selectAll} onPress={toggleAll}>
-          <Ionicons
-            name={allSelected ? 'checkbox' : 'square-outline'}
-            size={22}
-            color={adminColors.primary}
-          />
-          <Text style={styles.selectAllText}>Select All</Text>
-        </Pressable>
-
+      <AdminScreenLayout padded={false}>
         <FlatList
           data={items}
           keyExtractor={(i) => i.id}
+          ListHeaderComponent={
+            <Pressable style={styles.selectAll} onPress={toggleAll}>
+              <Ionicons
+                name={allSelected ? 'checkbox' : 'square-outline'}
+                size={22}
+                color={adminColors.primary}
+              />
+              <Text style={styles.selectAllText}>Select All</Text>
+            </Pressable>
+          }
           renderItem={({ item }) => (
             <BulkItemCard
               item={item}
@@ -141,6 +144,9 @@ export function BulkOperationsScreen({ navigation }: Props) {
               onToggle={toggle}
             />
           )}
+          contentContainerStyle={adminScreenStyles.listContent}
+          style={styles.list}
+          showsVerticalScrollIndicator={false}
         />
 
         {selectedCount > 0 ? (
@@ -205,11 +211,12 @@ export function BulkOperationsScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  list: { flex: 1 },
   selectAll: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    padding: spacing.md,
+    paddingBottom: spacing.sm,
   },
   selectAllText: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   actionBar: {
@@ -223,7 +230,7 @@ const styles = StyleSheet.create({
   },
   actionBarText: { fontSize: 14, fontWeight: '600' },
   applyBtn: {
-    backgroundColor: '#1E1B4B',
+    backgroundColor: adminColors.ctaDark,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -238,7 +245,7 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { fontSize: 18, fontWeight: '700', marginBottom: spacing.md },
   confirmBtn: {
-    backgroundColor: '#1E1B4B',
+    backgroundColor: adminColors.ctaDark,
     borderRadius: radius.sm,
     height: 48,
     alignItems: 'center',
