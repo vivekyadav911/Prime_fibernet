@@ -65,12 +65,18 @@ export function usePayslipCalculation(payslipId: string | null) {
   );
 
   const generatePDF = useCallback(async () => {
-    if (!payslip) throw new Error('Payslip not loaded');
-    if (payslip.status !== 'approved' && payslip.status !== 'paid') {
+    if (!payslipId) throw new Error('Payslip not loaded');
+    const refreshed = await refetch();
+    const snapshot = refreshed.data;
+    if (!snapshot) throw new Error('Payslip not loaded');
+    if (snapshot.status !== 'approved' && snapshot.status !== 'paid') {
       throw new Error('Payslip must be approved before generating PDF');
     }
-    return generateAndUploadPDF(payslip);
-  }, [generateAndUploadPDF, payslip]);
+    if (!snapshot.dailyBreakdown?.length) {
+      throw new Error('Payslip snapshot is missing daily breakdown — regenerate the payslip first');
+    }
+    return generateAndUploadPDF(snapshot);
+  }, [generateAndUploadPDF, payslipId, refetch]);
 
   const sharePDF = useCallback(async () => {
     if (!payslip?.generatedPdfUrl) throw new Error('PDF not generated yet');

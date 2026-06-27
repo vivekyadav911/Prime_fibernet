@@ -1,13 +1,14 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {  Button } from '@prime/ui';
 
 import { AdminScreenLayout, DateField, FormField, RoleGuard, SelectField } from '@/components/admin';
 import { useAttendanceOverride } from '@/hooks/attendance/useAdminAttendance';
 import { useGetOfficersQuery } from '@/services/api/officersApi';
+import { setAdminRecordsPrefs } from '@/store/slices/attendanceSlice';
+import { useAppDispatch } from '@/store/hooks';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
-import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
@@ -25,6 +26,7 @@ const STATUS_OPTIONS = [
 ];
 
 export function ManualAttendanceEntryScreen({ navigation }: Props) {
+  const dispatch = useAppDispatch();
   const { data: officers, isLoading: officersLoading, isError, error } = useGetOfficersQuery();
   const [override, { isLoading: saving }] = useAttendanceOverride();
 
@@ -78,13 +80,32 @@ export function ManualAttendanceEntryScreen({ navigation }: Props) {
         reason: reason.trim(),
       }).unwrap();
 
-      Alert.alert('Saved', 'Manual attendance entry recorded for audit.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      dispatch(
+        setAdminRecordsPrefs({
+          selectedDate: date,
+          viewMode: 'list',
+          useDateRange: false,
+        }),
+      );
+
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
     } catch (e) {
       setFormError(queryErrorMessage(e));
     }
-  }, [buildIsoTime, checkInTime, checkOutTime, date, navigation, officerId, override, reason, status]);
+  }, [
+    buildIsoTime,
+    checkInTime,
+    checkOutTime,
+    date,
+    dispatch,
+    navigation,
+    officerId,
+    override,
+    reason,
+    status,
+  ]);
 
   return (
     <RoleGuard requiredPermission="attendance.edit">

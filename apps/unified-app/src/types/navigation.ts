@@ -268,9 +268,17 @@ export type AdminAttendanceStackParamList = {
 
 export type AdminPayrollStackParamList = {
   PayrollHome: undefined;
-  PayslipsManagement: undefined;
+  PayslipsManagement: { month?: number; year?: number } | undefined;
+  PayslipPreGeneration: {
+    officerId: string;
+    officerName: string;
+    periodStart: string;
+    periodEnd: string;
+    payslipId?: string;
+  };
   PayslipReview: {
     officerId: string;
+    officerName?: string;
     periodStart: string;
     periodEnd: string;
     payslipId?: string;

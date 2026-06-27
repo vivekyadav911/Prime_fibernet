@@ -3,9 +3,12 @@
 export const PAYSLIP_STATUSES = [
   'draft',
   'pending_review',
+  'needs_review',
+  'flagged_zero_pay',
   'approved',
   'paid',
   'cancelled',
+  'voided',
 ] as const;
 
 export type PayslipStatus = (typeof PAYSLIP_STATUSES)[number];
@@ -47,6 +50,7 @@ export type CompanyHoliday = {
   holidayDate: string;
   name: string;
   appliesToAll: boolean;
+  scopeLabel: string;
   createdBy: string | null;
   createdAt: string;
 };
@@ -104,6 +108,10 @@ export type Payslip = {
   authorizedAt: string | null;
   generatedBy: string | null;
   negativePayOverrideNote: string | null;
+  voidedAt: string | null;
+  voidedBy: string | null;
+  voidReason: string | null;
+  calculationWarnings: string[];
   createdAt: string;
   updatedAt: string;
   dailyBreakdown?: PayslipDailyBreakdown[];
@@ -155,16 +163,75 @@ export type CalendarDayCell = {
     | 'extra';
 };
 
+export type PayrollWarningCode =
+  | 'zero_pay'
+  | 'missing_officer_data'
+  | 'incomplete_attendance'
+  | 'unresolved_attendance'
+  | 'no_compensation'
+  | 'no_shift_assigned'
+  | 'snapshot_invalid';
+
+export type AttendancePeriodSummary = {
+  workingDays: number;
+  present: number;
+  absent: number;
+  leave: number;
+  holiday: number;
+  weeklyOff: number;
+  unresolved: number;
+  incomplete: number;
+  unresolvedDates: string[];
+  incompleteDates: string[];
+  canGenerate: boolean;
+  noShiftAssigned: boolean;
+  warnings: string[];
+};
+
 export type PayrollDashboardEntry = {
   officerId: string;
   officerName: string;
+  avatarUrl: string | null;
   payslipId: string | null;
   status: PayslipStatus | 'not_started';
   netPayPreview: number | null;
   generatedPdfUrl: string | null;
   payPeriodLabel: string | null;
+  payPeriodStart: string;
+  payPeriodEnd: string;
   blocked: boolean;
   blockingDates: string[];
+  attendanceSummary: AttendancePeriodSummary;
+  warningCodes: PayrollWarningCode[];
+  missingOfficerFields: string[];
+  hasCompensation: boolean;
+  hasShiftAssignment: boolean;
+};
+
+export type PayslipAuditLogEntry = {
+  id: string;
+  payslipId: string;
+  action: string;
+  performedBy: string | null;
+  performedAt: string;
+  previousStatus: string | null;
+  newStatus: string | null;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+};
+
+export type PayrollGenerationPreview = {
+  officerId: string;
+  officerName: string;
+  periodStart: string;
+  periodEnd: string;
+  periodLabel: string;
+  attendanceSummary: AttendancePeriodSummary;
+  missingOfficerFields: string[];
+  hasCompensation: boolean;
+  hasShiftAssignment: boolean;
+  canGenerate: boolean;
+  warnings: string[];
 };
 
 export type GeneratePayslipInput = {
@@ -209,6 +276,7 @@ export type DbCompanyHolidayRow = {
   holiday_date: string;
   name: string;
   applies_to_all: boolean;
+  scope_label?: string | null;
   created_by: string | null;
   created_at: string;
 };
@@ -242,6 +310,10 @@ export type DbPayslipRow = {
   authorized_at: string | null;
   generated_by: string | null;
   negative_pay_override_note: string | null;
+  voided_at: string | null;
+  voided_by: string | null;
+  void_reason: string | null;
+  calculation_warnings: string[] | null;
   created_at: string;
   updated_at: string;
   officers?: { full_name?: string };
@@ -313,6 +385,7 @@ export function mapCompanyHoliday(row: DbCompanyHolidayRow): CompanyHoliday {
     holidayDate: row.holiday_date,
     name: row.name,
     appliesToAll: row.applies_to_all,
+    scopeLabel: row.scope_label?.trim() || (row.applies_to_all ? 'Company-wide' : 'Specific group'),
     createdBy: row.created_by,
     createdAt: row.created_at,
   };
@@ -376,6 +449,12 @@ export function mapPayslip(row: DbPayslipRow): Payslip {
     authorizedAt: row.authorized_at,
     generatedBy: row.generated_by,
     negativePayOverrideNote: row.negative_pay_override_note,
+    voidedAt: row.voided_at ?? null,
+    voidedBy: row.voided_by ?? null,
+    voidReason: row.void_reason ?? null,
+    calculationWarnings: Array.isArray(row.calculation_warnings)
+      ? (row.calculation_warnings as string[])
+      : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     officerName: row.officers?.full_name,

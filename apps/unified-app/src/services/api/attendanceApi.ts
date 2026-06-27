@@ -286,6 +286,15 @@ export const attendanceApi = baseApi.injectEndpoints({
 
           const manualNote = `Manually entered by ${adminName}${body.reason ? `: ${body.reason}` : ''}`;
 
+          const workingHours =
+            body.checkIn && body.checkOut
+              ? Math.round(
+                  ((new Date(body.checkOut).getTime() - new Date(body.checkIn).getTime()) /
+                    3_600_000) *
+                    100,
+                ) / 100
+              : undefined;
+
           const { data, error } = await client
             .from('shifts')
             .upsert({
@@ -297,6 +306,7 @@ export const attendanceApi = baseApi.injectEndpoints({
               check_in_method: 'admin_override',
               notes: manualNote,
               status: body.checkOut ? 'completed' : 'active',
+              working_hours: workingHours,
               manual_entry_by: userId,
               manual_entry_by_name: adminName,
               manual_entry_reason: body.reason,

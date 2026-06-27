@@ -1,22 +1,36 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Screen } from '@prime/ui';
 
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
-import { AdminScreenLayout, DateField, RoleGuard, StatusBadge } from '@/components/admin';
+import {
+  AdminScreenLayout,
+  DateField,
+  FilterChips,
+  RoleGuard,
+  SearchBar,
+  SelectField,
+  StatusBadge,
+} from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAdminAttendance } from '@/hooks/attendance/useAdminAttendance';
 import { setAdminRecordsPrefs } from '@/store/slices/attendanceSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import type { AttendanceRecord, CheckInMethod } from '@/types/attendance';
+import type { AttendanceRecord, AttendanceStatus, CheckInMethod } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
-import { shareAttendanceCsv, shareAttendancePdf } from '@/utils/attendanceExport';
-import { getLocalDateString } from '@/utils/dateUtils';
+import { shareAttendanceCsv, shareAttendancePdf, resolveExportCalendarMonths, downloadAttendanceCsvInBrowser } from '@/utils/attendanceExport';
+import { isWebBrowser } from '@/utils/webFileDownload';
+import { formatAttendanceDuration } from '@/utils/attendanceDuration';
+import {
+  filterAndSortAttendanceRecords,
+  type AttendanceRecordsSortKey,
+  type AttendanceStatusFilter,
+} from '@/utils/attendanceRecordsFilters';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'AttendanceRecords'>;
@@ -24,17 +38,33 @@ type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'AttendanceRe
 const PAGE_PADDING = spacing.lg;
 const CARD_RADIUS = 22;
 
+const STATUS_FILTER_OPTIONS: { value: AttendanceStatusFilter; label: string }[] = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'present', label: 'Present' },
+  { value: 'absent', label: 'Absent' },
+  { value: 'late', label: 'Late' },
+  { value: 'half_day', label: 'Half day' },
+  { value: 'on_leave', label: 'On leave' },
+  { value: 'holiday', label: 'Holiday' },
+];
+
+const SORT_OPTIONS: { value: AttendanceRecordsSortKey; label: string }[] = [
+  { value: 'date_desc', label: 'Date (newest)' },
+  { value: 'date_asc', label: 'Date (oldest)' },
+  { value: 'name_asc', label: 'Officer A–Z' },
+  { value: 'name_desc', label: 'Officer Z–A' },
+  { value: 'checkin_desc', label: 'Check-in (latest)' },
+  { value: 'checkin_asc', label: 'Check-in (earliest)' },
+  { value: 'status', label: 'Status priority' },
+];
+
 function formatTime(iso?: string): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function formatDuration(hours?: number): string {
-  if (hours == null || hours <= 0) return '—';
-  const wholeHours = Math.floor(hours);
-  const minutes = Math.round((hours - wholeHours) * 60);
-  if (minutes > 0) return `${wholeHours}h ${minutes}m`;
-  return `${wholeHours}h`;
+function formatDuration(record: AttendanceRecord): string {
+  return formatAttendanceDuration(record);
 }
 
 function formatDisplayDate(iso: string): string {
@@ -138,7 +168,7 @@ function AttendanceHistoryCard({ item }: { item: AttendanceRecord }) {
         <View style={styles.recordTimeDivider} />
         <View style={styles.recordTimeCell}>
           <Text style={styles.recordTimeLabel}>Duration</Text>
-          <Text style={styles.recordTimeValue}>{formatDuration(item.workingHours)}</Text>
+          <Text style={styles.recordTimeValue}>{formatDuration(item)}</Text>
         </View>
       </View>
 
@@ -170,15 +200,24 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
 
   const { data, isLoading, isError, error, refetch, isFetching } = useAdminAttendance(queryArgs);
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
+  const [includeCalendarInPdf, setIncludeCalendarInPdf] = useState(viewMode === 'calendar');
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<AttendanceStatusFilter>('all');
+  const [sortBy, setSortBy] = useState<AttendanceRecordsSortKey>('date_desc');
 
   const records = data ?? [];
+  const filteredRecords = useMemo(
+    () => filterAndSortAttendanceRecords(records, searchQuery, statusFilter, sortBy),
+    [records, searchQuery, sortBy, statusFilter],
+  );
   const counts = useMemo(
     () => ({
-      present: records.filter((r) => r.status === 'present').length,
-      absent: records.filter((r) => r.status === 'absent' || !r.checkInTime).length,
-      late: records.filter((r) => r.status === 'late' || r.isLate).length,
+      present: filteredRecords.filter((r) => r.status === 'present').length,
+      absent: filteredRecords.filter((r) => r.status === 'absent' || !r.checkInTime).length,
+      late: filteredRecords.filter((r) => r.status === 'late' || r.isLate).length,
     }),
-    [records],
+    [filteredRecords],
   );
 
   const rangeLabel = useDateRange ? `${dateFrom} to ${dateTo}` : selectedDate;
@@ -197,27 +236,47 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
     [updatePrefs],
   );
 
-  const handleExportCsv = useCallback(async () => {
-    setExporting('csv');
-    try {
-      await shareAttendanceCsv(records, rangeLabel.replace(/\s/g, '_'));
-    } catch (e) {
-      Alert.alert('Export failed', queryErrorMessage(e));
-    } finally {
-      setExporting(null);
-    }
-  }, [rangeLabel, records]);
+  const handleExportCsv = useCallback(() => {
+    setExportError(null);
+    if (filteredRecords.length === 0) return;
 
-  const handleExportPdf = useCallback(async () => {
-    setExporting('pdf');
-    try {
-      await shareAttendancePdf(records, rangeLabel);
-    } catch (e) {
-      Alert.alert('Export failed', queryErrorMessage(e));
-    } finally {
-      setExporting(null);
+    if (isWebBrowser()) {
+      try {
+        downloadAttendanceCsvInBrowser(filteredRecords, rangeLabel.replace(/\s/g, '_'));
+      } catch (e) {
+        setExportError(queryErrorMessage(e));
+      }
+      return;
     }
-  }, [rangeLabel, records]);
+
+    setExporting('csv');
+    void shareAttendanceCsv(filteredRecords, rangeLabel.replace(/\s/g, '_'))
+      .catch((e) => setExportError(queryErrorMessage(e)))
+      .finally(() => setExporting(null));
+  }, [filteredRecords, rangeLabel]);
+
+  const handleExportPdf = useCallback(() => {
+    setExportError(null);
+    if (filteredRecords.length === 0) return;
+
+    setExporting('pdf');
+    void shareAttendancePdf(filteredRecords, rangeLabel, {
+      includeCalendar: includeCalendarInPdf,
+      calendarMonths: includeCalendarInPdf
+        ? resolveExportCalendarMonths(filteredRecords, useDateRange, dateFrom, dateTo, selectedDate)
+        : undefined,
+    })
+      .catch((e) => setExportError(queryErrorMessage(e)))
+      .finally(() => setExporting(null));
+  }, [
+    dateFrom,
+    dateTo,
+    filteredRecords,
+    includeCalendarInPdf,
+    rangeLabel,
+    selectedDate,
+    useDateRange,
+  ]);
 
   const renderItem = useCallback(
     ({ item }: { item: AttendanceRecord }) => <AttendanceHistoryCard item={item} />,
@@ -225,7 +284,8 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
   );
 
   const listHeader = useMemo(() => {
-    const selected = new Date(selectedDate);
+    const calendarAnchor = useDateRange ? dateFrom : selectedDate;
+    const selected = new Date(calendarAnchor);
 
     return (
       <View style={styles.listHeader}>
@@ -276,16 +336,27 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
             <Button
               label={exporting === 'csv' ? 'Exporting…' : 'Export CSV'}
               variant="secondary"
-              onPress={() => void handleExportCsv()}
-              disabled={Boolean(exporting) || records.length === 0}
+              onPress={handleExportCsv}
+              disabled={Boolean(exporting) || filteredRecords.length === 0}
             />
             <Button
               label={exporting === 'pdf' ? 'Exporting…' : 'Export PDF'}
               variant="secondary"
-              onPress={() => void handleExportPdf()}
-              disabled={Boolean(exporting) || records.length === 0}
+              onPress={handleExportPdf}
+              disabled={Boolean(exporting) || filteredRecords.length === 0}
             />
           </View>
+
+          <View style={styles.calendarExportRow}>
+            <Text style={styles.calendarExportLabel}>Include calendar in PDF</Text>
+            <Switch
+              value={includeCalendarInPdf}
+              onValueChange={setIncludeCalendarInPdf}
+              trackColor={{ true: adminColors.primary }}
+            />
+          </View>
+
+          {exportError ? <Text style={styles.exportError}>{exportError}</Text> : null}
         </View>
 
         <AttendanceSummaryStrip
@@ -305,10 +376,36 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
             />
           </View>
         ) : (
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Records</Text>
-            <Text style={styles.sectionCount}>{records.length} officer(s)</Text>
-          </View>
+          <>
+            <View style={styles.listControls}>
+              <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search officer, zone, notes…"
+                containerStyle={styles.searchBar}
+              />
+              <SelectField
+                label="Sort by"
+                value={sortBy}
+                options={SORT_OPTIONS}
+                onSelect={setSortBy}
+                placeholder="Sort records"
+              />
+              <FilterChips
+                options={STATUS_FILTER_OPTIONS}
+                selected={statusFilter}
+                onSelect={setStatusFilter}
+              />
+            </View>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Records</Text>
+              <Text style={styles.sectionCount}>
+                {filteredRecords.length === records.length
+                  ? `${records.length} officer(s)`
+                  : `${filteredRecords.length} of ${records.length}`}
+              </Text>
+            </View>
+          </>
         )}
       </View>
     );
@@ -319,12 +416,19 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
     dateFrom,
     dateTo,
     exporting,
+    exportError,
     handleCalendarDayPress,
     handleExportCsv,
     handleExportPdf,
+    includeCalendarInPdf,
     navigation,
     records,
     selectedDate,
+    filteredRecords.length,
+    records.length,
+    searchQuery,
+    sortBy,
+    statusFilter,
     updatePrefs,
     useDateRange,
     viewMode,
@@ -364,7 +468,7 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
           />
         ) : (
           <FlatList
-            data={records}
+            data={filteredRecords}
             keyExtractor={(r) => r.id}
             renderItem={renderItem}
             ListHeaderComponent={listHeader}
@@ -374,9 +478,13 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
             onRefresh={refetch}
             ListEmptyComponent={
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No attendance records</Text>
+                <Text style={styles.emptyTitle}>
+                  {records.length === 0 ? 'No attendance records' : 'No matching records'}
+                </Text>
                 <Text style={styles.emptySubtitle}>
-                  No officer sessions were logged for {formatDisplayDate(selectedDate)}.
+                  {records.length === 0
+                    ? `No officer sessions were logged for ${formatDisplayDate(selectedDate)}.`
+                    : 'Try adjusting your search or status filter.'}
                 </Text>
               </View>
             }
@@ -405,6 +513,14 @@ const styles = StyleSheet.create({
   rangeToggleLabel: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   toolbarRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   exportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  calendarExportRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing.xxs,
+  },
+  calendarExportLabel: { fontSize: 13, fontWeight: '500', color: colors.textSecondary },
+  exportError: { fontSize: 13, color: colors.errorRed, marginTop: spacing.xxs },
   viewToggle: { paddingVertical: spacing.xs },
   viewTogglePressed: { opacity: 0.7 },
   viewToggleText: { fontSize: 14, fontWeight: '600', color: adminColors.primary },
@@ -457,18 +573,20 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 17, fontWeight: '700', color: colors.textPrimary },
   sectionCount: { fontSize: 13, fontWeight: '500', color: colors.textSecondary },
+  listControls: { gap: spacing.sm },
+  searchBar: { marginBottom: 0 },
   recordCard: {
     backgroundColor: adminColors.cardBg,
-    borderRadius: CARD_RADIUS,
+    borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderDefault,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.xs,
+    gap: spacing.xs,
   },
-  recordHeader: { gap: spacing.xs },
+  recordHeader: { gap: 4 },
   recordName: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.textPrimary,
     letterSpacing: -0.2,
@@ -482,47 +600,47 @@ const styles = StyleSheet.create({
   chip: {
     borderRadius: radius.full,
     borderWidth: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
   },
   chipWarning: { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' },
   chipError: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
   chipInfo: { backgroundColor: adminColors.primaryTint, borderColor: '#C9C2F0' },
-  chipText: { fontSize: 12, fontWeight: '600' },
+  chipText: { fontSize: 11, fontWeight: '600' },
   chipTextWarning: { color: '#B45309' },
   chipTextError: { color: '#B91C1C' },
   chipTextInfo: { color: adminColors.primary },
-  manualNote: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic' },
+  manualNote: { fontSize: 11, color: colors.textSecondary, fontStyle: 'italic' },
   recordTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xxs,
   },
-  recordTimeCell: { flex: 1, alignItems: 'center', gap: 2 },
+  recordTimeCell: { flex: 1, alignItems: 'center', gap: 1 },
   recordTimeDivider: {
     width: StyleSheet.hairlineWidth,
-    height: 28,
+    height: 22,
     backgroundColor: colors.borderDefault,
   },
   recordTimeLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
   recordTimeValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
   },
-  recordMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  recordMeta: { flexShrink: 1, fontSize: 13, color: colors.textSecondary },
-  recordMetaDot: { fontSize: 13, color: colors.textSecondary },
+  recordMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
+  recordMeta: { flexShrink: 1, fontSize: 11, color: colors.textSecondary },
+  recordMetaDot: { fontSize: 11, color: colors.textSecondary },
   emptyCard: {
     backgroundColor: adminColors.cardBg,
     borderRadius: CARD_RADIUS,

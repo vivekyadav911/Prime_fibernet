@@ -1,6 +1,7 @@
 import {
   useCreateCompanyHolidayMutation,
   useDeleteCompanyHolidayMutation,
+  useUpdateCompanyHolidayMutation,
   useGetCompanyHolidaysQuery,
   useGetEmployeeCompensationsQuery,
   useGetLabelThresholdsQuery,
@@ -19,6 +20,7 @@ export function usePayslipSettings(year?: number) {
   const [updatePayTypeRule] = useUpdatePayTypeRuleMutation();
   const [updateLabelThreshold] = useUpdateLabelThresholdMutation();
   const [createHoliday] = useCreateCompanyHolidayMutation();
+  const [updateHoliday] = useUpdateCompanyHolidayMutation();
   const [deleteHoliday] = useDeleteCompanyHolidayMutation();
   const [upsertCompensation] = useUpsertEmployeeCompensationMutation();
 
@@ -50,6 +52,7 @@ export function usePayslipSettings(year?: number) {
     updatePayTypeRule,
     updateLabelThreshold,
     createHoliday,
+    updateHoliday,
     deleteHoliday,
     upsertCompensation,
   };

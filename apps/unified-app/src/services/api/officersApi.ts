@@ -138,10 +138,14 @@ export const officersApi = baseApi.injectEndpoints({
           return (data ?? []).map((row) => ({
             id: row.id as string,
             userId: (row.user_id as string) ?? null,
-            name: (row.users as { name?: string })?.name ?? String(row.name ?? 'Officer'),
+            name:
+              (row.full_name as string)?.trim() ||
+              (row.users as { name?: string })?.name?.trim() ||
+              'Unknown officer',
             email: (row.users as { email?: string })?.email ?? String(row.email ?? ''),
             region: (row.region as string) ?? null,
             availabilityStatus: String(row.availability_status ?? 'offline'),
+            profilePhotoUrl: (row.profile_photo_url as string) ?? null,
           }));
         },
       }),

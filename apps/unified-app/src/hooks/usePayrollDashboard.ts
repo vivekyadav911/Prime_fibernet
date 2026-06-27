@@ -5,11 +5,26 @@ import {
   useCalculatePayslipMutation,
   useGetPayrollDashboardQuery,
 } from '@/services/api/payrollApi';
+import { clampPayrollMonth, clampPayrollYear } from '@/utils/payrollPeriod';
 
 export function usePayrollDashboard(initialMonth?: number, initialYear?: number) {
   const now = new Date();
-  const [month, setMonth] = useState(initialMonth ?? now.getMonth() + 1);
-  const [year, setYear] = useState(initialYear ?? now.getFullYear());
+  const [month, setMonthRaw] = useState(initialMonth ?? now.getMonth() + 1);
+  const [year, setYearRaw] = useState(initialYear ?? now.getFullYear());
+
+  const setMonth = useCallback((value: number) => {
+    setMonthRaw(clampPayrollMonth(value));
+  }, []);
+
+  const setYear = useCallback((value: number) => {
+    setYearRaw(clampPayrollYear(value));
+  }, []);
+
+  const setPeriod = useCallback((nextMonth: number, nextYear: number) => {
+    const normalized = periodFromMonthYear(nextMonth, nextYear);
+    setMonthRaw(normalized.month);
+    setYearRaw(normalized.year);
+  }, []);
 
   const { data, isLoading, isError, error, refetch } = useGetPayrollDashboardQuery({
     month,
@@ -47,6 +62,7 @@ export function usePayrollDashboard(initialMonth?: number, initialYear?: number)
     year,
     setMonth,
     setYear,
+    setPeriod,
     period,
     entries: data ?? [],
     isLoading,

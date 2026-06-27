@@ -19,3 +19,8 @@ export async function generatePdfFromHtml(html: string): Promise<string> {
 
   return uri;
 }
+
+/** Web-only — native callers should use generatePdfFromHtml and share via expo-sharing. */
+export async function generatePdfBlobFromHtml(_html: string): Promise<Blob> {
+  throw new Error('generatePdfBlobFromHtml is only available on web');
+}

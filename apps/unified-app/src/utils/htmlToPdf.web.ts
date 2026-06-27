@@ -53,7 +53,11 @@ async function renderHtmlToPdfBlob(html: string): Promise<Blob> {
       doc.html(iframeDoc.body, {
         callback: (pdf) => {
           try {
-            const blob = pdf.output('blob');
+            const raw = pdf.output('blob');
+            const blob =
+              raw.type === 'application/pdf'
+                ? raw
+                : new Blob([raw], { type: 'application/pdf' });
             if (blob.size < MIN_PDF_BYTES) {
               reject(new Error('PDF generation failed — output file is empty'));
               return;
@@ -69,6 +73,7 @@ async function renderHtmlToPdfBlob(html: string): Promise<Blob> {
           scale: 0.75,
           useCORS: true,
           logging: false,
+          backgroundColor: '#ffffff',
         },
         width: 489,
         windowWidth: 800,
@@ -82,4 +87,8 @@ async function renderHtmlToPdfBlob(html: string): Promise<Blob> {
 export async function generatePdfFromHtml(html: string): Promise<string> {
   const blob = await renderHtmlToPdfBlob(html);
   return URL.createObjectURL(blob);
+}
+
+export async function generatePdfBlobFromHtml(html: string): Promise<Blob> {
+  return renderHtmlToPdfBlob(html);
 }

@@ -37,6 +37,7 @@ import { ShiftManagementScreen } from '@/screens/admin/hr/ShiftManagementScreen'
 import { RoleManagementScreen } from '@/screens/admin/hr/RoleManagementScreen';
 import { PayrollScreen } from '@/screens/admin/hr/payroll/PayrollScreen';
 import { PayslipsManagementScreen } from '@/screens/admin/hr/payroll/PayslipsManagementScreen';
+import { PayslipPreGenerationScreen } from '@/screens/admin/hr/payroll/PayslipPreGenerationScreen';
 import { PayslipReviewScreen } from '@/screens/admin/hr/payroll/PayslipReviewScreen';
 import { PayslipSettingsScreen } from '@/screens/admin/hr/payroll/PayslipSettingsScreen';
 import { PayslipPdfViewerScreen } from '@/screens/common/PayslipPdfViewerScreen';
@@ -266,6 +267,7 @@ export function AdminPayrollStackNav() {
     <PayrollStack.Navigator screenOptions={adminStackScreenOptions}>
       <PayrollStack.Screen name="PayrollHome" component={PayrollScreen} options={{ title: 'Payroll' }} />
       <PayrollStack.Screen name="PayslipsManagement" component={PayslipsManagementScreen} options={{ title: 'Payslips' }} />
+      <PayrollStack.Screen name="PayslipPreGeneration" component={PayslipPreGenerationScreen} options={{ title: 'Confirm generation' }} />
       <PayrollStack.Screen name="PayslipReview" component={PayslipReviewScreen} options={{ title: 'Review payslip' }} />
       <PayrollStack.Screen name="PayslipSettings" component={PayslipSettingsScreen} options={{ title: 'Payslip settings' }} />
       <PayrollStack.Screen name="PayslipPdfViewer" component={PayslipPdfViewerScreen} options={{ headerShown: false, title: 'Payslip PDF' }} />

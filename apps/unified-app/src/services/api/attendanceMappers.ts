@@ -23,6 +23,7 @@ import type {
 import { getOfficerIdForUser, parseGeographyPoint } from './mappers';
 import type { TypedSupabaseClient } from './supabase';
 import { checkGeofenceStatus } from '@/utils/geofenceUtils';
+import { resolveWorkingHours } from '@/utils/attendanceDuration';
 
 export const APPROVAL_OFFICER_EMBED = 'full_name, profile_photo_url';
 export const APPROVAL_BASE_SELECT = `*, officers(${APPROVAL_OFFICER_EMBED})`;
@@ -117,6 +118,9 @@ export function mapAttendanceRow(row: DbAttendanceRow): AttendanceRecord {
   const checkOutLoc = parseGeographyPoint(row.check_out_location) ?? undefined;
   const status = (row.attendance_status ?? row.status ?? 'absent') as AttendanceStatus;
 
+  const checkInTime = row.check_in_time ?? undefined;
+  const checkOutTime = row.check_out_time ?? undefined;
+
   return {
     id: row.id,
     officerId: row.officer_id,
@@ -125,15 +129,19 @@ export function mapAttendanceRow(row: DbAttendanceRow): AttendanceRecord {
     geofenceId: row.geofence_id ?? '',
     geofenceName: row.geofences?.name?.trim() || 'Unassigned zone',
     date: row.shift_date ?? new Date().toISOString().slice(0, 10),
-    checkInTime: row.check_in_time ?? undefined,
-    checkOutTime: row.check_out_time ?? undefined,
+    checkInTime,
+    checkOutTime,
     checkInLocation: checkInLoc,
     checkOutLocation: checkOutLoc,
     checkInMethod: (row.check_in_method ?? 'manual_inside') as CheckInMethod,
     checkOutMethod: row.check_out_method as CheckInMethod | undefined,
     checkInDistanceFromFence: Number(row.check_in_distance_m ?? 0),
     checkOutDistanceFromFence: row.check_out_distance_m != null ? Number(row.check_out_distance_m) : undefined,
-    workingHours: row.working_hours != null ? Number(row.working_hours) : undefined,
+    workingHours: resolveWorkingHours({
+      checkInTime,
+      checkOutTime,
+      workingHours: row.working_hours != null ? Number(row.working_hours) : undefined,
+    }),
     overtimeHours: row.overtime_hours != null ? Number(row.overtime_hours) : undefined,
     status,
     isLate: Boolean(row.is_late),

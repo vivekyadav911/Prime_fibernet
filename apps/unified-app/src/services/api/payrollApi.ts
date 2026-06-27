@@ -1,3 +1,13 @@
+import {
+  buildGenerationPreview,
+  buildPayrollDashboardEntries,
+  DEFAULT_SHIFT,
+  mapShift,
+  mapShiftDefinition,
+  missingOfficerFields,
+} from '@/services/payroll/payrollDashboardBuilder';
+import { fetchPayslipApprovalValidation } from '@/services/payroll/payslipApprovalContext';
+import { dayBeforeIso } from '@/services/payslip/payslipValidation';
 import type {
   AttendanceLabelThreshold,
   CompanyHoliday,
@@ -6,7 +16,9 @@ import type {
   LineItemType,
   PayTypeRule,
   PayrollDashboardEntry,
+  PayrollGenerationPreview,
   Payslip,
+  PayslipAuditLogEntry,
   PayslipCalculationResult,
   PayslipStatus,
 } from '@/types/payslip';
@@ -17,8 +29,10 @@ import {
   mapPayTypeRule,
   mapPayslip,
 } from '@/types/payslip';
+import { periodFromMonthYear } from '@/utils/payrollPeriod';
 
 import { baseApi } from './baseApi';
+import type { TypedSupabaseClient } from './supabase';
 
 const PAYSLIP_SELECT = `
   *,
@@ -33,11 +47,28 @@ export function buildPayslipStoragePath(officerId: string, payslipId: string): s
   return `${officerId}/${payslipId}.pdf`;
 }
 
-function periodFromMonthYear(month: number, year: number): { start: string; end: string } {
-  const start = `${year}-${String(month).padStart(2, '0')}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-  return { start, end };
+async function insertPayrollAudit(
+  client: TypedSupabaseClient,
+  entry: {
+    payslipId: string;
+    action: string;
+    performedBy: string | null;
+    previousStatus?: string | null;
+    newStatus?: string | null;
+    reason?: string | null;
+    metadata?: Record<string, unknown>;
+  },
+): Promise<void> {
+  const { error } = await client.from('payroll_audit_log').insert({
+    payslip_id: entry.payslipId,
+    action: entry.action,
+    performed_by: entry.performedBy,
+    previous_status: entry.previousStatus ?? null,
+    new_status: entry.newStatus ?? null,
+    reason: entry.reason ?? null,
+    metadata: entry.metadata ?? {},
+  });
+  if (error) throw error;
 }
 
 export const payrollApi = baseApi.injectEndpoints({
@@ -48,37 +79,99 @@ export const payrollApi = baseApi.injectEndpoints({
     >({
       query: ({ month, year }) => ({
         handler: async (client) => {
-          const { start, end } = periodFromMonthYear(month, year);
+          const period = periodFromMonthYear(month, year);
 
-          const [{ data: officers, error: offErr }, { data: payslips, error: payErr }] =
-            await Promise.all([
-              client.from('officers').select('id, full_name').order('full_name'),
-              client
-                .from('payslips')
-                .select('id, officer_id, status, net_pay, generated_pdf_url, pay_period_label, employee_name')
-                .eq('pay_period_start', start)
-                .eq('pay_period_end', end),
-            ]);
+          const [
+            { data: officers, error: offErr },
+            { data: payslips, error: payErr },
+            { data: shifts, error: shiftErr },
+            { data: holidays, error: holErr },
+            { data: shiftDefs, error: defErr },
+            { data: contracts, error: contractErr },
+            { data: bankRows, error: bankErr },
+            { data: compensations, error: compErr },
+          ] = await Promise.all([
+            client
+              .from('officers')
+              .select('id, full_name, profile_photo_url')
+              .order('full_name'),
+            client
+              .from('payslips')
+              .select(
+                `id, officer_id, status, net_pay, gross_earnings, hourly_rate, total_actual_hours,
+                 total_additions, total_deductions, generated_pdf_url, pay_period_label, employee_name,
+                 payslip_daily_breakdown(day_pay, actual_hours, display_label, is_scheduled_working_day)`,
+              )
+              .eq('pay_period_start', period.start)
+              .eq('pay_period_end', period.end)
+              .neq('status', 'voided'),
+            client
+              .from('shifts')
+              .select(
+                'id, officer_id, shift_date, check_in_time, check_out_time, attendance_status, working_hours, status',
+              )
+              .gte('shift_date', period.start)
+              .lte('shift_date', period.end),
+            client
+              .from('company_holidays')
+              .select('holiday_date')
+              .gte('holiday_date', period.start)
+              .lte('holiday_date', period.end),
+            client
+              .from('shift_definition_officers')
+              .select(
+                'officer_id, shift_definitions(start_time, end_time, working_days, is_overnight)',
+              ),
+            client
+              .from('employment_contracts')
+              .select('officer_id, employee_designation, employee_department'),
+            client.from('officer_bank_details').select('officer_id, account_number'),
+            client
+              .from('employee_compensation')
+              .select('officer_id')
+              .lte('effective_from', period.end)
+              .or(`effective_to.is.null,effective_to.gte.${period.start}`),
+          ]);
+
           if (offErr) throw offErr;
           if (payErr) throw payErr;
+          if (shiftErr) throw shiftErr;
+          if (holErr) throw holErr;
+          if (defErr) throw defErr;
+          if (contractErr) throw contractErr;
+          if (bankErr) throw bankErr;
+          if (compErr) throw compErr;
 
-          const payslipByOfficer = new Map(
-            (payslips ?? []).map((p) => [p.officer_id as string, p]),
+          const contractByOfficer = new Map(
+            (contracts ?? []).map((c) => [c.officer_id as string, c]),
           );
+          const bankByOfficer = new Map((bankRows ?? []).map((b) => [b.officer_id as string, b]));
+          const compOfficerIds = new Set((compensations ?? []).map((c) => c.officer_id as string));
 
-          return (officers ?? []).map((o) => {
-            const ps = payslipByOfficer.get(o.id as string);
+          const profiles = (officers ?? []).map((o) => {
+            const contract = contractByOfficer.get(o.id as string);
+            const bank = bankByOfficer.get(o.id as string);
             return {
-              officerId: o.id as string,
-              officerName: (o.full_name as string) ?? 'Officer',
-              payslipId: (ps?.id as string) ?? null,
-              status: ps ? (ps.status as PayslipStatus) : ('not_started' as const),
-              netPayPreview: ps?.net_pay != null ? Number(ps.net_pay) : null,
-              generatedPdfUrl: (ps?.generated_pdf_url as string) ?? null,
-              payPeriodLabel: (ps?.pay_period_label as string) ?? null,
-              blocked: false,
-              blockingDates: [],
+              officer_id: o.id as string,
+              full_name: o.full_name as string | null,
+              employee_id: null,
+              designation: (contract?.employee_designation as string) ?? null,
+              department: (contract?.employee_department as string) ?? null,
+              bank_account_number: (bank?.account_number as string) ?? null,
+              has_compensation: compOfficerIds.has(o.id as string),
             };
+          });
+
+          return buildPayrollDashboardEntries({
+            officers: (officers ?? []) as never,
+            payslips: (payslips ?? []) as never,
+            shifts: (shifts ?? []) as never,
+            holidays: (holidays ?? []).map((h) => h.holiday_date as string),
+            shiftDefinitions: (shiftDefs ?? []) as never,
+            profiles,
+            periodStart: period.start,
+            periodEnd: period.end,
+            periodLabel: period.label,
           });
         },
       }),
@@ -98,6 +191,20 @@ export const payrollApi = baseApi.injectEndpoints({
           });
           if (error) throw error;
           const result = data as Record<string, unknown>;
+          if (result.error && !result.payslip_id && !result.blocked) {
+            const code = result.code as string | undefined;
+            const unresolved = (result.unresolved_dates as string[]) ?? [];
+            const missing = (result.missing_fields as string[]) ?? [];
+            let message = String(result.error);
+            if (code === 'UNRESOLVED_DAYS' && unresolved.length) {
+              message = `Incomplete attendance on: ${unresolved.join(', ')}`;
+            } else if (code === 'MISSING_OFFICER_DATA' && missing.length) {
+              message = `Missing officer data: ${missing.join(', ')}`;
+            } else if (code === 'NO_SHIFT_ASSIGNED') {
+              message = 'Officer has no shift schedule assigned — configure shift before generating';
+            }
+            throw new Error(message);
+          }
           return {
             payslipId: (result.payslip_id as string) ?? null,
             blocked: Boolean(result.blocked),
@@ -280,28 +387,46 @@ export const payrollApi = baseApi.injectEndpoints({
       query: ({ payslipId, signatureName, negativePayOverrideNote }) => ({
         handler: async (client) => {
           const { data: session } = await client.auth.getSession();
+          const performedBy = session.session?.user?.id ?? null;
+
+          const approvalValidation = await fetchPayslipApprovalValidation(
+            client,
+            payslipId,
+            negativePayOverrideNote,
+          );
+          if (!approvalValidation.allowed) {
+            throw new Error(approvalValidation.reasons.join('\n') || 'Cannot approve this payslip');
+          }
+
           const { data: current } = await client
             .from('payslips')
-            .select('net_pay')
+            .select('status')
             .eq('id', payslipId)
             .single();
 
-          if (Number(current?.net_pay ?? 0) < 0 && !negativePayOverrideNote?.trim()) {
-            throw new Error('Net pay is negative — provide an override note to approve');
-          }
+          const nextStatus: PayslipStatus = 'approved';
 
           const { error } = await client
             .from('payslips')
             .update({
-              status: 'approved',
+              status: nextStatus,
               authorized_signature_name: signatureName,
-              authorized_by: session.session?.user?.id ?? null,
+              authorized_by: performedBy,
               authorized_at: new Date().toISOString(),
               negative_pay_override_note: negativePayOverrideNote?.trim() || null,
               updated_at: new Date().toISOString(),
             })
             .eq('id', payslipId);
           if (error) throw error;
+
+          await insertPayrollAudit(client, {
+            payslipId,
+            action: 'approved',
+            performedBy,
+            previousStatus: (current?.status as string) ?? null,
+            newStatus: nextStatus,
+            reason: negativePayOverrideNote?.trim() || null,
+          });
 
           const { data, error: fetchErr } = await client
             .from('payslips')
@@ -460,18 +585,45 @@ export const payrollApi = baseApi.injectEndpoints({
 
     createCompanyHoliday: builder.mutation<
       CompanyHoliday,
-      { holidayDate: string; name: string }
+      { holidayDate: string; name: string; appliesToAll?: boolean; scopeLabel?: string }
     >({
       query: (body) => ({
         handler: async (client) => {
           const { data: session } = await client.auth.getSession();
+          const appliesToAll = body.appliesToAll ?? true;
           const { data, error } = await client
             .from('company_holidays')
             .insert({
               holiday_date: body.holidayDate,
               name: body.name,
+              applies_to_all: appliesToAll,
+              scope_label: body.scopeLabel?.trim() || (appliesToAll ? 'Company-wide' : 'Specific group'),
               created_by: session.session?.user?.id ?? null,
             })
+            .select()
+            .single();
+          if (error) throw error;
+          return mapCompanyHoliday(data as never);
+        },
+      }),
+      invalidatesTags: ['PayslipSettings'],
+    }),
+
+    updateCompanyHoliday: builder.mutation<
+      CompanyHoliday,
+      { id: string; holidayDate: string; name: string; appliesToAll: boolean; scopeLabel?: string }
+    >({
+      query: ({ id, holidayDate, name, appliesToAll, scopeLabel }) => ({
+        handler: async (client) => {
+          const { data, error } = await client
+            .from('company_holidays')
+            .update({
+              holiday_date: holidayDate,
+              name,
+              applies_to_all: appliesToAll,
+              scope_label: scopeLabel?.trim() || (appliesToAll ? 'Company-wide' : 'Specific group'),
+            })
+            .eq('id', id)
             .select()
             .single();
           if (error) throw error;
@@ -512,12 +664,14 @@ export const payrollApi = baseApi.injectEndpoints({
       query: (body) => ({
         handler: async (client) => {
           const { data: session } = await client.auth.getSession();
+          const closeBefore = dayBeforeIso(body.effectiveFrom);
 
           await client
             .from('employee_compensation')
-            .update({ effective_to: body.effectiveFrom })
+            .update({ effective_to: closeBefore })
             .eq('officer_id', body.officerId)
-            .is('effective_to', null);
+            .lt('effective_from', body.effectiveFrom)
+            .or(`effective_to.is.null,effective_to.gte.${body.effectiveFrom}`);
 
           const { data, error } = await client
             .from('employee_compensation')
@@ -535,17 +689,271 @@ export const payrollApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['PayslipSettings'],
     }),
+
+    getPayrollGenerationPreview: builder.query<
+      PayrollGenerationPreview,
+      { officerId: string; payPeriodStart: string; payPeriodEnd: string }
+    >({
+      query: ({ officerId, payPeriodStart, payPeriodEnd }) => ({
+        handler: async (client) => {
+          const period = periodFromMonthYear(
+            Number(payPeriodStart.slice(5, 7)),
+            Number(payPeriodStart.slice(0, 4)),
+          );
+
+          const [
+            { data: officer },
+            { data: contract },
+            { data: bank },
+            { data: compRows },
+            { data: shiftLink },
+            { data: shifts },
+            { data: holidays },
+          ] = await Promise.all([
+            client.from('officers').select('id, full_name').eq('id', officerId).single(),
+            client
+              .from('employment_contracts')
+              .select('employee_designation, employee_department')
+              .eq('officer_id', officerId)
+              .maybeSingle(),
+            client
+              .from('officer_bank_details')
+              .select('account_number')
+              .eq('officer_id', officerId)
+              .maybeSingle(),
+            client
+              .from('employee_compensation')
+              .select('officer_id')
+              .eq('officer_id', officerId)
+              .lte('effective_from', payPeriodEnd)
+              .or(`effective_to.is.null,effective_to.gte.${payPeriodStart}`)
+              .limit(1),
+            client
+              .from('shift_definition_officers')
+              .select('shift_definitions(start_time, end_time, working_days, is_overnight)')
+              .eq('officer_id', officerId)
+              .maybeSingle(),
+            client
+              .from('shifts')
+              .select(
+                'id, shift_date, check_in_time, check_out_time, attendance_status, working_hours, status',
+              )
+              .eq('officer_id', officerId)
+              .gte('shift_date', payPeriodStart)
+              .lte('shift_date', payPeriodEnd),
+            client
+              .from('company_holidays')
+              .select('holiday_date')
+              .gte('holiday_date', payPeriodStart)
+              .lte('holiday_date', payPeriodEnd),
+          ]);
+
+          const profile = {
+            officer_id: officerId,
+            full_name: officer?.full_name ?? null,
+            employee_id: null,
+            designation: contract?.employee_designation ?? null,
+            department: contract?.employee_department ?? null,
+            bank_account_number: bank?.account_number ?? null,
+            has_compensation: (compRows ?? []).length > 0,
+          };
+
+          const shiftDef = mapShiftDefinition(
+            (shiftLink?.shift_definitions as never) ?? null,
+          ) ?? DEFAULT_SHIFT;
+
+          const hasShiftAssignment = Boolean(shiftLink?.shift_definitions);
+
+          return buildGenerationPreview({
+            officerId,
+            officerName: officer?.full_name?.trim() || 'Unknown officer',
+            periodStart: payPeriodStart,
+            periodEnd: payPeriodEnd,
+            periodLabel: period.label,
+            shiftDefinition: shiftDef,
+            hasShiftAssignment,
+            shifts: (shifts ?? []).map((s) =>
+              mapShift({
+                id: s.id as string,
+                officer_id: officerId,
+                shift_date: s.shift_date as string,
+                check_in_time: s.check_in_time as string | null,
+                check_out_time: s.check_out_time as string | null,
+                attendance_status: s.attendance_status as string | null,
+                working_hours: s.working_hours as number | null,
+                status: s.status as string | null,
+              }),
+            ),
+            holidays: (holidays ?? []).map((h) => h.holiday_date as string),
+            missingOfficerFields: missingOfficerFields(profile),
+            hasCompensation: profile.has_compensation,
+          });
+        },
+      }),
+      providesTags: ['Payroll'],
+    }),
+
+    getPayslipAuditLog: builder.query<PayslipAuditLogEntry[], string>({
+      query: (payslipId) => ({
+        handler: async (client) => {
+          const { data, error } = await client
+            .from('payroll_audit_log')
+            .select('*')
+            .eq('payslip_id', payslipId)
+            .order('performed_at', { ascending: false });
+          if (error) throw error;
+          return (data ?? []).map((row) => ({
+            id: row.id as string,
+            payslipId: row.payslip_id as string,
+            action: row.action as string,
+            performedBy: (row.performed_by as string) ?? null,
+            performedAt: row.performed_at as string,
+            previousStatus: (row.previous_status as string) ?? null,
+            newStatus: (row.new_status as string) ?? null,
+            reason: (row.reason as string) ?? null,
+            metadata: (row.metadata as Record<string, unknown>) ?? {},
+          }));
+        },
+      }),
+      providesTags: (_r, _e, id) => [{ type: 'Payslips', id: `audit-${id}` }],
+    }),
+
+    voidPayslip: builder.mutation<
+      Payslip,
+      { payslipId: string; reason: string; regenerate?: boolean }
+    >({
+      query: ({ payslipId, reason }) => ({
+        handler: async (client) => {
+          const { data: session } = await client.auth.getSession();
+          const performedBy = session.session?.user?.id ?? null;
+          const { data: current } = await client
+            .from('payslips')
+            .select('status')
+            .eq('id', payslipId)
+            .single();
+
+          const { error } = await client
+            .from('payslips')
+            .update({
+              status: 'voided',
+              voided_at: new Date().toISOString(),
+              voided_by: performedBy,
+              void_reason: reason.trim(),
+              generated_pdf_url: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', payslipId);
+          if (error) throw error;
+
+          await insertPayrollAudit(client, {
+            payslipId,
+            action: 'voided',
+            performedBy,
+            previousStatus: (current?.status as string) ?? null,
+            newStatus: 'voided',
+            reason: reason.trim(),
+          });
+
+          const { data, error: fetchErr } = await client
+            .from('payslips')
+            .select(PAYSLIP_SELECT)
+            .eq('id', payslipId)
+            .single();
+          if (fetchErr) throw fetchErr;
+          return mapPayslip(data as never);
+        },
+      }),
+      invalidatesTags: (_r, _e, { payslipId }) => [
+        { type: 'Payslips', id: payslipId },
+        'Payroll',
+      ],
+    }),
+
+    bulkApprovePayslips: builder.mutation<
+      { approved: string[]; failed: { payslipId: string; error: string }[] },
+      { payslipIds: string[]; signatureName: string; overrideNote?: string }
+    >({
+      query: ({ payslipIds, signatureName, overrideNote }) => ({
+        handler: async (client) => {
+          const approved: string[] = [];
+          const failed: { payslipId: string; error: string }[] = [];
+
+          for (const payslipId of payslipIds) {
+            try {
+              const { data: session } = await client.auth.getSession();
+              const performedBy = session.session?.user?.id ?? null;
+
+              const approvalValidation = await fetchPayslipApprovalValidation(
+                client,
+                payslipId,
+                overrideNote,
+              );
+              if (!approvalValidation.allowed) {
+                failed.push({
+                  payslipId,
+                  error: approvalValidation.reasons.join('; ') || 'Cannot approve',
+                });
+                continue;
+              }
+
+              const { data: current } = await client
+                .from('payslips')
+                .select('status')
+                .eq('id', payslipId)
+                .single();
+
+              const { error } = await client
+                .from('payslips')
+                .update({
+                  status: 'approved',
+                  authorized_signature_name: signatureName,
+                  authorized_by: performedBy,
+                  authorized_at: new Date().toISOString(),
+                  negative_pay_override_note: overrideNote?.trim() || null,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', payslipId);
+              if (error) throw error;
+
+              await insertPayrollAudit(client, {
+                payslipId,
+                action: 'approved',
+                performedBy,
+                previousStatus: (current?.status as string) ?? null,
+                newStatus: 'approved',
+                reason: overrideNote?.trim() || null,
+                metadata: { bulk: true },
+              });
+
+              approved.push(payslipId);
+            } catch (e) {
+              failed.push({
+                payslipId,
+                error: e instanceof Error ? e.message : 'Approval failed',
+              });
+            }
+          }
+
+          return { approved, failed };
+        },
+      }),
+      invalidatesTags: ['Payroll', 'Payslips'],
+    }),
   }),
 });
 
 export const {
   useGetPayrollDashboardQuery,
+  useGetPayrollGenerationPreviewQuery,
   useCalculatePayslipMutation,
   useGetPayslipQuery,
   useGetPayslipByPeriodQuery,
+  useGetPayslipAuditLogQuery,
   useAddPayslipLineItemMutation,
   useRemovePayslipLineItemMutation,
   useApprovePayslipMutation,
+  useBulkApprovePayslipsMutation,
+  useVoidPayslipMutation,
   useUpdatePayslipPdfUrlMutation,
   useLazyGetPayslipSignedUrlQuery,
   useGetMyPayslipsQuery,
@@ -555,6 +963,7 @@ export const {
   useUpdateLabelThresholdMutation,
   useGetCompanyHolidaysQuery,
   useCreateCompanyHolidayMutation,
+  useUpdateCompanyHolidayMutation,
   useDeleteCompanyHolidayMutation,
   useGetEmployeeCompensationsQuery,
   useUpsertEmployeeCompensationMutation,

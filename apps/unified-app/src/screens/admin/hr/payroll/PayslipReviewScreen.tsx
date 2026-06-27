@@ -7,6 +7,10 @@ import { AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
 import { PayslipTimesheetCalendar } from '@/components/payroll/PayslipTimesheetCalendar';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePayslipCalculation } from '@/hooks/usePayslipCalculation';
+import {
+  useGetPayslipAuditLogQuery,
+  useVoidPayslipMutation,
+} from '@/services/api/payrollApi';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
@@ -15,11 +19,12 @@ import type { AdminPayrollStackParamList } from '@/types/navigation';
 import { formatCurrencyInrPrecise } from '@/utils/formatCurrency';
 import { payslipPdfViewerParams } from '@/utils/payslipNavigation';
 import { queryErrorMessage } from '@/utils/queryError';
+import { payslipNeedsReviewError } from '@/services/payslip/payslipValidation';
 
 type Props = NativeStackScreenProps<AdminPayrollStackParamList, 'PayslipReview'>;
 
 export function PayslipReviewScreen({ route, navigation }: Props) {
-  const { officerId, periodStart, periodEnd, payslipId: initialPayslipId } = route.params;
+  const { officerId, officerName, periodStart, periodEnd, payslipId: initialPayslipId } = route.params;
   const [activePayslipId, setActivePayslipId] = useState(initialPayslipId ?? null);
   const [showApprove, setShowApprove] = useState(false);
   const [signatureName, setSignatureName] = useState('');
@@ -28,14 +33,15 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
   const [itemAmount, setItemAmount] = useState('');
   const [itemType, setItemType] = useState<'addition' | 'deduction'>('addition');
 
+  const [voidReason, setVoidReason] = useState('');
+  const [showVoid, setShowVoid] = useState(false);
+
   const {
     payslip,
     isLoading,
     isError,
     error,
     refetch,
-    runCalculation,
-    isCalculating,
     addItem,
     removeItem,
     approve,
@@ -43,22 +49,21 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
     generatePDF,
   } = usePayslipCalculation(activePayslipId);
 
+  const { data: auditLog } = useGetPayslipAuditLogQuery(activePayslipId ?? '', {
+    skip: !activePayslipId,
+  });
+  const [voidPayslip, { isLoading: isVoiding }] = useVoidPayslipMutation();
+
   useEffect(() => {
     if (!activePayslipId && officerId) {
-      void runCalculation(officerId, periodStart, periodEnd)
-        .then((r) => {
-          if (r.blocked) {
-            Alert.alert('Blocked', `Incomplete attendance on: ${r.blockingDates.join(', ')}`);
-            navigation.goBack();
-            return;
-          }
-          if (r.payslipId) setActivePayslipId(r.payslipId);
-        })
-        .catch((e) => {
-          Alert.alert('Error', e instanceof Error ? e.message : 'Calculation failed');
-        });
+      navigation.replace('PayslipPreGeneration', {
+        officerId,
+        officerName: officerName ?? payslip?.employeeName ?? 'Officer',
+        periodStart,
+        periodEnd,
+      });
     }
-  }, [activePayslipId, officerId, periodStart, periodEnd, runCalculation, navigation]);
+  }, [activePayslipId, officerId, navigation, periodStart, periodEnd]);
 
   const handleAddItem = useCallback(async () => {
     const amount = Number(itemAmount);
@@ -87,8 +92,8 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
       void refetch();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Approval failed';
-      if (msg.includes('negative')) {
-        Alert.alert('Negative net pay', 'Add an override note explaining the negative net pay.');
+      if (msg.includes('negative') || msg.includes('zero')) {
+        Alert.alert('Approval blocked', msg);
       } else {
         Alert.alert('Error', msg);
       }
@@ -119,6 +124,32 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
     }
   }, [generatePDF, refetch, navigation]);
 
+  const handleVoid = useCallback(async () => {
+    if (!activePayslipId || !voidReason.trim()) {
+      Alert.alert('Required', 'Enter a reason for voiding this payslip.');
+      return;
+    }
+    try {
+      await voidPayslip({ payslipId: activePayslipId, reason: voidReason.trim() }).unwrap();
+      setShowVoid(false);
+      Alert.alert('Voided', 'Payslip voided. You can regenerate from Payroll.', [
+        {
+          text: 'Regenerate',
+          onPress: () =>
+            navigation.replace('PayslipPreGeneration', {
+              officerId,
+              officerName: payslip?.employeeName ?? 'Officer',
+              periodStart,
+              periodEnd,
+            }),
+        },
+        { text: 'Done', onPress: () => navigation.goBack() },
+      ]);
+    } catch (e) {
+      Alert.alert('Error', e instanceof Error ? e.message : 'Void failed');
+    }
+  }, [activePayslipId, navigation, officerId, payslip, periodEnd, periodStart, voidPayslip, voidReason]);
+
   const openPdfViewer = useCallback(() => {
     if (!payslip) return;
     const params = payslipPdfViewerParams(payslip);
@@ -132,7 +163,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
   const periodMonth = Number(periodStart.slice(5, 7));
   const periodYear = Number(periodStart.slice(0, 4));
 
-  if (isLoading || isCalculating || !payslip) {
+  if (isLoading || !payslip) {
     return (
       <AdminScreenLayout>
         <SkeletonLoader rows={10} />
@@ -148,8 +179,33 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
     );
   }
 
-  const canApprove = payslip.status === 'draft' || payslip.status === 'pending_review';
+  const snapshotError = payslipNeedsReviewError(payslip);
+  if (snapshotError) {
+    return (
+      <Screen style={adminScreenStyles.canvas}>
+        <ErrorState
+          message={`Payslip data is inconsistent and cannot be displayed.\n\n${snapshotError}\n\nRegenerate this payslip from Payroll after fixing the underlying issues.`}
+          onRetry={() =>
+            navigation.replace('PayslipPreGeneration', {
+              officerId,
+              officerName: payslip.employeeName,
+              periodStart,
+              periodEnd,
+              payslipId: activePayslipId ?? undefined,
+            })
+          }
+        />
+      </Screen>
+    );
+  }
+
+  const canApprove =
+    payslip.status === 'draft' ||
+    payslip.status === 'pending_review' ||
+    payslip.status === 'needs_review' ||
+    payslip.status === 'flagged_zero_pay';
   const canGeneratePdf = payslip.status === 'approved' || payslip.status === 'paid';
+  const canVoid = payslip.status === 'approved' || payslip.status === 'paid';
 
   return (
     <RoleGuard requiredPermission="payroll.edit">
@@ -229,6 +285,24 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
             ) : null}
           </View>
 
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Audit trail</Text>
+            {(auditLog ?? []).length ? (
+              (auditLog ?? []).map((entry) => (
+                <View key={entry.id} style={styles.auditRow}>
+                  <Text style={styles.auditAction}>{entry.action.replace(/_/g, ' ')}</Text>
+                  <Text style={styles.auditMeta}>
+                    {new Date(entry.performedAt).toLocaleString('en-IN')}
+                    {entry.previousStatus ? ` · ${entry.previousStatus} → ${entry.newStatus}` : ''}
+                  </Text>
+                  {entry.reason ? <Text style={styles.auditReason}>{entry.reason}</Text> : null}
+                </View>
+              ))
+            ) : (
+              <Text style={styles.auditEmpty}>No audit entries yet.</Text>
+            )}
+          </View>
+
           <View style={styles.actions}>
             {canApprove ? (
               <Button
@@ -248,8 +322,40 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
             {payslip.generatedPdfUrl ? (
               <Button label="View PDF" variant="secondary" onPress={openPdfViewer} />
             ) : null}
+            {canVoid ? (
+              <Button
+                label="Void & regenerate"
+                variant="ghost"
+                onPress={() => setShowVoid(true)}
+                disabled={isVoiding}
+              />
+            ) : null}
           </View>
         </ScrollView>
+
+        <Modal visible={showVoid} transparent animationType="fade">
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Void payslip</Text>
+              <Text style={styles.modalHint}>
+                Voids this approved payslip so it can be regenerated. Reason is logged in the audit
+                trail.
+              </Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={voidReason}
+                onChangeText={setVoidReason}
+                placeholder="Reason for voiding"
+                placeholderTextColor={colors.textSecondary}
+                multiline
+              />
+              <View style={styles.modalActions}>
+                <Button label="Cancel" variant="ghost" onPress={() => setShowVoid(false)} />
+                <Button label="Void" variant="primary" onPress={() => void handleVoid()} />
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         <Modal visible={showApprove} transparent animationType="fade">
           <View style={styles.modalBackdrop}>
@@ -263,14 +369,22 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
                 placeholder="Authorized signatory name"
                 placeholderTextColor={colors.textSecondary}
               />
-              {payslip.netPay < 0 ? (
+              {payslip.netPay <= 0 ? (
                 <>
-                  <Text style={styles.warning}>Net pay is negative — override note required.</Text>
+                  <Text style={styles.warning}>
+                    {payslip.netPay < 0
+                      ? 'Net pay is negative — override note required.'
+                      : 'Net pay is zero — override note required to approve.'}
+                  </Text>
                   <TextInput
                     style={[styles.input, styles.textArea]}
                     value={overrideNote}
                     onChangeText={setOverrideNote}
-                    placeholder="Explain negative net pay"
+                    placeholder={
+                      payslip.netPay < 0
+                        ? 'Explain negative net pay'
+                        : 'Explain why a zero-pay payslip should be approved'
+                    }
                     placeholderTextColor={colors.textSecondary}
                     multiline
                   />
@@ -343,4 +457,14 @@ const styles = StyleSheet.create({
   textArea: { minHeight: 72, textAlignVertical: 'top' },
   warning: { fontSize: 12, color: colors.errorRed },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, marginTop: spacing.sm },
+  auditRow: {
+    paddingVertical: spacing.xs,
+    borderBottomWidth: 1,
+    borderColor: colors.borderDefault,
+    gap: 2,
+  },
+  auditAction: { fontWeight: '600', fontSize: 13, textTransform: 'capitalize' },
+  auditMeta: { fontSize: 11, color: colors.textSecondary },
+  auditReason: { fontSize: 12, color: colors.textPrimary },
+  auditEmpty: { fontSize: 12, color: colors.textSecondary },
 });

@@ -3,7 +3,13 @@ import { adminColors } from '@/theme/admin';
 import { radius, spacing } from '@/theme/spacing';
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: adminColors.badgePending,
+  draft: adminColors.badgePending,
+  pending_review: adminColors.badgePending,
+  needs_review: adminColors.badgeWarning,
+  flagged_zero_pay: adminColors.badgeBlocked,
+  voided: '#6B7280',
+  cancelled: '#6B7280',
+  not_started: '#6B7280',
   approved: adminColors.badgeActive,
   rejected: adminColors.badgeBlocked,
   active: adminColors.badgeActive,
