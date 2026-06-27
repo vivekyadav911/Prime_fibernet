@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
-
-import { FormField, RoleGuard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
 import { useCreatePlanMutation, useGetPlansQuery, useUpdatePlanMutation } from '@/store/api/endpoints';
 import type { AdminPlansStackParamList } from '@/types/navigation';
 
@@ -55,17 +53,17 @@ export function PlanFormScreen({ route, navigation }: Props) {
 
   return (
     <RoleGuard requiredPermission={planId ? 'plans.edit' : 'plans.create'}>
-      <Screen>
+      <AdminScreenLayout>
         <FormField label="Plan Name" value={name} onChangeText={setName} />
         <FormField label="Category (Home/Business)" value={category} onChangeText={setCategory} />
         <FormField label="Speed (Mbps)" value={speedMbps} onChangeText={setSpeedMbps} keyboardType="numeric" />
         <FormField label="Price (₹)" value={price} onChangeText={setPrice} keyboardType="numeric" />
         <FormField label="Validity (days)" value={validityDays} onChangeText={setValidityDays} keyboardType="numeric" />
         <FormField label="Features (one per line)" value={features} onChangeText={setFeatures} multiline />
-        <Button label={isActive ? 'Active ✓' : 'Inactive'} variant="secondary" onPress={() => setIsActive(!isActive)} />
-        <Button label="Save" onPress={() => void onSave()} />
-        <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
-      </Screen>
+        <AdminButton label={isActive ? 'Active ✓' : 'Inactive'} variant="secondary" onPress={() => setIsActive(!isActive)} />
+        <AdminButton label="Save" onPress={() => void onSave()} />
+        <AdminButton label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }

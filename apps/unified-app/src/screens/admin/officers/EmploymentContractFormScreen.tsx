@@ -11,10 +11,8 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Controller, useForm } from 'react-hook-form';
-import {  Button } from '@prime/ui';
-
 import { CollapsibleFormSection } from '@/components/admin/employment/CollapsibleFormSection';
-import { AdminScreenLayout, DateField, FilterChips, FormField, RoleGuard, SelectField } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, DateField, FilterChips, FormField, RoleGuard, SelectField } from '@/components/admin';
 import { DismissKeyboardScrollView, ErrorState, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import { buildDefaultFormValues, EMPLOYMENT_TYPE_OPTIONS, WEEKLY_OFF_OPTIONS } from '@/constants/employmentContractDefaults';
 import { useCompanyDefaults } from '@/hooks/useCompanyDefaults';
@@ -269,7 +267,7 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
               <Controller control={control} name="ctcAnnual" render={({ field, fieldState }) => (
                 <FormField label="Annual CTC (INR)" value={field.value} onChangeText={field.onChange} keyboardType="decimal-pad" error={fieldState.error?.message} />
               )} />
-              <Button label="Auto-split CTC" variant="secondary" onPress={handleAutoSplit} />
+              <AdminButton label="Auto-split CTC" variant="secondary" onPress={handleAutoSplit} />
               <Controller control={control} name="basicSalaryMonthly" render={({ field }) => (
                 <FormField label="Basic (monthly)" value={field.value} onChangeText={field.onChange} keyboardType="decimal-pad" />
               )} />
@@ -380,13 +378,13 @@ export function EmploymentContractFormScreen({ route, navigation }: Props) {
             </DismissKeyboardScrollView>
 
           <View style={styles.footer}>
-            <Button
+            <AdminButton
               label={submitting === 'draft' || savingDraft ? 'Saving…' : 'Save as Draft'}
               variant="secondary"
               onPress={() => void onSaveDraft()}
               disabled={submitting === 'draft' || savingDraft}
             />
-            <Button
+            <AdminButton
               label={submitting === 'generate' || finalizing ? 'Generating…' : 'Save & Generate PDF'}
               onPress={() => void onSaveGenerate()}
               disabled={(!canGenerate && submitting !== 'generate') || submitting === 'generate' || finalizing}
@@ -445,7 +443,7 @@ function CustomClausesEditor({
           </Pressable>
         </View>
       ))}
-      <Button label="Add Custom Clause" variant="secondary" onPress={addClause} />
+      <AdminButton label="Add Custom Clause" variant="secondary" onPress={addClause} />
     </View>
   );
 }

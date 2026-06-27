@@ -2,15 +2,11 @@ import { useCallback } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Plan } from '@prime/types';
-import { Button, Screen } from '@prime/ui';
-
-import { AdminEmptyState, RoleGuard, StatusBadge } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminEmptyState, AdminScreenLayout, AdminStateShell, RoleGuard, StatusBadge } from '@/components/admin';
 import { useDeletePlanMutation, useGetPlansQuery, useUpdatePlanMutation } from '@/store/api/endpoints';
 import type { AdminPlansStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
-import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminPlansStackParamList, 'PlanList'>;
 
@@ -34,28 +30,33 @@ export function PlanListScreen({ navigation }: Props) {
         <Text style={styles.meta}>{item.speedMbps} Mbps · ₹{item.price} · {item.validityDays}d</Text>
         <StatusBadge status={item.isActive ? 'active' : 'blocked'} />
         <View style={styles.actions}>
-          <Button label="Edit" variant="ghost" onPress={() => navigation.navigate('PlanForm', { mode: 'edit', planId: item.id })} />
-          <Button label={item.isActive ? 'Deactivate' : 'Activate'} variant="secondary" onPress={() => toggleActive(item)} />
-          <Button label="Delete" variant="ghost" onPress={() => deletePlan(item.id)} />
+          <AdminButton label="Edit" variant="ghost" onPress={() => navigation.navigate('PlanForm', { mode: 'edit', planId: item.id })} />
+          <AdminButton label={item.isActive ? 'Deactivate' : 'Activate'} variant="secondary" onPress={() => toggleActive(item)} />
+          <AdminButton label="Delete" variant="ghost" onPress={() => deletePlan(item.id)} />
         </View>
       </View>
     ),
     [deletePlan, navigation, toggleActive],
   );
 
-  if (isLoading) return <Screen><SkeletonLoader rows={6} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-
   return (
     <RoleGuard requiredPermission="plans.view">
-      <Screen padded={false}>
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={refetch}
+        loadingRows={6}
+      >
+      <AdminScreenLayout padded={false}>
         <View style={styles.header}>
-          <Button label="Add New Plan" onPress={() => navigation.navigate('PlanForm', { mode: 'create' })} />
+          <AdminButton label="Add New Plan" onPress={() => navigation.navigate('PlanForm', { mode: 'create' })} />
         </View>
         {!data?.length ? <AdminEmptyState title="No plans" iconName="cellular-outline" /> : (
           <FlatList data={data} keyExtractor={(p) => p.id} renderItem={renderItem} />
         )}
-      </Screen>
+      </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

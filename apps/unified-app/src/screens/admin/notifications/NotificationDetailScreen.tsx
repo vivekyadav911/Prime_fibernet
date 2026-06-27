@@ -12,10 +12,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import {  Button } from '@prime/ui';
-
 import { DeliveryAnalyticsCard, formatScheduleDisplay } from '@/components/Notifications';
-import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   deleteFromHistory,
@@ -221,7 +219,7 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
           </SectionCard>
 
           <View style={styles.actions}>
-            <Button
+            <AdminButton
               label="Resend"
               variant="ghost"
               onPress={() => {
@@ -240,7 +238,7 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
               }}
               style={styles.actionBtn}
             />
-            <Button
+            <AdminButton
               label="Copy as New"
               variant="ghost"
               onPress={() =>
@@ -273,7 +271,7 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
               }
               style={styles.actionBtn}
             />
-            <Button
+            <AdminButton
               label="Delete"
               variant="ghost"
               onPress={() => {
@@ -305,7 +303,7 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
                 scrollEnabled={false}
               />
               {notification.recipients.length > recipientLimit ? (
-                <Button
+                <AdminButton
                   label="Load more"
                   variant="ghost"
                   onPress={() => setRecipientLimit((n) => n + PAGE_SIZE)}
@@ -317,7 +315,7 @@ export function NotificationDetailScreen({ navigation, route }: Props) {
               <Text style={styles.summaryOnly}>
                 {notification.recipients.length} recipients — summary stats only
               </Text>
-              <Button label="Export recipient list" variant="ghost" onPress={() => void exportCsv()} />
+              <AdminButton label="Export recipient list" variant="ghost" onPress={() => void exportCsv()} />
             </SectionCard>
           ) : null}
         </ScrollView>

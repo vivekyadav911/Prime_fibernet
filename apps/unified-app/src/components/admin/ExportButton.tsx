@@ -1,6 +1,6 @@
 import { Alert } from 'react-native';
-import { Button } from '@prime/ui';
 
+import { AdminButton } from './AdminButton';
 type ExportButtonProps = {
   label?: string;
   format: 'csv' | 'pdf';
@@ -19,7 +19,7 @@ export function ExportButton({ label, format, onExport, disabled }: ExportButton
   };
 
   return (
-    <Button
+    <AdminButton
       label={label ?? `Export ${format.toUpperCase()}`}
       variant="secondary"
       onPress={() => void handlePress()}

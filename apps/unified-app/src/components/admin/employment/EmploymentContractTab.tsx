@@ -2,9 +2,9 @@ import { useCallback, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button } from '@prime/ui';
-
-import { StatusBadge, useAdminPermission } from '@/components/admin';
+import { AdminButton } from '../AdminButton';
+import { StatusBadge } from '../StatusBadge';
+import { useAdminPermission } from '../RoleGuard';
 import { EmptyState, SkeletonLoader } from '@/components/common';
 import { useCompanyDefaults } from '@/hooks/useCompanyDefaults';
 import { useContractPDF } from '@/hooks/useContractPDF';
@@ -283,7 +283,7 @@ export function EmploymentContractTab({ officerId, profile }: Props) {
       {/* Secondary actions */}
       <View style={styles.actions}>
         {canEdit ? (
-          <Button
+          <AdminButton
             label="Edit Contract"
             variant="secondary"
             onPress={() =>
@@ -296,7 +296,7 @@ export function EmploymentContractTab({ officerId, profile }: Props) {
         ) : null}
 
         {!hasPdf && canEdit ? (
-          <Button
+          <AdminButton
             label="Generate PDF"
             onPress={() =>
               navigation.navigate('EmploymentContractForm', {
@@ -314,7 +314,7 @@ export function EmploymentContractTab({ officerId, profile }: Props) {
         ) : null}
 
         {canEdit && hasPdf ? (
-          <Button
+          <AdminButton
             label={busy || finalizing ? 'Generating…' : 'Regenerate PDF'}
             variant="secondary"
             onPress={() => void handleRegenerate()}
@@ -323,7 +323,7 @@ export function EmploymentContractTab({ officerId, profile }: Props) {
         ) : null}
 
         {canEdit && hasPdf && !employeeSigned ? (
-          <Button
+          <AdminButton
             label={requestingSignature || busy ? 'Sending…' : 'Request Employee Signature'}
             variant="secondary"
             onPress={() => void handleRequestSignature()}
@@ -332,7 +332,7 @@ export function EmploymentContractTab({ officerId, profile }: Props) {
         ) : null}
 
         {canEdit && hasPdf && !employerSigned ? (
-          <Button label="Sign for Company" onPress={handleSignForCompany} />
+          <AdminButton label="Sign for Company" onPress={handleSignForCompany} />
         ) : null}
 
         <Pressable

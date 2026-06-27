@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, StyleSheet } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button } from '@prime/ui';
-
-import { FormField, AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
+import { AdminButton, FormField, AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useGetFullAdminSettingsQuery,
@@ -76,7 +74,7 @@ export function InvoiceSettingsScreen(_props: Props) {
             <FormField label="Default HSN / SAC" value={defaultHsn} onChangeText={setDefaultHsn} />
             <FormField label="Footer note" value={footerNote} onChangeText={setFooterNote} multiline />
           </SectionCard>
-          <Button label="Save settings" onPress={() => void onSave()} />
+          <AdminButton label="Save settings" onPress={() => void onSave()} />
       </AdminScreenLayout>
     </RoleGuard>
   );

@@ -1,10 +1,7 @@
 import { useCallback } from 'react';
 import { FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
-
-import { AdminScreenLayout, RoleGuard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminScreenLayout, AdminStateShell, RoleGuard } from '@/components/admin';
 import { useGetComplaintsQuery } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -34,11 +31,15 @@ export function ComplaintsScreen({ navigation }: Props) {
     [navigation],
   );
 
-  if (isLoading) return <Screen><SkeletonLoader rows={5} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-
   return (
     <RoleGuard requiredPermission="settings.view">
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={refetch}
+        loadingRows={5}
+      >
       <AdminScreenLayout>
         <FlatList
           data={data ?? []}
@@ -48,6 +49,7 @@ export function ComplaintsScreen({ navigation }: Props) {
           ListEmptyComponent={<Text style={styles.empty}>No complaints</Text>}
         />
       </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

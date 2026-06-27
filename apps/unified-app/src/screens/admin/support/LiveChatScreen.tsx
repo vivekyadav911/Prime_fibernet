@@ -2,11 +2,9 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { formatDistanceToNow } from 'date-fns';
-import { Screen } from '@prime/ui';
 
 import { AgentStatusToggle } from '@/components/support';
-import { AdminScreenLayout, RoleGuard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminScreenLayout, AdminStateShell, RoleGuard } from '@/components/admin';
 import { useAgentAvailability } from '@/hooks/useAgentAvailability';
 import { useOfficerId } from '@/hooks/useOfficerId';
 import { useChatSession } from '@/hooks/useChatSession';
@@ -76,24 +74,15 @@ export function LiveChatScreen({ navigation }: Props) {
     [handleAccept, navigation],
   );
 
-  if (loading) {
-    return (
-      <Screen safeAreaTop={false}>
-        <SkeletonLoader rows={6} />
-      </Screen>
-    );
-  }
-
-  if (error) {
-    return (
-      <Screen safeAreaTop={false}>
-        <ErrorState message={error} onRetry={reload} />
-      </Screen>
-    );
-  }
-
   return (
     <RoleGuard requiredPermission="settings.view">
+      <AdminStateShell
+        isLoading={loading}
+        isError={!!error}
+        errorMessage={error ?? undefined}
+        onRetry={reload}
+        loadingRows={6}
+      >
       <AdminScreenLayout>
         <View style={styles.container}>
           <View style={styles.toolbar}>
@@ -125,6 +114,7 @@ export function LiveChatScreen({ navigation }: Props) {
           />
         </View>
       </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

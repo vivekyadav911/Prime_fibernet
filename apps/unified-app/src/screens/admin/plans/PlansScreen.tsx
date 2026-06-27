@@ -13,8 +13,6 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Button } from '@prime/ui';
-
 import {
   PlanCard,
   PlanFilterBar,
@@ -22,7 +20,7 @@ import {
   PlanListRow,
   PlanStatsBar,
 } from '@/components/Plans';
-import { AdminEmptyState, AdminScreenLayout, RoleGuard, SearchBar } from '@/components/admin';
+import { AdminButton, AdminEmptyState, AdminScreenLayout, RoleGuard, SearchBar } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { scrollLayoutStyles } from '@/components/common/scrollLayoutStyles';
 import { usePlans } from '@/hooks/usePlans';
@@ -291,7 +289,7 @@ export function PlansScreen({ navigation }: Props) {
             <Pressable style={styles.iconBtn} onPress={onRefresh}>
               <Ionicons name="refresh-outline" size={22} color={colors.textSecondary} />
             </Pressable>
-            <Button label="+ New Plan" onPress={handleCreate} />
+            <AdminButton label="+ New Plan" onPress={handleCreate} />
           </View>
         </View>
 
@@ -329,7 +327,7 @@ export function PlansScreen({ navigation }: Props) {
           <Pressable style={styles.iconBtn} onPress={showSortPicker}>
             <Ionicons name="funnel-outline" size={20} color={colors.textSecondary} />
           </Pressable>
-          <Button label="+ New" onPress={handleCreate} />
+          <AdminButton label="+ New" onPress={handleCreate} />
         </View>
 
         <PlanFilterBar

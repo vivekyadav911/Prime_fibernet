@@ -13,10 +13,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Button } from '@prime/ui';
-
 import { AudiencePickerSheet } from '@/components/Notifications';
-import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader, DismissKeyboardScrollView, KeyboardDismissView, ToggleSwitch } from '@/components/common';
 import type { AutomationRule, RecurringSchedule } from '@/services/broadcastNotificationService';
 import {
@@ -317,7 +315,7 @@ export function AutomaticNotificationsScreen(_props: Props) {
             <Text style={styles.sectionHint}>
               Scheduled broadcasts sent automatically on a recurring basis (processed server-side).
             </Text>
-            <Button label="+ Add recurring schedule" variant="ghost" onPress={() => setAddOpen(true)} />
+            <AdminButton label="+ Add recurring schedule" variant="ghost" onPress={() => setAddOpen(true)} />
             <FlatList
               data={schedules ?? []}
               keyExtractor={(item) => item.id}
@@ -359,8 +357,8 @@ export function AutomaticNotificationsScreen(_props: Props) {
                 ))}
               </View>
               <View style={styles.modalActions}>
-                <Button label="Cancel" variant="ghost" onPress={() => setEditingRule(null)} style={styles.modalBtn} />
-                <Button label="Save" onPress={() => void saveRuleEdit()} style={styles.modalBtn} />
+                <AdminButton label="Cancel" variant="ghost" onPress={() => setEditingRule(null)} style={styles.modalBtn} />
+                <AdminButton label="Save" onPress={() => void saveRuleEdit()} style={styles.modalBtn} />
               </View>
               </Pressable>
             </KeyboardDismissView>
@@ -429,8 +427,8 @@ export function AutomaticNotificationsScreen(_props: Props) {
                 <Text style={styles.label}>TIME (HH:MM, IST)</Text>
                 <TextInput style={styles.input} value={scheduleTime} onChangeText={setScheduleTime} placeholder="09:00" />
                 <View style={styles.modalActions}>
-                  <Button label="Cancel" variant="ghost" onPress={() => setAddOpen(false)} style={styles.modalBtn} />
-                  <Button
+                  <AdminButton label="Cancel" variant="ghost" onPress={() => setAddOpen(false)} style={styles.modalBtn} />
+                  <AdminButton
                     label={creating ? 'Saving…' : 'Create'}
                     onPress={() => void handleCreateSchedule()}
                     disabled={creating}

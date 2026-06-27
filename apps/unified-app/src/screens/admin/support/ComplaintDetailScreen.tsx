@@ -1,10 +1,7 @@
 import { useCallback } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen, Button } from '@prime/ui';
-
-import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, RoleGuard, SectionCard } from '@/components/admin';
 import { useGetComplaintQuery } from '@/services/api/adminSupportApi';
 import { updateComplaint } from '@/services/complaintService';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -31,11 +28,16 @@ export function ComplaintDetailScreen({ route, navigation }: Props) {
     [complaintId, refetch],
   );
 
-  if (isLoading) return <Screen><SkeletonLoader rows={5} /></Screen>;
-  if (isError || !complaint) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-
   return (
     <RoleGuard requiredPermission="settings.view">
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError || !complaint}
+        error={error}
+        onRetry={refetch}
+        loadingRows={5}
+      >
+      {complaint ? (
       <AdminScreenLayout>
         <SectionCard title={complaint.complaintNumber}>
           <Text style={styles.label}>Customer</Text>
@@ -49,19 +51,21 @@ export function ComplaintDetailScreen({ route, navigation }: Props) {
         </SectionCard>
 
         <View style={styles.actions}>
-          <Button label="Investigate" variant="ghost" onPress={() => void handleStatus('investigating')} />
-          <Button label="Escalate" variant="ghost" onPress={() => void handleStatus('escalated')} />
-          <Button label="Resolve" onPress={() => void handleStatus('resolved')} />
+          <AdminButton label="Investigate" variant="ghost" onPress={() => void handleStatus('investigating')} />
+          <AdminButton label="Escalate" variant="ghost" onPress={() => void handleStatus('escalated')} />
+          <AdminButton label="Resolve" onPress={() => void handleStatus('resolved')} />
         </View>
 
         {complaint.linkedTicketId ? (
-          <Button
+          <AdminButton
             label="View Linked Ticket"
             variant="ghost"
             onPress={() => navigation.navigate('TicketDetail', { ticketId: complaint.linkedTicketId! })}
           />
         ) : null}
       </AdminScreenLayout>
+      ) : null}
+      </AdminStateShell>
     </RoleGuard>
   );
 }

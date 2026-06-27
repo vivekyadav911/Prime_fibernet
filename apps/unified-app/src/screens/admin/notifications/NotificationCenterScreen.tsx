@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@prime/ui';
-
-import { AdminScreenLayout, ConfirmModal, FormField, RoleGuard, SectionCard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, ConfirmModal, FormField, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetNotificationHistoryQuery, useSendBulkNotificationMutation } from '@/store/api/endpoints';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -55,7 +53,7 @@ export function NotificationCenterScreen() {
           <FormField label="Message" value={body} onChangeText={setBody} multiline />
           <View style={styles.targetRow}>
             {TARGETS.map((t) => (
-              <Button
+              <AdminButton
                 key={t}
                 label={t}
                 variant={target === t ? 'primary' : 'ghost'}
@@ -64,7 +62,7 @@ export function NotificationCenterScreen() {
             ))}
           </View>
           <FormField label="Schedule (optional ISO datetime)" value={scheduledAt} onChangeText={setScheduledAt} />
-          <Button label="Send" onPress={() => setConfirmOpen(true)} disabled={!title || !body} />
+          <AdminButton label="Send" onPress={() => setConfirmOpen(true)} disabled={!title || !body} />
         </SectionCard>
         <Text style={styles.historyHeader}>Sent history</Text>
       </View>

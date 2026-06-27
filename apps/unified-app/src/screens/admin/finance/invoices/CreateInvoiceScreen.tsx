@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button } from '@prime/ui';
-
-import { FormField, AdminScreenLayout, RoleGuard, SectionCard, SelectField } from '@/components/admin';
+import { AdminButton, FormField, AdminScreenLayout, RoleGuard, SectionCard, SelectField } from '@/components/admin';
 import { ToggleSwitch } from '@/components/common';
 import {
   InvoiceDeliverySection,
@@ -186,7 +184,7 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
       <>
         <AdminScreenLayout scroll contentStyle={styles.scroll}>
           <SectionCard title="Customer details">
-            <Button
+            <AdminButton
               label={selectedCustomer ? `Selected: ${selectedCustomer.name}` : 'Select customer'}
               variant="secondary"
               onPress={() => setCustomerModalVisible(true)}
@@ -242,9 +240,9 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
           <FormField label="Notes" value={notes} onChangeText={setNotes} multiline />
 
           <View style={styles.actions}>
-            <Button label="Save draft" variant="secondary" onPress={() => void onSaveDraft()} disabled={creating} />
-            <Button label="Download PDF" variant="secondary" onPress={() => void onDownloadOnly()} disabled={creating} />
-            <Button label="Send invoice" onPress={() => void onSend()} disabled={creating || sending} />
+            <AdminButton label="Save draft" variant="secondary" onPress={() => void onSaveDraft()} disabled={creating} />
+            <AdminButton label="Download PDF" variant="secondary" onPress={() => void onDownloadOnly()} disabled={creating} />
+            <AdminButton label="Send invoice" onPress={() => void onSend()} disabled={creating || sending} />
           </View>
         </AdminScreenLayout>
 

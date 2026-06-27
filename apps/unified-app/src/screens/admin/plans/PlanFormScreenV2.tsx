@@ -10,9 +10,7 @@ import {
 } from 'react-native';
 import type { ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {  Button } from '@prime/ui';
-
-import { AdminScreenLayout, FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
 import { DismissKeyboardScrollView, ToggleSwitch } from '@/components/common';
 import { usePlanForm } from '@/hooks/usePlanForm';
 import { fetchPlanById } from '@/services/planService';
@@ -270,7 +268,7 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
                   onChangeText={setFeatureInput}
                   containerStyle={styles.featureInput}
                 />
-                <Button label="Add" variant="secondary" onPress={addFeature} />
+                <AdminButton label="Add" variant="secondary" onPress={addFeature} />
               </View>
               <View style={styles.chipRow}>
                 {formData.features.map((f, i) => (
@@ -304,16 +302,16 @@ export function PlanFormScreenV2({ route, navigation }: Props) {
             </DismissKeyboardScrollView>
 
           <View style={styles.footer}>
-            <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
+            <AdminButton label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
             {mode === 'edit' ? (
-              <Button
+              <AdminButton
                 label="Save & Duplicate"
                 variant="secondary"
                 disabled={isSubmitting}
                 onPress={() => void handleSave(true)}
               />
             ) : null}
-            <Button
+            <AdminButton
               label={isSubmitting ? 'Saving…' : 'Save Plan'}
               disabled={isSubmitting}
               onPress={() => void handleSave(false)}

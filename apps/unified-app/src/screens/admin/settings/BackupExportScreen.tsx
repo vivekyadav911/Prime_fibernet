@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import {  Button } from '@prime/ui';
-
-import { AdminScreenLayout, ExportButton, RoleGuard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, ExportButton, RoleGuard } from '@/components/admin';
 import {
   SaveButton,
   SettingsHubLayout,
@@ -121,7 +119,7 @@ export function BackupExportScreen() {
       </SettingsSection>
 
       <SettingsSection title="Manual Backup & Export">
-        <Button label={backingUp ? 'Creating…' : 'Create Backup Now'} onPress={onCreateBackup} disabled={backingUp} />
+        <AdminButton label={backingUp ? 'Creating…' : 'Create Backup Now'} onPress={onCreateBackup} disabled={backingUp} />
         <ExportButton label="Export Users (.xlsx)" format="csv" onExport={() => runExport('export_users')} />
         <ExportButton label="Export Officers (.xlsx)" format="csv" onExport={() => runExport('export_officers')} />
         <ExportButton label="Export Reports (.xlsx)" format="csv" onExport={() => runExport('export_reports')} />

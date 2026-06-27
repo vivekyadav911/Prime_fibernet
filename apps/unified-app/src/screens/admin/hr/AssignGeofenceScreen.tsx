@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
-
-import { AdminScreenLayout, RoleGuard } from '@/components/admin';
-import { SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, RoleGuard } from '@/components/admin';
 import { useAssignGeofence, useGeofence } from '@/hooks/attendance/useAdminAttendance';
 import { useGetOfficersQuery } from '@/store/api/endpoints';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
@@ -45,28 +42,24 @@ export function AssignGeofenceScreen({ route, navigation }: Props) {
     o.name.toLowerCase().includes(search.toLowerCase()),
   );
 
-  if (geoLoading || officersLoading) {
-    return (
-      <Screen>
-        <SkeletonLoader rows={8} />
-      </Screen>
-    );
-  }
-
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <AdminScreenLayout padded={false}>
+      <AdminStateShell
+        isLoading={geoLoading || officersLoading}
+        loadingRows={8}
+      >
+        <AdminScreenLayout padded={false}>
         <FlatList
           data={filtered}
           keyExtractor={(o) => o.id}
           ListHeaderComponent={<Text style={styles.title}>Assign officers — {geofence?.name}</Text>}
           ListFooterComponent={
-            <Button label={saving ? 'Saving…' : 'Save'} onPress={() => void handleSave()} disabled={saving} />
+            <AdminButton label={saving ? 'Saving…' : 'Save'} onPress={() => void handleSave()} disabled={saving} />
           }
           renderItem={({ item }) => (
             <View style={styles.row}>
               <Text style={styles.name}>{item.name}</Text>
-              <Button
+              <AdminButton
                 label={selected.has(item.id) ? '✓' : '○'}
                 variant="ghost"
                 onPress={() => toggle(item.id)}
@@ -77,7 +70,8 @@ export function AssignGeofenceScreen({ route, navigation }: Props) {
           style={styles.list}
           showsVerticalScrollIndicator={false}
         />
-      </AdminScreenLayout>
+        </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
-
 import { GeofenceLocationControls } from '@/components/attendance/GeofenceLocationControls';
 import { GeofenceLocationPicker } from '@/components/attendance/GeofenceLocationPicker';
-import { AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
-import { SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, FormField, RoleGuard } from '@/components/admin';
 import { useCreateGeofence, useGeofence, useUpdateGeofence } from '@/hooks/attendance/useAdminAttendance';
 import { reverseGeocode } from '@/services/GeocodingService';
 import type { Coordinates } from '@/types/attendance';
@@ -113,16 +110,9 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
     navigation.goBack();
   }, [address, center, city, create, existing?.assignedOfficers, geofenceId, isEdit, name, navigation, radius, state, update]);
 
-  if (isEdit && isLoading) {
-    return (
-      <Screen>
-        <SkeletonLoader rows={6} />
-      </Screen>
-    );
-  }
-
   return (
     <RoleGuard requiredPermission="attendance.edit">
+      <AdminStateShell isLoading={isEdit && isLoading} loadingRows={6}>
       <AdminScreenLayout>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.scroll}>
@@ -143,12 +133,12 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
               Radius: {radius}m ({GEOFENCE_RADIUS_MIN_M}–{GEOFENCE_RADIUS_MAX_M}m)
             </Text>
             <View style={styles.radiusRow}>
-              <Button
+              <AdminButton
                 label="−"
                 variant="ghost"
                 onPress={() => setRadius((r) => Math.max(GEOFENCE_RADIUS_MIN_M, r - 25))}
               />
-              <Button
+              <AdminButton
                 label="+"
                 variant="ghost"
                 onPress={() => setRadius((r) => Math.min(GEOFENCE_RADIUS_MAX_M, r + 25))}
@@ -168,7 +158,7 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
 
             <FormField label="Name" value={name} onChangeText={setName} placeholder="Office HQ" />
 
-            <Button
+            <AdminButton
               label={creating || updating ? 'Saving…' : 'Save geofence'}
               onPress={() => void handleSave()}
               disabled={creating || updating || !radiusValidation.valid}
@@ -176,6 +166,7 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
           </ScrollView>
         </KeyboardAvoidingView>
       </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

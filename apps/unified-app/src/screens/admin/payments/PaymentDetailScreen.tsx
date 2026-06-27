@@ -1,9 +1,7 @@
-import { AdminScreenLayout } from '@/components/admin';
+import { AdminButton, AdminScreenLayout } from '@/components/admin';
 import { useCallback } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button } from '@prime/ui';
-
 import { AmountDisplay, MethodIcon, PaymentTimeline, PaymentStatusBadge } from '@/components/payments';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePaymentDetail } from '@/hooks/usePayments';
@@ -75,16 +73,16 @@ export function PaymentDetailScreen({ route, navigation }: Props) {
         <PaymentTimeline payment={payment} />
       </View>
       {(payment.status === 'pending_review' || payment.status === 'cash_collected') && (
-        <Button
+        <AdminButton
           label="Review payment"
           onPress={() => navigation.navigate('PaymentReview', { paymentId })}
         />
       )}
       {payment.status === 'confirmed' && (
-        <Button label="Download receipt" variant="secondary" onPress={onReceipt} />
+        <AdminButton label="Download receipt" variant="secondary" onPress={onReceipt} />
       )}
       {payment.status === 'confirmed' && (
-        <Button
+        <AdminButton
           label="Initiate refund"
           variant="ghost"
           onPress={() => navigation.navigate('Refund', { paymentId })}

@@ -1,9 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button } from '@prime/ui';
-
-import { AdminScreenLayout, DateField, RoleGuard, StatusBadge } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, DateField, RoleGuard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetAttendanceQuery } from '@/store/api/endpoints';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
@@ -23,15 +21,15 @@ export function AttendanceScreen({ navigation }: Props) {
       <View style={adminScreenStyles.listHeader}>
         <DateField label="Date" value={date} onChange={setDate} placeholder="Select date" />
         <View style={styles.navRow}>
-          <Button label="Live" variant="ghost" onPress={() => navigation.navigate('LiveAttendance')} />
-          <Button label="Geofences" variant="ghost" onPress={() => navigation.navigate('GeofenceManagement')} />
-          <Button label="Approvals" variant="ghost" onPress={() => navigation.navigate('ApprovalRequests')} />
-          <Button label="Records" variant="ghost" onPress={() => navigation.navigate('AttendanceRecords')} />
-          <Button label="Shifts" variant="ghost" onPress={() => navigation.navigate('ShiftManagement')} />
-          <Button label="Leave" variant="ghost" onPress={() => navigation.navigate('LeaveManagement')} />
-          <Button label="Reports" variant="ghost" onPress={() => navigation.navigate('AttendanceReports')} />
-          <Button label="Exceptions" variant="ghost" onPress={() => navigation.navigate('CheckInExceptions')} />
-          <Button label="Completed" variant="ghost" onPress={() => navigation.navigate('CompletedShifts')} />
+          <AdminButton label="Live" variant="ghost" onPress={() => navigation.navigate('LiveAttendance')} />
+          <AdminButton label="Geofences" variant="ghost" onPress={() => navigation.navigate('GeofenceManagement')} />
+          <AdminButton label="Approvals" variant="ghost" onPress={() => navigation.navigate('ApprovalRequests')} />
+          <AdminButton label="Records" variant="ghost" onPress={() => navigation.navigate('AttendanceRecords')} />
+          <AdminButton label="Shifts" variant="ghost" onPress={() => navigation.navigate('ShiftManagement')} />
+          <AdminButton label="Leave" variant="ghost" onPress={() => navigation.navigate('LeaveManagement')} />
+          <AdminButton label="Reports" variant="ghost" onPress={() => navigation.navigate('AttendanceReports')} />
+          <AdminButton label="Exceptions" variant="ghost" onPress={() => navigation.navigate('CheckInExceptions')} />
+          <AdminButton label="Completed" variant="ghost" onPress={() => navigation.navigate('CompletedShifts')} />
         </View>
       </View>
     ),

@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen, Button } from '@prime/ui';
-
-import { AdminScreenLayout, RoleGuard, SelectField } from '@/components/admin';
-import { MarkdownText, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, RoleGuard, SelectField } from '@/components/admin';
+import { MarkdownText } from '@/components/common';
 import {
   useGetFaqsAdminQuery,
   useGetFaqCategoriesQuery,
@@ -69,10 +67,9 @@ export function FaqEditorScreen({ route, navigation }: Props) {
     }
   };
 
-  if (!categories) return <Screen><SkeletonLoader rows={4} /></Screen>;
-
   return (
     <RoleGuard requiredPermission="settings.view">
+      <AdminStateShell isLoading={!categories} loadingRows={4}>
       <AdminScreenLayout>
         <KeyboardAvoidingView
           style={styles.flex}
@@ -131,10 +128,11 @@ export function FaqEditorScreen({ route, navigation }: Props) {
               </Pressable>
             </View>
 
-            <Button label={isLoading ? 'Saving…' : 'Save'} onPress={() => void onSave()} />
+            <AdminButton label={isLoading ? 'Saving…' : 'Save'} onPress={() => void onSave()} />
           </ScrollView>
         </KeyboardAvoidingView>
       </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

@@ -2,12 +2,10 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import {  Button } from '@prime/ui';
-
 import { ToggleSwitch } from '@/components/common';
 import type { PaymentGateway } from '@prime/types';
 
-import { AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
 import { SaveButton, SettingsHubLayout, SettingsSection } from '@/components/admin/settings';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
@@ -92,7 +90,7 @@ export function IntegrationsSettingsScreen() {
             }
           }}
         />
-        <Button
+        <AdminButton
           label="Test email"
           variant="secondary"
           onPress={async () => {
@@ -124,13 +122,13 @@ export function IntegrationsSettingsScreen() {
       </SettingsSection>
 
       <SettingsSection title="Payment Gateways">
-        <Button
+        <AdminButton
           label="Configure payment gateways"
           variant="secondary"
           onPress={() => navigation.navigate('GatewayConfig')}
         />
-        <Button label="EasyBuzz" variant={gateway === 'easybuzz' ? 'primary' : 'ghost'} onPress={() => setGateway('easybuzz')} />
-        <Button label="Razorpay" variant={gateway === 'razorpay' ? 'primary' : 'ghost'} onPress={() => setGateway('razorpay')} />
+        <AdminButton label="EasyBuzz" variant={gateway === 'easybuzz' ? 'primary' : 'ghost'} onPress={() => setGateway('easybuzz')} />
+        <AdminButton label="Razorpay" variant={gateway === 'razorpay' ? 'primary' : 'ghost'} onPress={() => setGateway('razorpay')} />
         <SaveButton
           label="Save Gateway"
           onPress={async () => {

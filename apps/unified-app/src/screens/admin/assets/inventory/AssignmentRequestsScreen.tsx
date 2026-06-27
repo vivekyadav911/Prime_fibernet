@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button } from '@prime/ui';
-
-import { AdminScreenLayout, RoleGuard, StatusBadge } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, RoleGuard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   fetchAssignmentRequests,
@@ -72,13 +70,13 @@ export function AssignmentRequestsScreen(_props: Props) {
         {item.notes ? <Text style={styles.notes}>{item.notes}</Text> : null}
         <StatusBadge status={item.status} />
         <View style={styles.actions}>
-          <Button
+          <AdminButton
             label="Approve"
             variant="secondary"
             disabled={reviewingId === item.id}
             onPress={() => void handleReview(item.id, 'approve')}
           />
-          <Button
+          <AdminButton
             label="Reject"
             variant="ghost"
             disabled={reviewingId === item.id}

@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Button } from '@prime/ui';
 
+import { AdminButton } from './AdminButton';
+import { Ionicons } from '@expo/vector-icons';
 import { adminDesign } from '@/theme/adminDesign';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -29,7 +29,7 @@ export function AdminEmptyState({
       </View>
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-      {actionLabel && onAction ? <Button label={actionLabel} onPress={onAction} style={styles.btn} /> : null}
+      {actionLabel && onAction ? <AdminButton label={actionLabel} onPress={onAction} style={styles.btn} /> : null}
     </View>
   );
 }

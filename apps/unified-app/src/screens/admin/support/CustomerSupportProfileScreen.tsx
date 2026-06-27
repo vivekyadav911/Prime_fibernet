@@ -1,10 +1,7 @@
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
-
-import { AdminScreenLayout, RoleGuard, SectionCard, StatusBadge } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, RoleGuard, SectionCard, StatusBadge } from '@/components/admin';
 import { useCustomerSupport } from '@/hooks/useCustomerSupport';
 import { logCustomerInteraction } from '@/services/complaintService';
 import { adminColors } from '@/theme/admin';
@@ -31,11 +28,16 @@ export function CustomerSupportProfileScreen({ route, navigation }: Props) {
     });
   }, [customerId]);
 
-  if (isLoading) return <Screen><SkeletonLoader rows={8} showAvatar /></Screen>;
-  if (!user) return <Screen><ErrorState message="Customer not found" onRetry={() => {}} /></Screen>;
-
   return (
     <RoleGuard requiredPermission="users.view">
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={!user}
+        errorMessage="Customer not found"
+        loadingRows={8}
+        loadingShape="circle"
+      >
+      {user ? (
       <AdminScreenLayout>
         <ScrollView>
           <SectionCard title="Account Overview">
@@ -51,9 +53,9 @@ export function CustomerSupportProfileScreen({ route, navigation }: Props) {
           </SectionCard>
 
           <View style={styles.quickActions}>
-            <Button label="Raise Ticket" onPress={() => navigation.navigate('CreateTicket', { customerId })} />
-            <Button label="Live Chat" variant="ghost" onPress={() => navigation.navigate('LiveChat')} />
-            <Button label="Log Call" variant="ghost" onPress={() => void handleLogCall()} />
+            <AdminButton label="Raise Ticket" onPress={() => navigation.navigate('CreateTicket', { customerId })} />
+            <AdminButton label="Live Chat" variant="ghost" onPress={() => navigation.navigate('LiveChat')} />
+            <AdminButton label="Log Call" variant="ghost" onPress={() => void handleLogCall()} />
           </View>
 
           {avgCsat != null ? (
@@ -127,6 +129,8 @@ export function CustomerSupportProfileScreen({ route, navigation }: Props) {
           ) : null}
         </ScrollView>
       </AdminScreenLayout>
+      ) : null}
+      </AdminStateShell>
     </RoleGuard>
   );
 }

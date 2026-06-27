@@ -2,9 +2,7 @@ import { useCallback, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Circle } from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button } from '@prime/ui';
-
-import { AdminScreenLayout, AdminEmptyState, RoleGuard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, AdminEmptyState, RoleGuard } from '@/components/admin';
 import { FreeMapView } from '@/components/map';
 import { ErrorState, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import {
@@ -52,9 +50,9 @@ function GeofenceCard({
         {item.assignedOfficers.length === 1 ? '' : 's'}
       </Text>
       <View style={styles.cardActions}>
-        <Button label="Edit" variant="ghost" onPress={() => onEdit(item)} />
-        <Button label="Assign" variant="ghost" onPress={() => onAssign(item)} />
-        <Button label="Delete" variant="ghost" onPress={() => onDelete(item.id)} />
+        <AdminButton label="Edit" variant="ghost" onPress={() => onEdit(item)} />
+        <AdminButton label="Assign" variant="ghost" onPress={() => onAssign(item)} />
+        <AdminButton label="Delete" variant="ghost" onPress={() => onDelete(item.id)} />
       </View>
     </View>
   );
@@ -155,7 +153,7 @@ export function GeofenceManagementScreen({ navigation }: Props) {
     <View style={adminScreenStyles.listHeader}>
       <View style={styles.header}>
         <Text style={styles.title}>Geofences</Text>
-        <Button
+        <AdminButton
           label="Add geofence"
           onPress={() => navigation.navigate('CreateGeofence', {})}
         />

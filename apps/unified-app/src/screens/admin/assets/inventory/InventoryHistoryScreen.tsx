@@ -11,12 +11,11 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Screen } from '@prime/ui';
 
 import { HistoryCard, HistoryListRow } from '@/components/Inventory';
-import { AdminScreenLayout, AdminEmptyState, RoleGuard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, AdminEmptyState, AdminStateShell, RoleGuard } from '@/components/admin';
 import { DateRangePicker } from '@/components/common/pickers';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { SkeletonLoader } from '@/components/common';
 import { useInventoryHistory } from '@/hooks/useInventoryHistory';
 import { fetchInventoryItems } from '@/services/inventoryService';
 import { adminColors } from '@/theme/admin';
@@ -193,25 +192,16 @@ export function InventoryHistoryScreen({ navigation }: Props) {
     </View>
   );
 
-  if (isLoading && sections.length === 0) {
-    return (
-      <RoleGuard requiredPermission="inventory.view">
-        <Screen><SkeletonLoader rows={8} /></Screen>
-      </RoleGuard>
-    );
-  }
-
-  if (error && sections.length === 0) {
-    return (
-      <RoleGuard requiredPermission="inventory.view">
-        <Screen><ErrorState message={error} onRetry={refresh} /></Screen>
-      </RoleGuard>
-    );
-  }
-
   return (
     <RoleGuard requiredPermission="inventory.view">
-      <AdminScreenLayout>
+      <AdminStateShell
+        isLoading={isLoading && sections.length === 0}
+        isError={!!error && sections.length === 0}
+        errorMessage={error ?? undefined}
+        onRetry={refresh}
+        loadingRows={8}
+      >
+        <AdminScreenLayout>
         <SectionList
           sections={sections}
           keyExtractor={(entry) => entry.id}
@@ -382,7 +372,7 @@ export function InventoryHistoryScreen({ navigation }: Props) {
                 accentColor={adminColors.primary}
               />
               <View style={styles.modalActions}>
-                <Button
+                <AdminButton
                   label="Clear dates"
                   variant="ghost"
                   onPress={() => {
@@ -391,12 +381,13 @@ export function InventoryHistoryScreen({ navigation }: Props) {
                     setFilters({ ...filters, dateFrom: null, dateTo: null });
                   }}
                 />
-                <Button label="Done" onPress={() => setFilterModal(null)} />
+                <AdminButton label="Done" onPress={() => setFilterModal(null)} />
               </View>
             </Pressable>
           </Pressable>
         </Modal>
       </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

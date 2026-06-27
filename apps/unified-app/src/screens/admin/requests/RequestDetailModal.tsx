@@ -13,10 +13,8 @@ import { format } from 'date-fns';
 import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button } from '@prime/ui';
-
 import { AssignOfficerModal } from '@/components/Requests/AssignOfficerModal';
-import { AvatarIcon, FormField, RoleGuard } from '@/components/admin';
+import { AdminButton, AvatarIcon, FormField, RoleGuard } from '@/components/admin';
 import { DismissKeyboardScrollView } from '@/components/common';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -242,8 +240,8 @@ export function RequestDetailModal({
                   placeholder="Add a note…"
                 />
                 <View style={styles.noteActions}>
-                  <Button label="Cancel" variant="ghost" onPress={() => setShowNoteInput(false)} />
-                  <Button
+                  <AdminButton label="Cancel" variant="ghost" onPress={() => setShowNoteInput(false)} />
+                  <AdminButton
                     label={addingNote ? 'Saving…' : 'Save note'}
                     onPress={() => void handleAddNote()}
                     disabled={addingNote}
@@ -255,7 +253,7 @@ export function RequestDetailModal({
 
           <View style={styles.footer}>
             <RoleGuard requiredPermission="requests.edit">
-              <Button
+              <AdminButton
                 label="Add Note"
                 variant="secondary"
                 onPress={() => setShowNoteInput(true)}
@@ -263,7 +261,7 @@ export function RequestDetailModal({
               />
             </RoleGuard>
             <RoleGuard requiredPermission="requests.edit">
-              <Button
+              <AdminButton
                 label="Create Ticket"
                 variant="secondary"
                 onPress={() => {

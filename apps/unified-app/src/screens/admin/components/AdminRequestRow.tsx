@@ -1,7 +1,9 @@
 import React from 'react';
+
+import { AdminButton } from '@/components/admin';
 import { StyleSheet, Text, View } from 'react-native';
 import type { ServiceRequest } from '@prime/types';
-import { Button, StatusChip } from '@prime/ui';
+import { StatusChip } from '@prime/ui';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
@@ -28,8 +30,8 @@ export const AdminRequestRow = React.memo(function AdminRequestRow({
         {request.officerId ? null : <Text style={styles.unassigned}>Unassigned</Text>}
       </View>
       <View style={styles.actions}>
-        <Button label="Assign" variant="secondary" onPress={() => onAssign(request.id)} disabled={!canAssign} />
-        <Button label="Escalate" variant="ghost" onPress={() => onEscalate(request.id)} />
+        <AdminButton label="Assign" variant="secondary" onPress={() => onAssign(request.id)} disabled={!canAssign} />
+        <AdminButton label="Escalate" variant="ghost" onPress={() => onEscalate(request.id)} />
       </View>
     </View>
   );

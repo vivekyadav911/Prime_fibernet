@@ -1,17 +1,16 @@
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 
 import { CollectionStatusBadge } from '@/components/payments';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminScreenLayout, AdminStateShell } from '@/components/admin';
 import { useCustomerCollectionHistory } from '@/hooks/usePayments';
 import { useGetCustomerCollectionDetailQuery } from '@/services/api/collectionAssignmentsApi';
+import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { formatINR } from '@/utils/currencyFormat';
-import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminPaymentsStackParamList, 'CustomerCollectionDetail'>;
 
@@ -20,24 +19,15 @@ export function CustomerCollectionDetailScreen({ route }: Props) {
   const { data: customer, isLoading: customerLoading } = useGetCustomerCollectionDetailQuery(customerId);
   const { data: events, isLoading, isError, error, refetch } = useCustomerCollectionHistory(customerId);
 
-  if (customerLoading || isLoading) {
-    return (
-      <Screen>
-        <SkeletonLoader rows={6} />
-      </Screen>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Screen>
-        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
-    );
-  }
-
   return (
-    <Screen padded={false}>
+    <AdminStateShell
+      isLoading={customerLoading || isLoading}
+      isError={isError}
+      error={error}
+      onRetry={refetch}
+      loadingRows={6}
+    >
+      <AdminScreenLayout padded={false}>
       <View style={styles.header}>
         <Text style={styles.title}>{customer?.name ?? 'Customer'}</Text>
         <Text style={styles.meta}>
@@ -62,7 +52,7 @@ export function CustomerCollectionDetailScreen({ route }: Props) {
       <FlatList
         data={events ?? []}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[adminScreenStyles.listContent, styles.list]}
         ListEmptyComponent={<Text style={styles.empty}>No assignment events yet.</Text>}
         renderItem={({ item }) => (
           <View style={styles.eventCard}>
@@ -77,7 +67,8 @@ export function CustomerCollectionDetailScreen({ route }: Props) {
           </View>
         )}
       />
-    </Screen>
+      </AdminScreenLayout>
+    </AdminStateShell>
   );
 }
 

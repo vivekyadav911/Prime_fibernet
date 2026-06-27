@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {  Button } from '@prime/ui';
-
-import { AdminScreenLayout, FormField, RoleGuard, SelectField } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, FormField, RoleGuard, SelectField } from '@/components/admin';
 import { DismissKeyboardScrollView, ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetOfficersQuery } from '@/services/api/officersApi';
 import { useGetAdminUserDetailQuery, useUpdateAdminUserMutation } from '@/store/api/endpoints';
@@ -89,8 +87,8 @@ export function UserEditScreen({ route, navigation }: Props) {
             <Text style={styles.helper}>
               Only the assigned officer can view this customer and collect payments in the field app.
             </Text>
-            <Button label={saving ? 'Saving…' : 'Save'} onPress={() => void onSave()} style={styles.btn} />
-            <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
+            <AdminButton label={saving ? 'Saving…' : 'Save'} onPress={() => void onSave()} style={styles.btn} />
+            <AdminButton label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
           </DismissKeyboardScrollView>
         </KeyboardAvoidingView>
       </AdminScreenLayout>

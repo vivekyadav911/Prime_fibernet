@@ -1,5 +1,6 @@
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Button } from '@prime/ui';
+
+import { AdminButton } from '../AdminButton';
 import type { OfficerCredentialsInfo } from '@/types/api/officer';
 import { officerStrings } from '@/constants/officerStrings';
 import { SectionHeader } from './SectionHeader';
@@ -46,14 +47,14 @@ export function OfficerCredentialsCard({
       />
       <View style={styles.actions}>
         {credentials.visibleToAdmin && onReveal ? (
-          <Button
+          <AdminButton
             label={revealing ? 'Revealing…' : officerStrings.detail.labels.revealPassword}
             variant="ghost"
             onPress={() => void onReveal()}
           />
         ) : null}
         {onReset ? (
-          <Button
+          <AdminButton
             label={resetting ? 'Resetting…' : officerStrings.detail.labels.resetPassword}
             onPress={() => {
               Alert.alert(

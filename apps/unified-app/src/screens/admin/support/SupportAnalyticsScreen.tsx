@@ -4,11 +4,8 @@ import { BarChart, PieChart } from 'react-native-gifted-charts';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen, Button } from '@prime/ui';
-
 import { StatsCard, SupportStatsRow } from '@/components/support';
-import { AdminScreenLayout, FilterChips, RoleGuard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, FilterChips, RoleGuard } from '@/components/admin';
 import { useSupportAnalytics } from '@/hooks/useSupportAnalytics';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -16,7 +13,6 @@ import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
 import type { SupportAnalyticsPeriod } from '@/types/support';
-import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminSupportStackParamList, 'SupportAnalytics'>;
 
@@ -41,9 +37,6 @@ export function SupportAnalyticsScreen(_props: Props) {
     if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(path);
   }, [data]);
 
-  if (isLoading) return <Screen><SkeletonLoader rows={8} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-
   const statusPie = Object.entries(data?.byStatus ?? {}).map(([label, value], i) => ({
     value,
     text: label,
@@ -60,6 +53,13 @@ export function SupportAnalyticsScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="settings.view">
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={refetch}
+        loadingRows={8}
+      >
       <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <FilterChips options={PERIOD_OPTIONS} selected={period} onSelect={(v) => setPeriod(v as SupportAnalyticsPeriod)} />
@@ -95,9 +95,10 @@ export function SupportAnalyticsScreen(_props: Props) {
             </View>
           ))}
 
-          <Button label="Export Report (.csv)" onPress={() => void handleExport()} style={styles.exportBtn} />
+          <AdminButton label="Export Report (.csv)" onPress={() => void handleExport()} style={styles.exportBtn} />
         </ScrollView>
       </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

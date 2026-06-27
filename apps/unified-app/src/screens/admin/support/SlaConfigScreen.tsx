@@ -1,10 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen, Button } from '@prime/ui';
-
-import { AdminScreenLayout, RoleGuard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, RoleGuard } from '@/components/admin';
 import { useGetSlaPoliciesQuery, useUpdateSlaPolicyMutation } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -70,18 +67,22 @@ export function SlaConfigScreen(_props: Props) {
               }))
             }
           />
-          <Button label="Save" onPress={() => void handleSave(item)} />
+          <AdminButton label="Save" onPress={() => void handleSave(item)} />
         </View>
       );
     },
     [edits, handleSave],
   );
 
-  if (isLoading) return <Screen><SkeletonLoader rows={4} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-
   return (
     <RoleGuard requiredPermission="settings.view">
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={refetch}
+        loadingRows={4}
+      >
       <AdminScreenLayout>
         <FlatList
           data={data ?? []}
@@ -92,6 +93,7 @@ export function SlaConfigScreen(_props: Props) {
         />
         {saving ? <Text style={styles.saving}>Saving…</Text> : null}
       </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

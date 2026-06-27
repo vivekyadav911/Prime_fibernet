@@ -11,15 +11,13 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Button } from '@prime/ui';
-
 import {
   FilterBar,
   InventoryCard,
   InventoryTableRow,
   StatCard,
 } from '@/components/Inventory';
-import { AdminScreenLayout, AdminEmptyState, RoleGuard, SearchBar } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, AdminEmptyState, RoleGuard, SearchBar } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useInventory } from '@/hooks/useInventory';
 import { fetchCategories } from '@/services/inventoryService';
@@ -178,7 +176,7 @@ export function InventoryListScreen({ navigation }: Props) {
     selectedIds.size > 0 ? (
       <View style={styles.bulkBar}>
         <Text style={styles.bulkText}>{selectedIds.size} selected</Text>
-        <Button
+        <AdminButton
           label="Bulk Operations"
           variant="secondary"
           onPress={() => navigation.navigate('BulkOperations')}

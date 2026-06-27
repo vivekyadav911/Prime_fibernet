@@ -2,15 +2,11 @@ import { useCallback, useState } from 'react';
 import { FlatList, Modal, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ServiceRequest } from '@prime/types';
-import { Button, Screen } from '@prime/ui';
-
-import { AdminEmptyState, FilterChips, RoleGuard, SearchBar, StatusBadge } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminEmptyState, AdminScreenLayout, AdminStateShell, FilterChips, RoleGuard, SearchBar, StatusBadge } from '@/components/admin';
 import { useAssignRequestMutation, useGetAllRequestsQuery, useGetOfficersQuery } from '@/store/api/endpoints';
 import type { AdminRequestsStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
-import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminRequestsStackParamList, 'RequestList'>;
 
@@ -55,9 +51,9 @@ export function RequestListScreen({ navigation }: Props) {
         <StatusBadge status={item.status} />
         <View style={styles.actions}>
           {bulkMode ? (
-            <Button label={selected.includes(item.id) ? 'Selected' : 'Select'} variant="secondary" onPress={() => toggleSelect(item.id)} />
+            <AdminButton label={selected.includes(item.id) ? 'Selected' : 'Select'} variant="secondary" onPress={() => toggleSelect(item.id)} />
           ) : (
-            <Button label="Detail" variant="ghost" onPress={() => navigation.navigate('RequestDetail', { requestId: item.id })} />
+            <AdminButton label="Detail" variant="ghost" onPress={() => navigation.navigate('RequestDetail', { requestId: item.id })} />
           )}
         </View>
       </View>
@@ -65,12 +61,16 @@ export function RequestListScreen({ navigation }: Props) {
     [bulkMode, navigation, selected],
   );
 
-  if (isLoading) return <Screen><SkeletonLoader rows={6} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen padded={false}>
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={refetch}
+        loadingRows={6}
+      >
+      <AdminScreenLayout padded={false}>
         <View style={styles.toolbar}>
           <SearchBar value={search} onChangeText={setSearch} placeholder="Search address…" />
           <FilterChips
@@ -84,9 +84,9 @@ export function RequestListScreen({ navigation }: Props) {
             selected={status}
             onSelect={setStatus}
           />
-          <Button label={bulkMode ? 'Cancel bulk' : 'Bulk assign'} variant="secondary" onPress={() => setBulkMode(!bulkMode)} />
+          <AdminButton label={bulkMode ? 'Cancel bulk' : 'Bulk assign'} variant="secondary" onPress={() => setBulkMode(!bulkMode)} />
           {bulkMode && selected.length ? (
-            <Button label={`Assign ${selected.length}`} onPress={() => setAssignModal(true)} />
+            <AdminButton label={`Assign ${selected.length}`} onPress={() => setAssignModal(true)} />
           ) : null}
         </View>
         {!filtered.length ? <AdminEmptyState title="No requests" iconName="checkmark-circle-outline" /> : (
@@ -97,14 +97,15 @@ export function RequestListScreen({ navigation }: Props) {
             <View style={styles.modalCard}>
               <Text style={styles.modalTitle}>Assign to officer</Text>
               {(officers ?? []).map((o) => (
-                <Button key={o.id} label={o.name} variant={officerId === o.id ? 'primary' : 'ghost'} onPress={() => setOfficerId(o.id)} />
+                <AdminButton key={o.id} label={o.name} variant={officerId === o.id ? 'primary' : 'ghost'} onPress={() => setOfficerId(o.id)} />
               ))}
-              <Button label="Confirm assign" onPress={() => void bulkAssign()} />
-              <Button label="Cancel" variant="ghost" onPress={() => setAssignModal(false)} />
+              <AdminButton label="Confirm assign" onPress={() => void bulkAssign()} />
+              <AdminButton label="Cancel" variant="ghost" onPress={() => setAssignModal(false)} />
             </View>
           </View>
         </Modal>
-      </Screen>
+      </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

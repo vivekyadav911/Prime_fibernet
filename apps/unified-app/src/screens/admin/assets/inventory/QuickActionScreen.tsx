@@ -1,11 +1,8 @@
 import { useLayoutEffect } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
-
 import { ActionTabSelector } from '@/components/Inventory';
-import { AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminScreenLayout, AdminStateShell, FormField, RoleGuard } from '@/components/admin';
 import { useInventoryItem } from '@/hooks/useInventoryItem';
 import { useQuickAction } from '@/hooks/useQuickAction';
 import { useAppDispatch } from '@/store/hooks';
@@ -51,25 +48,17 @@ export function QuickActionScreen({ navigation, route }: Props) {
     }
   };
 
-  if (isLoading) {
-    return (
-      <RoleGuard requiredPermission="inventory.edit">
-        <Screen><SkeletonLoader rows={5} /></Screen>
-      </RoleGuard>
-    );
-  }
-
-  if (error || !item) {
-    return (
-      <RoleGuard requiredPermission="inventory.edit">
-        <Screen><ErrorState message={error ?? 'Item not found'} onRetry={() => navigation.goBack()} /></Screen>
-      </RoleGuard>
-    );
-  }
-
   return (
     <RoleGuard requiredPermission="inventory.edit">
-      <AdminScreenLayout>
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={!!error || !item}
+        errorMessage={error ?? 'Item not found'}
+        onRetry={() => navigation.goBack()}
+        loadingRows={5}
+      >
+        {item ? (
+        <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.summaryCard}>
             <Text style={styles.itemName}>{item.name}</Text>
@@ -127,6 +116,8 @@ export function QuickActionScreen({ navigation, route }: Props) {
           )}
         </Pressable>
       </AdminScreenLayout>
+        ) : null}
+      </AdminStateShell>
     </RoleGuard>
   );
 }

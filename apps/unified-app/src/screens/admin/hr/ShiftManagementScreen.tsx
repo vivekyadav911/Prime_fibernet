@@ -1,10 +1,8 @@
 import { useCallback } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
 
-import { AdminScreenLayout, RoleGuard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, RoleGuard } from '@/components/admin';
 import { useCreateShift, useDeleteShift, useShifts } from '@/hooks/attendance/useAdminAttendance';
 import type { ShiftDefinition } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
@@ -12,7 +10,6 @@ import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
-import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'ShiftManagement'>;
 
@@ -30,7 +27,7 @@ function ShiftCard({
         {item.startTime} – {item.endTime} · {item.type} · Grace {item.graceMinutes}m
       </Text>
       <Text style={styles.meta}>👥 {item.assignedOfficers.length} officers</Text>
-      <Button label="Delete" variant="ghost" onPress={() => onDelete(item.id)} />
+      <AdminButton label="Delete" variant="ghost" onPress={() => onDelete(item.id)} />
     </View>
   );
 }
@@ -70,42 +67,39 @@ export function ShiftManagementScreen(_props: Props) {
     [handleDelete],
   );
 
-  if (isLoading) {
-    return (
-      <Screen>
-        <SkeletonLoader rows={6} />
-      </Screen>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Screen>
-        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
-    );
-  }
-
   const listHeader = (
     <View style={styles.header}>
       <Text style={styles.title}>Shift management</Text>
-      <Button label={creating ? 'Adding…' : 'Add shift'} onPress={() => void handleAdd()} disabled={creating} />
+      <AdminButton
+        label="Add shift"
+        loading={creating}
+        loadingLabel="Adding…"
+        onPress={() => void handleAdd()}
+      />
     </View>
   );
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <AdminScreenLayout padded={false}>
-        <FlatList
-          data={data ?? []}
-          keyExtractor={(s) => s.id}
-          renderItem={renderItem}
-          ListHeaderComponent={listHeader}
-          contentContainerStyle={adminScreenStyles.listContent}
-          style={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
-      </AdminScreenLayout>
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={refetch}
+        loadingRows={6}
+      >
+        <AdminScreenLayout padded={false}>
+          <FlatList
+            data={data ?? []}
+            keyExtractor={(s) => s.id}
+            renderItem={renderItem}
+            ListHeaderComponent={listHeader}
+            contentContainerStyle={adminScreenStyles.listContent}
+            style={styles.list}
+            showsVerticalScrollIndicator={false}
+          />
+        </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

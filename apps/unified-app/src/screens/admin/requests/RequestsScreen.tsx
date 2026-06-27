@@ -8,18 +8,17 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Screen } from '@prime/ui';
 
 import { AssignOfficerModal } from '@/components/Requests/AssignOfficerModal';
 import { ExportRequestsModal } from '@/components/Requests/ExportRequestsModal';
 import { RequestCard } from '@/components/Requests/RequestCard';
 import { RequestDetailModal } from '@/screens/admin/requests/RequestDetailModal';
 import { AdminScreenLayout, AdminEmptyState,
+  AdminStateShell,
   FilterChips,
   RoleGuard,
   SearchBar,
   SelectField, } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAdminRequests } from '@/hooks/useAdminRequests';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -121,24 +120,16 @@ export function RequestsScreen() {
     [isWide],
   );
 
-  if (loading && !allRequests.length) {
-    return (
-      <Screen>
-        <SkeletonLoader rows={8} shape="card" />
-      </Screen>
-    );
-  }
-
-  if (error && !allRequests.length) {
-    return (
-      <Screen>
-        <ErrorState message={error} onRetry={() => void refresh()} />
-      </Screen>
-    );
-  }
-
   return (
     <RoleGuard requiredPermission="requests.view">
+      <AdminStateShell
+        isLoading={loading && !allRequests.length}
+        isError={!!error && !allRequests.length}
+        errorMessage={error ?? undefined}
+        onRetry={() => void refresh()}
+        loadingRows={8}
+        loadingShape="card"
+      >
       <AdminScreenLayout>
         <View style={styles.header}>
           <Text style={styles.pageTitle}>Requests</Text>
@@ -225,6 +216,7 @@ export function RequestsScreen() {
           onClose={() => setExportVisible(false)}
         />
       </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

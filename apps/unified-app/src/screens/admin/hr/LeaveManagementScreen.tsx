@@ -1,10 +1,7 @@
 import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
-
-import { AdminScreenLayout, RoleGuard, StatusBadge } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, RoleGuard, StatusBadge } from '@/components/admin';
 import { useLeaveRequests, useReviewLeave } from '@/hooks/attendance/useAdminAttendance';
 import type { LeaveRequestRecord } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
@@ -12,7 +9,6 @@ import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
-import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'LeaveManagement'>;
 type FilterTab = 'all' | 'pending' | 'approved' | 'rejected';
@@ -38,8 +34,8 @@ function LeaveCard({
       <Text style={styles.reason}>{item.reason}</Text>
       {item.status === 'pending' ? (
         <View style={styles.actions}>
-          <Button label="Reject" variant="ghost" onPress={() => onReject(item.id)} />
-          <Button label="Approve" onPress={() => onApprove(item.id)} />
+          <AdminButton label="Reject" variant="ghost" onPress={() => onReject(item.id)} />
+          <AdminButton label="Approve" onPress={() => onApprove(item.id)} />
         </View>
       ) : null}
     </View>
@@ -80,22 +76,6 @@ export function LeaveManagementScreen(_props: Props) {
     [handleApprove, handleReject],
   );
 
-  if (isLoading) {
-    return (
-      <Screen>
-        <SkeletonLoader rows={6} />
-      </Screen>
-    );
-  }
-
-  if (isError) {
-    return (
-      <Screen>
-        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
-    );
-  }
-
   const tabs: FilterTab[] = ['all', 'pending', 'approved', 'rejected'];
 
   const listHeader = (
@@ -103,7 +83,7 @@ export function LeaveManagementScreen(_props: Props) {
       <Text style={styles.title}>Leave management</Text>
       <View style={styles.tabs}>
         {tabs.map((t) => (
-          <Button
+          <AdminButton
             key={t}
             label={t}
             variant={tab === t ? 'primary' : 'ghost'}
@@ -116,7 +96,14 @@ export function LeaveManagementScreen(_props: Props) {
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <AdminScreenLayout padded={false}>
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={refetch}
+        loadingRows={6}
+      >
+        <AdminScreenLayout padded={false}>
         <FlatList
           data={data ?? []}
           keyExtractor={(r) => r.id}
@@ -128,7 +115,8 @@ export function LeaveManagementScreen(_props: Props) {
           style={styles.list}
           showsVerticalScrollIndicator={false}
         />
-      </AdminScreenLayout>
+        </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

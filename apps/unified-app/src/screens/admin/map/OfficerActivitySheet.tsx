@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+
+import { AdminButton } from '@/components/admin';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { format } from 'date-fns';
-import { Button } from '@prime/ui';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import {
@@ -148,7 +149,7 @@ export function OfficerActivitySheet({
         )}
 
         <View style={styles.actions}>
-          <Button
+          <AdminButton
             label="View Full Trail"
             variant="secondary"
             onPress={() => {

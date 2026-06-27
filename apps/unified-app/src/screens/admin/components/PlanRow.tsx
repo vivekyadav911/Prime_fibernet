@@ -1,7 +1,8 @@
 import React from 'react';
+
+import { AdminButton } from '@/components/admin';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Plan } from '@prime/types';
-import { Button } from '@prime/ui';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
@@ -18,8 +19,8 @@ export const PlanRow = React.memo(function PlanRow({ plan, onEdit, onDelete }: P
         <Text style={styles.name}>{plan.name}</Text>
         <Text style={styles.meta}>{plan.speedMbps} Mbps · ₹{plan.price}</Text>
       </View>
-      <Button label="Edit" variant="ghost" onPress={() => onEdit(plan)} />
-      <Button label="Delete" variant="ghost" onPress={() => onDelete(plan.id)} />
+      <AdminButton label="Edit" variant="ghost" onPress={() => onEdit(plan)} />
+      <AdminButton label="Delete" variant="ghost" onPress={() => onDelete(plan.id)} />
     </View>
   );
 });

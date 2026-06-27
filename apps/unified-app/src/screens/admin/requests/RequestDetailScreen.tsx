@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
-
-import { FormField, RoleGuard, SectionCard, StatusBadge } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, FormField, RoleGuard, SectionCard, StatusBadge } from '@/components/admin';
 import {
   useAddRequestActivityMutation,
   useGetRequestDetailQuery,
@@ -13,7 +10,6 @@ import {
 import type { AdminRequestsStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
-import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminRequestsStackParamList, 'RequestDetail'>;
 
@@ -33,14 +29,21 @@ export function RequestDetailScreen({ route }: Props) {
     refetch();
   };
 
-  if (isLoading) return <Screen><SkeletonLoader rows={6} /></Screen>;
-  if (isError || !request) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-
-  const stepIndex = STEPS.indexOf(request.status);
-
   return (
     <RoleGuard requiredPermission="requests.view">
-      <Screen>
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError || !request}
+        error={error}
+        onRetry={refetch}
+        loadingRows={6}
+      >
+      {request ? (
+      <AdminScreenLayout>
+        {(() => {
+          const stepIndex = STEPS.indexOf(request.status);
+          return (
+            <>
         <Text style={styles.title}>{request.requestType}</Text>
         <StatusBadge status={request.status} />
         <Text style={styles.meta}>{request.address}</Text>
@@ -65,14 +68,19 @@ export function RequestDetailScreen({ route }: Props) {
 
         <RoleGuard requiredPermission="requests.edit">
           <FormField label="Add note" value={note} onChangeText={setNote} multiline />
-          <Button label="Add note" onPress={() => void onAddNote()} />
+          <AdminButton label="Add note" onPress={() => void onAddNote()} />
           <View style={styles.statusRow}>
             {STEPS.map((s) => (
-              <Button key={s} label={s} variant="ghost" onPress={() => updateStatus({ id: requestId, status: s, note: `Status → ${s}` })} />
+              <AdminButton key={s} label={s} variant="ghost" onPress={() => updateStatus({ id: requestId, status: s, note: `Status → ${s}` })} />
             ))}
           </View>
         </RoleGuard>
-      </Screen>
+            </>
+          );
+        })()}
+      </AdminScreenLayout>
+      ) : null}
+      </AdminStateShell>
     </RoleGuard>
   );
 }

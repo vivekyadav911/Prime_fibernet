@@ -1,21 +1,16 @@
 import { useCallback, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
-
-import { RoleGuard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, RoleGuard } from '@/components/admin';
 import { PayrollWarningBadges } from '@/components/payroll/PayrollWarningBadges';
 import {
   useCalculatePayslipMutation,
   useGetPayrollGenerationPreviewQuery,
 } from '@/services/api/payrollApi';
 import { adminColors } from '@/theme/admin';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminPayrollStackParamList } from '@/types/navigation';
-import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminPayrollStackParamList, 'PayslipPreGeneration'>;
 
@@ -94,27 +89,19 @@ export function PayslipPreGenerationScreen({ route, navigation }: Props) {
     calculatePayslip,
   ]);
 
-  if (isLoading) {
-    return (
-      <Screen style={adminScreenStyles.canvas}>
-        <SkeletonLoader rows={8} />
-      </Screen>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <Screen style={adminScreenStyles.canvas}>
-        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
-    );
-  }
-
-  const summary = data.attendanceSummary;
+  const summary = data?.attendanceSummary;
 
   return (
     <RoleGuard requiredPermission="payroll.edit">
-      <Screen padded={false} style={adminScreenStyles.canvas}>
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError || !data}
+        error={error}
+        onRetry={refetch}
+        loadingRows={8}
+      >
+      {data && summary ? (
+      <AdminScreenLayout padded={false}>
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={styles.headerCard}>
             <Text style={styles.title}>{officerName}</Text>
@@ -166,8 +153,8 @@ export function PayslipPreGenerationScreen({ route, navigation }: Props) {
           ) : null}
 
           <View style={styles.actions}>
-            <Button label="Back" variant="ghost" onPress={() => navigation.goBack()} />
-            <Button
+            <AdminButton label="Back" variant="ghost" onPress={() => navigation.goBack()} />
+            <AdminButton
               label={data.canGenerate ? 'Generate payslip' : 'Blocked — fix issues first'}
               variant="primary"
               onPress={() => void handleGenerate()}
@@ -175,7 +162,9 @@ export function PayslipPreGenerationScreen({ route, navigation }: Props) {
             />
           </View>
         </ScrollView>
-      </Screen>
+      </AdminScreenLayout>
+      ) : null}
+      </AdminStateShell>
     </RoleGuard>
   );
 }

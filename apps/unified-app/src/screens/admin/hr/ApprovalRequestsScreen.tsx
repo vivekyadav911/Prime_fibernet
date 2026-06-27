@@ -1,10 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
-
-import { AdminScreenLayout, AdminEmptyState, FilterChips, RoleGuard, StatusBadge } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminEmptyState, AdminStateShell, FilterChips, RoleGuard, StatusBadge } from '@/components/admin';
 import {
   useApprovalRequests,
   useReviewApproval,
@@ -338,7 +335,7 @@ export function ApprovalRequestsScreen(_props: Props) {
         <FilterChips options={FILTER_OPTIONS} selected={tab} onSelect={setTab} />
         {tab === 'pending' ? (
           <View style={styles.bulkToolbar}>
-            <Button
+            <AdminButton
               label={selectionMode ? 'Cancel selection' : 'Select multiple'}
               variant="ghost"
               onPress={() => {
@@ -348,12 +345,12 @@ export function ApprovalRequestsScreen(_props: Props) {
             />
             {selectionMode ? (
               <>
-                <Button
+                <AdminButton
                   label={`Approve (${selectedIds.length})`}
                   onPress={() => runBulkAction('approve')}
                   disabled={selectedIds.length === 0 || bulkReviewing}
                 />
-                <Button
+                <AdminButton
                   label={`Reject (${selectedIds.length})`}
                   variant="secondary"
                   onPress={() => runBulkAction('reject')}
@@ -377,26 +374,16 @@ export function ApprovalRequestsScreen(_props: Props) {
     ],
   );
 
-  if (isLoading) {
-    return (
-      <Screen safeAreaTop={false}>
-        <SkeletonLoader rows={6} shape="card" />
-      </Screen>
-    );
-  }
-
-  if (isError) {
-    return (
-      <AdminScreenLayout>
-        <View style={styles.stateCard}>
-          <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-        </View>
-      </AdminScreenLayout>
-    );
-  }
-
   return (
     <RoleGuard requiredPermission="attendance.edit">
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={refetch}
+        loadingRows={6}
+        loadingShape="card"
+      >
       <AdminScreenLayout>
         <FlatList
           data={records}
@@ -422,6 +409,7 @@ export function ApprovalRequestsScreen(_props: Props) {
           }
         />
       </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

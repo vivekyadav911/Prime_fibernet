@@ -1,8 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
-import {  Button } from '@prime/ui';
-
-import { AdminScreenLayout, FormField } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, FormField } from '@/components/admin';
 import { GatewayCard } from '@/components/payments';
 import { DismissKeyboardScrollView, ErrorState, FullScreenModalShell, KeyboardDismissView, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import { useGateways } from '@/hooks/usePayments';
@@ -134,9 +132,9 @@ export function GatewayConfigScreen() {
             {editing?.webhook_url ? (
               <Text style={styles.webhook}>Webhook: {editing.webhook_url}</Text>
             ) : null}
-            <Button label="Test connection" variant="secondary" onPress={() => runSave({ testOnly: true })} disabled={busy} />
-            <Button label="Save & activate" onPress={() => runSave({ activate: true })} disabled={busy} />
-            <Button label="Set as default" variant="ghost" onPress={() => runSave({ activate: true, setDefault: true })} />
+            <AdminButton label="Test connection" variant="secondary" onPress={() => runSave({ testOnly: true })} disabled={busy} />
+            <AdminButton label="Save & activate" onPress={() => runSave({ activate: true })} disabled={busy} />
+            <AdminButton label="Set as default" variant="ghost" onPress={() => runSave({ activate: true, setDefault: true })} />
           </DismissKeyboardScrollView>
         </KeyboardDismissView>
       </FullScreenModalShell>

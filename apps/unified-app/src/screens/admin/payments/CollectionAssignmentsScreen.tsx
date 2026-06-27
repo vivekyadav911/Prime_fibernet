@@ -12,16 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button } from '@prime/ui';
-
-import {
-  AdminEmptyState,
-  AdminScreenLayout,
-  Pagination,
-  RoleGuard,
-  SearchBar,
-  SelectField,
-} from '@/components/admin';
+import { AdminButton, AdminEmptyState, AdminScreenLayout, Pagination, RoleGuard, SearchBar, SelectField } from '@/components/admin';
 import {
   CollectionAssignmentsFilterSheet,
   CollectionStatusBadge,
@@ -240,16 +231,16 @@ export function CollectionAssignmentsScreen() {
           ) : null}
           <View style={styles.actions}>
             {bulkMode ? (
-              <Button
+              <AdminButton
                 label={isSelected ? 'Selected' : 'Select'}
                 variant={isSelected ? 'primary' : 'secondary'}
                 onPress={() => toggleSelect(item.id)}
               />
             ) : (
               <>
-                <Button label="Assign" variant="secondary" onPress={() => openSingleAssign(item)} />
+                <AdminButton label="Assign" variant="secondary" onPress={() => openSingleAssign(item)} />
                 {item.claimedByOfficerId ? (
-                  <Button
+                  <AdminButton
                     label="Revoke claim"
                     variant="ghost"
                     onPress={() => void onReleaseClaim(item)}
@@ -295,7 +286,7 @@ export function CollectionAssignmentsScreen() {
               onSelect={setSortKey}
             />
           </View>
-          <Button
+          <AdminButton
             label={bulkMode ? 'Cancel bulk' : 'Bulk assign'}
             variant={bulkMode ? 'ghost' : 'secondary'}
             onPress={() => {
@@ -304,7 +295,7 @@ export function CollectionAssignmentsScreen() {
             }}
           />
           {bulkMode && selected.length > 0 ? (
-            <Button label={`Assign ${selected.length}`} onPress={openBulkAssign} />
+            <AdminButton label={`Assign ${selected.length}`} onPress={openBulkAssign} />
           ) : null}
         </View>
 
@@ -412,12 +403,12 @@ export function CollectionAssignmentsScreen() {
                   <Text style={styles.officerOptionText}>{o.name}</Text>
                 </Pressable>
               ))}
-              <Button
+              <AdminButton
                 label="Confirm"
                 onPress={() => void confirmAssign()}
                 disabled={bulkSaving || singleSaving || pickedOfficerId == null}
               />
-              <Button label="Cancel" variant="ghost" onPress={closeAssignModal} />
+              <AdminButton label="Cancel" variant="ghost" onPress={closeAssignModal} />
             </Pressable>
           </Pressable>
         </Modal>

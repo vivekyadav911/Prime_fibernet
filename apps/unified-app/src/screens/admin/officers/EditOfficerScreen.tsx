@@ -8,9 +8,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {  Button } from '@prime/ui';
-
-import { AdminScreenLayout, DateField, FormField, RoleGuard, SectionLabel, SelectField } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, DateField, FormField, RoleGuard, SectionLabel, SelectField } from '@/components/admin';
 import { DismissKeyboardScrollView, ErrorState } from '@/components/common';
 import { officerStrings } from '@/constants/officerStrings';
 import { useKeyboardBottomInset } from '@/hooks/useKeyboardBottomInset';
@@ -290,7 +288,7 @@ export function EditOfficerScreen({ route, navigation }: Props) {
             <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
               <View style={styles.tabs}>
                 {(['personal', 'contact', 'role'] as EditSection[]).map((s) => (
-                  <Button
+                  <AdminButton
                     key={s}
                     label={SECTION_LABELS[s]}
                     variant={activeSection === s ? 'primary' : 'ghost'}
@@ -387,7 +385,7 @@ export function EditOfficerScreen({ route, navigation }: Props) {
                     onChange={(v) => { setJoiningDatePreference(v); markDirty(); }}
                   />
 
-                  <Button
+                  <AdminButton
                     label={savingPersonal ? 'Saving…' : officerStrings.form.save}
                     onPress={() => void savePersonal()}
                   />
@@ -472,7 +470,7 @@ export function EditOfficerScreen({ route, navigation }: Props) {
                   {renderEmergencyContact(1, emergencyContact1, setEmergencyContact1)}
                   {renderEmergencyContact(2, emergencyContact2, setEmergencyContact2)}
 
-                  <Button
+                  <AdminButton
                     label={savingContact ? 'Saving…' : officerStrings.form.save}
                     onPress={() => void saveContact()}
                   />
@@ -493,14 +491,14 @@ export function EditOfficerScreen({ route, navigation }: Props) {
                     value={joiningDate}
                     onChange={(v) => { setJoiningDate(v); markDirty(); }}
                   />
-                  <Button
+                  <AdminButton
                     label={savingRole ? 'Saving…' : officerStrings.form.save}
                     onPress={() => void saveRole()}
                   />
                 </>
               ) : null}
 
-              <Button label={officerStrings.form.cancel} variant="ghost" onPress={() => navigation.goBack()} style={styles.cancel} />
+              <AdminButton label={officerStrings.form.cancel} variant="ghost" onPress={() => navigation.goBack()} style={styles.cancel} />
             </DismissKeyboardScrollView>
         </KeyboardAvoidingView>
       </AdminScreenLayout>

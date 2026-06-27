@@ -1,7 +1,8 @@
 import React from 'react';
+
+import { AdminButton } from '@/components/admin';
 import { StyleSheet, Text, View } from 'react-native';
 import type { UserProfile } from '@prime/types';
-import { Button } from '@prime/ui';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
@@ -21,9 +22,9 @@ export const UserRow = React.memo(function UserRow({ user, canBlock, onBlock, on
         {user.isBlocked ? <Text style={styles.blocked}>Blocked</Text> : null}
       </View>
       {user.isBlocked ? (
-        <Button label="Unblock" variant="secondary" onPress={() => onUnblock(user.id)} />
+        <AdminButton label="Unblock" variant="secondary" onPress={() => onUnblock(user.id)} />
       ) : (
-        <Button label="Block" variant="ghost" onPress={() => onBlock(user.id)} disabled={!canBlock} />
+        <AdminButton label="Block" variant="ghost" onPress={() => onBlock(user.id)} disabled={!canBlock} />
       )}
     </View>
   );

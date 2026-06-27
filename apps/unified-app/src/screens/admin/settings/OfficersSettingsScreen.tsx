@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
-import {  Button } from '@prime/ui';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 
-import { AdminScreenLayout, RoleGuard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, RoleGuard } from '@/components/admin';
 import {
   SaveButton,
   SettingsHubLayout,
@@ -75,7 +74,7 @@ export function OfficersSettingsScreen() {
       <SettingsSection title="Attendance & Shifts">
         <SettingsRow label="Enable Attendance Tracking" value={form.attendanceTrackingEnabled} onValueChange={(v) => set('attendanceTrackingEnabled', v)} />
         <SettingsRow label="Enable Shift Management" value={form.shiftManagementEnabled} onValueChange={(v) => set('shiftManagementEnabled', v)} />
-        <Button
+        <AdminButton
           label="Manage Office Hours"
           variant="secondary"
           onPress={() => drawerNav.navigate('Attendance', { screen: 'ShiftManagement' })}

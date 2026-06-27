@@ -1,9 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button } from '@prime/ui';
-
-import { AdminScreenLayout, AdminStateShell, DateField } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, AdminStateShell, DateField } from '@/components/admin';
 import { AmountDisplay, DenominationInput, MethodIcon } from '@/components/payments';
 import { usePaymentDetail } from '@/hooks/usePayments';
 import {
@@ -126,8 +124,8 @@ export function PaymentReviewScreen({ route, navigation }: Props) {
       </View>
 
       <View style={styles.actions}>
-        <Button label="Reject" variant="secondary" onPress={onReject} disabled={rejecting} />
-        <Button
+        <AdminButton label="Reject" variant="secondary" onPress={onReject} disabled={rejecting} />
+        <AdminButton
           label={isCash ? 'Confirm & receipt' : 'Confirm payment'}
           onPress={onConfirm}
           disabled={confirming}

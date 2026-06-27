@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {  Button } from '@prime/ui';
-
-import { AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
 import { PayslipTimesheetCalendar } from '@/components/payroll/PayslipTimesheetCalendar';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePayslipCalculation } from '@/hooks/usePayslipCalculation';
@@ -182,7 +180,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
   const snapshotError = payslipNeedsReviewError(payslip);
   if (snapshotError) {
     return (
-      <Screen style={adminScreenStyles.canvas}>
+      <AdminScreenLayout>
         <ErrorState
           message={`Payslip data is inconsistent and cannot be displayed.\n\n${snapshotError}\n\nRegenerate this payslip from Payroll after fixing the underlying issues.`}
           onRetry={() =>
@@ -195,7 +193,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
             })
           }
         />
-      </Screen>
+      </AdminScreenLayout>
     );
   }
 
@@ -250,7 +248,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
                 </Text>
                 <Text style={styles.lineAmount}>{formatCurrencyInrPrecise(item.amount)}</Text>
                 {canApprove ? (
-                  <Button
+                  <AdminButton
                     label="Remove"
                     variant="ghost"
                     onPress={() => void removeItem(item.id)}
@@ -262,12 +260,12 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
             {canApprove ? (
               <View style={styles.addItem}>
                 <View style={styles.typeRow}>
-                  <Button
+                  <AdminButton
                     label="Addition"
                     variant={itemType === 'addition' ? 'primary' : 'ghost'}
                     onPress={() => setItemType('addition')}
                   />
-                  <Button
+                  <AdminButton
                     label="Deduction"
                     variant={itemType === 'deduction' ? 'primary' : 'ghost'}
                     onPress={() => setItemType('deduction')}
@@ -280,7 +278,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
                   onChangeText={setItemAmount}
                   keyboardType="decimal-pad"
                 />
-                <Button label="Add line item" variant="secondary" onPress={() => void handleAddItem()} />
+                <AdminButton label="Add line item" variant="secondary" onPress={() => void handleAddItem()} />
               </View>
             ) : null}
           </View>
@@ -305,7 +303,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
 
           <View style={styles.actions}>
             {canApprove ? (
-              <Button
+              <AdminButton
                 label="Authorize & Approve"
                 variant="primary"
                 onPress={() => setShowApprove(true)}
@@ -313,17 +311,17 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
               />
             ) : null}
             {canGeneratePdf ? (
-              <Button
+              <AdminButton
                 label={payslip.generatedPdfUrl ? 'Regenerate PDF' : 'Generate PDF'}
                 variant="secondary"
                 onPress={() => void handleGeneratePdf()}
               />
             ) : null}
             {payslip.generatedPdfUrl ? (
-              <Button label="View PDF" variant="secondary" onPress={openPdfViewer} />
+              <AdminButton label="View PDF" variant="secondary" onPress={openPdfViewer} />
             ) : null}
             {canVoid ? (
-              <Button
+              <AdminButton
                 label="Void & regenerate"
                 variant="ghost"
                 onPress={() => setShowVoid(true)}
@@ -350,8 +348,8 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
                 multiline
               />
               <View style={styles.modalActions}>
-                <Button label="Cancel" variant="ghost" onPress={() => setShowVoid(false)} />
-                <Button label="Void" variant="primary" onPress={() => void handleVoid()} />
+                <AdminButton label="Cancel" variant="ghost" onPress={() => setShowVoid(false)} />
+                <AdminButton label="Void" variant="primary" onPress={() => void handleVoid()} />
               </View>
             </View>
           </View>
@@ -391,8 +389,8 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
                 </>
               ) : null}
               <View style={styles.modalActions}>
-                <Button label="Cancel" variant="ghost" onPress={() => setShowApprove(false)} />
-                <Button label="Approve" variant="primary" onPress={() => void handleApprove()} />
+                <AdminButton label="Cancel" variant="ghost" onPress={() => setShowApprove(false)} />
+                <AdminButton label="Approve" variant="primary" onPress={() => void handleApprove()} />
               </View>
             </View>
           </View>

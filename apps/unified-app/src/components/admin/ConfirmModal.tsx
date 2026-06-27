@@ -1,6 +1,7 @@
 import { Keyboard, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { AdminButton } from './AdminButton';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button } from '@prime/ui';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
@@ -40,8 +41,8 @@ export function ConfirmModal({
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.actions}>
-            <Button label={cancelLabel} variant="ghost" onPress={onCancel} />
-            <Button label={loading ? '…' : confirmLabel} onPress={onConfirm} disabled={loading} />
+            <AdminButton label={cancelLabel} variant="ghost" onPress={onCancel} />
+            <AdminButton label={loading ? '…' : confirmLabel} onPress={onConfirm} disabled={loading} />
           </View>
         </Pressable>
       </Pressable>

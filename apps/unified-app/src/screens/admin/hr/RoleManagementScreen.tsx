@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { Button } from '@prime/ui';
-
-import { RoleGuard, AdminScreenLayout, SectionCard } from '@/components/admin';
+import { AdminButton, RoleGuard, AdminScreenLayout, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import { useGetAdminRolesQuery, useUpdateRolePermissionsMutation } from '@/store/api/endpoints';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -69,7 +67,7 @@ export function RoleManagementScreen() {
             keyboardShouldPersistTaps="handled"
           >
             {(roles ?? []).map((r) => (
-              <Button
+              <AdminButton
                 key={r.id}
                 label={r.name}
                 variant={role?.id === r.id ? 'primary' : 'ghost'}
@@ -94,7 +92,7 @@ export function RoleManagementScreen() {
             ))}
           </SectionCard>
           <RoleGuard requiredPermission="roles.edit">
-            <Button label="Save changes" onPress={() => void onSave()} />
+            <AdminButton label="Save changes" onPress={() => void onSave()} />
           </RoleGuard>
       </AdminScreenLayout>
     </RoleGuard>

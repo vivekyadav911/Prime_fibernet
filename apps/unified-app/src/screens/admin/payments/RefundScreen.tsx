@@ -1,9 +1,7 @@
-import { AdminScreenLayout, AdminStateShell } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, AdminStateShell } from '@/components/admin';
 import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button } from '@prime/ui';
-
 import { AmountDisplay } from '@/components/payments';
 import { usePaymentDetail } from '@/hooks/usePayments';
 import { useInitiateRefundV2Mutation } from '@/services/api/paymentCollectionApi';
@@ -63,7 +61,7 @@ export function RefundScreen({ route, navigation }: Props) {
           onChangeText={setReason}
           placeholderTextColor={colors.textSecondary}
         />
-        <Button label="Initiate refund" onPress={onSubmit} disabled={refunding} style={styles.submit} />
+        <AdminButton label="Initiate refund" onPress={onSubmit} disabled={refunding} style={styles.submit} />
       </AdminScreenLayout>
     </AdminStateShell>
   );

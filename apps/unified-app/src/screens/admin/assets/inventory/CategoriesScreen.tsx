@@ -10,10 +10,8 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Button } from '@prime/ui';
-
 import { CategoryCard } from '@/components/Inventory';
-import { AdminScreenLayout, FormField, RoleGuard, SearchBar } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, FormField, RoleGuard, SearchBar } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   createCategory,
@@ -203,7 +201,7 @@ export function CategoriesScreen({ navigation }: Props) {
             <View style={styles.empty}>
               <Ionicons name="pricetag-outline" size={64} color={colors.borderDefault} />
               <Text style={styles.emptyTitle}>No categories yet</Text>
-              <Button label="Add Category" onPress={openAdd} />
+              <AdminButton label="Add Category" onPress={openAdd} />
             </View>
           }
           contentContainerStyle={[adminScreenStyles.listContent, filtered.length === 0 && styles.emptyList]}
@@ -245,7 +243,7 @@ export function CategoriesScreen({ navigation }: Props) {
                   />
                 ))}
               </View>
-              <Button label={saving ? 'Saving...' : 'Save Category'} onPress={() => void handleSave()} disabled={saving} />
+              <AdminButton label={saving ? 'Saving...' : 'Save Category'} onPress={() => void handleSave()} disabled={saving} />
             </Pressable>
           </Pressable>
         </Modal>

@@ -12,8 +12,6 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import {  Button } from '@prime/ui';
-
 import {
   AudiencePickerSheet,
   EventTypeSelector,
@@ -23,7 +21,7 @@ import {
   SendProgressModal,
   formatScheduleDisplay,
 } from '@/components/Notifications';
-import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { SkeletonLoader, DismissKeyboardScrollView, ToggleSwitch } from '@/components/common';
 import { useCreateNotification } from '@/hooks/useCreateNotification';
 import { fetchNotificationById } from '@/services/broadcastNotificationService';
@@ -222,7 +220,7 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
                 </ScrollView>
               ) : null}
               {templatesOpen ? (
-                <Button
+                <AdminButton
                   label="+ Save as Template"
                   variant="ghost"
                   onPress={() => {
@@ -314,13 +312,13 @@ export function CreateNotificationScreen({ navigation, route }: Props) {
           </DismissKeyboardScrollView>
 
           <View style={styles.footer}>
-            <Button
+            <AdminButton
               label={isSavingDraft ? 'Saving…' : '💾 Save Draft'}
               variant="ghost"
               onPress={() => void saveDraft()}
               style={styles.footerBtn}
             />
-            <Button
+            <AdminButton
               label={
                 isSubmitting
                   ? 'Sending…'

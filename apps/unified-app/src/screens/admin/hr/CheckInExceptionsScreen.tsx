@@ -1,9 +1,7 @@
 import { useCallback } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button } from '@prime/ui';
-
-import { AdminScreenLayout, RoleGuard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, RoleGuard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetCheckInExceptionsQuery, useReviewCheckInExceptionMutation } from '@/store/api/endpoints';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
@@ -26,8 +24,8 @@ export function CheckInExceptionsScreen(_props: Props) {
           {item.reason} · {new Date(item.checkInTime).toLocaleString()}
         </Text>
         <View style={styles.actions}>
-          <Button label="Approve" variant="secondary" onPress={() => review({ id: item.id, action: 'approve' })} />
-          <Button label="Reject" variant="ghost" onPress={() => review({ id: item.id, action: 'reject' })} />
+          <AdminButton label="Approve" variant="secondary" onPress={() => review({ id: item.id, action: 'approve' })} />
+          <AdminButton label="Reject" variant="ghost" onPress={() => review({ id: item.id, action: 'reject' })} />
         </View>
       </View>
     ),

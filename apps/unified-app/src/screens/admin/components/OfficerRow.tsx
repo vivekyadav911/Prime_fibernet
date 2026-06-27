@@ -1,7 +1,8 @@
 import React from 'react';
+
+import { AdminButton } from '@/components/admin';
 import { StyleSheet, Text, View } from 'react-native';
 import type { Officer } from '@prime/types';
-import { Button } from '@prime/ui';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
@@ -18,7 +19,7 @@ export const OfficerRow = React.memo(function OfficerRow({ officer, onSetAvailab
         <Text style={styles.meta}>{officer.email} · {officer.region ?? 'No region'}</Text>
         <Text style={styles.meta}>Status: {officer.availabilityStatus}</Text>
       </View>
-      <Button label="Set available" variant="secondary" onPress={() => onSetAvailable(officer.id)} />
+      <AdminButton label="Set available" variant="secondary" onPress={() => onSetAvailable(officer.id)} />
     </View>
   );
 });

@@ -1,9 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {  Button } from '@prime/ui';
-
-import { AdminScreenLayout, DateField, FormField, RoleGuard, SelectField } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, DateField, FormField, RoleGuard, SelectField } from '@/components/admin';
 import { useAttendanceOverride } from '@/hooks/attendance/useAdminAttendance';
 import { useGetOfficersQuery } from '@/services/api/officersApi';
 import { setAdminRecordsPrefs } from '@/store/slices/attendanceSlice';
@@ -160,7 +158,7 @@ export function ManualAttendanceEntryScreen({ navigation }: Props) {
             multiline
           />
 
-          <Button
+          <AdminButton
             label={saving ? 'Saving…' : 'Save manual entry'}
             onPress={() => void handleSave()}
             disabled={saving || officersLoading}

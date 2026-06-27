@@ -2,11 +2,8 @@ import { useLayoutEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Screen } from '@prime/ui';
-
 import { StockProgressBar, StockStatusBadge } from '@/components/Inventory';
-import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminScreenLayout, AdminStateShell, RoleGuard, SectionCard } from '@/components/admin';
 import { useInventoryItem } from '@/hooks/useInventoryItem';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -76,25 +73,17 @@ export function ItemDetailScreen({ navigation, route }: Props) {
     });
   }, [navigation, itemId, item?.name]);
 
-  if (isLoading) {
-    return (
-      <RoleGuard requiredPermission="inventory.view">
-        <Screen><SkeletonLoader rows={6} /></Screen>
-      </RoleGuard>
-    );
-  }
-
-  if (error || !item) {
-    return (
-      <RoleGuard requiredPermission="inventory.view">
-        <Screen><ErrorState message={error ?? 'Item not found'} onRetry={() => navigation.goBack()} /></Screen>
-      </RoleGuard>
-    );
-  }
-
   return (
     <RoleGuard requiredPermission="inventory.view">
-      <AdminScreenLayout>
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={!!error || !item}
+        errorMessage={error ?? 'Item not found'}
+        onRetry={() => navigation.goBack()}
+        loadingRows={6}
+      >
+        {item ? (
+        <AdminScreenLayout>
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.identityCard}>
             <View style={styles.identityHeader}>
@@ -173,6 +162,8 @@ export function ItemDetailScreen({ navigation, route }: Props) {
           </SectionCard>
         </ScrollView>
       </AdminScreenLayout>
+        ) : null}
+      </AdminStateShell>
     </RoleGuard>
   );
 }

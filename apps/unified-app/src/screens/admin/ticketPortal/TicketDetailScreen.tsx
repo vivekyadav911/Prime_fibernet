@@ -14,8 +14,6 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {  Button } from '@prime/ui';
-
 import { AssignOfficerModal } from '@/components/Requests/AssignOfficerModal';
 import {
   LinkRequestModal,
@@ -25,7 +23,7 @@ import {
   TicketTimeline,
 } from '@/components/TicketPortal';
 import { EscalationBanner } from '@/components/support';
-import { AdminScreenLayout, AvatarIcon, FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, AvatarIcon, FormField, RoleGuard, SectionCard, SelectField } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { RequestDetailModal } from '@/screens/admin/requests/RequestDetailModal';
 import {
@@ -345,7 +343,7 @@ export function TicketDetailScreen({ route }: Props) {
                       placeholder="Describe how this was resolved…"
                     />
                     <View style={styles.linkActions}>
-                      <Button
+                      <AdminButton
                         label="Cancel"
                         variant="ghost"
                         onPress={() => {
@@ -353,7 +351,7 @@ export function TicketDetailScreen({ route }: Props) {
                           setResolutionSummary('');
                         }}
                       />
-                      <Button
+                      <AdminButton
                         label={`Mark ${pendingStatus}`}
                         onPress={() => void handleStatusChange(pendingStatus, resolutionSummary)}
                         disabled={!resolutionSummary.trim()}
@@ -423,13 +421,13 @@ export function TicketDetailScreen({ route }: Props) {
                 <Text style={styles.muted}>Linked request no longer exists</Text>
               )}
               <View style={styles.linkActions}>
-                <Button
+                <AdminButton
                   label="View Request"
                   variant="secondary"
                   onPress={() => setRequestModalVisible(true)}
                 />
                 <RoleGuard requiredPermission="requests.edit">
-                  <Button
+                  <AdminButton
                     label="Unlink"
                     variant="ghost"
                     onPress={() => {
@@ -449,7 +447,7 @@ export function TicketDetailScreen({ route }: Props) {
           ) : (
             <RoleGuard requiredPermission="requests.edit">
               <SectionCard title="Linked Request">
-                <Button label="Link to Request" variant="secondary" onPress={() => setLinkModalVisible(true)} />
+                <AdminButton label="Link to Request" variant="secondary" onPress={() => setLinkModalVisible(true)} />
               </SectionCard>
             </RoleGuard>
           )}
@@ -467,7 +465,7 @@ export function TicketDetailScreen({ route }: Props) {
               <Text style={styles.muted}>No officer assigned</Text>
             )}
             <RoleGuard requiredPermission="requests.edit">
-              <Button
+              <AdminButton
                 label={ticket.assignedOfficerId ? 'Reassign Officer' : 'Assign Officer'}
                 variant={ticket.assignedOfficerId ? 'secondary' : 'primary'}
                 onPress={() => setAssignVisible(true)}
@@ -511,7 +509,7 @@ export function TicketDetailScreen({ route }: Props) {
                   </Text>
                 </Pressable>
               </View>
-              <Button
+              <AdminButton
                 label={postingNote ? 'Posting…' : 'Post Note'}
                 onPress={handlePostNote}
                 disabled={!noteText.trim() || postingNote}
@@ -532,7 +530,7 @@ export function TicketDetailScreen({ route }: Props) {
                 </Text>
               ) : null}
               <RoleGuard requiredPermission="requests.edit">
-                <Button
+                <AdminButton
                   label="Reopen Ticket"
                   variant="secondary"
                   onPress={() => {
@@ -553,7 +551,7 @@ export function TicketDetailScreen({ route }: Props) {
           </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.sm }]}>
-          <Button
+          <AdminButton
             label={downloading ? 'Generating…' : 'Download Report'}
             onPress={handleDownload}
             disabled={downloading}

@@ -1,10 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen, Button } from '@prime/ui';
-
-import { AdminScreenLayout, RoleGuard } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, RoleGuard } from '@/components/admin';
 import { useGetCannedResponsesQuery, useUpsertCannedResponseMutation } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -42,11 +39,15 @@ export function CannedResponsesScreen(_props: Props) {
     setBody('');
   }, [title, shortcut, body, upsert]);
 
-  if (isLoading) return <Screen><SkeletonLoader rows={5} /></Screen>;
-  if (isError) return <Screen><ErrorState message={queryErrorMessage(error)} onRetry={refetch} /></Screen>;
-
   return (
     <RoleGuard requiredPermission="settings.view">
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={refetch}
+        loadingRows={5}
+      >
       <AdminScreenLayout>
         <FlatList
           data={grouped}
@@ -79,12 +80,13 @@ export function CannedResponsesScreen(_props: Props) {
             <TextInput style={styles.input} placeholder="#shortcut" value={shortcut} onChangeText={setShortcut} />
             <TextInput style={[styles.input, styles.body]} placeholder="Body" value={body} onChangeText={setBody} multiline />
             <View style={styles.formActions}>
-              <Button label="Cancel" variant="ghost" onPress={() => setShowForm(false)} />
-              <Button label="Save" onPress={() => void handleSave()} />
+              <AdminButton label="Cancel" variant="ghost" onPress={() => setShowForm(false)} />
+              <AdminButton label="Save" onPress={() => void handleSave()} />
             </View>
           </View>
         ) : null}
       </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

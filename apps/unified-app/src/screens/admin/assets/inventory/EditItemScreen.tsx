@@ -9,10 +9,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Screen } from '@prime/ui';
-
-import { AdminScreenLayout, FormField, RoleGuard, SelectField } from '@/components/admin';
-import { SkeletonLoader } from '@/components/common';
+import { AdminScreenLayout, AdminStateShell, FormField, RoleGuard, SelectField } from '@/components/admin';
 import { useInventoryForm } from '@/hooks/useInventoryForm';
 import { fetchCategories } from '@/services/inventoryService';
 import { useAppDispatch } from '@/store/hooks';
@@ -50,7 +47,7 @@ export function EditItemScreen({ navigation, route }: Props) {
   if (isLoading) {
     return (
       <RoleGuard requiredPermission="inventory.edit">
-        <Screen><SkeletonLoader rows={6} /></Screen>
+        <AdminStateShell isLoading loadingRows={6}>{null}</AdminStateShell>
       </RoleGuard>
     );
   }

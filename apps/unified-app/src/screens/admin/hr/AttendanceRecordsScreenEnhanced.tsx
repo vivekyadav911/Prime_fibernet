@@ -1,10 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Screen } from '@prime/ui';
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
-import { AdminButton, AdminScreenLayout, DateField, FilterChips, RoleGuard, SearchBar, SelectField, StatusBadge } from '@/components/admin';
-import { ErrorState, SkeletonLoader } from '@/components/common';
+import { AdminButton, AdminScreenLayout, AdminStateShell, DateField, FilterChips, RoleGuard, SearchBar, SelectField, StatusBadge } from '@/components/admin';
 import { useAdminAttendance } from '@/hooks/attendance/useAdminAttendance';
 import { setAdminRecordsPrefs } from '@/store/slices/attendanceSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -425,26 +423,16 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
     viewMode,
   ]);
 
-  if (isLoading) {
-    return (
-      <Screen safeAreaTop={false}>
-        <SkeletonLoader rows={8} shape="card" />
-      </Screen>
-    );
-  }
-
-  if (isError) {
-    return (
-      <AdminScreenLayout>
-        <View style={styles.stateCard}>
-          <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-        </View>
-      </AdminScreenLayout>
-    );
-  }
-
   return (
     <RoleGuard requiredPermission="attendance.view">
+      <AdminStateShell
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        onRetry={refetch}
+        loadingRows={8}
+        loadingShape="card"
+      >
       <AdminScreenLayout>
         {viewMode === 'calendar' ? (
           <FlatList
@@ -482,6 +470,7 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
           />
         )}
       </AdminScreenLayout>
+      </AdminStateShell>
     </RoleGuard>
   );
 }

@@ -1,8 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {  Button } from '@prime/ui';
-
-import { AdminScreenLayout, AvatarIcon, RoleGuard, SectionCard, StatusBadge } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, AvatarIcon, RoleGuard, SectionCard, StatusBadge } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
   useGetAdminUserDetailQuery,
@@ -34,7 +32,7 @@ export function UserDetailScreen({ route, navigation }: Props) {
           <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.meta}>{user.email} · {user.phone ?? '—'}</Text>
           <StatusBadge status={user.isBlocked ? 'inactive' : 'active'} />
-          <Button label="Edit profile" onPress={() => navigation.navigate('UserEdit', { userId })} />
+          <AdminButton label="Edit profile" onPress={() => navigation.navigate('UserEdit', { userId })} />
         </View>
 
         <SectionCard title="Collection">
