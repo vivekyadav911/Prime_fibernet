@@ -2,9 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { fetchTickets, subscribeToTickets } from '@/services/ticketsService';
 import { useAppSelector } from '@/store/hooks';
-import type { Ticket, TicketFilters } from '@/types/tickets';
+import type { Ticket, TicketFilters, TicketStats } from '@/types/tickets';
 import { applyTicketFilters } from '@/utils/ticketViewMappers';
-import { computeSLAStatus, isSLABreached } from '@/utils/slaUtils';
+import {
+  buildSlaStatusFromTicket,
+  computeTicketStats,
+  isOpenTicketSlaBreached,
+} from '@/utils/slaUtils';
 
 export const DEFAULT_TICKET_FILTERS: TicketFilters = {
   status: 'All',
@@ -17,10 +21,10 @@ export const DEFAULT_TICKET_FILTERS: TicketFilters = {
   searchQuery: '',
 };
 
-function recomputeSla(tickets: Ticket[]): Ticket[] {
+function refreshSlaFields(tickets: Ticket[]): Ticket[] {
   return tickets.map((t) => ({
     ...t,
-    slaStatus: computeSLAStatus(t),
+    slaStatus: buildSlaStatusFromTicket(t),
   }));
 }
 
@@ -42,7 +46,7 @@ export function useTickets(initialFilters?: Partial<TicketFilters>) {
     setError(null);
     try {
       const data = await fetchTickets();
-      setAllTickets(recomputeSla(data));
+      setAllTickets(refreshSlaFields(data));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load tickets');
     } finally {
@@ -66,32 +70,22 @@ export function useTickets(initialFilters?: Partial<TicketFilters>) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setAllTickets((prev) => recomputeSla(prev));
+      setAllTickets((prev) => refreshSlaFields(prev));
       setTick((t) => t + 1);
     }, 60_000);
     return () => clearInterval(interval);
   }, []);
 
-  const ticketsWithSla = useMemo(() => recomputeSla(allTickets), [allTickets, tick]);
+  const ticketsWithSla = useMemo(() => refreshSlaFields(allTickets), [allTickets, tick]);
 
   const filteredTickets = useMemo(
     () => applyTicketFilters(ticketsWithSla, filters),
     [ticketsWithSla, filters],
   );
 
-  const openCount = useMemo(
-    () => allTickets.filter((t) => t.status === 'Open' || t.status === 'Reopened').length,
-    [allTickets],
-  );
-
-  const breachedCount = useMemo(
-    () => allTickets.filter((t) => isSLABreached(t)).length,
-    [allTickets],
-  );
-
-  const unassignedCount = useMemo(
-    () => allTickets.filter((t) => !t.assignedOfficerId).length,
-    [allTickets],
+  const stats = useMemo<TicketStats>(
+    () => computeTicketStats(ticketsWithSla),
+    [ticketsWithSla],
   );
 
   const updateFilters = useCallback((patch: Partial<TicketFilters>) => {
@@ -106,11 +100,17 @@ export function useTickets(initialFilters?: Partial<TicketFilters>) {
     await load(true);
   }, [load]);
 
+  const unassignedCount = useMemo(
+    () => allTickets.filter((t) => !t.assignedOfficerId).length,
+    [allTickets],
+  );
+
   return {
     tickets: filteredTickets,
     allTickets: ticketsWithSla,
-    openCount,
-    breachedCount,
+    stats,
+    openCount: stats.totalOpen,
+    breachedCount: stats.slaBreaches,
     unassignedCount,
     filters,
     updateFilters,
@@ -120,6 +120,23 @@ export function useTickets(initialFilters?: Partial<TicketFilters>) {
     onRefresh,
     error,
     reload: load,
+  };
+}
+
+/** Canonical ticket KPIs — same logic as dashboard, list, and detail surfaces */
+export function useTicketStats() {
+  const { stats, allTickets, loading, error, reload } = useTickets();
+  const openBreachedTickets = useMemo(
+    () => allTickets.filter((t) => isOpenTicketSlaBreached(t)),
+    [allTickets],
+  );
+  return {
+    stats,
+    allTickets,
+    openBreachedTickets,
+    loading,
+    error,
+    reload,
   };
 }
 

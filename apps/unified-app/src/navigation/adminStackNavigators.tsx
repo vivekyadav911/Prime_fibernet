@@ -38,6 +38,7 @@ import { RoleManagementScreen } from '@/screens/admin/hr/RoleManagementScreen';
 import { PayrollScreen } from '@/screens/admin/hr/payroll/PayrollScreen';
 import { PayslipsManagementScreen } from '@/screens/admin/hr/payroll/PayslipsManagementScreen';
 import { PayslipPreGenerationScreen } from '@/screens/admin/hr/payroll/PayslipPreGenerationScreen';
+import { PayslipAttendanceTriageScreen } from '@/screens/admin/hr/payroll/PayslipAttendanceTriageScreen';
 import { PayslipReviewScreen } from '@/screens/admin/hr/payroll/PayslipReviewScreen';
 import { PayslipSettingsScreen } from '@/screens/admin/hr/payroll/PayslipSettingsScreen';
 import { PayslipPdfViewerScreen } from '@/screens/common/PayslipPdfViewerScreen';
@@ -75,6 +76,8 @@ import {
   SecurityScreen,
   SettingsHubScreen,
   SystemSettingsScreen,
+  WhatsAppLogsScreen,
+  WhatsAppSettingsScreen,
 } from '@/screens/admin/settings';
 import { AdminSupportScreen } from '@/screens/admin/system/SupportScreen';
 import {
@@ -125,11 +128,9 @@ import type {
   AdminTicketsStackParamList,
   AdminUsersStackParamList,
 } from '@/types/navigation';
-import { adminColors } from '@/theme/admin';
 import { adminHeaderTheme } from '@/theme/adminHeader';
 
 import { AdminDrawerHeaderLeft } from './AdminDrawerHeaderLeft';
-import { AdminDrawerProfileButton } from './AdminDrawerProfileButton';
 import { adminStackScreenOptions } from './adminScreenOptions';
 
 const DashboardStack = createNativeStackNavigator<AdminDashboardStackParamList>();
@@ -268,6 +269,7 @@ export function AdminPayrollStackNav() {
       <PayrollStack.Screen name="PayrollHome" component={PayrollScreen} options={{ title: 'Payroll' }} />
       <PayrollStack.Screen name="PayslipsManagement" component={PayslipsManagementScreen} options={{ title: 'Payslips' }} />
       <PayrollStack.Screen name="PayslipPreGeneration" component={PayslipPreGenerationScreen} options={{ title: 'Confirm generation' }} />
+      <PayrollStack.Screen name="PayslipAttendanceTriage" component={PayslipAttendanceTriageScreen} options={{ title: 'Fix attendance issues' }} />
       <PayrollStack.Screen name="PayslipReview" component={PayslipReviewScreen} options={{ title: 'Review payslip' }} />
       <PayrollStack.Screen name="PayslipSettings" component={PayslipSettingsScreen} options={{ title: 'Payslip settings' }} />
       <PayrollStack.Screen name="PayslipPdfViewer" component={PayslipPdfViewerScreen} options={{ headerShown: false, title: 'Payslip PDF' }} />
@@ -419,6 +421,8 @@ export function AdminSettingsStackNav() {
       <SettingsStack.Screen name="OfficerSalary" component={OfficerSalaryScreen} options={{ title: 'Officer Salary' }} />
       <SettingsStack.Screen name="Notifications" component={NotificationsSettingsScreen} options={{ title: 'Notifications' }} />
       <SettingsStack.Screen name="Integrations" component={IntegrationsSettingsScreen} options={{ title: 'Integrations' }} />
+      <SettingsStack.Screen name="WhatsAppSettings" component={WhatsAppSettingsScreen} options={{ title: 'WhatsApp Integration' }} />
+      <SettingsStack.Screen name="WhatsAppLogs" component={WhatsAppLogsScreen} options={{ title: 'WhatsApp Logs' }} />
       <SettingsStack.Screen name="GatewayConfig" component={GatewayConfigScreen} options={{ title: 'Payment gateways' }} />
       <SettingsStack.Screen name="Appearance" component={AppearanceSettingsScreen} options={{ title: 'Appearance' }} />
       <SettingsStack.Screen name="System" component={SystemSettingsScreen} options={{ title: 'System' }} />

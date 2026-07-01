@@ -134,6 +134,20 @@ function resolveDocumentPath(
   return null;
 }
 
+function normalizeDate(value: string | undefined | null): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function formatThrownError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message;
+  }
+  return String(error);
+}
+
 async function copyDocumentToOfficerFolder(
   adminClient: ReturnType<typeof createClient>,
   sourcePath: string,
@@ -366,7 +380,7 @@ serve(async (req) => {
           city: city?.trim() || null,
           state: state?.trim() || null,
           pincode: pincode?.trim() || null,
-          date_of_birth: dateOfBirth || null,
+          date_of_birth: normalizeDate(dateOfBirth),
           gender: gender?.trim() || null,
           blood_group: bloodGroup?.trim() || null,
           marital_status: maritalStatus?.trim() || null,
@@ -375,7 +389,7 @@ serve(async (req) => {
           emergency_contact_name: ec1?.name?.trim() || null,
           emergency_contact_phone: ec1?.phone?.trim() || null,
           role_id: roleId || null,
-          joining_date: joiningDate || contractStartDate || null,
+          joining_date: normalizeDate(joiningDate) ?? normalizeDate(contractStartDate),
           base_salary: basic || null,
           salary_config: salaryConfig,
           profile_photo_url: null,
@@ -467,37 +481,47 @@ serve(async (req) => {
         joiningDatePreference: joiningDatePreference ?? null,
       };
 
-      await adminClient.from('officer_onboarding').insert({
+      const { error: onboardingError } = await adminClient.from('officer_onboarding').insert({
         officer_id: officerId,
         status: 'completed',
         data: onboardingData,
       });
+      if (onboardingError) throw onboardingError;
 
-      if (contractType || contractStartDate || contractTerms) {
-        await adminClient.from('officer_contracts').insert({
+      if (contractType || normalizeDate(contractStartDate) || contractTerms) {
+        const { error: contractError } = await adminClient.from('officer_contracts').insert({
           officer_id: officerId,
           contract_type: contractType ?? 'Permanent',
-          start_date: contractStartDate ?? joiningDate ?? null,
+          start_date: normalizeDate(contractStartDate) ?? normalizeDate(joiningDate),
           terms: contractTerms ?? { salary: salaryConfig },
         });
+        if (contractError) throw contractError;
       }
 
       const ciphertext = await encryptPassword(password!);
-      await adminClient.from('officer_credentials').insert({
+      const { error: credentialsError } = await adminClient.from('officer_credentials').insert({
         officer_id: officerId,
         login_email: loginEmail,
         password_ciphertext: ciphertext,
         visible_to_admin: allowAdminViewPassword,
         password_set_method: passwordMode,
       });
+      if (credentialsError) throw credentialsError;
 
-      await adminClient.from('audit_logs').insert({
-        actor_id: adminAuthUser?.id ?? null,
+      const { data: auditActor } = adminAuthUser?.id
+        ? await adminClient.from('users').select('id').eq('id', adminAuthUser.id).maybeSingle()
+        : { data: null };
+
+      const { error: auditError } = await adminClient.from('audit_logs').insert({
+        actor_id: auditActor?.id ?? null,
         action: 'officer_created',
         target_entity: officerId,
         new_values: { email: normalizedEmail, full_name: fullName.trim() },
         status: 'SUCCESS',
       });
+      if (auditError) {
+        console.error('audit_logs insert failed:', auditError.message);
+      }
 
       return new Response(
         JSON.stringify({
@@ -513,7 +537,7 @@ serve(async (req) => {
       throw dbError;
     }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = formatThrownError(e);
     return new Response(JSON.stringify({ error: msg }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

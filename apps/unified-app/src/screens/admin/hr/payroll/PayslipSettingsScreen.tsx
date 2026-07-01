@@ -1,15 +1,14 @@
 ﻿import { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { AdminButton } from '@/components/admin/AdminButton';
 
-import { AdminScreenLayout, DateField, FormField, RoleGuard } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, DateField, FormField, RoleGuard } from '@/components/admin';
 import { OfficerSearchField } from '@/components/payroll/OfficerSearchField';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePayslipSettings } from '@/hooks/usePayslipSettings';
 import { useGetOfficersQuery } from '@/services/api/officersApi';
+import { useGetPayrollCompensationForOfficerQuery } from '@/services/api/payrollApi';
 import { adminColors } from '@/theme/admin';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminPayrollStackParamList } from '@/types/navigation';
@@ -20,7 +19,11 @@ import { getLocalDateString } from '@/utils/dateUtils';
 type Props = NativeStackScreenProps<AdminPayrollStackParamList, 'PayslipSettings'>;
 
 const STEPS = [
-  { id: 'salary', label: '1. Salary', hint: 'Set monthly salary per officer ÔÇö used to compute hourly rate.' },
+  {
+    id: 'salary',
+    label: '1. Salary',
+    hint: 'Read-only view of contract-sourced compensation. Edit via Officer Contract, not here.',
+  },
   {
     id: 'rules',
     label: '2. Pay rules',
@@ -29,23 +32,21 @@ const STEPS = [
   {
     id: 'labels',
     label: '3. Labels',
-    hint: 'Clocked hours ├À shift hours ÔåÆ attendance %. These bands become the display label on payslips.',
+    hint: 'Clocked hours ÷ shift hours → attendance %. These bands become the display label on payslips.',
   },
   { id: 'holidays', label: '4. Holidays', hint: 'Company holidays are paid per the holiday pay rule.' },
 ] as const;
 
 type StepId = (typeof STEPS)[number]['id'];
 
-export function PayslipSettingsScreen(_props: Props) {
+export function PayslipSettingsScreen({ navigation }: Props) {
   const [step, setStep] = useState<StepId>('salary');
   const [holidayDate, setHolidayDate] = useState(getLocalDateString());
   const [holidayName, setHolidayName] = useState('');
   const [holidayScopeAll, setHolidayScopeAll] = useState(true);
   const [holidayScopeLabel, setHolidayScopeLabel] = useState('Company-wide');
   const [editingHolidayId, setEditingHolidayId] = useState<string | null>(null);
-  const [compOfficerId, setCompOfficerId] = useState('');
-  const [compSalary, setCompSalary] = useState('');
-  const [compEffectiveFrom, setCompEffectiveFrom] = useState(getLocalDateString());
+  const [selectedOfficerId, setSelectedOfficerId] = useState('');
 
   const settingsYear = new Date().getFullYear();
   const {
@@ -59,13 +60,21 @@ export function PayslipSettingsScreen(_props: Props) {
     createHoliday,
     updateHoliday,
     deleteHoliday,
-    upsertCompensation,
   } = usePayslipSettings(settingsYear);
 
   const { data: officers } = useGetOfficersQuery();
   const officerNameById = useMemo(
     () => new Map((officers ?? []).map((o) => [o.id, o.name])),
     [officers],
+  );
+  const { data: contractComp, isLoading: isCompLoading } = useGetPayrollCompensationForOfficerQuery(
+    { officerId: selectedOfficerId },
+    { skip: !selectedOfficerId },
+  );
+
+  const orphanRecords = useMemo(
+    () => compensations.filter((item) => item.isOrphan),
+    [compensations],
   );
 
   const activeStep = STEPS.find((s) => s.id === step)!;
@@ -121,69 +130,84 @@ export function PayslipSettingsScreen(_props: Props) {
 
           {step === 'salary' ? (
             <>
+              <Text style={styles.helper}>
+                Salary terms are sourced from each officer&apos;s employment contract (including
+                revisions). Payroll no longer accepts free-form salary entry here.
+              </Text>
               <View style={styles.form}>
-                <OfficerSearchField value={compOfficerId} onSelect={setCompOfficerId} />
-                <FormField
-                  label="Monthly salary"
-                  value={compSalary}
-                  onChangeText={setCompSalary}
-                  keyboardType="decimal-pad"
-                />
-                <DateField
-                  label="Effective from"
-                  value={compEffectiveFrom}
-                  onChange={setCompEffectiveFrom}
-                />
-                <AdminButton
-                  label="Save salary"
-                  variant="secondary"
-                  onPress={() => {
-                    const salary = Number(compSalary);
-                    if (!compOfficerId || !Number.isFinite(salary) || salary <= 0) {
-                      Alert.alert('Invalid', 'Select an officer and enter a valid salary.');
-                      return;
-                    }
-                    void upsertCompensation({
-                      officerId: compOfficerId,
-                      monthlySalary: salary,
-                      effectiveFrom: compEffectiveFrom,
-                    })
-                      .unwrap()
-                      .then(() => {
-                        Alert.alert('Saved', 'Compensation updated.');
-                        setCompSalary('');
+                <OfficerSearchField value={selectedOfficerId} onSelect={setSelectedOfficerId} />
+                {selectedOfficerId ? (
+                  <AdminButton
+                    label="View / manage in Officer Contract"
+                    variant="secondary"
+                    onPress={() =>
+                      navigation.getParent()?.navigate('Officers', {
+                        screen: 'EmploymentContractForm',
+                        params: { officerId: selectedOfficerId },
                       })
-                      .catch((e) =>
-                        Alert.alert('Error', e instanceof Error ? e.message : 'Failed'),
-                      );
-                  }}
-                />
+                    }
+                  />
+                ) : null}
               </View>
-              {compensations.map((item) => (
-                <View key={item.id} style={styles.card}>
-                  <Text style={styles.cardTitle}>
-                    {officerNameById.get(item.officerId) ?? item.officerId.slice(0, 8)}
-                  </Text>
-                  <Text style={styles.cardMeta}>
-                    {formatCurrencyInrPrecise(item.monthlySalary)}/mo ÔÇö{' '}
-                    {formatCompensationRange(item.effectiveFrom, item.effectiveTo)}
+
+              {selectedOfficerId && isCompLoading ? <SkeletonLoader rows={3} /> : null}
+
+              {selectedOfficerId && contractComp?.contractTerms.length ? (
+                contractComp.contractTerms.map((term) => (
+                  <View key={term.id} style={styles.card}>
+                    <Text style={styles.cardTitle}>
+                      {officerNameById.get(selectedOfficerId) ?? 'Officer'} · contract term
+                    </Text>
+                    <Text style={styles.cardMeta}>
+                      {formatCurrencyInrPrecise(term.monthlySalary)}/mo —{' '}
+                      {formatCompensationRange(term.effectiveFrom, term.effectiveTo)}
+                    </Text>
+                    {term.reason ? <Text style={styles.cardDesc}>{term.reason}</Text> : null}
+                  </View>
+                ))
+              ) : null}
+
+              {selectedOfficerId && !isCompLoading && !contractComp?.hasContractSource ? (
+                <View style={[styles.card, styles.warningCard]}>
+                  <Text style={styles.cardTitle}>No contract-sourced salary</Text>
+                  <Text style={styles.cardDesc}>
+                    {contractComp?.warnings.join(' ') ||
+                      'Create or sign an employment contract with compensation terms before generating payslips.'}
                   </Text>
                 </View>
-              ))}
+              ) : null}
+
+              {orphanRecords.length ? (
+                <View style={[styles.card, styles.warningCard]}>
+                  <Text style={styles.cardTitle}>Legacy payroll salary records need review</Text>
+                  <Text style={styles.cardDesc}>
+                    These records were created directly in Payroll Settings and are not linked to a
+                    contract. Reconcile them via Officer Contract — they are not used for new
+                    payslip calculations.
+                  </Text>
+                  {orphanRecords.map((item) => (
+                    <Text key={item.id} style={styles.cardMeta}>
+                      {officerNameById.get(item.officerId) ?? item.officerId.slice(0, 8)} ·{' '}
+                      {formatCurrencyInrPrecise(item.monthlySalary)}/mo ·{' '}
+                      {formatCompensationRange(item.effectiveFrom, item.effectiveTo)}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
             </>
           ) : null}
 
           {step === 'rules' ? (
             <>
               <Text style={styles.helper}>
-                Pay rules apply after a day&apos;s label/status is resolved. Fraction ├ù hourly rate
-                ├ù hours (scheduled or actual).
+                Pay rules apply after a day&apos;s label/status is resolved. Fraction × hourly rate
+                × hours (scheduled or actual).
               </Text>
               {payTypeRules.map((rule) => (
                 <View key={rule.id} style={styles.card}>
                   <Text style={styles.cardTitle}>{rule.attendanceStatus.replace(/_/g, ' ')}</Text>
                   <Text style={styles.cardMeta}>
-                    Pay fraction: {rule.payFraction} ┬À{' '}
+                    Pay fraction: {rule.payFraction} ·{' '}
                     {rule.usesScheduledHours ? 'Scheduled hours' : 'Actual hours'}
                   </Text>
                   {rule.description ? (
@@ -197,7 +221,7 @@ export function PayslipSettingsScreen(_props: Props) {
           {step === 'labels' ? (
             <>
               <Text style={styles.helper}>
-                Labels are assigned from attendance % = actual hours ├À scheduled shift hours. The
+                Labels are assigned from attendance % = actual hours ÷ scheduled shift hours. The
                 matching label then selects the pay rule above.
               </Text>
               {labelThresholds.map((th) => (
@@ -206,7 +230,7 @@ export function PayslipSettingsScreen(_props: Props) {
                   <Text style={styles.cardMeta}>
                     {(th.minHoursFraction * 100).toFixed(0)}%
                     {th.maxHoursFraction != null
-                      ? ` ÔÇô ${(th.maxHoursFraction * 100).toFixed(0)}%`
+                      ? ` – ${(th.maxHoursFraction * 100).toFixed(0)}%`
                       : '+'}{' '}
                     of shift hours
                   </Text>
@@ -304,7 +328,7 @@ export function PayslipSettingsScreen(_props: Props) {
                   <View key={h.id} style={styles.card}>
                     <Text style={styles.cardTitle}>{h.name}</Text>
                     <Text style={styles.cardMeta}>
-                      {h.holidayDate} ┬À {h.scopeLabel}
+                      {h.holidayDate} · {h.scopeLabel}
                     </Text>
                     <View style={styles.typeRow}>
                       <AdminButton
@@ -388,6 +412,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDefault,
     gap: spacing.xxs,
   },
+  warningCard: { borderColor: colors.warningAmber, backgroundColor: colors.amberLight },
   cardTitle: { fontWeight: '600', fontSize: 14, textTransform: 'capitalize' },
   cardMeta: { fontSize: 12, color: colors.textSecondary },
   cardDesc: { fontSize: 12, color: colors.textPrimary },

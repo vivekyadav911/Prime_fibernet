@@ -12,7 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
 
 import { FilterChips, FormField } from '@/components/admin';
-import { KeyboardDismissView } from '@/components/common';
 import { SelectCustomerModal } from '@/components/TicketPortal/SelectCustomerModal';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -108,16 +107,24 @@ export function SendInvoiceRecipientModal({
 
   return (
     <>
-      <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-        <Pressable
-          style={[styles.backdrop, { paddingTop: insets.top }]}
-          onPress={() => {
-            Keyboard.dismiss();
-            onClose();
-          }}
-        >
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        presentationStyle="overFullScreen"
+        statusBarTranslucent
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalRoot}>
           <Pressable
-            style={[styles.card, { paddingBottom: insets.bottom + spacing.md }]}
+            style={styles.backdrop}
+            onPress={() => {
+              Keyboard.dismiss();
+              onClose();
+            }}
+          />
+          <Pressable
+            style={[styles.card, { paddingBottom: insets.bottom + spacing.md, marginTop: insets.top + spacing.md }]}
             onPress={(e) => e.stopPropagation()}
           >
             <View style={styles.header}>
@@ -131,7 +138,7 @@ export function SendInvoiceRecipientModal({
               </Pressable>
             </View>
 
-            <KeyboardDismissView>
+            <View style={styles.body}>
               <Text style={styles.meta}>
                 {invoiceNumber} · {customerName}
               </Text>
@@ -207,9 +214,9 @@ export function SendInvoiceRecipientModal({
             </View>
 
             {sending ? <ActivityIndicator color={adminColors.primary} style={styles.sending} /> : null}
-            </KeyboardDismissView>
+            </View>
           </Pressable>
-        </Pressable>
+        </View>
       </Modal>
 
       <SelectCustomerModal
@@ -223,16 +230,22 @@ export function SendInvoiceRecipientModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  modalRoot: {
     flex: 1,
-    backgroundColor: colors.overlay,
     justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.overlay,
   },
   card: {
     backgroundColor: colors.surfaceWhite,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
+    maxHeight: '85%',
     padding: spacing.md,
+  },
+  body: {
     gap: spacing.sm,
   },
   header: {

@@ -10,7 +10,7 @@ import type { Ticket } from '@/types/tickets';
 import { truncateTicketNumber } from '@/utils/ticketViewMappers';
 
 import { PoolBadge, TicketPriorityBadge, TicketStatusBadge } from './TicketStatusBadge';
-import { SLAIndicator } from './SLAIndicator';
+import { SLAProgressBar } from './SLAProgressBar';
 
 const COMPLAINT_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   'Technical Issue': 'build-outline',
@@ -57,7 +57,7 @@ export function TicketCard({ ticket, onPress }: TicketCardProps) {
           ) : (
             <PoolBadge />
           )}
-          <SLAIndicator ticket={ticket} mode="compact" />
+          <SLAProgressBar ticket={ticket} mode="compact" />
         </View>
       </View>
 

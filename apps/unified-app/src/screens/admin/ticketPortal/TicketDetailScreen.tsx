@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssignOfficerModal } from '@/components/Requests/AssignOfficerModal';
 import {
   LinkRequestModal,
-  SLAIndicator,
+  SLAProgressBar,
   TicketPriorityBadge,
   TicketStatusBadge,
   TicketTimeline,
@@ -306,7 +306,7 @@ export function TicketDetailScreen({ route }: Props) {
               <TicketStatusBadge status={ticket.status} />
               <TicketPriorityBadge priority={ticket.priority} />
             </View>
-            <SLAIndicator ticket={ticket} mode="full" />
+            <SLAProgressBar ticket={ticket} mode="full" />
 
             <RoleGuard requiredPermission="requests.edit">
               <View style={styles.statusSection}>

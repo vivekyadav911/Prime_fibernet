@@ -254,7 +254,14 @@ export type AdminAttendanceStackParamList = {
   LiveAttendance: undefined;
   AttendanceHub: undefined;
   CheckInExceptions: undefined;
-  AttendanceRecords: undefined;
+  AttendanceRecords:
+    | {
+        officerId?: string;
+        officerName?: string;
+        dateFrom?: string;
+        dateTo?: string;
+      }
+    | undefined;
   ManualAttendanceEntry: undefined;
   CompletedShifts: undefined;
   GeofenceManagement: undefined;
@@ -275,6 +282,15 @@ export type AdminPayrollStackParamList = {
     periodStart: string;
     periodEnd: string;
     payslipId?: string;
+  };
+  PayslipAttendanceTriage: {
+    officerId: string;
+    officerName: string;
+    periodStart: string;
+    periodEnd: string;
+    payslipId?: string;
+    focusCategory?: import('@/services/payslip/calculatePayslipCore').AttendanceIssueCategory;
+    returnTo?: 'pregeneration' | 'payroll_home';
   };
   PayslipReview: {
     officerId: string;
@@ -377,6 +393,8 @@ export type AdminSettingsStackParamList = {
   OfficerSalary: undefined;
   Notifications: undefined;
   Integrations: undefined;
+  WhatsAppSettings: undefined;
+  WhatsAppLogs: undefined;
   GatewayConfig: undefined;
   Appearance: undefined;
   System: undefined;

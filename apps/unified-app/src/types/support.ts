@@ -144,6 +144,7 @@ export interface SupportDashboardStats {
   avgCsatScore: number;
   ticketsToday: number;
   ticketsThisWeek: number;
+  officersWithAssignments: number;
 }
 
 export interface SupportAnalyticsData {

@@ -55,6 +55,8 @@ export type ShiftRecordInput = {
   attendanceStatus: string | null;
   workingHours: number | null;
   status: string | null;
+  payrollResolutionType?: string | null;
+  payrollBulkPayMode?: 'paid' | 'unpaid' | null;
 };
 
 export type OfficerSnapshotInput = {
@@ -196,7 +198,7 @@ function hoursBetween(checkIn: string, checkOut: string): number {
   return Math.round((ms / 3600000) * 100) / 100;
 }
 
-function compensationForDate(rows: CompensationInput[], date: string): CompensationInput {
+export function compensationForDate(rows: CompensationInput[], date: string): CompensationInput {
   const matches = rows.filter((r) => {
     return date >= r.effectiveFrom && (r.effectiveTo == null || date <= r.effectiveTo);
   });
@@ -206,6 +208,24 @@ function compensationForDate(rows: CompensationInput[], date: string): Compensat
       'MISSING_COMPENSATION_FOR_DATE',
     );
   }
+  if (matches.length > 1) {
+    throw new PayslipCalculationError(
+      `Ambiguous salary records for ${date} — close overlapping effective ranges`,
+      'AMBIGUOUS_COMPENSATION',
+    );
+  }
+  return matches[0]!;
+}
+
+/** Returns null for dates before employment start or outside any contract term. */
+export function compensationForDateOptional(
+  rows: CompensationInput[],
+  date: string,
+): CompensationInput | null {
+  const matches = rows.filter((r) => {
+    return date >= r.effectiveFrom && (r.effectiveTo == null || date <= r.effectiveTo);
+  });
+  if (matches.length === 0) return null;
   if (matches.length > 1) {
     throw new PayslipCalculationError(
       `Ambiguous salary records for ${date} — close overlapping effective ranges`,
@@ -288,6 +308,45 @@ function computeDayPay(
   return { dayPay, payFraction, hoursCounted };
 }
 
+/** Admin bulk overrides without check-in must not earn scheduled leave pay unless explicitly paid. */
+function isUnpaidBulkOverrideDay(
+  shift: ShiftRecordInput | undefined,
+  actualHours: number,
+): boolean {
+  if (shift?.payrollResolutionType !== 'payroll_bulk_override' || actualHours > 0) {
+    return false;
+  }
+  if (shift.attendanceStatus === 'holiday') return false;
+  if (shift.attendanceStatus === 'on_leave') {
+    return shift.payrollBulkPayMode !== 'paid';
+  }
+  return true;
+}
+
+export type AttendanceIssueCategory =
+  | 'no_shift_assigned'
+  | 'no_check_in'
+  | 'check_in_without_check_out';
+
+export type AttendanceDayIssue = {
+  date: string;
+  category: AttendanceIssueCategory;
+  shiftRecordId: string | null;
+  checkInTime: string | null;
+  checkOutTime: string | null;
+  attendanceStatus: string | null;
+};
+
+export type AttendanceIssueSummary = {
+  noShiftAssigned: boolean;
+  noCheckInCount: number;
+  noCheckInDates: string[];
+  incompleteCount: number;
+  incompleteDates: string[];
+  issues: AttendanceDayIssue[];
+  primaryIssue: AttendanceIssueCategory | null;
+};
+
 export type AttendancePeriodSummary = {
   workingDays: number;
   present: number;
@@ -301,8 +360,82 @@ export type AttendancePeriodSummary = {
   incompleteDates: string[];
   canGenerate: boolean;
   noShiftAssigned: boolean;
+  issueSummary: AttendanceIssueSummary;
   warnings: string[];
 };
+
+export function diagnosePayPeriodAttendance(input: {
+  payPeriodStart: string;
+  payPeriodEnd: string;
+  shiftDefinition: ShiftDefinitionInput;
+  hasShiftAssignment: boolean;
+  shifts: ShiftRecordInput[];
+  holidays: string[];
+}): AttendanceIssueSummary {
+  if (!input.hasShiftAssignment) {
+    return {
+      noShiftAssigned: true,
+      noCheckInCount: 0,
+      noCheckInDates: [],
+      incompleteCount: 0,
+      incompleteDates: [],
+      issues: [],
+      primaryIssue: 'no_shift_assigned',
+    };
+  }
+
+  const holidayDates = new Set(input.holidays);
+  const shiftByDate = new Map(input.shifts.map((s) => [s.shiftDate, s]));
+  const noCheckInDates: string[] = [];
+  const incompleteDates: string[] = [];
+  const issues: AttendanceDayIssue[] = [];
+
+  for (const date of eachDateInRange(input.payPeriodStart, input.payPeriodEnd)) {
+    const dow = dayOfWeek(date);
+    const isScheduled = input.shiftDefinition.workingDays.includes(dow);
+    const isHoliday = holidayDates.has(date);
+    const shift = shiftByDate.get(date);
+
+    if (shift?.checkInTime && !shift.checkOutTime && shift.status === 'active') {
+      incompleteDates.push(date);
+      issues.push({
+        date,
+        category: 'check_in_without_check_out',
+        shiftRecordId: shift.id,
+        checkInTime: shift.checkInTime,
+        checkOutTime: shift.checkOutTime,
+        attendanceStatus: shift.attendanceStatus,
+      });
+      continue;
+    }
+
+    if (!shift && isScheduled && !isHoliday) {
+      noCheckInDates.push(date);
+      issues.push({
+        date,
+        category: 'no_check_in',
+        shiftRecordId: null,
+        checkInTime: null,
+        checkOutTime: null,
+        attendanceStatus: null,
+      });
+    }
+  }
+
+  let primaryIssue: AttendanceIssueCategory | null = null;
+  if (noCheckInDates.length > 0) primaryIssue = 'no_check_in';
+  else if (incompleteDates.length > 0) primaryIssue = 'check_in_without_check_out';
+
+  return {
+    noShiftAssigned: false,
+    noCheckInCount: noCheckInDates.length,
+    noCheckInDates,
+    incompleteCount: incompleteDates.length,
+    incompleteDates,
+    issues,
+    primaryIssue,
+  };
+}
 
 export function summarizePayPeriodAttendance(input: {
   payPeriodStart: string;
@@ -313,6 +446,15 @@ export function summarizePayPeriodAttendance(input: {
   holidays: string[];
 }): AttendancePeriodSummary {
   if (!input.hasShiftAssignment) {
+    const issueSummary: AttendanceIssueSummary = {
+      noShiftAssigned: true,
+      noCheckInCount: 0,
+      noCheckInDates: [],
+      incompleteCount: 0,
+      incompleteDates: [],
+      issues: [],
+      primaryIssue: 'no_shift_assigned',
+    };
     return {
       workingDays: 0,
       present: 0,
@@ -326,6 +468,7 @@ export function summarizePayPeriodAttendance(input: {
       incompleteDates: [],
       canGenerate: false,
       noShiftAssigned: true,
+      issueSummary,
       warnings: ['Officer has no shift schedule assigned'],
     };
   }
@@ -382,11 +525,13 @@ export function summarizePayPeriodAttendance(input: {
   }
 
   if (unresolved > 0) {
-    warnings.push(`${unresolved} scheduled day(s) have no attendance record`);
+    warnings.push(`${unresolved} scheduled day(s) have no check-in record`);
   }
   if (incomplete > 0) {
     warnings.push(`${incomplete} day(s) have check-in without check-out`);
   }
+
+  const issueSummary = diagnosePayPeriodAttendance(input);
 
   return {
     workingDays,
@@ -401,6 +546,7 @@ export function summarizePayPeriodAttendance(input: {
     incompleteDates,
     canGenerate: unresolved === 0 && incomplete === 0,
     noShiftAssigned: false,
+    issueSummary,
     warnings,
   };
 }
@@ -458,12 +604,20 @@ export function calculatePayslipCore(input: CalculatePayslipCoreInput): PayslipR
   );
 
   for (const date of eachDateInRange(input.payPeriodStart, input.payPeriodEnd)) {
+    const comp = compensationForDateOptional(input.compensations, date);
+    if (!comp) continue;
     compensationForDate(input.compensations, date);
   }
+
+  const employmentStart = input.compensations.reduce(
+    (min, row) => (row.effectiveFrom < min ? row.effectiveFrom : min),
+    input.compensations[0]!.effectiveFrom,
+  );
 
   const rateChangeDates: string[] = [];
   let prevCompKey: string | null = null;
   for (const date of eachDateInRange(input.payPeriodStart, input.payPeriodEnd)) {
+    if (date < employmentStart) continue;
     const comp = compensationForDate(input.compensations, date);
     const key = `${comp.id}-${comp.monthlySalary}`;
     if (prevCompKey && prevCompKey !== key) rateChangeDates.push(date);
@@ -488,9 +642,9 @@ export function calculatePayslipCore(input: CalculatePayslipCoreInput): PayslipR
     const isWeeklyOff = !isScheduled && !isHoliday;
     const shift = shiftByDate.get(date);
 
-    const comp = compensationForDate(input.compensations, date);
-    const monthlySalary = comp.monthlySalary;
-    const hourlyRate = computeHourlyRate(monthlySalary, input.shiftDefinition);
+    const comp = compensationForDateOptional(input.compensations, date);
+    const monthlySalary = comp?.monthlySalary ?? 0;
+    const hourlyRate = comp ? computeHourlyRate(monthlySalary, input.shiftDefinition) : 0;
     if (primaryHourlyRate === 0 && hourlyRate > 0) primaryHourlyRate = hourlyRate;
 
     let actualHours = 0;
@@ -542,11 +696,17 @@ export function calculatePayslipCore(input: CalculatePayslipCoreInput): PayslipR
     let hoursCounted = 0;
 
     if (resolution !== 'unresolved' && resolution !== 'incomplete') {
-      const rule = payRuleKey ? rulesByStatus.get(payRuleKey) : undefined;
-      const computed = computeDayPay(rule, hourlyRate, shiftHours, actualHours, payRuleKey);
-      dayPay = computed.dayPay;
-      payFraction = computed.payFraction;
-      hoursCounted = computed.hoursCounted;
+      if (isUnpaidBulkOverrideDay(shift, actualHours)) {
+        dayPay = 0;
+        payFraction = 0;
+        hoursCounted = 0;
+      } else {
+        const rule = payRuleKey ? rulesByStatus.get(payRuleKey) : undefined;
+        const computed = computeDayPay(rule, hourlyRate, shiftHours, actualHours, payRuleKey);
+        dayPay = computed.dayPay;
+        payFraction = computed.payFraction;
+        hoursCounted = computed.hoursCounted;
+      }
       grossPay += dayPay;
     }
 

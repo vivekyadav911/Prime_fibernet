@@ -30,13 +30,23 @@ export interface SLAPolicy {
   resolutionTimeHours: number;
 }
 
+export type TicketSlaStatusValue = 'pending' | 'met' | 'breached' | 'na';
+
+export type SlaProgressState = 'on_track' | 'at_risk' | 'breached' | 'met';
+
 export interface SLAStatus {
+  responseStatus: TicketSlaStatusValue;
+  resolutionStatus: TicketSlaStatusValue;
+  responseLive: TicketSlaStatusValue;
+  resolutionLive: TicketSlaStatusValue;
   responseBreached: boolean;
   resolutionBreached: boolean;
   responseDeadline: Date;
   resolutionDeadline: Date;
   responseRemainingMs: number;
   resolutionRemainingMs: number;
+  respondedAt: Date | null;
+  resolvedAt: Date | null;
 }
 
 export interface TicketAttachment {
@@ -100,8 +110,11 @@ export interface Ticket {
   assignedOfficerName: string | null;
   assignedOfficerRole: string | null;
   assignedAt: Date | null;
+  respondedAt: Date | null;
   resolvedAt: Date | null;
   closedAt: Date | null;
+  responseSlaStatus: TicketSlaStatusValue;
+  resolutionSlaStatus: TicketSlaStatusValue;
   createdAt: Date;
   updatedAt: Date;
   createdByAdminId: string;
@@ -160,7 +173,9 @@ export interface TicketStats {
   totalOpen: number;
   totalInProgress: number;
   totalResolved: number;
-  totalBreached: number;
+  /** Open / in-progress tickets with a live or frozen breach on response or resolution SLA */
+  slaBreaches: number;
+  officersWithAssignments: number;
   avgResolutionHours: number;
   byPriority: Record<TicketPriority, number>;
   byComplaintType: Record<ComplaintType, number>;

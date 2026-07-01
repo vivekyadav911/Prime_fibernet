@@ -6,6 +6,8 @@ export { OfficersSettingsScreen } from './OfficersSettingsScreen';
 export { OfficerSalaryScreen } from './OfficerSalaryScreen';
 export { NotificationsSettingsScreen } from './NotificationsSettingsScreen';
 export { IntegrationsSettingsScreen } from './IntegrationsSettingsScreen';
+export { WhatsAppSettingsScreen } from './WhatsAppSettingsScreen';
+export { WhatsAppLogsScreen } from './WhatsAppLogsScreen';
 export { AppearanceSettingsScreen } from './AppearanceSettingsScreen';
 export { SystemSettingsScreen } from './SystemSettingsScreen';
 export { BackupExportScreen } from './BackupExportScreen';

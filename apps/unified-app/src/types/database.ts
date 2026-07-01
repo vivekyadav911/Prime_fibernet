@@ -228,6 +228,51 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_approval_audit_log: {
+        Row: {
+          action: string
+          approval_request_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          performed_by: string | null
+          performed_by_name: string
+        }
+        Insert: {
+          action: string
+          approval_request_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          performed_by_name?: string
+        }
+        Update: {
+          action?: string
+          approval_request_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          performed_by?: string | null
+          performed_by_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_approval_audit_log_approval_request_id_fkey"
+            columns: ["approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_approval_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_approval_audit_log_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_approval_requests: {
         Row: {
           attendance_id: string | null
@@ -304,6 +349,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      attendance_label_thresholds: {
+        Row: {
+          id: string
+          label: string
+          max_hours_fraction: number | null
+          min_hours_fraction: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          label: string
+          max_hours_fraction?: number | null
+          min_hours_fraction: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          max_hours_fraction?: number | null
+          min_hours_fraction?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       audit_logs: {
         Row: {
@@ -679,6 +751,13 @@ export type Database = {
             foreignKeyName: "chat_sessions_linked_ticket_id_fkey"
             columns: ["linked_ticket_id"]
             isOneToOne: false
+            referencedRelation: "ticket_sla_live"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_sessions_linked_ticket_id_fkey"
+            columns: ["linked_ticket_id"]
+            isOneToOne: false
             referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
@@ -784,6 +863,83 @@ export type Database = {
           },
         ]
       }
+      company_contract_defaults: {
+        Row: {
+          company_address: string
+          company_cin: string | null
+          company_name: string
+          company_pan: string | null
+          default_governing_law: string | null
+          default_signatory_designation: string | null
+          default_signatory_name: string | null
+          id: string
+          logo_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_address: string
+          company_cin?: string | null
+          company_name: string
+          company_pan?: string | null
+          default_governing_law?: string | null
+          default_signatory_designation?: string | null
+          default_signatory_name?: string | null
+          id?: string
+          logo_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_address?: string
+          company_cin?: string | null
+          company_name?: string
+          company_pan?: string | null
+          default_governing_law?: string | null
+          default_signatory_designation?: string | null
+          default_signatory_name?: string | null
+          id?: string
+          logo_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      company_holidays: {
+        Row: {
+          applies_to_all: boolean
+          created_at: string
+          created_by: string | null
+          holiday_date: string
+          id: string
+          name: string
+          scope_label: string
+        }
+        Insert: {
+          applies_to_all?: boolean
+          created_at?: string
+          created_by?: string | null
+          holiday_date: string
+          id?: string
+          name: string
+          scope_label?: string
+        }
+        Update: {
+          applies_to_all?: boolean
+          created_at?: string
+          created_by?: string | null
+          holiday_date?: string
+          id?: string
+          name?: string
+          scope_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_holidays_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_info: {
         Row: {
           about: string | null
@@ -877,6 +1033,77 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_compensation_terms: {
+        Row: {
+          approved_by: string | null
+          contract_id: string
+          contract_version_id: string | null
+          created_at: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          monthly_salary: number
+          officer_id: string
+          reason: string | null
+          source: string
+        }
+        Insert: {
+          approved_by?: string | null
+          contract_id: string
+          contract_version_id?: string | null
+          created_at?: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          monthly_salary: number
+          officer_id: string
+          reason?: string | null
+          source?: string
+        }
+        Update: {
+          approved_by?: string | null
+          contract_id?: string
+          contract_version_id?: string | null
+          created_at?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          monthly_salary?: number
+          officer_id?: string
+          reason?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_compensation_terms_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_compensation_terms_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_compensation_terms_contract_version_id_fkey"
+            columns: ["contract_version_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contract_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_compensation_terms_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_complaints: {
         Row: {
           account_number: string | null
@@ -942,6 +1169,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_complaints_linked_ticket_id_fkey"
+            columns: ["linked_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_sla_live"
             referencedColumns: ["id"]
           },
           {
@@ -1019,7 +1253,350 @@ export type Database = {
             foreignKeyName: "customer_interactions_linked_ticket_id_fkey"
             columns: ["linked_ticket_id"]
             isOneToOne: false
+            referencedRelation: "ticket_sla_live"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_interactions_linked_ticket_id_fkey"
+            columns: ["linked_ticket_id"]
+            isOneToOne: false
             referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_compensation: {
+        Row: {
+          contract_term_id: string | null
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          monthly_salary: number
+          officer_id: string
+          source: string
+        }
+        Insert: {
+          contract_term_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          monthly_salary: number
+          officer_id: string
+          source?: string
+        }
+        Update: {
+          contract_term_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          monthly_salary?: number
+          officer_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_compensation_contract_term_id_fkey"
+            columns: ["contract_term_id"]
+            isOneToOne: false
+            referencedRelation: "contract_compensation_terms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_compensation_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_compensation_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employment_contract_versions: {
+        Row: {
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          pdf_url: string | null
+          snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          pdf_url?: string | null
+          snapshot: Json
+          version_number: number
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          pdf_url?: string | null
+          snapshot?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employment_contract_versions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "employment_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employment_contract_versions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employment_contracts: {
+        Row: {
+          authorized_signatory_designation: string
+          authorized_signatory_name: string
+          basic_salary_monthly: number | null
+          bonus_terms: string | null
+          company_address: string
+          company_cin: string | null
+          company_name: string
+          company_pan: string | null
+          confidentiality_clause: string | null
+          contract_end_date: string | null
+          created_at: string
+          created_by: string | null
+          ctc_annual: number
+          custom_clauses: Json | null
+          date_of_joining: string
+          employee_aadhaar_last4: string | null
+          employee_address: string
+          employee_department: string | null
+          employee_designation: string
+          employee_email: string | null
+          employee_full_name: string
+          employee_pan: string | null
+          employee_phone: string | null
+          employee_signature_base64: string | null
+          employee_signature_path: string | null
+          employee_signed_at: string | null
+          employee_signed_by: string | null
+          employer_signature_base64: string | null
+          employer_signature_path: string | null
+          employer_signed_at: string | null
+          employer_signed_by: string | null
+          employment_type: string
+          esi_applicable: boolean | null
+          generated_pdf_url: string | null
+          governing_law_jurisdiction: string | null
+          gratuity_applicable: boolean | null
+          hra_monthly: number | null
+          id: string
+          ip_assignment_clause: string | null
+          leave_policy: string | null
+          non_compete_clause: string | null
+          non_compete_months: number | null
+          notice_period_days: number | null
+          notice_period_probation_days: number | null
+          officer_id: string
+          pf_applicable: boolean | null
+          pf_employer_contribution: number | null
+          probation_period_months: number | null
+          professional_tax_applicable: boolean | null
+          reporting_manager: string | null
+          resignation_clause: string | null
+          salary_payment_date: string | null
+          salary_revision_clause: string | null
+          signature_request_sent_at: string | null
+          signature_status: string
+          special_allowance_monthly: number | null
+          status: string
+          tds_applicable: boolean | null
+          termination_clause: string | null
+          updated_at: string
+          version: number
+          weekly_off: string | null
+          work_location: string
+          working_days_per_week: number | null
+          working_hours_per_day: string | null
+        }
+        Insert: {
+          authorized_signatory_designation: string
+          authorized_signatory_name: string
+          basic_salary_monthly?: number | null
+          bonus_terms?: string | null
+          company_address: string
+          company_cin?: string | null
+          company_name: string
+          company_pan?: string | null
+          confidentiality_clause?: string | null
+          contract_end_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          ctc_annual: number
+          custom_clauses?: Json | null
+          date_of_joining: string
+          employee_aadhaar_last4?: string | null
+          employee_address: string
+          employee_department?: string | null
+          employee_designation: string
+          employee_email?: string | null
+          employee_full_name: string
+          employee_pan?: string | null
+          employee_phone?: string | null
+          employee_signature_base64?: string | null
+          employee_signature_path?: string | null
+          employee_signed_at?: string | null
+          employee_signed_by?: string | null
+          employer_signature_base64?: string | null
+          employer_signature_path?: string | null
+          employer_signed_at?: string | null
+          employer_signed_by?: string | null
+          employment_type?: string
+          esi_applicable?: boolean | null
+          generated_pdf_url?: string | null
+          governing_law_jurisdiction?: string | null
+          gratuity_applicable?: boolean | null
+          hra_monthly?: number | null
+          id?: string
+          ip_assignment_clause?: string | null
+          leave_policy?: string | null
+          non_compete_clause?: string | null
+          non_compete_months?: number | null
+          notice_period_days?: number | null
+          notice_period_probation_days?: number | null
+          officer_id: string
+          pf_applicable?: boolean | null
+          pf_employer_contribution?: number | null
+          probation_period_months?: number | null
+          professional_tax_applicable?: boolean | null
+          reporting_manager?: string | null
+          resignation_clause?: string | null
+          salary_payment_date?: string | null
+          salary_revision_clause?: string | null
+          signature_request_sent_at?: string | null
+          signature_status?: string
+          special_allowance_monthly?: number | null
+          status?: string
+          tds_applicable?: boolean | null
+          termination_clause?: string | null
+          updated_at?: string
+          version?: number
+          weekly_off?: string | null
+          work_location: string
+          working_days_per_week?: number | null
+          working_hours_per_day?: string | null
+        }
+        Update: {
+          authorized_signatory_designation?: string
+          authorized_signatory_name?: string
+          basic_salary_monthly?: number | null
+          bonus_terms?: string | null
+          company_address?: string
+          company_cin?: string | null
+          company_name?: string
+          company_pan?: string | null
+          confidentiality_clause?: string | null
+          contract_end_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          ctc_annual?: number
+          custom_clauses?: Json | null
+          date_of_joining?: string
+          employee_aadhaar_last4?: string | null
+          employee_address?: string
+          employee_department?: string | null
+          employee_designation?: string
+          employee_email?: string | null
+          employee_full_name?: string
+          employee_pan?: string | null
+          employee_phone?: string | null
+          employee_signature_base64?: string | null
+          employee_signature_path?: string | null
+          employee_signed_at?: string | null
+          employee_signed_by?: string | null
+          employer_signature_base64?: string | null
+          employer_signature_path?: string | null
+          employer_signed_at?: string | null
+          employer_signed_by?: string | null
+          employment_type?: string
+          esi_applicable?: boolean | null
+          generated_pdf_url?: string | null
+          governing_law_jurisdiction?: string | null
+          gratuity_applicable?: boolean | null
+          hra_monthly?: number | null
+          id?: string
+          ip_assignment_clause?: string | null
+          leave_policy?: string | null
+          non_compete_clause?: string | null
+          non_compete_months?: number | null
+          notice_period_days?: number | null
+          notice_period_probation_days?: number | null
+          officer_id?: string
+          pf_applicable?: boolean | null
+          pf_employer_contribution?: number | null
+          probation_period_months?: number | null
+          professional_tax_applicable?: boolean | null
+          reporting_manager?: string | null
+          resignation_clause?: string | null
+          salary_payment_date?: string | null
+          salary_revision_clause?: string | null
+          signature_request_sent_at?: string | null
+          signature_status?: string
+          special_allowance_monthly?: number | null
+          status?: string
+          tds_applicable?: boolean | null
+          termination_clause?: string | null
+          updated_at?: string
+          version?: number
+          weekly_off?: string | null
+          work_location?: string
+          working_days_per_week?: number | null
+          working_hours_per_day?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employment_contracts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employment_contracts_employee_signed_by_fkey"
+            columns: ["employee_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employment_contracts_employer_signed_by_fkey"
+            columns: ["employer_signed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employment_contracts_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: true
+            referencedRelation: "officers"
             referencedColumns: ["id"]
           },
         ]
@@ -1867,35 +2444,61 @@ export type Database = {
       invoice_history: {
         Row: {
           amount: number | null
+          channel: string | null
           created_at: string | null
           id: string
+          invoice_id: string | null
           invoice_number: string | null
           metadata: Json | null
           pdf_url: string | null
+          recipient: string | null
+          sent_by: string | null
           status: string | null
           user_id: string | null
         }
         Insert: {
           amount?: number | null
+          channel?: string | null
           created_at?: string | null
           id?: string
+          invoice_id?: string | null
           invoice_number?: string | null
           metadata?: Json | null
           pdf_url?: string | null
+          recipient?: string | null
+          sent_by?: string | null
           status?: string | null
           user_id?: string | null
         }
         Update: {
           amount?: number | null
+          channel?: string | null
           created_at?: string | null
           id?: string
+          invoice_id?: string | null
           invoice_number?: string | null
           metadata?: Json | null
           pdf_url?: string | null
+          recipient?: string | null
+          sent_by?: string | null
           status?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoice_history_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_history_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoice_history_user_id_fkey"
             columns: ["user_id"]
@@ -1959,8 +2562,8 @@ export type Database = {
           sent_to: string | null
           sgst_amount: number | null
           status: string | null
-          subtotal: number | null
           subscription_id: string | null
+          subtotal: number | null
           total_amount: number | null
           updated_at: string | null
           user_id: string | null
@@ -1997,8 +2600,8 @@ export type Database = {
           sent_to?: string | null
           sgst_amount?: number | null
           status?: string | null
-          subtotal?: number | null
           subscription_id?: string | null
+          subtotal?: number | null
           total_amount?: number | null
           updated_at?: string | null
           user_id?: string | null
@@ -2035,13 +2638,27 @@ export type Database = {
           sent_to?: string | null
           sgst_amount?: number | null
           status?: string | null
-          subtotal?: number | null
           subscription_id?: string | null
+          subtotal?: number | null
           total_amount?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "user_payments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_subscription_id_fkey"
             columns: ["subscription_id"]
@@ -2201,6 +2818,54 @@ export type Database = {
           },
         ]
       }
+      notification_automation_rules: {
+        Row: {
+          audience_type: string
+          channels: Json
+          created_at: string | null
+          description: string | null
+          enabled: boolean
+          event_key: string
+          event_type: string
+          id: string
+          label: string
+          message_template: string
+          priority: string
+          title_template: string
+          updated_at: string | null
+        }
+        Insert: {
+          audience_type?: string
+          channels?: Json
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean
+          event_key: string
+          event_type?: string
+          id?: string
+          label: string
+          message_template: string
+          priority?: string
+          title_template: string
+          updated_at?: string | null
+        }
+        Update: {
+          audience_type?: string
+          channels?: Json
+          created_at?: string | null
+          description?: string | null
+          enabled?: boolean
+          event_key?: string
+          event_type?: string
+          id?: string
+          label?: string
+          message_template?: string
+          priority?: string
+          title_template?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       notification_drafts: {
         Row: {
           audience: string | null
@@ -2295,6 +2960,92 @@ export type Database = {
             columns: ["notification_id"]
             isOneToOne: false
             referencedRelation: "broadcast_notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_recurring_schedules: {
+        Row: {
+          audience_area: string | null
+          audience_plan_id: string | null
+          audience_plan_name: string | null
+          audience_type: string
+          audience_user_ids: string[] | null
+          audience_user_names: string[] | null
+          created_at: string | null
+          created_by_id: string
+          created_by_name: string
+          day_of_week: number | null
+          enabled: boolean
+          event_type: string
+          frequency: string
+          id: string
+          last_run_at: string | null
+          message: string
+          name: string
+          next_run_at: string | null
+          priority: string
+          time_of_day: string
+          timezone: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          audience_area?: string | null
+          audience_plan_id?: string | null
+          audience_plan_name?: string | null
+          audience_type?: string
+          audience_user_ids?: string[] | null
+          audience_user_names?: string[] | null
+          created_at?: string | null
+          created_by_id: string
+          created_by_name: string
+          day_of_week?: number | null
+          enabled?: boolean
+          event_type?: string
+          frequency?: string
+          id?: string
+          last_run_at?: string | null
+          message: string
+          name: string
+          next_run_at?: string | null
+          priority?: string
+          time_of_day?: string
+          timezone?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          audience_area?: string | null
+          audience_plan_id?: string | null
+          audience_plan_name?: string | null
+          audience_type?: string
+          audience_user_ids?: string[] | null
+          audience_user_names?: string[] | null
+          created_at?: string | null
+          created_by_id?: string
+          created_by_name?: string
+          day_of_week?: number | null
+          enabled?: boolean
+          event_type?: string
+          frequency?: string
+          id?: string
+          last_run_at?: string | null
+          message?: string
+          name?: string
+          next_run_at?: string | null
+          priority?: string
+          time_of_day?: string
+          timezone?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_recurring_schedules_audience_plan_id_fkey"
+            columns: ["audience_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
             referencedColumns: ["id"]
           },
         ]
@@ -2625,27 +3376,33 @@ export type Database = {
       }
       officer_documents: {
         Row: {
+          display_name: string | null
           document_type: string
-          file_url: string
+          file_url: string | null
           id: string
           mime_type: string | null
           officer_id: string
+          storage_path: string | null
           uploaded_at: string
         }
         Insert: {
+          display_name?: string | null
           document_type: string
-          file_url: string
+          file_url?: string | null
           id?: string
           mime_type?: string | null
           officer_id: string
+          storage_path?: string | null
           uploaded_at?: string
         }
         Update: {
+          display_name?: string | null
           document_type?: string
-          file_url?: string
+          file_url?: string | null
           id?: string
           mime_type?: string | null
           officer_id?: string
+          storage_path?: string | null
           uploaded_at?: string
         }
         Relationships: [
@@ -3571,6 +4328,33 @@ export type Database = {
         }
         Relationships: []
       }
+      pay_type_rules: {
+        Row: {
+          attendance_status: string
+          description: string | null
+          id: string
+          pay_fraction: number
+          updated_at: string
+          uses_scheduled_hours: boolean
+        }
+        Insert: {
+          attendance_status: string
+          description?: string | null
+          id?: string
+          pay_fraction?: number
+          updated_at?: string
+          uses_scheduled_hours?: boolean
+        }
+        Update: {
+          attendance_status?: string
+          description?: string | null
+          id?: string
+          pay_fraction?: number
+          updated_at?: string
+          uses_scheduled_hours?: boolean
+        }
+        Relationships: []
+      }
       payment_gateways: {
         Row: {
           created_at: string | null
@@ -3938,46 +4722,370 @@ export type Database = {
           },
         ]
       }
-      payslips: {
+      payroll_attendance_triage_log: {
         Row: {
-          base: number | null
-          bonuses: number | null
-          created_at: string | null
-          deductions: number | null
+          action: string
           id: string
-          month: string | null
-          net_pay: number | null
-          officer_id: string | null
-          pdf_url: string | null
+          metadata: Json
+          new_status: string | null
+          officer_id: string
+          pay_period_end: string
+          pay_period_start: string
+          performed_at: string
+          performed_by: string | null
+          previous_snapshot: Json
+          reason: string
+          resolution_type: string
+          shift_date: string
         }
         Insert: {
-          base?: number | null
-          bonuses?: number | null
-          created_at?: string | null
-          deductions?: number | null
+          action: string
           id?: string
-          month?: string | null
-          net_pay?: number | null
-          officer_id?: string | null
-          pdf_url?: string | null
+          metadata?: Json
+          new_status?: string | null
+          officer_id: string
+          pay_period_end: string
+          pay_period_start: string
+          performed_at?: string
+          performed_by?: string | null
+          previous_snapshot?: Json
+          reason: string
+          resolution_type: string
+          shift_date: string
         }
         Update: {
-          base?: number | null
-          bonuses?: number | null
-          created_at?: string | null
-          deductions?: number | null
+          action?: string
           id?: string
-          month?: string | null
-          net_pay?: number | null
-          officer_id?: string | null
-          pdf_url?: string | null
+          metadata?: Json
+          new_status?: string | null
+          officer_id?: string
+          pay_period_end?: string
+          pay_period_start?: string
+          performed_at?: string
+          performed_by?: string | null
+          previous_snapshot?: Json
+          reason?: string
+          resolution_type?: string
+          shift_date?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payroll_attendance_triage_log_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_attendance_triage_log_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_audit_log: {
+        Row: {
+          action: string
+          id: string
+          metadata: Json
+          new_status: string | null
+          payslip_id: string
+          performed_at: string
+          performed_by: string | null
+          previous_status: string | null
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          id?: string
+          metadata?: Json
+          new_status?: string | null
+          payslip_id: string
+          performed_at?: string
+          performed_by?: string | null
+          previous_status?: string | null
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          id?: string
+          metadata?: Json
+          new_status?: string | null
+          payslip_id?: string
+          performed_at?: string
+          performed_by?: string | null
+          previous_status?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_audit_log_payslip_id_fkey"
+            columns: ["payslip_id"]
+            isOneToOne: false
+            referencedRelation: "payslips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_audit_log_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payslip_daily_breakdown: {
+        Row: {
+          actual_hours: number
+          attendance_record_id: string | null
+          created_at: string
+          date: string
+          day_pay: number
+          display_label: string
+          hourly_rate_applied: number | null
+          id: string
+          is_scheduled_working_day: boolean
+          payslip_id: string
+        }
+        Insert: {
+          actual_hours?: number
+          attendance_record_id?: string | null
+          created_at?: string
+          date: string
+          day_pay?: number
+          display_label: string
+          hourly_rate_applied?: number | null
+          id?: string
+          is_scheduled_working_day: boolean
+          payslip_id: string
+        }
+        Update: {
+          actual_hours?: number
+          attendance_record_id?: string | null
+          created_at?: string
+          date?: string
+          day_pay?: number
+          display_label?: string
+          hourly_rate_applied?: number | null
+          id?: string
+          is_scheduled_working_day?: boolean
+          payslip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payslip_daily_breakdown_attendance_record_id_fkey"
+            columns: ["attendance_record_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payslip_daily_breakdown_payslip_id_fkey"
+            columns: ["payslip_id"]
+            isOneToOne: false
+            referencedRelation: "payslips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payslip_line_items: {
+        Row: {
+          added_by: string | null
+          amount: number
+          created_at: string
+          id: string
+          item_type: string
+          label: string
+          notes: string | null
+          payslip_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          amount: number
+          created_at?: string
+          id?: string
+          item_type: string
+          label: string
+          notes?: string | null
+          payslip_id: string
+        }
+        Update: {
+          added_by?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          item_type?: string
+          label?: string
+          notes?: string | null
+          payslip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payslip_line_items_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payslip_line_items_payslip_id_fkey"
+            columns: ["payslip_id"]
+            isOneToOne: false
+            referencedRelation: "payslips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payslips: {
+        Row: {
+          admin_override_dates: Json
+          admin_override_day_count: number
+          attendance_snapshot: Json | null
+          authorized_at: string | null
+          authorized_by: string | null
+          authorized_signature_name: string | null
+          bank_account_last4: string | null
+          calculation_warnings: Json
+          company_address: string | null
+          company_logo_url: string | null
+          company_name: string | null
+          created_at: string | null
+          deductions: number | null
+          employee_department: string | null
+          employee_designation: string | null
+          employee_id_display: string | null
+          employee_name: string | null
+          generated_by: string | null
+          generated_pdf_url: string | null
+          gross_earnings: number | null
+          hourly_rate: number | null
+          id: string
+          negative_pay_override_note: string | null
+          net_pay: number | null
+          officer_id: string | null
+          pay_period_end: string | null
+          pay_period_label: string | null
+          pay_period_start: string | null
+          status: string | null
+          total_actual_hours: number | null
+          total_additions: number | null
+          total_deductions: number | null
+          total_scheduled_days: number | null
+          total_worked_days: number | null
+          updated_at: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          admin_override_dates?: Json
+          admin_override_day_count?: number
+          attendance_snapshot?: Json | null
+          authorized_at?: string | null
+          authorized_by?: string | null
+          authorized_signature_name?: string | null
+          bank_account_last4?: string | null
+          calculation_warnings?: Json
+          company_address?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          deductions?: number | null
+          employee_department?: string | null
+          employee_designation?: string | null
+          employee_id_display?: string | null
+          employee_name?: string | null
+          generated_by?: string | null
+          generated_pdf_url?: string | null
+          gross_earnings?: number | null
+          hourly_rate?: number | null
+          id?: string
+          negative_pay_override_note?: string | null
+          net_pay?: number | null
+          officer_id?: string | null
+          pay_period_end?: string | null
+          pay_period_label?: string | null
+          pay_period_start?: string | null
+          status?: string | null
+          total_actual_hours?: number | null
+          total_additions?: number | null
+          total_deductions?: number | null
+          total_scheduled_days?: number | null
+          total_worked_days?: number | null
+          updated_at?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          admin_override_dates?: Json
+          admin_override_day_count?: number
+          attendance_snapshot?: Json | null
+          authorized_at?: string | null
+          authorized_by?: string | null
+          authorized_signature_name?: string | null
+          bank_account_last4?: string | null
+          calculation_warnings?: Json
+          company_address?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          deductions?: number | null
+          employee_department?: string | null
+          employee_designation?: string | null
+          employee_id_display?: string | null
+          employee_name?: string | null
+          generated_by?: string | null
+          generated_pdf_url?: string | null
+          gross_earnings?: number | null
+          hourly_rate?: number | null
+          id?: string
+          negative_pay_override_note?: string | null
+          net_pay?: number | null
+          officer_id?: string | null
+          pay_period_end?: string | null
+          pay_period_label?: string | null
+          pay_period_start?: string | null
+          status?: string | null
+          total_actual_hours?: number | null
+          total_additions?: number | null
+          total_deductions?: number | null
+          total_scheduled_days?: number | null
+          total_worked_days?: number | null
+          updated_at?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payslips_authorized_by_fkey"
+            columns: ["authorized_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payslips_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payslips_officer_id_fkey"
             columns: ["officer_id"]
             isOneToOne: false
             referencedRelation: "officers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payslips_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4077,7 +5185,9 @@ export type Database = {
       }
       portal_notifications: {
         Row: {
+          action_url: string | null
           body: string | null
+          category: string | null
           created_at: string | null
           data: Json | null
           id: string
@@ -4088,7 +5198,9 @@ export type Database = {
           type: string
         }
         Insert: {
+          action_url?: string | null
           body?: string | null
+          category?: string | null
           created_at?: string | null
           data?: Json | null
           id?: string
@@ -4099,7 +5211,9 @@ export type Database = {
           type: string
         }
         Update: {
+          action_url?: string | null
           body?: string | null
+          category?: string | null
           created_at?: string | null
           data?: Json | null
           id?: string
@@ -4159,6 +5273,13 @@ export type Database = {
             columns: ["note_id"]
             isOneToOne: false
             referencedRelation: "ticket_internal_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_ticket_attachments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_sla_live"
             referencedColumns: ["id"]
           },
           {
@@ -4458,6 +5579,7 @@ export type Database = {
           start_time: string
           type: string
           updated_at: string
+          working_days: number[]
         }
         Insert: {
           break_minutes?: number
@@ -4471,6 +5593,7 @@ export type Database = {
           start_time: string
           type?: string
           updated_at?: string
+          working_days?: number[]
         }
         Update: {
           break_minutes?: number
@@ -4484,6 +5607,7 @@ export type Database = {
           start_time?: string
           type?: string
           updated_at?: string
+          working_days?: number[]
         }
         Relationships: []
       }
@@ -4553,9 +5677,15 @@ export type Database = {
           late_by_minutes: number | null
           location: unknown
           location_mocked: boolean | null
+          manual_entry_at: string | null
+          manual_entry_by: string | null
+          manual_entry_by_name: string | null
+          manual_entry_reason: string | null
           notes: string | null
           officer_id: string | null
           overtime_hours: number | null
+          payroll_bulk_pay_mode: string | null
+          payroll_resolution_type: string | null
           shift_date: string | null
           start_time: string | null
           status: string | null
@@ -4578,9 +5708,15 @@ export type Database = {
           late_by_minutes?: number | null
           location?: unknown
           location_mocked?: boolean | null
+          manual_entry_at?: string | null
+          manual_entry_by?: string | null
+          manual_entry_by_name?: string | null
+          manual_entry_reason?: string | null
           notes?: string | null
           officer_id?: string | null
           overtime_hours?: number | null
+          payroll_bulk_pay_mode?: string | null
+          payroll_resolution_type?: string | null
           shift_date?: string | null
           start_time?: string | null
           status?: string | null
@@ -4603,9 +5739,15 @@ export type Database = {
           late_by_minutes?: number | null
           location?: unknown
           location_mocked?: boolean | null
+          manual_entry_at?: string | null
+          manual_entry_by?: string | null
+          manual_entry_by_name?: string | null
+          manual_entry_reason?: string | null
           notes?: string | null
           officer_id?: string | null
           overtime_hours?: number | null
+          payroll_bulk_pay_mode?: string | null
+          payroll_resolution_type?: string | null
           shift_date?: string | null
           start_time?: string | null
           status?: string | null
@@ -4624,6 +5766,13 @@ export type Database = {
             columns: ["geofence_id"]
             isOneToOne: false
             referencedRelation: "geofences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_manual_entry_by_fkey"
+            columns: ["manual_entry_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
@@ -4667,6 +5816,13 @@ export type Database = {
           ticket_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sla_breaches_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_sla_live"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sla_breaches_ticket_id_fkey"
             columns: ["ticket_id"]
@@ -4853,6 +6009,13 @@ export type Database = {
             foreignKeyName: "ticket_activity_events_ticket_id_fkey"
             columns: ["ticket_id"]
             isOneToOne: false
+            referencedRelation: "ticket_sla_live"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_activity_events_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
             referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
@@ -4956,6 +6119,13 @@ export type Database = {
             columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_internal_notes_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_sla_live"
             referencedColumns: ["id"]
           },
           {
@@ -5075,8 +6245,11 @@ export type Database = {
           linked_request_id: string | null
           linked_request_number: string | null
           priority: string
+          resolution_sla_status: string
           resolution_summary: string | null
           resolved_at: string | null
+          responded_at: string | null
+          response_sla_status: string
           sla_resolution_breached: boolean
           sla_resolution_deadline: string
           sla_response_breached: boolean
@@ -5117,8 +6290,11 @@ export type Database = {
           linked_request_id?: string | null
           linked_request_number?: string | null
           priority: string
+          resolution_sla_status?: string
           resolution_summary?: string | null
           resolved_at?: string | null
+          responded_at?: string | null
+          response_sla_status?: string
           sla_resolution_breached?: boolean
           sla_resolution_deadline: string
           sla_response_breached?: boolean
@@ -5159,8 +6335,11 @@ export type Database = {
           linked_request_id?: string | null
           linked_request_number?: string | null
           priority?: string
+          resolution_sla_status?: string
           resolution_summary?: string | null
           resolved_at?: string | null
+          responded_at?: string | null
+          response_sla_status?: string
           sla_resolution_breached?: boolean
           sla_resolution_deadline?: string
           sla_response_breached?: boolean
@@ -5620,6 +6799,99 @@ export type Database = {
           },
         ]
       }
+      whatsapp_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message_type: string
+          recipient_name: string | null
+          recipient_phone: string
+          reference_id: string | null
+          reference_type: string | null
+          sent_by: string | null
+          status: string
+          wa_message_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_type: string
+          recipient_name?: string | null
+          recipient_phone: string
+          reference_id?: string | null
+          reference_type?: string | null
+          sent_by?: string | null
+          status?: string
+          wa_message_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_type?: string
+          recipient_name?: string | null
+          recipient_phone?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          sent_by?: string | null
+          status?: string
+          wa_message_id?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_settings: {
+        Row: {
+          activation_template: string
+          complaint_update_template: string
+          created_at: string
+          enabled: boolean
+          gateway_session_id: string
+          gateway_url: string
+          id: string
+          invoice_template: string
+          notify_activations: boolean
+          notify_complaints: boolean
+          notify_invoice: boolean
+          notify_payment: boolean
+          payment_receipt_template: string
+          updated_at: string
+        }
+        Insert: {
+          activation_template?: string
+          complaint_update_template?: string
+          created_at?: string
+          enabled?: boolean
+          gateway_session_id?: string
+          gateway_url?: string
+          id?: string
+          invoice_template?: string
+          notify_activations?: boolean
+          notify_complaints?: boolean
+          notify_invoice?: boolean
+          notify_payment?: boolean
+          payment_receipt_template?: string
+          updated_at?: string
+        }
+        Update: {
+          activation_template?: string
+          complaint_update_template?: string
+          created_at?: string
+          enabled?: boolean
+          gateway_session_id?: string
+          gateway_url?: string
+          id?: string
+          invoice_template?: string
+          notify_activations?: boolean
+          notify_complaints?: boolean
+          notify_invoice?: boolean
+          notify_payment?: boolean
+          payment_receipt_template?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       geography_columns: {
@@ -5688,6 +6960,7 @@ export type Database = {
           avg_csat_score: number | null
           avg_resolution_hours: number | null
           in_progress_tickets: number | null
+          officers_with_assignments: number | null
           open_tickets: number | null
           overdue_tickets: number | null
           resolved_tickets: number | null
@@ -5696,6 +6969,179 @@ export type Database = {
           tickets_today: number | null
         }
         Relationships: []
+      }
+      ticket_sla_live: {
+        Row: {
+          account_number: string | null
+          address: string | null
+          assigned_at: string | null
+          assigned_officer_id: string | null
+          assigned_officer_name: string | null
+          assigned_officer_role: string | null
+          city: string | null
+          closed_at: string | null
+          complaint_type: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          created_by_admin_id: string | null
+          created_by_admin_name: string | null
+          csat_comment: string | null
+          csat_score: number | null
+          csat_sent_at: string | null
+          customer_id: string | null
+          customer_notified: boolean | null
+          description: string | null
+          escalation_level: number | null
+          first_response_at: string | null
+          id: string | null
+          linked_request_id: string | null
+          linked_request_number: string | null
+          priority: string | null
+          resolution_sla_live: string | null
+          resolution_sla_status: string | null
+          resolution_summary: string | null
+          resolved_at: string | null
+          responded_at: string | null
+          response_sla_live: string | null
+          response_sla_status: string | null
+          sla_resolution_breached: boolean | null
+          sla_resolution_deadline: string | null
+          sla_response_breached: boolean | null
+          sla_response_deadline: string | null
+          source: string | null
+          status: string | null
+          sub_category: string | null
+          tags: string[] | null
+          ticket_number: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          address?: string | null
+          assigned_at?: string | null
+          assigned_officer_id?: string | null
+          assigned_officer_name?: string | null
+          assigned_officer_role?: string | null
+          city?: string | null
+          closed_at?: string | null
+          complaint_type?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          created_by_admin_id?: string | null
+          created_by_admin_name?: string | null
+          csat_comment?: string | null
+          csat_score?: number | null
+          csat_sent_at?: string | null
+          customer_id?: string | null
+          customer_notified?: boolean | null
+          description?: string | null
+          escalation_level?: number | null
+          first_response_at?: string | null
+          id?: string | null
+          linked_request_id?: string | null
+          linked_request_number?: string | null
+          priority?: string | null
+          resolution_sla_live?: never
+          resolution_sla_status?: string | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          responded_at?: string | null
+          response_sla_live?: never
+          response_sla_status?: string | null
+          sla_resolution_breached?: boolean | null
+          sla_resolution_deadline?: string | null
+          sla_response_breached?: boolean | null
+          sla_response_deadline?: string | null
+          source?: string | null
+          status?: string | null
+          sub_category?: string | null
+          tags?: string[] | null
+          ticket_number?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          address?: string | null
+          assigned_at?: string | null
+          assigned_officer_id?: string | null
+          assigned_officer_name?: string | null
+          assigned_officer_role?: string | null
+          city?: string | null
+          closed_at?: string | null
+          complaint_type?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          created_by_admin_id?: string | null
+          created_by_admin_name?: string | null
+          csat_comment?: string | null
+          csat_score?: number | null
+          csat_sent_at?: string | null
+          customer_id?: string | null
+          customer_notified?: boolean | null
+          description?: string | null
+          escalation_level?: number | null
+          first_response_at?: string | null
+          id?: string | null
+          linked_request_id?: string | null
+          linked_request_number?: string | null
+          priority?: string | null
+          resolution_sla_live?: never
+          resolution_sla_status?: string | null
+          resolution_summary?: string | null
+          resolved_at?: string | null
+          responded_at?: string | null
+          response_sla_live?: never
+          response_sla_status?: string | null
+          sla_resolution_breached?: boolean | null
+          sla_resolution_deadline?: string | null
+          sla_response_breached?: boolean | null
+          sla_response_deadline?: string | null
+          source?: string | null
+          status?: string | null
+          sub_category?: string | null
+          tags?: string[] | null
+          ticket_number?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_assigned_officer_id_fkey"
+            columns: ["assigned_officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_created_by_admin_id_fkey"
+            columns: ["created_by_admin_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_linked_request_id_fkey"
+            columns: ["linked_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -5826,6 +7272,7 @@ export type Database = {
             }
             Returns: string
           }
+      backfill_ticket_sla: { Args: { p_dry_run?: boolean }; Returns: Json }
       bulk_assign_collection_officer: {
         Args: { p_customer_ids: string[]; p_officer_id?: string }
         Returns: Json
@@ -5874,6 +7321,7 @@ export type Database = {
         Returns: Json
       }
       generate_complaint_number: { Args: never; Returns: string }
+      generate_invoice_number: { Args: never; Returns: string }
       generate_ticket_number: { Args: never; Returns: string }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
@@ -6148,31 +7596,8 @@ export type Database = {
         Returns: undefined
       }
       notify_officer_contract_signature: {
-        Args: {
-          p_contract_id: string
-        }
+        Args: { p_contract_id: string }
         Returns: undefined
-      }
-      submit_employment_contract_signature: {
-        Args: {
-          p_contract_id: string
-          p_role: string
-          p_signature_path: string
-          p_signed_by?: string | null
-        }
-        Returns: Json
-      }
-      publish_signed_employment_contract_pdf: {
-        Args: {
-          p_contract_id: string
-          p_storage_path: string
-          p_new_version: number
-          p_archived_version?: number | null
-          p_archived_snapshot?: Json | null
-          p_archived_pdf_url?: string | null
-          p_created_by?: string | null
-        }
-        Returns: Json
       }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
@@ -6214,9 +7639,101 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      publish_signed_employment_contract_pdf: {
+        Args: {
+          p_archived_pdf_url?: string
+          p_archived_snapshot?: Json
+          p_archived_version?: number
+          p_contract_id: string
+          p_created_by?: string
+          p_new_version: number
+          p_storage_path: string
+        }
+        Returns: {
+          authorized_signatory_designation: string
+          authorized_signatory_name: string
+          basic_salary_monthly: number | null
+          bonus_terms: string | null
+          company_address: string
+          company_cin: string | null
+          company_name: string
+          company_pan: string | null
+          confidentiality_clause: string | null
+          contract_end_date: string | null
+          created_at: string
+          created_by: string | null
+          ctc_annual: number
+          custom_clauses: Json | null
+          date_of_joining: string
+          employee_aadhaar_last4: string | null
+          employee_address: string
+          employee_department: string | null
+          employee_designation: string
+          employee_email: string | null
+          employee_full_name: string
+          employee_pan: string | null
+          employee_phone: string | null
+          employee_signature_base64: string | null
+          employee_signature_path: string | null
+          employee_signed_at: string | null
+          employee_signed_by: string | null
+          employer_signature_base64: string | null
+          employer_signature_path: string | null
+          employer_signed_at: string | null
+          employer_signed_by: string | null
+          employment_type: string
+          esi_applicable: boolean | null
+          generated_pdf_url: string | null
+          governing_law_jurisdiction: string | null
+          gratuity_applicable: boolean | null
+          hra_monthly: number | null
+          id: string
+          ip_assignment_clause: string | null
+          leave_policy: string | null
+          non_compete_clause: string | null
+          non_compete_months: number | null
+          notice_period_days: number | null
+          notice_period_probation_days: number | null
+          officer_id: string
+          pf_applicable: boolean | null
+          pf_employer_contribution: number | null
+          probation_period_months: number | null
+          professional_tax_applicable: boolean | null
+          reporting_manager: string | null
+          resignation_clause: string | null
+          salary_payment_date: string | null
+          salary_revision_clause: string | null
+          signature_request_sent_at: string | null
+          signature_status: string
+          special_allowance_monthly: number | null
+          status: string
+          tds_applicable: boolean | null
+          termination_clause: string | null
+          updated_at: string
+          version: number
+          weekly_off: string | null
+          work_location: string
+          working_days_per_week: number | null
+          working_hours_per_day: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employment_contracts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       release_collection_claim: {
         Args: { p_customer_id: string }
         Returns: Json
+      }
+      review_attendance_approval: {
+        Args: {
+          p_action: string
+          p_request_id: string
+          p_review_notes?: string
+        }
+        Returns: string
       }
       search_officer_customers: {
         Args: { p_query?: string }
@@ -6812,6 +8329,294 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
+      }
+      submit_employment_contract_signature:
+        | {
+            Args: {
+              p_contract_id: string
+              p_role: string
+              p_signature_path: string
+              p_signed_by?: string
+            }
+            Returns: {
+              authorized_signatory_designation: string
+              authorized_signatory_name: string
+              basic_salary_monthly: number | null
+              bonus_terms: string | null
+              company_address: string
+              company_cin: string | null
+              company_name: string
+              company_pan: string | null
+              confidentiality_clause: string | null
+              contract_end_date: string | null
+              created_at: string
+              created_by: string | null
+              ctc_annual: number
+              custom_clauses: Json | null
+              date_of_joining: string
+              employee_aadhaar_last4: string | null
+              employee_address: string
+              employee_department: string | null
+              employee_designation: string
+              employee_email: string | null
+              employee_full_name: string
+              employee_pan: string | null
+              employee_phone: string | null
+              employee_signature_base64: string | null
+              employee_signature_path: string | null
+              employee_signed_at: string | null
+              employee_signed_by: string | null
+              employer_signature_base64: string | null
+              employer_signature_path: string | null
+              employer_signed_at: string | null
+              employer_signed_by: string | null
+              employment_type: string
+              esi_applicable: boolean | null
+              generated_pdf_url: string | null
+              governing_law_jurisdiction: string | null
+              gratuity_applicable: boolean | null
+              hra_monthly: number | null
+              id: string
+              ip_assignment_clause: string | null
+              leave_policy: string | null
+              non_compete_clause: string | null
+              non_compete_months: number | null
+              notice_period_days: number | null
+              notice_period_probation_days: number | null
+              officer_id: string
+              pf_applicable: boolean | null
+              pf_employer_contribution: number | null
+              probation_period_months: number | null
+              professional_tax_applicable: boolean | null
+              reporting_manager: string | null
+              resignation_clause: string | null
+              salary_payment_date: string | null
+              salary_revision_clause: string | null
+              signature_request_sent_at: string | null
+              signature_status: string
+              special_allowance_monthly: number | null
+              status: string
+              tds_applicable: boolean | null
+              termination_clause: string | null
+              updated_at: string
+              version: number
+              weekly_off: string | null
+              work_location: string
+              working_days_per_week: number | null
+              working_hours_per_day: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "employment_contracts"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_contract_id: string
+              p_role: string
+              p_signature_base64?: string
+              p_signature_path: string
+              p_signed_by?: string
+            }
+            Returns: {
+              authorized_signatory_designation: string
+              authorized_signatory_name: string
+              basic_salary_monthly: number | null
+              bonus_terms: string | null
+              company_address: string
+              company_cin: string | null
+              company_name: string
+              company_pan: string | null
+              confidentiality_clause: string | null
+              contract_end_date: string | null
+              created_at: string
+              created_by: string | null
+              ctc_annual: number
+              custom_clauses: Json | null
+              date_of_joining: string
+              employee_aadhaar_last4: string | null
+              employee_address: string
+              employee_department: string | null
+              employee_designation: string
+              employee_email: string | null
+              employee_full_name: string
+              employee_pan: string | null
+              employee_phone: string | null
+              employee_signature_base64: string | null
+              employee_signature_path: string | null
+              employee_signed_at: string | null
+              employee_signed_by: string | null
+              employer_signature_base64: string | null
+              employer_signature_path: string | null
+              employer_signed_at: string | null
+              employer_signed_by: string | null
+              employment_type: string
+              esi_applicable: boolean | null
+              generated_pdf_url: string | null
+              governing_law_jurisdiction: string | null
+              gratuity_applicable: boolean | null
+              hra_monthly: number | null
+              id: string
+              ip_assignment_clause: string | null
+              leave_policy: string | null
+              non_compete_clause: string | null
+              non_compete_months: number | null
+              notice_period_days: number | null
+              notice_period_probation_days: number | null
+              officer_id: string
+              pf_applicable: boolean | null
+              pf_employer_contribution: number | null
+              probation_period_months: number | null
+              professional_tax_applicable: boolean | null
+              reporting_manager: string | null
+              resignation_clause: string | null
+              salary_payment_date: string | null
+              salary_revision_clause: string | null
+              signature_request_sent_at: string | null
+              signature_status: string
+              special_allowance_monthly: number | null
+              status: string
+              tds_applicable: boolean | null
+              termination_clause: string | null
+              updated_at: string
+              version: number
+              weekly_off: string | null
+              work_location: string
+              working_days_per_week: number | null
+              working_hours_per_day: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "employment_contracts"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+      ticket_resolution_hours: { Args: { p_priority: string }; Returns: number }
+      ticket_response_hours: { Args: { p_priority: string }; Returns: number }
+      tickets_evaluate_resolution: {
+        Args: {
+          p_event_at: string
+          p_ticket: Database["public"]["Tables"]["tickets"]["Row"]
+        }
+        Returns: {
+          account_number: string | null
+          address: string | null
+          assigned_at: string | null
+          assigned_officer_id: string | null
+          assigned_officer_name: string | null
+          assigned_officer_role: string | null
+          city: string | null
+          closed_at: string | null
+          complaint_type: string
+          contact_email: string | null
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          created_by_admin_id: string | null
+          created_by_admin_name: string
+          csat_comment: string | null
+          csat_score: number | null
+          csat_sent_at: string | null
+          customer_id: string | null
+          customer_notified: boolean
+          description: string
+          escalation_level: number
+          first_response_at: string | null
+          id: string
+          linked_request_id: string | null
+          linked_request_number: string | null
+          priority: string
+          resolution_sla_status: string
+          resolution_summary: string | null
+          resolved_at: string | null
+          responded_at: string | null
+          response_sla_status: string
+          sla_resolution_breached: boolean
+          sla_resolution_deadline: string
+          sla_response_breached: boolean
+          sla_response_deadline: string
+          source: string
+          status: string
+          sub_category: string | null
+          tags: string[]
+          ticket_number: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      tickets_insert_activity: {
+        Args: {
+          p_at?: string
+          p_description: string
+          p_performed_by: string
+          p_performed_by_role?: string
+          p_ticket_id: string
+          p_type: string
+        }
+        Returns: undefined
+      }
+      tickets_record_first_response: {
+        Args: { p_ticket: Database["public"]["Tables"]["tickets"]["Row"] }
+        Returns: {
+          account_number: string | null
+          address: string | null
+          assigned_at: string | null
+          assigned_officer_id: string | null
+          assigned_officer_name: string | null
+          assigned_officer_role: string | null
+          city: string | null
+          closed_at: string | null
+          complaint_type: string
+          contact_email: string | null
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          created_by_admin_id: string | null
+          created_by_admin_name: string
+          csat_comment: string | null
+          csat_score: number | null
+          csat_sent_at: string | null
+          customer_id: string | null
+          customer_notified: boolean
+          description: string
+          escalation_level: number
+          first_response_at: string | null
+          id: string
+          linked_request_id: string | null
+          linked_request_number: string | null
+          priority: string
+          resolution_sla_status: string
+          resolution_summary: string | null
+          resolved_at: string | null
+          responded_at: string | null
+          response_sla_status: string
+          sla_resolution_breached: boolean
+          sla_resolution_deadline: string
+          sla_response_breached: boolean
+          sla_response_deadline: string
+          source: string
+          status: string
+          sub_category: string | null
+          tags: string[]
+          ticket_number: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "tickets"
+          to: "tickets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {

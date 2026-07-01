@@ -7,9 +7,13 @@ const IV_LENGTH = 12;
 const PREFIX = 'encrypted:';
 
 function getEncryptionKey(): string {
-  const key = Deno.env.get('OFFICER_PII_KEY');
+  const key =
+    Deno.env.get('OFFICER_PII_KEY') ??
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   if (!key || key.length < 32) {
-    throw new Error('OFFICER_PII_KEY must be set and at least 32 characters');
+    throw new Error(
+      'OFFICER_PII_KEY (or SUPABASE_SERVICE_ROLE_KEY) must be set and at least 32 characters',
+    );
   }
   return key;
 }

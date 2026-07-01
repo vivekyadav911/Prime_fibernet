@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { dateSchema, uuidSchema } from '@/types/common';
+import { dateSchema } from '@/types/common';
 
 const phoneSchema = z
   .string()
@@ -51,9 +51,8 @@ export const AdminCreateOfficerStep2Schema = z.object({
   emergencyContact2: emergencyContactSchema.optional(),
 });
 
-/** Step 3 — Contract & Role + Credentials (base fields) */
+/** Step 3 — Contract + Credentials (base fields) */
 export const AdminCreateOfficerStep3BaseSchema = z.object({
-  roleId: uuidSchema,
   region: z.string().optional(),
   positionApplied: z.string().optional(),
   designation: z.string().optional(),
@@ -126,7 +125,7 @@ export type AdminCreateOfficerFormData = z.infer<typeof AdminCreateOfficerBaseSc
 export const OFFICER_WIZARD_STEPS = [
   { key: 1, title: 'Personal Info', subtitle: 'Name, DOB, gender, photo' },
   { key: 2, title: 'Contact & Bank', subtitle: 'Address, bank, emergency contacts' },
-  { key: 3, title: 'Contract & Role', subtitle: 'Role, salary, credentials' },
+  { key: 3, title: 'Contract & Role', subtitle: 'Contract, salary, credentials' },
   { key: 4, title: 'Documents', subtitle: 'ID, photo, resume' },
 ] as const;
 

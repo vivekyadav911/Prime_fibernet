@@ -23,7 +23,7 @@ import {
   mapDbRowToTicket,
   mapNoteRow,
 } from '@/utils/ticketViewMappers';
-import { isSLABreached } from '@/utils/slaUtils';
+import { buildSlaStatusFromTicket, computeTicketStats } from '@/utils/slaUtils';
 import { insertOfficerPortalNotification } from '@/utils/officerPortalNotification';
 
 async function requireSession() {
@@ -105,7 +105,7 @@ export async function generateTicketNumber(): Promise<string> {
 export async function fetchTickets(_filters?: Partial<TicketFilters>): Promise<Ticket[]> {
   const { client } = await requireSession();
   const { data, error } = await client
-    .from('tickets')
+    .from('ticket_sla_live')
     .select('*')
     .order('created_at', { ascending: false });
 
@@ -127,7 +127,7 @@ export async function fetchTickets(_filters?: Partial<TicketFilters>): Promise<T
 
 export async function fetchTicketById(id: string): Promise<Ticket> {
   const { client } = await requireSession();
-  const { data, error } = await client.from('tickets').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await client.from('ticket_sla_live').select('*').eq('id', id).maybeSingle();
   if (error) throw error;
   if (!data) throw new Error('Ticket not found');
 
@@ -252,13 +252,15 @@ export async function updateTicketStatus(
   const { error } = await client.from('tickets').update(patch).eq('id', ticketId);
   if (error) throw error;
 
-  await insertActivity(client, ticketId, {
-    type: status === 'Resolved' ? 'resolved' : status === 'Closed' ? 'closed' : 'status_changed',
-    description: `Status updated to ${status}`,
-    performedBy,
-    performedByRole: 'Admin',
-    metadata: { oldStatus: ticket.status, newStatus: status },
-  });
+  if (!['Resolved', 'Closed'].includes(status)) {
+    await insertActivity(client, ticketId, {
+      type: 'status_changed',
+      description: `Status updated to ${status}`,
+      performedBy,
+      performedByRole: 'Admin',
+      metadata: { oldStatus: ticket.status, newStatus: status },
+    });
+  }
 
   if (status === 'Resolved' && ticket.customerId) {
     try {
@@ -470,48 +472,11 @@ export async function removeTag(ticketId: string, tag: string): Promise<void> {
 
 export async function reopenTicket(ticketId: string, adminName: string): Promise<void> {
   await updateTicketStatus(ticketId, 'Reopened', undefined, adminName);
-  const { client } = await requireSession();
-  await insertActivity(client, ticketId, {
-    type: 'reopened',
-    description: 'Ticket reopened',
-    performedBy: adminName,
-    performedByRole: 'Admin',
-  });
 }
 
 export async function fetchTicketStats(): Promise<TicketStats> {
   const tickets = await fetchTickets();
-  const open = tickets.filter((t) => t.status === 'Open').length;
-  const inProgress = tickets.filter((t) => t.status === 'In Progress').length;
-  const resolved = tickets.filter((t) => t.status === 'Resolved' || t.status === 'Closed').length;
-  const breached = tickets.filter((t) => isSLABreached(t)).length;
-
-  const resolvedTickets = tickets.filter((t) => t.resolvedAt);
-  const avgResolutionHours =
-    resolvedTickets.length > 0
-      ? resolvedTickets.reduce((sum, t) => {
-          const hours = (t.resolvedAt!.getTime() - t.createdAt.getTime()) / (60 * 60 * 1000);
-          return sum + hours;
-        }, 0) / resolvedTickets.length
-      : 0;
-
-  const byPriority = { Low: 0, Medium: 0, High: 0, Critical: 0 } as TicketStats['byPriority'];
-  const byComplaintType = {} as TicketStats['byComplaintType'];
-
-  for (const t of tickets) {
-    byPriority[t.priority] += 1;
-    byComplaintType[t.complaintType] = (byComplaintType[t.complaintType] ?? 0) + 1;
-  }
-
-  return {
-    totalOpen: open,
-    totalInProgress: inProgress,
-    totalResolved: resolved,
-    totalBreached: breached,
-    avgResolutionHours,
-    byPriority,
-    byComplaintType,
-  };
+  return computeTicketStats(tickets);
 }
 
 const ticketsRealtimeListeners = new Set<() => void>();

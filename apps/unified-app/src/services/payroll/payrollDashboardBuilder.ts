@@ -4,6 +4,10 @@ import {
   type ShiftRecordInput,
 } from '@/services/payslip/calculatePayslipCore';
 import {
+  fixIssuesLabel,
+  primaryBlockingReason,
+} from '@/services/payroll/attendancePeriodDiagnostics';
+import {
   buildBlockingWarningCodes,
   validatePayslipSnapshotConsistency,
 } from '@/services/payslip/payslipValidation';
@@ -56,6 +60,8 @@ type ShiftRow = {
   attendance_status: string | null;
   working_hours: number | null;
   status: string | null;
+  payroll_resolution_type?: string | null;
+  payroll_bulk_pay_mode?: 'paid' | 'unpaid' | null;
 };
 
 type ShiftDefRow = {
@@ -104,6 +110,8 @@ function mapShift(row: ShiftRow): ShiftRecordInput {
     attendanceStatus: row.attendance_status,
     workingHours: row.working_hours != null ? Number(row.working_hours) : null,
     status: row.status,
+    payrollResolutionType: row.payroll_resolution_type ?? null,
+    payrollBulkPayMode: row.payroll_bulk_pay_mode ?? null,
   };
 }
 
@@ -202,6 +210,15 @@ export function buildPayrollDashboardEntries(input: {
       !hasShiftAssignment ||
       (ps != null && !snapshotValid);
 
+    const fixIssuesHint = blocked
+      ? primaryBlockingReason({
+          issueSummary: attendanceSummary.issueSummary,
+          missingOfficerFields: missingFields,
+          hasCompensation,
+          snapshotInvalid: ps != null && !snapshotValid,
+        })
+      : null;
+
     return {
       officerId: officer.id,
       officerName:
@@ -227,6 +244,7 @@ export function buildPayrollDashboardEntries(input: {
       missingOfficerFields: missingFields,
       hasCompensation,
       hasShiftAssignment,
+      fixIssuesHint,
     };
   });
 }
@@ -243,6 +261,14 @@ export function buildGenerationPreview(input: {
   holidays: string[];
   missingOfficerFields: string[];
   hasCompensation: boolean;
+  compensationWarnings?: string[];
+  compensationNotices?: string[];
+  contractCompensations?: Array<{
+    id: string;
+    monthlySalary: number;
+    effectiveFrom: string;
+    effectiveTo: string | null;
+  }>;
 }): import('@/types/payslip').PayrollGenerationPreview {
   const attendanceSummary = summarizePayPeriodAttendance({
     payPeriodStart: input.periodStart,
@@ -258,7 +284,13 @@ export function buildGenerationPreview(input: {
     warnings.push(`Missing officer data: ${input.missingOfficerFields.join(', ')}`);
   }
   if (!input.hasCompensation) {
-    warnings.push('No salary/compensation configured for this officer');
+    warnings.push('No contract-sourced salary configured for this officer');
+  }
+  if (input.compensationWarnings?.length) {
+    warnings.push(...input.compensationWarnings);
+  }
+  if (input.compensationNotices?.length) {
+    // informational only — not included in warnings / canGenerate
   }
   if (!input.hasShiftAssignment) {
     warnings.push('No shift schedule assigned — configure shift before generating');
@@ -280,6 +312,10 @@ export function buildGenerationPreview(input: {
       input.hasCompensation &&
       input.hasShiftAssignment,
     warnings,
+    compensationWarnings: input.compensationWarnings,
+    compensationNotices: input.compensationNotices,
+    contractCompensations: input.contractCompensations,
+    shiftDefinition: input.shiftDefinition,
   };
 }
 

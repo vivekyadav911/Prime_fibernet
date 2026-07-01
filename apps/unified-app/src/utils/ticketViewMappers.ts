@@ -9,7 +9,13 @@ import type {
   TicketSource,
   TicketStatus,
 } from '@/types/tickets';
-import { computeSLADeadlines, computeSLAStatus, getSLAPolicy, isSLABreached } from '@/utils/slaUtils';
+import {
+  buildSlaStatusFromTicket,
+  computeSLADeadlines,
+  getSLAPolicy,
+  isOpenTicketSlaBreached,
+  parseSlaStatus,
+} from '@/utils/slaUtils';
 
 const PRIORITY_ORDER: Record<TicketPriority, number> = {
   Critical: 4,
@@ -96,6 +102,11 @@ export function mapDbRowToTicket(
   const policy = getSLAPolicy(priority);
   const responseDeadline = parseDate(row.sla_response_deadline ?? createdAt);
   const resolutionDeadline = parseDate(row.sla_resolution_deadline ?? createdAt);
+  const respondedAt = row.responded_at
+    ? parseDate(row.responded_at)
+    : row.first_response_at
+      ? parseDate(row.first_response_at)
+      : null;
 
   const baseTicket: Ticket = {
     id: String(row.id),
@@ -115,8 +126,11 @@ export function mapDbRowToTicket(
     assignedOfficerName: row.assigned_officer_name ? String(row.assigned_officer_name) : null,
     assignedOfficerRole: row.assigned_officer_role ? String(row.assigned_officer_role) : null,
     assignedAt: row.assigned_at ? parseDate(row.assigned_at) : null,
+    respondedAt,
     resolvedAt: row.resolved_at ? parseDate(row.resolved_at) : null,
     closedAt: row.closed_at ? parseDate(row.closed_at) : null,
+    responseSlaStatus: parseSlaStatus(row.response_sla_status),
+    resolutionSlaStatus: parseSlaStatus(row.resolution_sla_status),
     createdAt,
     updatedAt: parseDate(row.updated_at ?? createdAt),
     createdByAdminId: String(row.created_by_admin_id ?? ''),
@@ -130,12 +144,18 @@ export function mapDbRowToTicket(
     attachments,
     slaPolicy: policy,
     slaStatus: {
-      responseBreached: Boolean(row.sla_response_breached),
-      resolutionBreached: Boolean(row.sla_resolution_breached),
+      responseStatus: parseSlaStatus(row.response_sla_status),
+      resolutionStatus: parseSlaStatus(row.resolution_sla_status),
+      responseLive: parseSlaStatus(row.response_sla_live ?? row.response_sla_status),
+      resolutionLive: parseSlaStatus(row.resolution_sla_live ?? row.resolution_sla_status),
+      responseBreached: false,
+      resolutionBreached: false,
       responseDeadline,
       resolutionDeadline,
       responseRemainingMs: responseDeadline.getTime() - Date.now(),
       resolutionRemainingMs: resolutionDeadline.getTime() - Date.now(),
+      respondedAt,
+      resolvedAt: row.resolved_at ? parseDate(row.resolved_at) : null,
     },
     resolutionSummary: row.resolution_summary ? String(row.resolution_summary) : null,
     customerNotified: Boolean(row.customer_notified),
@@ -148,7 +168,7 @@ export function mapDbRowToTicket(
     csatSentAt: row.csat_sent_at ? parseDate(row.csat_sent_at) : null,
   };
 
-  baseTicket.slaStatus = computeSLAStatus(baseTicket);
+  baseTicket.slaStatus = buildSlaStatusFromTicket(baseTicket);
   return baseTicket;
 }
 
@@ -170,9 +190,9 @@ export function applyTicketFilters(tickets: Ticket[], filters: TicketFilters): T
     result = result.filter((t) => !t.assignedOfficerId);
   }
   if (filters.slaBreached === true) {
-    result = result.filter((t) => isSLABreached(t));
+    result = result.filter((t) => isOpenTicketSlaBreached(t));
   } else if (filters.slaBreached === false) {
-    result = result.filter((t) => !isSLABreached(t));
+    result = result.filter((t) => !isOpenTicketSlaBreached(t));
   }
   if (filters.dateRange.from) {
     result = result.filter((t) => t.createdAt >= filters.dateRange.from!);
@@ -229,6 +249,8 @@ export function buildSlaInsertFields(priority: TicketPriority, createdAt: Date) 
     sla_resolution_deadline: resolutionDeadline.toISOString(),
     sla_response_breached: false,
     sla_resolution_breached: false,
+    response_sla_status: 'pending',
+    resolution_sla_status: 'pending',
   };
 }
 

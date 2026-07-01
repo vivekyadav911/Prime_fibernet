@@ -17,8 +17,8 @@ serve(async (req) => {
       .from('tickets')
       .select('id, ticket_number, priority, assigned_officer_id, escalation_level, sla_resolution_deadline')
       .not('status', 'in', '("Resolved","Closed")')
-      .lt('sla_resolution_deadline', now)
-      .eq('sla_resolution_breached', false);
+      .eq('resolution_sla_status', 'pending')
+      .lt('sla_resolution_deadline', now);
 
     if (error) throw error;
 
@@ -32,6 +32,7 @@ serve(async (req) => {
       await supabase
         .from('tickets')
         .update({
+          resolution_sla_status: 'breached',
           sla_resolution_breached: true,
           escalation_level: newLevel,
           updated_at: now,

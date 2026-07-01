@@ -15,15 +15,14 @@ import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAgentAvailability } from '@/hooks/useAgentAvailability';
 import { useChatSession } from '@/hooks/useChatSession';
-import { useTickets } from '@/hooks/useTickets';
+import { useTicketStats } from '@/hooks/useTickets';
 import { useGetSupportDashboardStatsQuery } from '@/services/api/adminSupportApi';
-import { useAppSelector } from '@/store/hooks';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminSupportStackParamList } from '@/types/navigation';
-import { isSLABreached } from '@/utils/slaUtils';
+import { useAppSelector } from '@/store/hooks';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminSupportStackParamList, 'SupportDashboard'>;
@@ -41,13 +40,10 @@ export function SupportDashboardScreen({ navigation }: Props) {
   const authUserId = useAppSelector((s) => s.auth.user?.id ?? null);
   const { status, updateStatus, loading: statusLoading } = useAgentAvailability(authUserId);
   const { data: stats, isLoading, isError, error, refetch } = useGetSupportDashboardStatsQuery();
-  const { allTickets } = useTickets();
+  const { stats: ticketStats, openBreachedTickets, allTickets } = useTicketStats();
   const { waitingCount } = useChatSession();
 
-  const breachedTickets = useMemo(
-    () => allTickets.filter((t) => isSLABreached(t) && !['Resolved', 'Closed'].includes(t.status)).slice(0, 5),
-    [allTickets],
-  );
+  const breachedTickets = useMemo(() => openBreachedTickets.slice(0, 5), [openBreachedTickets]);
 
   const myTickets = useMemo(
     () =>
@@ -105,9 +101,9 @@ export function SupportDashboardScreen({ navigation }: Props) {
 
           <Text style={styles.eyebrow}>Overview</Text>
           <SupportStatsRow>
-            <StatsCard label="Open" value={stats?.openTickets ?? 0} onPress={() => navigation.navigate('Tickets')} />
-            <StatsCard label="In Progress" value={stats?.inProgressTickets ?? 0} />
-            <StatsCard label="Breached" value={stats?.slaBreaches ?? 0} tone="danger" />
+            <StatsCard label="Open" value={ticketStats.totalOpen} onPress={() => navigation.navigate('Tickets')} />
+            <StatsCard label="In Progress" value={ticketStats.totalInProgress} />
+            <StatsCard label="Breached" value={ticketStats.slaBreaches} tone="danger" />
             <StatsCard label="Today" value={stats?.ticketsToday ?? 0} />
             <StatsCard label="CSAT" value={stats?.avgCsatScore ? `${stats.avgCsatScore} ⭐` : '—'} tone="success" />
           </SupportStatsRow>

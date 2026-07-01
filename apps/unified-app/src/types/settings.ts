@@ -143,6 +143,7 @@ export type SettingsNavRoute =
   | 'OfficerSalary'
   | 'Notifications'
   | 'Integrations'
+  | 'WhatsAppSettings'
   | 'Appearance'
   | 'System'
   | 'BackupExport'

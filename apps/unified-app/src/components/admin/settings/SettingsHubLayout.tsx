@@ -23,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { route: 'OfficerSalary', label: 'Officer Salary', icon: '💵' },
   { route: 'Notifications', label: 'Notifications', icon: '🔔' },
   { route: 'Integrations', label: 'Integrations', icon: '🔌' },
+  { route: 'WhatsAppSettings', label: 'WhatsApp', icon: '💬' },
   { route: 'Appearance', label: 'Appearance', icon: '🎨' },
   { route: 'System', label: 'System', icon: '⚙️' },
   { route: 'BackupExport', label: 'Backup & Export', icon: '💾' },

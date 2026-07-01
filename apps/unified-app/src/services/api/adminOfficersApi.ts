@@ -21,6 +21,7 @@ import {
   OFFICER_DOCUMENT_DEFINITIONS,
 } from '@/types/api/officer';
 import { parseOfficerDocumentStoragePath } from '@/utils/uploadOfficerDocument';
+import { parseSupabaseFunctionError } from '@/utils/supabaseFunctionError';
 
 import { baseApi } from './baseApi';
 import type { TypedSupabaseClient } from './supabase';
@@ -589,7 +590,7 @@ export const adminOfficersApi = baseApi.injectEndpoints({
       query: (body) => ({
         handler: async (client) => {
           const { data, error } = await client.functions.invoke('admin-create-officer', { body });
-          if (error) throw error;
+          if (error) throw new Error(await parseSupabaseFunctionError(error));
           const result = data as {
             officerId?: string;
             authUserId?: string;

@@ -1,20 +1,23 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AdminButton, AdminScreenLayout, FormField, RoleGuard } from '@/components/admin';
 import { PayslipTimesheetCalendar } from '@/components/payroll/PayslipTimesheetCalendar';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePayslipCalculation } from '@/hooks/usePayslipCalculation';
+import { isPayslipLiveCalculationStale } from '@/services/payroll/payslipCalculationLoader';
 import {
   useGetPayslipAuditLogQuery,
+  useGetPayrollTriageAuditLogQuery,
+  useGetPayslipLiveCalculationQuery,
   useVoidPayslipMutation,
 } from '@/services/api/payrollApi';
 import { adminColors } from '@/theme/admin';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AdminPayrollStackParamList } from '@/types/navigation';
 import { formatCurrencyInrPrecise } from '@/utils/formatCurrency';
+import { formatIssueDate } from '@/utils/attendanceIssueLabels';
 import { payslipPdfViewerParams } from '@/utils/payslipNavigation';
 import { queryErrorMessage } from '@/utils/queryError';
 import { payslipNeedsReviewError } from '@/services/payslip/payslipValidation';
@@ -34,6 +37,8 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
   const [voidReason, setVoidReason] = useState('');
   const [showVoid, setShowVoid] = useState(false);
 
+  const [showOverrideDetails, setShowOverrideDetails] = useState(false);
+
   const {
     payslip,
     isLoading,
@@ -45,7 +50,30 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
     approve,
     isApproving,
     generatePDF,
+    runCalculation,
+    isCalculating,
   } = usePayslipCalculation(activePayslipId);
+
+  const {
+    data: liveCalc,
+    isLoading: isLiveLoading,
+    isError: isLiveError,
+    refetch: refetchLive,
+  } = useGetPayslipLiveCalculationQuery(
+    {
+      officerId,
+      payPeriodStart: periodStart,
+      payPeriodEnd: periodEnd,
+      payslipId: activePayslipId,
+    },
+    { skip: !activePayslipId },
+  );
+
+  const { data: triageAudit } = useGetPayrollTriageAuditLogQuery({
+    officerId,
+    payPeriodStart: periodStart,
+    payPeriodEnd: periodEnd,
+  });
 
   const { data: auditLog } = useGetPayslipAuditLogQuery(activePayslipId ?? '', {
     skip: !activePayslipId,
@@ -161,7 +189,60 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
   const periodMonth = Number(periodStart.slice(5, 7));
   const periodYear = Number(periodStart.slice(0, 4));
 
-  if (isLoading || !payslip) {
+  const overrideEntries = useMemo(
+    () =>
+      (triageAudit ?? []).filter(
+        (entry) =>
+          entry.resolutionType === 'payroll_bulk_override' ||
+          entry.resolutionType === 'triage_correction',
+      ),
+    [triageAudit],
+  );
+
+  const isStale = useMemo(() => {
+    if (!payslip || !liveCalc) return false;
+    return isPayslipLiveCalculationStale(liveCalc, {
+      grossEarnings: payslip.grossEarnings,
+      netPay: payslip.netPay,
+      totalActualHours: payslip.totalActualHours,
+      updatedAt: payslip.updatedAt,
+    });
+  }, [liveCalc, payslip]);
+
+  const displayStats = liveCalc ?? {
+    hourlyRate: payslip?.hourlyRate ?? 0,
+    totalActualHours: payslip?.totalActualHours ?? 0,
+    grossPay: payslip?.grossEarnings ?? 0,
+    netPay: payslip?.netPay ?? 0,
+    dailyBreakdown:
+      payslip?.dailyBreakdown?.map((row) => ({
+        date: row.date,
+        attendanceRecordId: row.attendanceRecordId,
+        isScheduledWorkingDay: row.isScheduledWorkingDay,
+        resolution: 'attendance' as const,
+        attendanceStatus: null,
+        actualHours: row.actualHours,
+        scheduledHours: 0,
+        displayLabel: row.displayLabel,
+        payRuleKey: null,
+        payFraction: 0,
+        hoursCounted: 0,
+        hourlyRateApplied: row.hourlyRateApplied ?? 0,
+        dayPay: row.dayPay,
+      })) ?? [],
+  };
+
+  const handleRegenerateSnapshot = useCallback(async () => {
+    try {
+      await runCalculation(officerId, periodStart, periodEnd, true);
+      await Promise.all([refetch(), refetchLive()]);
+      Alert.alert('Regenerated', 'Payslip totals now match the current calculation.');
+    } catch (e) {
+      Alert.alert('Error', e instanceof Error ? e.message : 'Regeneration failed');
+    }
+  }, [officerId, periodEnd, periodStart, refetch, refetchLive, runCalculation]);
+
+  if (isLoading || !payslip || isLiveLoading) {
     return (
       <AdminScreenLayout>
         <SkeletonLoader rows={10} />
@@ -169,10 +250,16 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
     );
   }
 
-  if (isError) {
+  if (isError || isLiveError) {
     return (
       <AdminScreenLayout>
-        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+        <ErrorState
+          message={queryErrorMessage(error)}
+          onRetry={() => {
+            void refetch();
+            void refetchLive();
+          }}
+        />
       </AdminScreenLayout>
     );
   }
@@ -183,6 +270,7 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
       <AdminScreenLayout>
         <ErrorState
           message={`Payslip data is inconsistent and cannot be displayed.\n\n${snapshotError}\n\nRegenerate this payslip from Payroll after fixing the underlying issues.`}
+          retryLabel="Fix & regenerate"
           onRetry={() =>
             navigation.replace('PayslipPreGeneration', {
               officerId,
@@ -192,6 +280,8 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
               payslipId: activePayslipId ?? undefined,
             })
           }
+          onBack={() => navigation.goBack()}
+          backLabel="Go back"
         />
       </AdminScreenLayout>
     );
@@ -212,21 +302,48 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
           <View style={styles.summaryCard}>
             <Text style={styles.employeeName}>{payslip.employeeName}</Text>
             <Text style={styles.period}>{payslip.payPeriodLabel}</Text>
+            {payslip.adminOverrideDayCount > 0 ? (
+              <Pressable
+                style={styles.overrideBanner}
+                onPress={() => setShowOverrideDetails(true)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.overrideBannerText}>
+                  Contains {payslip.adminOverrideDayCount} admin-overridden day
+                  {payslip.adminOverrideDayCount === 1 ? '' : 's'} — tap to review who changed what
+                  and why before approving.
+                </Text>
+              </Pressable>
+            ) : null}
+            {isStale ? (
+              <View style={styles.staleBanner}>
+                <Text style={styles.staleBannerText}>
+                  Stale snapshot — attendance, salary, or override data changed since this payslip was
+                  generated. Totals below reflect the current calculation; regenerate to persist them.
+                </Text>
+                <AdminButton
+                  label={isCalculating ? 'Regenerating…' : 'Regenerate payslip'}
+                  variant="secondary"
+                  onPress={() => void handleRegenerateSnapshot()}
+                  disabled={isCalculating}
+                />
+              </View>
+            ) : null}
             <View style={styles.statsRow}>
               <View style={styles.stat}>
-                <Text style={styles.statVal}>{formatCurrencyInrPrecise(payslip.hourlyRate)}</Text>
+                <Text style={styles.statVal}>{formatCurrencyInrPrecise(displayStats.hourlyRate)}</Text>
                 <Text style={styles.statLbl}>Hourly rate</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statVal}>{payslip.totalActualHours}h</Text>
+                <Text style={styles.statVal}>{displayStats.totalActualHours}h</Text>
                 <Text style={styles.statLbl}>Total hours</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statVal}>{formatCurrencyInrPrecise(payslip.grossEarnings)}</Text>
+                <Text style={styles.statVal}>{formatCurrencyInrPrecise(displayStats.grossPay)}</Text>
                 <Text style={styles.statLbl}>Gross</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statVal}>{formatCurrencyInrPrecise(payslip.netPay)}</Text>
+                <Text style={styles.statVal}>{formatCurrencyInrPrecise(displayStats.netPay)}</Text>
                 <Text style={styles.statLbl}>Net pay</Text>
               </View>
             </View>
@@ -235,7 +352,18 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
           <PayslipTimesheetCalendar
             year={periodYear}
             month={periodMonth}
-            breakdown={payslip.dailyBreakdown ?? []}
+            breakdown={(displayStats.dailyBreakdown ?? []).map((row, index) => ({
+              id: `live-${row.date}-${index}`,
+              payslipId: payslip.id,
+              date: row.date,
+              attendanceRecordId: row.attendanceRecordId,
+              isScheduledWorkingDay: row.isScheduledWorkingDay,
+              actualHours: row.actualHours,
+              displayLabel: row.displayLabel,
+              dayPay: row.dayPay,
+              hourlyRateApplied: row.hourlyRateApplied,
+              createdAt: payslip.updatedAt,
+            }))}
             accent="admin"
           />
 
@@ -331,6 +459,35 @@ export function PayslipReviewScreen({ route, navigation }: Props) {
           </View>
         </ScrollView>
 
+        <Modal visible={showOverrideDetails} transparent animationType="slide">
+          <View style={styles.modalBackdrop}>
+            <ScrollView contentContainerStyle={styles.modalSheetScroll}>
+              <Text style={styles.modalTitle}>Admin override details</Text>
+              <Text style={styles.modalHint}>
+                Corrections tagged as payroll admin override or triage correction for this period.
+              </Text>
+              {overrideEntries.length ? (
+                overrideEntries.map((entry) => (
+                  <View key={entry.id} style={styles.overrideRow}>
+                    <Text style={styles.overrideDate}>{formatIssueDate(entry.shiftDate)}</Text>
+                    <Text style={styles.overrideStatus}>
+                      {(entry.newStatus ?? 'updated').replace(/_/g, ' ')}
+                      {entry.resolutionType === 'payroll_bulk_override' ? ' · bulk override' : ' · triage'}
+                    </Text>
+                    <Text style={styles.overrideMeta}>
+                      {new Date(entry.performedAt).toLocaleString('en-IN')}
+                    </Text>
+                    <Text style={styles.overrideReason}>{entry.reason}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.auditEmpty}>No override audit entries found for this period.</Text>
+              )}
+              <AdminButton label="Close" variant="primary" onPress={() => setShowOverrideDetails(false)} />
+            </ScrollView>
+          </View>
+        </Modal>
+
         <Modal visible={showVoid} transparent animationType="fade">
           <View style={styles.modalBackdrop}>
             <View style={styles.modalCard}>
@@ -411,6 +568,25 @@ const styles = StyleSheet.create({
   },
   employeeName: { fontSize: 18, fontWeight: '700', color: adminColors.primary },
   period: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm },
+  overrideBanner: {
+    backgroundColor: colors.amberLight,
+    borderWidth: 1,
+    borderColor: colors.warningAmber,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  overrideBannerText: { fontSize: 12, fontWeight: '600', color: colors.warningAmber },
+  staleBanner: {
+    backgroundColor: colors.amberLight,
+    borderWidth: 1,
+    borderColor: colors.warningAmber,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  staleBannerText: { fontSize: 12, color: colors.textPrimary },
   statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   stat: { flex: 1, minWidth: 70 },
   statVal: { fontWeight: '700', fontSize: 14, color: colors.textPrimary },
@@ -465,4 +641,23 @@ const styles = StyleSheet.create({
   auditMeta: { fontSize: 11, color: colors.textSecondary },
   auditReason: { fontSize: 12, color: colors.textPrimary },
   auditEmpty: { fontSize: 12, color: colors.textSecondary },
+  modalSheetScroll: {
+    backgroundColor: colors.surfaceWhite,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.sm,
+    marginTop: 'auto',
+    maxHeight: '80%',
+  },
+  overrideRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+    paddingVertical: spacing.sm,
+    gap: spacing.xxs,
+  },
+  overrideDate: { fontWeight: '700', fontSize: 13, color: adminColors.primary },
+  overrideStatus: { fontSize: 12, fontWeight: '600', color: colors.textPrimary, textTransform: 'capitalize' },
+  overrideMeta: { fontSize: 11, color: colors.textSecondary },
+  overrideReason: { fontSize: 12, color: colors.textPrimary },
 });

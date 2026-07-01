@@ -8,16 +8,28 @@ import type { CalendarDayCell } from '@/types/payslip';
 import { breakdownToCalendarCells } from '@/types/payslip';
 import type { PayslipDailyBreakdown } from '@/types/payslip';
 
-const COLOR_MAP: Record<CalendarDayCell['colorKey'], string> = {
+const CELL_BG_MAP: Record<CalendarDayCell['colorKey'], string> = {
+  present: colors.emeraldLight,
+  half_day: colors.amberLight,
+  quarter_day: colors.amberLight,
+  partial: '#E0F7FA',
+  absent: colors.redLight,
+  weekly_off: colors.surfaceWhite,
+  holiday: '#DBEAFE',
+  leave: '#EDE9FE',
+  extra: '#DCFCE7',
+};
+
+const CELL_TEXT_MAP: Record<CalendarDayCell['colorKey'], string> = {
   present: colors.successGreen,
   half_day: colors.warningAmber,
   quarter_day: colors.warningAmber,
   partial: colors.accentTeal,
   absent: colors.errorRed,
-  weekly_off: colors.borderDefault,
+  weekly_off: colors.textSecondary,
   holiday: colors.primaryNavy,
   leave: '#7c3aed',
-  extra: colors.emerald,
+  extra: '#15803d',
 };
 
 const SYMBOL_MAP: Record<CalendarDayCell['colorKey'], string> = {
@@ -69,7 +81,8 @@ export const PayslipTimesheetCalendar = memo(function PayslipTimesheetCalendar({
       if (!cell) {
         return <View key={`empty-${index}`} style={styles.cell} />;
       }
-      const bg = COLOR_MAP[cell.colorKey];
+      const bg = CELL_BG_MAP[cell.colorKey];
+      const textColor = CELL_TEXT_MAP[cell.colorKey];
       const symbol = SYMBOL_MAP[cell.colorKey];
       const hasFill = cell.colorKey !== 'weekly_off' && cell.displayLabel !== '';
 
@@ -82,10 +95,12 @@ export const PayslipTimesheetCalendar = memo(function PayslipTimesheetCalendar({
           ]}
           onPress={() => onDayPress?.(cell.date)}
         >
-          <Text style={[styles.dayNum, hasFill && styles.dayNumActive]}>{cell.day}</Text>
-          <Text style={[styles.symbol, hasFill && styles.dayNumActive]}>{symbol}</Text>
+          <Text style={[styles.dayNum, hasFill && { color: textColor, fontWeight: '600' }]}>
+            {cell.day}
+          </Text>
+          <Text style={[styles.symbol, hasFill && { color: textColor }]}>{symbol}</Text>
           {cell.actualHours > 0 ? (
-            <Text style={[styles.hours, hasFill && styles.dayNumActive]}>{cell.actualHours}h</Text>
+            <Text style={[styles.hours, hasFill && { color: textColor }]}>{cell.actualHours}h</Text>
           ) : null}
         </Pressable>
       );
@@ -109,10 +124,17 @@ export const PayslipTimesheetCalendar = memo(function PayslipTimesheetCalendar({
         </View>
       ))}
       <View style={styles.legend}>
-        {(Object.keys(COLOR_MAP) as CalendarDayCell['colorKey'][]).map((key) => (
+        {(Object.keys(CELL_BG_MAP) as CalendarDayCell['colorKey'][]).map((key) => (
           <View key={key} style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: COLOR_MAP[key] }]} />
-            <Text style={styles.legendText}>{key.replace('_', ' ')}</Text>
+            <View
+              style={[
+                styles.legendDot,
+                { backgroundColor: CELL_BG_MAP[key], borderColor: CELL_TEXT_MAP[key] },
+              ]}
+            />
+            <Text style={[styles.legendText, { color: CELL_TEXT_MAP[key] }]}>
+              {key.replace('_', ' ')}
+            </Text>
           </View>
         ))}
       </View>
@@ -135,7 +157,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 11,
-    color: colors.textSecondary,
+    color: colors.textPrimary,
     fontWeight: '600',
   },
   weekRow: { flexDirection: 'row' },
@@ -152,12 +174,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderDefault,
   },
-  dayNum: { fontSize: 10, color: colors.textSecondary },
-  dayNumActive: { color: colors.white, fontWeight: '600' },
-  symbol: { fontSize: 12, fontWeight: '700' },
-  hours: { fontSize: 8 },
+  dayNum: { fontSize: 10, color: colors.textPrimary },
+  symbol: { fontSize: 12, fontWeight: '700', color: colors.textPrimary },
+  hours: { fontSize: 8, color: colors.textPrimary },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontSize: 9, color: colors.textSecondary, textTransform: 'capitalize' },
+  legendDot: { width: 8, height: 8, borderRadius: 4, borderWidth: 1 },
+  legendText: { fontSize: 9, fontWeight: '600', textTransform: 'capitalize' },
 });

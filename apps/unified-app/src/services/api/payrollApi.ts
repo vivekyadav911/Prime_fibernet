@@ -6,6 +6,13 @@ import {
   mapShiftDefinition,
   missingOfficerFields,
 } from '@/services/payroll/payrollDashboardBuilder';
+import type { BulkOverrideStatusChoice } from '@/services/payroll/bulkOverrideEstimate';
+import { resolveBulkOverrideStorage } from '@/services/payroll/bulkOverrideEstimate';
+import {
+  buildLiveCalculationView,
+  fetchPayrollCompensation,
+  loadPayslipCalculation,
+} from '@/services/payroll/payslipCalculationLoader';
 import { fetchPayslipApprovalValidation } from '@/services/payroll/payslipApprovalContext';
 import { dayBeforeIso } from '@/services/payslip/payslipValidation';
 import type {
@@ -45,6 +52,143 @@ export const PAYSLIPS_BUCKET = 'payslips';
 
 export function buildPayslipStoragePath(officerId: string, payslipId: string): string {
   return `${officerId}/${payslipId}.pdf`;
+}
+
+export type PayrollTriageAuditEntry = {
+  id: string;
+  officerId: string;
+  shiftDate: string;
+  payPeriodStart: string;
+  payPeriodEnd: string;
+  action: string;
+  resolutionType: string;
+  previousSnapshot: Record<string, unknown>;
+  newStatus: string | null;
+  reason: string;
+  performedBy: string | null;
+  performedAt: string;
+  metadata: Record<string, unknown>;
+};
+
+async function insertPayrollTriageAudit(
+  client: TypedSupabaseClient,
+  entry: {
+    officerId: string;
+    shiftDate: string;
+    payPeriodStart: string;
+    payPeriodEnd: string;
+    action: string;
+    resolutionType: string;
+    previousSnapshot?: Record<string, unknown>;
+    newStatus?: string | null;
+    reason: string;
+    performedBy: string | null;
+    metadata?: Record<string, unknown>;
+  },
+): Promise<void> {
+  const { error } = await client.from('payroll_attendance_triage_log').insert({
+    officer_id: entry.officerId,
+    shift_date: entry.shiftDate,
+    pay_period_start: entry.payPeriodStart,
+    pay_period_end: entry.payPeriodEnd,
+    action: entry.action,
+    resolution_type: entry.resolutionType,
+    previous_snapshot: entry.previousSnapshot ?? {},
+    new_status: entry.newStatus ?? null,
+    reason: entry.reason,
+    performed_by: entry.performedBy,
+    metadata: entry.metadata ?? {},
+  });
+  if (error) throw error;
+}
+
+async function fetchAdminDisplayName(client: TypedSupabaseClient): Promise<string> {
+  const { data: session } = await client.auth.getSession();
+  const userId = session.session?.user?.id;
+  if (!userId) return 'Admin';
+  const { data: userRow } = await client
+    .from('users')
+    .select('email, name')
+    .eq('id', userId)
+    .maybeSingle();
+  return userRow?.name?.trim() || userRow?.email || 'Admin';
+}
+
+type ShiftRowSnapshot = {
+  id?: string;
+  check_in_time?: string | null;
+  check_out_time?: string | null;
+  attendance_status?: string | null;
+  working_hours?: number | null;
+  status?: string | null;
+};
+
+async function writePayrollTriageShift(
+  client: TypedSupabaseClient,
+  input: {
+    officerId: string;
+    date: string;
+    status: string;
+    reason: string;
+    resolutionType: 'triage_correction' | 'payroll_bulk_override';
+    performedBy: string | null;
+    adminName: string;
+    existing: ShiftRowSnapshot | null;
+    checkIn?: string;
+    checkOut?: string;
+    payrollBulkPayMode?: 'paid' | 'unpaid' | null;
+  },
+): Promise<void> {
+  const notePrefix =
+    input.resolutionType === 'payroll_bulk_override'
+      ? '[Payroll bulk override — payroll_bulk_override]'
+      : `[Payroll triage — ${input.resolutionType}]`;
+  const manualNote = `${notePrefix} ${input.reason.trim()} — ${input.adminName}`;
+
+  const checkIn = input.checkIn ?? input.existing?.check_in_time ?? null;
+  const checkOut = input.checkOut ?? input.existing?.check_out_time ?? null;
+
+  const workingHours =
+    checkIn && checkOut
+      ? Math.round(
+          ((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 3_600_000) * 100,
+        ) / 100
+      : input.resolutionType === 'payroll_bulk_override' ||
+          input.status === 'absent' ||
+          input.status === 'on_leave'
+        ? 0
+        : input.existing?.working_hours != null
+          ? Number(input.existing.working_hours)
+          : null;
+
+  const shiftStatus = checkIn && !checkOut ? 'active' : 'completed';
+
+  const row = {
+    officer_id: input.officerId,
+    shift_date: input.date,
+    check_in_time: checkIn,
+    check_out_time: checkOut,
+    attendance_status: input.status,
+    check_in_method: 'admin_override',
+    notes: manualNote,
+    status: shiftStatus,
+    working_hours: workingHours,
+    manual_entry_by: input.performedBy,
+    manual_entry_by_name: input.adminName,
+    manual_entry_reason: input.reason.trim(),
+    manual_entry_at: new Date().toISOString(),
+    payroll_resolution_type: input.resolutionType,
+    payroll_bulk_pay_mode: input.payrollBulkPayMode ?? null,
+  };
+
+  if (input.existing?.id) {
+    const { error } = await client.from('shifts').update(row).eq('id', input.existing.id);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await client.from('shifts').insert(row);
+  if (error) throw error;
 }
 
 async function insertPayrollAudit(
@@ -89,7 +233,6 @@ export const payrollApi = baseApi.injectEndpoints({
             { data: shiftDefs, error: defErr },
             { data: contracts, error: contractErr },
             { data: bankRows, error: bankErr },
-            { data: compensations, error: compErr },
           ] = await Promise.all([
             client
               .from('officers')
@@ -108,7 +251,7 @@ export const payrollApi = baseApi.injectEndpoints({
             client
               .from('shifts')
               .select(
-                'id, officer_id, shift_date, check_in_time, check_out_time, attendance_status, working_hours, status',
+                'id, officer_id, shift_date, check_in_time, check_out_time, attendance_status, working_hours, status, payroll_resolution_type',
               )
               .gte('shift_date', period.start)
               .lte('shift_date', period.end),
@@ -124,13 +267,8 @@ export const payrollApi = baseApi.injectEndpoints({
               ),
             client
               .from('employment_contracts')
-              .select('officer_id, employee_designation, employee_department'),
+              .select('officer_id, employee_designation, employee_department, status, ctc_annual, basic_salary_monthly, date_of_joining'),
             client.from('officer_bank_details').select('officer_id, account_number'),
-            client
-              .from('employee_compensation')
-              .select('officer_id')
-              .lte('effective_from', period.end)
-              .or(`effective_to.is.null,effective_to.gte.${period.start}`),
           ]);
 
           if (offErr) throw offErr;
@@ -140,17 +278,22 @@ export const payrollApi = baseApi.injectEndpoints({
           if (defErr) throw defErr;
           if (contractErr) throw contractErr;
           if (bankErr) throw bankErr;
-          if (compErr) throw compErr;
 
+          const eligibleContractStatuses = new Set(['generated', 'sent', 'signed', 'active']);
           const contractByOfficer = new Map(
             (contracts ?? []).map((c) => [c.officer_id as string, c]),
           );
           const bankByOfficer = new Map((bankRows ?? []).map((b) => [b.officer_id as string, b]));
-          const compOfficerIds = new Set((compensations ?? []).map((c) => c.officer_id as string));
 
           const profiles = (officers ?? []).map((o) => {
             const contract = contractByOfficer.get(o.id as string);
             const bank = bankByOfficer.get(o.id as string);
+            const hasCompensation = Boolean(
+              contract &&
+                eligibleContractStatuses.has(contract.status as string) &&
+                (Number(contract.ctc_annual) > 0 ||
+                  Number(contract.basic_salary_monthly ?? 0) > 0),
+            );
             return {
               officer_id: o.id as string,
               full_name: o.full_name as string | null,
@@ -158,7 +301,7 @@ export const payrollApi = baseApi.injectEndpoints({
               designation: (contract?.employee_designation as string) ?? null,
               department: (contract?.employee_department as string) ?? null,
               bank_account_number: (bank?.account_number as string) ?? null,
-              has_compensation: compOfficerIds.has(o.id as string),
+              has_compensation: hasCompensation,
             };
           });
 
@@ -172,7 +315,7 @@ export const payrollApi = baseApi.injectEndpoints({
             periodStart: period.start,
             periodEnd: period.end,
             periodLabel: period.label,
-          });
+          }).filter((entry) => entry.missingOfficerFields.length === 0);
         },
       }),
       providesTags: ['Payroll', 'Payslips'],
@@ -189,8 +332,16 @@ export const payrollApi = baseApi.injectEndpoints({
               force_overwrite_draft: body.forceOverwriteDraft ?? false,
             },
           });
-          if (error) throw error;
-          const result = data as Record<string, unknown>;
+          const result = (data ?? {}) as Record<string, unknown>;
+          if (error) {
+            const apiMessage =
+              typeof result.error === 'string'
+                ? result.error
+                : error instanceof Error
+                  ? error.message
+                  : 'Generation failed';
+            throw new Error(apiMessage);
+          }
           if (result.error && !result.payslip_id && !result.blocked) {
             const code = result.code as string | undefined;
             const unresolved = (result.unresolved_dates as string[]) ?? [];
@@ -705,7 +856,6 @@ export const payrollApi = baseApi.injectEndpoints({
             { data: officer },
             { data: contract },
             { data: bank },
-            { data: compRows },
             { data: shiftLink },
             { data: shifts },
             { data: holidays },
@@ -722,13 +872,6 @@ export const payrollApi = baseApi.injectEndpoints({
               .eq('officer_id', officerId)
               .maybeSingle(),
             client
-              .from('employee_compensation')
-              .select('officer_id')
-              .eq('officer_id', officerId)
-              .lte('effective_from', payPeriodEnd)
-              .or(`effective_to.is.null,effective_to.gte.${payPeriodStart}`)
-              .limit(1),
-            client
               .from('shift_definition_officers')
               .select('shift_definitions(start_time, end_time, working_days, is_overnight)')
               .eq('officer_id', officerId)
@@ -736,7 +879,7 @@ export const payrollApi = baseApi.injectEndpoints({
             client
               .from('shifts')
               .select(
-                'id, shift_date, check_in_time, check_out_time, attendance_status, working_hours, status',
+                'id, shift_date, check_in_time, check_out_time, attendance_status, working_hours, status, payroll_resolution_type, payroll_bulk_pay_mode',
               )
               .eq('officer_id', officerId)
               .gte('shift_date', payPeriodStart)
@@ -748,6 +891,8 @@ export const payrollApi = baseApi.injectEndpoints({
               .lte('holiday_date', payPeriodEnd),
           ]);
 
+          const compensation = await fetchPayrollCompensation(client, officerId);
+
           const profile = {
             officer_id: officerId,
             full_name: officer?.full_name ?? null,
@@ -755,7 +900,7 @@ export const payrollApi = baseApi.injectEndpoints({
             designation: contract?.employee_designation ?? null,
             department: contract?.employee_department ?? null,
             bank_account_number: bank?.account_number ?? null,
-            has_compensation: (compRows ?? []).length > 0,
+            has_compensation: compensation.hasContractSource,
           };
 
           const shiftDef = mapShiftDefinition(
@@ -782,11 +927,21 @@ export const payrollApi = baseApi.injectEndpoints({
                 attendance_status: s.attendance_status as string | null,
                 working_hours: s.working_hours as number | null,
                 status: s.status as string | null,
+                payroll_resolution_type: s.payroll_resolution_type as string | null,
+                payroll_bulk_pay_mode: s.payroll_bulk_pay_mode as 'paid' | 'unpaid' | null,
               }),
             ),
             holidays: (holidays ?? []).map((h) => h.holiday_date as string),
             missingOfficerFields: missingOfficerFields(profile),
             hasCompensation: profile.has_compensation,
+            compensationWarnings: compensation.warnings,
+            compensationNotices: compensation.informationalNotices,
+            contractCompensations: compensation.compensations.map((row) => ({
+              id: row.id,
+              monthlySalary: row.monthlySalary,
+              effectiveFrom: row.effectiveFrom,
+              effectiveTo: row.effectiveTo,
+            })),
           });
         },
       }),
@@ -939,6 +1094,302 @@ export const payrollApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Payroll', 'Payslips'],
     }),
+
+    getPayrollTriageAuditLog: builder.query<
+      PayrollTriageAuditEntry[],
+      { officerId: string; payPeriodStart: string; payPeriodEnd: string }
+    >({
+      query: ({ officerId, payPeriodStart, payPeriodEnd }) => ({
+        handler: async (client) => {
+          const { data, error } = await client
+            .from('payroll_attendance_triage_log')
+            .select('*')
+            .eq('officer_id', officerId)
+            .eq('pay_period_start', payPeriodStart)
+            .eq('pay_period_end', payPeriodEnd)
+            .order('performed_at', { ascending: false });
+          if (error) throw error;
+          return (data ?? []).map((row) => ({
+            id: row.id as string,
+            officerId: row.officer_id as string,
+            shiftDate: row.shift_date as string,
+            payPeriodStart: row.pay_period_start as string,
+            payPeriodEnd: row.pay_period_end as string,
+            action: row.action as string,
+            resolutionType: row.resolution_type as string,
+            previousSnapshot: (row.previous_snapshot as Record<string, unknown>) ?? {},
+            newStatus: (row.new_status as string) ?? null,
+            reason: row.reason as string,
+            performedBy: (row.performed_by as string) ?? null,
+            performedAt: row.performed_at as string,
+            metadata: (row.metadata as Record<string, unknown>) ?? {},
+          }));
+        },
+      }),
+      providesTags: ['Payroll'],
+    }),
+
+    resolvePayrollAttendanceDay: builder.mutation<
+      void,
+      {
+        officerId: string;
+        date: string;
+        payPeriodStart: string;
+        payPeriodEnd: string;
+        status: string;
+        reason: string;
+        checkIn?: string;
+        checkOut?: string;
+        resolutionType?: 'triage_correction' | 'payroll_bulk_override';
+      }
+    >({
+      query: (body) => ({
+        handler: async (client) => {
+          const { data: session } = await client.auth.getSession();
+          const performedBy = session.session?.user?.id ?? null;
+          const adminName = await fetchAdminDisplayName(client);
+          const resolutionType = body.resolutionType ?? 'triage_correction';
+
+          const { data: existing } = await client
+            .from('shifts')
+            .select('*')
+            .eq('officer_id', body.officerId)
+            .eq('shift_date', body.date)
+            .maybeSingle();
+
+          await writePayrollTriageShift(client, {
+            officerId: body.officerId,
+            date: body.date,
+            status: body.status,
+            reason: body.reason.trim(),
+            resolutionType,
+            performedBy,
+            adminName,
+            existing: existing as ShiftRowSnapshot | null,
+            checkIn: body.checkIn,
+            checkOut: body.checkOut,
+          });
+
+          await insertPayrollTriageAudit(client, {
+            officerId: body.officerId,
+            shiftDate: body.date,
+            payPeriodStart: body.payPeriodStart,
+            payPeriodEnd: body.payPeriodEnd,
+            action: 'status_override',
+            resolutionType,
+            previousSnapshot: existing
+              ? {
+                  attendance_status: existing.attendance_status,
+                  check_in_time: existing.check_in_time,
+                  check_out_time: existing.check_out_time,
+                }
+              : {},
+            newStatus: body.status,
+            reason: body.reason.trim(),
+            performedBy,
+            metadata: { source: 'payroll_triage' },
+          });
+        },
+      }),
+      invalidatesTags: ['Payroll', 'Attendance', 'Payslips'],
+    }),
+
+    completePayrollCheckOut: builder.mutation<
+      void,
+      {
+        officerId: string;
+        shiftId: string;
+        date: string;
+        payPeriodStart: string;
+        payPeriodEnd: string;
+        checkOut: string;
+        reason: string;
+      }
+    >({
+      query: (body) => ({
+        handler: async (client) => {
+          const { data: session } = await client.auth.getSession();
+          const performedBy = session.session?.user?.id ?? null;
+          const adminName = await fetchAdminDisplayName(client);
+
+          const { data: existing } = await client
+            .from('shifts')
+            .select('*')
+            .eq('id', body.shiftId)
+            .single();
+
+          const checkIn = existing.check_in_time as string;
+          const workingHours = Math.round(
+            ((new Date(body.checkOut).getTime() - new Date(checkIn).getTime()) / 3_600_000) * 100,
+          ) / 100;
+
+          const { error } = await client
+            .from('shifts')
+            .update({
+              check_out_time: body.checkOut,
+              status: 'completed',
+              working_hours: workingHours,
+              manual_entry_by: performedBy,
+              manual_entry_by_name: adminName,
+              manual_entry_reason: body.reason.trim(),
+              manual_entry_at: new Date().toISOString(),
+              payroll_resolution_type: 'triage_correction',
+              notes: `[Payroll triage — complete check-out] ${body.reason.trim()} — ${adminName}`,
+            })
+            .eq('id', body.shiftId);
+          if (error) throw error;
+
+          await insertPayrollTriageAudit(client, {
+            officerId: body.officerId,
+            shiftDate: body.date,
+            payPeriodStart: body.payPeriodStart,
+            payPeriodEnd: body.payPeriodEnd,
+            action: 'complete_checkout',
+            resolutionType: 'triage_correction',
+            previousSnapshot: {
+              check_out_time: existing.check_out_time,
+              status: existing.status,
+            },
+            newStatus: existing.attendance_status as string,
+            reason: body.reason.trim(),
+            performedBy,
+          });
+        },
+      }),
+      invalidatesTags: ['Payroll', 'Attendance', 'Payslips'],
+    }),
+
+    bulkPayrollAttendanceOverride: builder.mutation<
+      { resolved: number },
+      {
+        officerId: string;
+        dates: string[];
+        payPeriodStart: string;
+        payPeriodEnd: string;
+        choice: BulkOverrideStatusChoice;
+        reason: string;
+      }
+    >({
+      query: (body) => ({
+        handler: async (client) => {
+          const { data: session } = await client.auth.getSession();
+          const performedBy = session.session?.user?.id ?? null;
+          const adminName = await fetchAdminDisplayName(client);
+          const { attendanceStatus, payrollBulkPayMode } = resolveBulkOverrideStorage(body.choice);
+
+          let resolved = 0;
+          for (const date of body.dates) {
+            const { data: existing } = await client
+              .from('shifts')
+              .select('*')
+              .eq('officer_id', body.officerId)
+              .eq('shift_date', date)
+              .maybeSingle();
+
+            await writePayrollTriageShift(client, {
+              officerId: body.officerId,
+              date,
+              status: attendanceStatus,
+              reason: body.reason.trim(),
+              resolutionType: 'payroll_bulk_override',
+              performedBy,
+              adminName,
+              existing: existing as ShiftRowSnapshot | null,
+              payrollBulkPayMode,
+            });
+
+            await insertPayrollTriageAudit(client, {
+              officerId: body.officerId,
+              shiftDate: date,
+              payPeriodStart: body.payPeriodStart,
+              payPeriodEnd: body.payPeriodEnd,
+              action: 'bulk_override',
+              resolutionType: 'payroll_bulk_override',
+              previousSnapshot: existing
+                ? { attendance_status: existing.attendance_status }
+                : {},
+              newStatus: attendanceStatus,
+              reason: body.reason.trim(),
+              performedBy,
+              metadata: {
+                bulk: true,
+                override_choice: body.choice,
+                payroll_bulk_pay_mode: payrollBulkPayMode,
+              },
+            });
+            resolved += 1;
+          }
+          return { resolved };
+        },
+      }),
+      invalidatesTags: ['Payroll', 'Attendance', 'Payslips'],
+    }),
+
+    getPayrollCompensationForOfficer: builder.query<
+      Awaited<ReturnType<typeof fetchPayrollCompensation>>,
+      { officerId: string }
+    >({
+      query: ({ officerId }) => ({
+        handler: async (client) =>
+          fetchPayrollCompensation(client, officerId, { includeLegacyOrphans: true }),
+      }),
+      providesTags: ['PayslipSettings', 'Payroll'],
+    }),
+
+    getPayslipLiveCalculation: builder.query<
+      ReturnType<typeof buildLiveCalculationView> & { blocked: boolean; blockingDates: string[] },
+      {
+        officerId: string;
+        payPeriodStart: string;
+        payPeriodEnd: string;
+        payslipId?: string | null;
+      }
+    >({
+      query: ({ officerId, payPeriodStart, payPeriodEnd, payslipId }) => ({
+        handler: async (client) => {
+          let preservedAdditions = 0;
+          let preservedDeductions = 0;
+          if (payslipId) {
+            const { data: items } = await client
+              .from('payslip_line_items')
+              .select('item_type, amount')
+              .eq('payslip_id', payslipId);
+            (items ?? []).forEach((item) => {
+              if (item.item_type === 'addition') preservedAdditions += Number(item.amount);
+              else preservedDeductions += Number(item.amount);
+            });
+          }
+
+          const period = periodFromMonthYear(
+            Number(payPeriodStart.slice(5, 7)),
+            Number(payPeriodStart.slice(0, 4)),
+          );
+
+          const loaded = await loadPayslipCalculation(client, {
+            officerId,
+            payPeriodStart,
+            payPeriodEnd,
+            payPeriodLabel: period.label,
+            preservedAdditions,
+            preservedDeductions,
+          });
+
+          const view = buildLiveCalculationView(
+            loaded.result,
+            loaded.compensation,
+            preservedAdditions,
+            preservedDeductions,
+          );
+
+          return {
+            ...view,
+            blocked: loaded.result.blocked,
+            blockingDates: loaded.result.blockingDates,
+          };
+        },
+      }),
+      providesTags: ['Payroll', 'Payslips'],
+    }),
   }),
 });
 
@@ -953,6 +1404,10 @@ export const {
   useRemovePayslipLineItemMutation,
   useApprovePayslipMutation,
   useBulkApprovePayslipsMutation,
+  useGetPayrollTriageAuditLogQuery,
+  useResolvePayrollAttendanceDayMutation,
+  useCompletePayrollCheckOutMutation,
+  useBulkPayrollAttendanceOverrideMutation,
   useVoidPayslipMutation,
   useUpdatePayslipPdfUrlMutation,
   useLazyGetPayslipSignedUrlQuery,
@@ -966,6 +1421,8 @@ export const {
   useUpdateCompanyHolidayMutation,
   useDeleteCompanyHolidayMutation,
   useGetEmployeeCompensationsQuery,
+  useGetPayrollCompensationForOfficerQuery,
+  useGetPayslipLiveCalculationQuery,
   useUpsertEmployeeCompensationMutation,
 } = payrollApi;
 

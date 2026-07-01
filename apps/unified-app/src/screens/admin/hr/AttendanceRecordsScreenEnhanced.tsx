@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
@@ -174,10 +174,27 @@ function AttendanceHistoryCard({ item }: { item: AttendanceRecord }) {
   );
 }
 
-export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
+export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
   const dispatch = useAppDispatch();
   const prefs = useAppSelector((s) => s.attendance.adminRecordsPrefs);
   const { viewMode, selectedDate, dateFrom, dateTo, useDateRange } = prefs;
+
+  const [searchQuery, setSearchQuery] = useState(route.params?.officerName ?? '');
+
+  useEffect(() => {
+    const params = route.params;
+    if (!params?.dateFrom && !params?.dateTo && !params?.officerName) return;
+    dispatch(
+      setAdminRecordsPrefs({
+        useDateRange: Boolean(params.dateFrom && params.dateTo),
+        ...(params.dateFrom ? { dateFrom: params.dateFrom } : {}),
+        ...(params.dateTo ? { dateTo: params.dateTo } : {}),
+      }),
+    );
+    if (params.officerName) {
+      setSearchQuery(params.officerName);
+    }
+  }, [dispatch, route.params]);
 
   const queryArgs = useMemo(
     () =>
@@ -191,7 +208,6 @@ export function AttendanceRecordsScreenEnhanced({ navigation }: Props) {
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
   const [includeCalendarInPdf, setIncludeCalendarInPdf] = useState(viewMode === 'calendar');
   const [exportError, setExportError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<AttendanceStatusFilter>('all');
   const [sortBy, setSortBy] = useState<AttendanceRecordsSortKey>('date_desc');
 

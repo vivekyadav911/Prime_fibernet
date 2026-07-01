@@ -8,6 +8,9 @@ import { generatePdfFromHtml } from '@/utils/htmlToPdf';
 
 const ACCENT = '#1e3a5f';
 const BORDER = '#e2e8f0';
+const TEXT_BODY = '#1e293b';
+const TEXT_MUTED = '#334155';
+const TEXT_SUBTLE = '#475569';
 
 function escapeHtml(value: string): string {
   return value
@@ -34,13 +37,13 @@ const LABEL_SYMBOLS: Record<string, { symbol: string; color: string }> = {
   'Quarter Day': { symbol: '¼', color: '#d97706' },
   Partial: { symbol: '·', color: '#ca8a04' },
   Absent: { symbol: '✕', color: '#dc2626' },
-  'Weekly Off': { symbol: '—', color: '#94a3b8' },
+  'Weekly Off': { symbol: '—', color: TEXT_MUTED },
   Holiday: { symbol: '★', color: '#2563eb' },
   Leave: { symbol: 'L', color: '#7c3aed' },
 };
 
 function symbolForLabel(label: string): { symbol: string; color: string } {
-  return LABEL_SYMBOLS[label] ?? { symbol: '·', color: '#64748b' };
+  return LABEL_SYMBOLS[label] ?? { symbol: '·', color: TEXT_MUTED };
 }
 
 function buildCalendarHtml(breakdown: PayslipDailyBreakdown[], periodStart: string): string {
@@ -59,7 +62,7 @@ function buildCalendarHtml(breakdown: PayslipDailyBreakdown[], periodStart: stri
     const date = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const row = byDate.get(date);
     const label = row?.displayLabel ?? '';
-    const { symbol, color } = label ? symbolForLabel(label) : { symbol: '', color: '#ccc' };
+    const { symbol, color } = label ? symbolForLabel(label) : { symbol: '', color: TEXT_SUBTLE };
     const hours = row?.actualHours ? `${row.actualHours}h` : '';
     cells.push(`
       <td class="cal-cell">
@@ -122,44 +125,44 @@ export function buildPayslipHtml(payslip: Payslip): string {
   <meta charset="utf-8" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: #1e293b; padding: 24px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: ${TEXT_BODY}; padding: 24px; }
     .header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid ${ACCENT}; padding-bottom: 12px; }
     .company-name { font-size: 18px; font-weight: 700; color: ${ACCENT}; }
-    .company-addr { font-size: 10px; color: #64748b; margin-top: 4px; max-width: 280px; }
+    .company-addr { font-size: 10px; color: ${TEXT_MUTED}; margin-top: 4px; max-width: 280px; }
     .doc-title { font-size: 22px; font-weight: 800; color: ${ACCENT}; text-align: right; }
-    .doc-meta { text-align: right; font-size: 10px; color: #64748b; margin-top: 4px; }
+    .doc-meta { text-align: right; font-size: 10px; color: ${TEXT_MUTED}; margin-top: 4px; }
     .logo { max-height: 48px; max-width: 120px; margin-bottom: 8px; }
     .payee-box { border: 1px solid ${BORDER}; border-radius: 6px; padding: 12px; margin-bottom: 16px; }
     .payee-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; }
-    .payee-grid dt { font-size: 9px; text-transform: uppercase; color: #64748b; font-weight: 600; }
-    .payee-grid dd { font-size: 11px; margin-bottom: 6px; }
+    .payee-grid dt { font-size: 9px; text-transform: uppercase; color: ${TEXT_MUTED}; font-weight: 600; }
+    .payee-grid dd { font-size: 11px; margin-bottom: 6px; color: ${TEXT_BODY}; }
     .stats { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
     .stat { flex: 1; min-width: 80px; border: 1px solid ${BORDER}; border-radius: 6px; padding: 8px; text-align: center; }
     .stat-val { font-size: 14px; font-weight: 700; color: ${ACCENT}; }
-    .stat-lbl { font-size: 8px; text-transform: uppercase; color: #64748b; margin-top: 2px; }
+    .stat-lbl { font-size: 8px; text-transform: uppercase; color: ${TEXT_MUTED}; margin-top: 2px; }
     h3 { font-size: 12px; color: ${ACCENT}; margin-bottom: 8px; }
     .cal-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-    .cal-table th { font-size: 9px; color: #64748b; padding: 4px; }
+    .cal-table th { font-size: 9px; color: ${TEXT_MUTED}; padding: 4px; font-weight: 600; }
     .cal-cell { border: 1px solid ${BORDER}; text-align: center; padding: 4px 2px; vertical-align: top; height: 52px; width: 14.28%; }
     .cal-empty { border: none; }
-    .cal-day { font-size: 9px; color: #64748b; }
+    .cal-day { font-size: 9px; color: ${TEXT_MUTED}; font-weight: 600; }
     .cal-symbol { font-size: 14px; font-weight: 700; line-height: 1.2; }
-    .cal-hours { font-size: 8px; color: #94a3b8; }
-    .cal-legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 9px; margin-top: 6px; }
+    .cal-hours { font-size: 8px; color: ${TEXT_SUBTLE}; font-weight: 600; }
+    .cal-legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 9px; margin-top: 6px; color: ${TEXT_BODY}; }
     .legend-item { white-space: nowrap; }
-    .cal-note { font-size: 8px; color: #94a3b8; margin-top: 4px; font-style: italic; }
+    .cal-note { font-size: 8px; color: ${TEXT_SUBTLE}; margin-top: 4px; font-style: italic; }
     .earnings { display: flex; gap: 16px; margin-top: 16px; }
     .earn-col { flex: 1; }
     .earn-col table { width: 100%; border-collapse: collapse; }
     .earn-col th { background: ${ACCENT}; color: #fff; padding: 6px 8px; text-align: left; font-size: 10px; }
-    .earn-col td { padding: 5px 8px; border-bottom: 1px solid ${BORDER}; }
+    .earn-col td { padding: 5px 8px; border-bottom: 1px solid ${BORDER}; color: ${TEXT_BODY}; }
     .amt { text-align: right; }
     .subtotal { font-weight: 700; background: #f8fafc; }
     .net-pay { margin-top: 12px; padding: 12px; background: ${ACCENT}; color: #fff; font-size: 16px; font-weight: 800; text-align: center; border-radius: 6px; }
     .signatures { display: flex; gap: 24px; margin-top: 24px; }
-    .sig-block { flex: 1; }
-    .sig-line { border-top: 1px solid #334155; margin-top: 40px; padding-top: 4px; font-size: 10px; }
-    .footer { margin-top: 20px; font-size: 8px; color: #94a3b8; text-align: center; border-top: 1px solid ${BORDER}; padding-top: 8px; }
+    .sig-block { flex: 1; color: ${TEXT_BODY}; }
+    .sig-line { border-top: 1px solid ${TEXT_MUTED}; margin-top: 40px; padding-top: 4px; font-size: 10px; }
+    .footer { margin-top: 20px; font-size: 8px; color: ${TEXT_SUBTLE}; text-align: center; border-top: 1px solid ${BORDER}; padding-top: 8px; }
   </style>
 </head>
 <body>
@@ -216,7 +219,7 @@ export function buildPayslipHtml(payslip: Payslip): string {
       <table>
         <thead><tr><th colspan="2">Deductions</th></tr></thead>
         <tbody>
-          ${deductionRows || '<tr><td colspan="2" style="color:#94a3b8">No deductions</td></tr>'}
+          ${deductionRows || `<tr><td colspan="2" style="color:${TEXT_SUBTLE}">No deductions</td></tr>`}
           <tr class="subtotal"><td>Total Deductions</td><td class="amt">${fmtMoney(payslip.totalDeductions)}</td></tr>
         </tbody>
       </table>

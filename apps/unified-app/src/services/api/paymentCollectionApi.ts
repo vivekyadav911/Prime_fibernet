@@ -247,6 +247,9 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             .eq('id', paymentId);
           if (error) throw error;
           await client.functions.invoke('generate-payment-receipt', { body: { paymentId } });
+          void client.functions
+            .invoke('send-payment-whatsapp', { body: { payment_id: paymentId } })
+            .catch(() => undefined);
         },
       }),
       invalidatesTags: ['Payments', 'Analytics'],

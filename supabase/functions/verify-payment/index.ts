@@ -1,9 +1,16 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getWhatsAppSettings,
+  logWhatsApp,
+  renderTemplate,
+  sendWhatsAppText,
+} from '../_shared/whatsapp.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const OPENWA_API_MASTER_KEY = Deno.env.get('OPENWA_API_MASTER_KEY')!;
 
 type BillingCycle = 'monthly' | 'quarterly' | 'annual';
 
@@ -11,6 +18,56 @@ function cycleDays(cycle: BillingCycle): number {
   if (cycle === 'quarterly') return 90;
   if (cycle === 'annual') return 365;
   return 30;
+}
+
+async function sendActivationWhatsApp(params: {
+  supabase: ReturnType<typeof createClient>;
+  customerName: string | null;
+  customerPhone: string | null;
+  planName: string | null;
+  referenceId: string;
+}) {
+  const settings = await getWhatsAppSettings(params.supabase);
+  if (!settings?.enabled || !settings.notify_activations || !settings.gateway_session_id) {
+    return;
+  }
+
+  if (!params.customerPhone) {
+    await logWhatsApp(params.supabase, {
+      recipient_phone: 'unknown',
+      recipient_name: params.customerName,
+      message_type: 'activation',
+      reference_id: params.referenceId,
+      reference_type: 'subscription',
+      status: 'skipped',
+      error_message: 'Customer has no phone number',
+    });
+    return;
+  }
+
+  const text = renderTemplate(settings.activation_template, {
+    customer_name: params.customerName ?? 'Customer',
+    plan_name: params.planName ?? 'Active plan',
+  });
+
+  const result = await sendWhatsAppText(
+    settings.gateway_url,
+    OPENWA_API_MASTER_KEY,
+    settings.gateway_session_id,
+    params.customerPhone,
+    text,
+  );
+
+  await logWhatsApp(params.supabase, {
+    recipient_phone: params.customerPhone,
+    recipient_name: params.customerName,
+    message_type: 'activation',
+    reference_id: params.referenceId,
+    reference_type: 'subscription',
+    status: result.success ? 'sent' : 'failed',
+    error_message: result.error ?? null,
+    wa_message_id: result.messageId ?? null,
+  });
 }
 
 serve(async (req) => {
@@ -78,6 +135,14 @@ serve(async (req) => {
           status: 'active',
           auto_renew: true,
         });
+
+        await sendActivationWhatsApp({
+          supabase,
+          customerName: (portalPayment.customer_name as string | null | undefined) ?? null,
+          customerPhone: (portalPayment.customer_phone as string | null | undefined) ?? null,
+          planName: (plan?.name as string | null | undefined) ?? (portalPayment.plan_name as string | null | undefined) ?? null,
+          referenceId: String(portalPayment.customer_id),
+        });
       }
 
       const { data: customerAuth } = await supabase
@@ -138,6 +203,14 @@ serve(async (req) => {
         start_at: start.toISOString().slice(0, 10),
         end_at: end.toISOString().slice(0, 10),
         status: 'active',
+      });
+
+      await sendActivationWhatsApp({
+        supabase,
+        customerName: (payment.user_name as string | null | undefined) ?? null,
+        customerPhone: (payment.user_phone as string | null | undefined) ?? null,
+        planName: (payment.plan_name as string | null | undefined) ?? null,
+        referenceId: String(payment.user_id),
       });
     }
 

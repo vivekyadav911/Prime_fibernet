@@ -9,6 +9,7 @@ type KpiStripProps = {
   mrr: number;
   openRequests: number;
   officersOnline: number;
+  officersWithAssignments?: number;
   revenueTrendPercent?: number;
 };
 
@@ -61,6 +62,7 @@ export function KpiStrip({
   mrr,
   openRequests,
   officersOnline,
+  officersWithAssignments = 0,
   revenueTrendPercent,
 }: KpiStripProps) {
   const trendMeta =
@@ -92,9 +94,24 @@ export function KpiStrip({
     {
       label: 'Officers online',
       value: officersOnline.toLocaleString('en-IN'),
-      meta: officersOnline > 0 ? 'On duty' : 'No coverage',
-      metaColor: officersOnline > 0 ? dash.success : dash.warning,
-      accent: officersOnline > 0 ? dash.success : dash.warning,
+      meta:
+        officersOnline > 0
+          ? `${officersWithAssignments} with tickets`
+          : officersWithAssignments > 0
+            ? `${officersWithAssignments} assigned (offline)`
+            : 'No presence',
+      metaColor:
+        officersOnline > 0
+          ? dash.success
+          : officersWithAssignments > 0
+            ? dash.warning
+            : dash.warning,
+      accent:
+        officersOnline > 0
+          ? dash.success
+          : officersWithAssignments > 0
+            ? dash.warning
+            : dash.warning,
     },
   ];
 

@@ -210,6 +210,65 @@ describe('calculatePayslipCore', () => {
     expect(result.grossPay).toBeCloseTo(expectedGross, 2);
     expect(result.netPay).toBe(result.grossPay);
   });
+
+  it('does not pay bulk on_leave overrides without hours unless explicitly paid', () => {
+    const shifts = january2026Shifts({
+      '2026-01-15': { attendanceStatus: 'on_leave', workingHours: 0 },
+    }).map((s) =>
+      s.shiftDate === '2026-01-15'
+        ? { ...s, payrollResolutionType: 'payroll_bulk_override', payrollBulkPayMode: 'unpaid' as const }
+        : s,
+    );
+
+    const result = calculatePayslipCore(baseInput({ shifts }));
+    const leaveDay = result.dailyBreakdown.find((d) => d.date === '2026-01-15');
+    expect(leaveDay?.displayLabel).toBe('Leave');
+    expect(leaveDay?.dayPay).toBe(0);
+  });
+
+  it('pays bulk on_leave overrides when admin explicitly chooses paid leave', () => {
+    const shifts = january2026Shifts({
+      '2026-01-15': { attendanceStatus: 'on_leave', workingHours: 0 },
+    }).map((s) =>
+      s.shiftDate === '2026-01-15'
+        ? { ...s, payrollResolutionType: 'payroll_bulk_override', payrollBulkPayMode: 'paid' as const }
+        : s,
+    );
+
+    const result = calculatePayslipCore(baseInput({ shifts }));
+    const leaveDay = result.dailyBreakdown.find((d) => d.date === '2026-01-15');
+    expect(leaveDay?.dayPay).toBeCloseTo(106.84 * 9 * 1, 2);
+  });
+
+  it('applies different hourly rates before and after a mid-period salary change', () => {
+    const shifts = january2026Shifts({});
+    const result = calculatePayslipCore(
+      baseInput({
+        compensations: [
+          { id: 'comp-a', monthlySalary: 50000, effectiveFrom: '2026-01-01', effectiveTo: '2026-01-15' },
+          { id: 'comp-b', monthlySalary: 25000, effectiveFrom: '2026-01-16', effectiveTo: null },
+        ],
+        shifts,
+      }),
+    );
+
+    const beforeChange = result.dailyBreakdown.find((d) => d.date === '2026-01-10');
+    const afterChange = result.dailyBreakdown.find((d) => d.date === '2026-01-20');
+    expect(beforeChange?.hourlyRateApplied).toBeCloseTo(213.68, 2);
+    expect(afterChange?.hourlyRateApplied).toBeCloseTo(106.84, 2);
+    expect(result.rateChangeDates).toContain('2026-01-16');
+  });
+
+  it('pays half day as 0.5 × actual hours × that day hourly rate', () => {
+    const shifts = january2026Shifts({
+      '2026-01-10': { attendanceStatus: 'half_day', workingHours: 4.5 },
+    });
+    const result = calculatePayslipCore(baseInput({ shifts }));
+    const halfDay = result.dailyBreakdown.find((d) => d.date === '2026-01-10');
+    expect(halfDay?.dayPay).toBeCloseTo(106.84 * 4.5 * 0.5, 2);
+    expect(halfDay?.hoursCounted).toBeCloseTo(4.5, 2);
+    expect(halfDay?.payFraction).toBe(0.5);
+  });
 });
 
 describe('canApprovePayslip', () => {
@@ -266,6 +325,8 @@ describe('Review vs PDF render parity', () => {
       voidedBy: null,
       voidReason: null,
       calculationWarnings: result.warnings,
+      adminOverrideDayCount: 0,
+      adminOverrideDates: [],
       createdAt: result.generatedAt,
       updatedAt: result.generatedAt,
       dailyBreakdown: result.dailyBreakdown.map((d, i) => ({

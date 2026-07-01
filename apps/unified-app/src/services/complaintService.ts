@@ -51,6 +51,17 @@ export async function updateComplaint(
 
   const { data, error } = await client.from('customer_complaints').update(payload).eq('id', id).select('*').single();
   if (error) throw error;
+  if (updates.status) {
+    void client.functions
+      .invoke('send-complaint-update-whatsapp', {
+        body: {
+          complaint_id: id,
+          new_status: updates.status,
+          update_message: updates.resolution ?? '',
+        },
+      })
+      .catch(() => undefined);
+  }
   return mapComplaint(data as Record<string, unknown>);
 }
 

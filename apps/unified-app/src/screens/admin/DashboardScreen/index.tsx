@@ -8,7 +8,7 @@ import { AdminScreenLayout, QuickAccessGrid, type QuickAccessItem } from '@/comp
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useNotificationsDashboardStats } from '@/hooks/useNotificationHub';
 import { usePlansDashboardStats } from '@/hooks/usePlans';
-import { useTickets } from '@/hooks/useTickets';
+import { useTicketStats } from '@/hooks/useTickets';
 import {
   useGetAllRequestsQuery,
   useGetDashboardKpisQuery,
@@ -63,16 +63,22 @@ export function DashboardScreen() {
   const { data: revenueSeries } = useGetRevenueByMonthQuery({});
   const { data: activities } = useGetRecentActivitiesQuery({ page: 1, limit: 20 });
   const { data: allRequests } = useGetAllRequestsQuery();
-  const { openCount, breachedCount, unassignedCount: unassignedTickets, allTickets } = useTickets();
+  const { stats: ticketStats, allTickets: ticketRows } = useTicketStats();
   const { stats: planStats } = usePlansDashboardStats();
   const { stats: notificationStats } = useNotificationsDashboardStats();
   const [sendBulk] = useSendBulkRechargeNotificationMutation();
 
   const ticketSummary = useMemo(() => {
-    const inProgress = allTickets.filter((t) => t.status === 'In Progress').length;
-    const resolved = allTickets.filter((t) => t.status === 'Resolved' || t.status === 'Closed').length;
-    return { open: openCount, inProgress, resolved, breached: breachedCount, unassigned: unassignedTickets };
-  }, [allTickets, breachedCount, openCount, unassignedTickets]);
+    const unassigned = ticketRows.filter((t) => !t.assignedOfficerId && !['Resolved', 'Closed'].includes(t.status)).length;
+    return {
+      open: ticketStats.totalOpen,
+      inProgress: ticketStats.totalInProgress,
+      resolved: ticketStats.totalResolved,
+      breached: ticketStats.slaBreaches,
+      unassigned,
+      officersWithAssignments: ticketStats.officersWithAssignments,
+    };
+  }, [ticketRows, ticketStats]);
 
   const requestSummary = useMemo(() => {
     const open = (allRequests ?? []).filter((r) =>
@@ -134,7 +140,7 @@ export function DashboardScreen() {
     if (ticketSummary.breached > 0) {
       return {
         headline: `${ticketSummary.breached} ticket${ticketSummary.breached === 1 ? '' : 's'} breached SLA`,
-        subline: 'Response targets need immediate action',
+        subline: 'Open tickets need immediate action',
         onPress: () => navigation.navigate('TicketPortal', { screen: 'TicketList' }),
       };
     }
@@ -178,7 +184,9 @@ export function DashboardScreen() {
             ? { badge: requestSummary.pending, badgeTone: 'info' }
             : {},
       users: urgentRenewals.length > 0 ? { badge: urgentRenewals.length, badgeTone: 'warning' } : {},
-      officers: (kpis?.officersOnline ?? 0) === 0 ? { alertDot: true, badgeTone: 'danger' } : {},
+      officers: (kpis?.officersOnline ?? 0) === 0 && (kpis?.officersWithAssignments ?? 0) === 0
+        ? { alertDot: true, badgeTone: 'danger' }
+        : {},
       notifications:
         (notificationStats?.totalDrafts ?? 0) > 0
           ? { badge: notificationStats?.totalDrafts ?? 0, badgeTone: 'warning' as const }
@@ -193,6 +201,7 @@ export function DashboardScreen() {
     }));
   }, [
     kpis?.officersOnline,
+    kpis?.officersWithAssignments,
     notificationStats?.totalDrafts,
     requestSummary.pending,
     requestSummary.unassigned,
@@ -283,6 +292,7 @@ export function DashboardScreen() {
           mrr={kpis?.mrr ?? 0}
           openRequests={kpis?.openRequests ?? 0}
           officersOnline={kpis?.officersOnline ?? 0}
+          officersWithAssignments={kpis?.officersWithAssignments ?? ticketSummary.officersWithAssignments}
           revenueTrendPercent={revenueTrendPercent}
         />
 

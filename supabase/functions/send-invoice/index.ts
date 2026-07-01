@@ -1,10 +1,19 @@
 import { serve } from 'https://deno.land/std@0.178.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.42.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import {
+  getWhatsAppSettings,
+  logWhatsApp,
+  resolveRequestUserId,
+  sendWhatsAppDocument,
+  sendWhatsAppText,
+} from '../_shared/whatsapp.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const OPENWA_API_MASTER_KEY = Deno.env.get('OPENWA_API_MASTER_KEY')!;
 
 type SendBody = {
   invoiceId: string;
@@ -71,15 +80,104 @@ serve(async (req) => {
     }
 
     if (channel === 'whatsapp') {
-      const { data: settings } = await supabase.from('general_settings').select('feature_whatsapp').limit(1).maybeSingle();
-      if (!settings?.feature_whatsapp) {
-        throw new Error(
-          'WHATSAPP_NOT_CONFIGURED: Enable WhatsApp in Settings or download the PDF and share from your device',
-        );
+      const settings = await getWhatsAppSettings(supabase);
+      if (!settings?.enabled || !settings.notify_invoice || !settings.gateway_session_id) {
+        throw new Error('WHATSAPP_NOT_CONFIGURED: Configure OpenWA in WhatsApp Integration settings first');
       }
-      throw new Error(
-        'WHATSAPP_NOT_CONFIGURED: Download the PDF from invoice history and share via your device',
+
+      const phone = String(recipient).trim();
+      const amount = Number(invoice.total_amount ?? invoice.amount ?? 0).toLocaleString('en-IN');
+      const dueDate = invoice.due_date
+        ? new Date(invoice.due_date).toLocaleDateString('en-IN')
+        : 'N/A';
+      const text = settings.invoice_template
+        .replaceAll('{{customer_name}}', String(invoice.customer_name ?? 'Customer'))
+        .replaceAll('{{invoice_number}}', String(invoice.invoice_number ?? invoice.id))
+        .replaceAll('{{amount}}', amount)
+        .replaceAll('{{due_date}}', dueDate);
+
+      const textResult = await sendWhatsAppText(
+        settings.gateway_url,
+        OPENWA_API_MASTER_KEY,
+        settings.gateway_session_id,
+        phone,
+        text,
       );
+
+      if (!textResult.success) {
+        await logWhatsApp(supabase, {
+          recipient_phone: phone,
+          recipient_name: invoice.customer_name,
+          message_type: 'invoice',
+          reference_id: invoiceId,
+          reference_type: 'invoice',
+          status: 'failed',
+          error_message: textResult.error ?? 'Unknown WhatsApp send failure',
+          wa_message_id: textResult.messageId ?? null,
+          sent_by: senderId,
+        });
+        throw new Error(textResult.error ?? 'Failed to send WhatsApp invoice');
+      }
+
+      if (pdfUrl) {
+        const pdfResponse = await fetch(pdfUrl);
+        if (pdfResponse.ok) {
+          const bytes = new Uint8Array(await pdfResponse.arrayBuffer());
+          let binary = '';
+          for (let index = 0; index < bytes.length; index += 1) {
+            binary += String.fromCharCode(bytes[index]!);
+          }
+          const base64 = btoa(binary);
+          await sendWhatsAppDocument(
+            settings.gateway_url,
+            OPENWA_API_MASTER_KEY,
+            settings.gateway_session_id,
+            phone,
+            base64,
+            `Invoice_${invoice.invoice_number ?? invoice.id}.pdf`,
+            'Your invoice is attached.',
+          );
+        }
+      }
+
+      await supabase
+        .from('invoices')
+        .update({
+          delivery_status: 'sent',
+          delivery_channel: 'whatsapp',
+          sent_at: new Date().toISOString(),
+          sent_to: phone,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', invoiceId);
+
+      await supabase.from('invoice_history').insert({
+        invoice_id: invoiceId,
+        user_id: invoice.user_id,
+        invoice_number: invoice.invoice_number,
+        amount: invoice.total_amount ?? invoice.amount,
+        status: 'sent',
+        channel: 'whatsapp',
+        recipient: phone,
+        sent_by: senderId,
+        pdf_url: pdfUrl,
+        metadata: { invoiceId, waMessageId: textResult.messageId ?? null },
+      });
+
+      await logWhatsApp(supabase, {
+        recipient_phone: phone,
+        recipient_name: invoice.customer_name,
+        message_type: 'invoice',
+        reference_id: invoiceId,
+        reference_type: 'invoice',
+        status: 'sent',
+        wa_message_id: textResult.messageId ?? null,
+        sent_by: senderId,
+      });
+
+      return new Response(JSON.stringify({ ok: true, sentTo: phone }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const { data: company } = await supabase.from('general_settings').select('*').limit(1).maybeSingle();

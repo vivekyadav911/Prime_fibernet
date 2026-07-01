@@ -18,7 +18,6 @@ import { StatsCard } from '@/components/support';
 import { AdminScreenLayout, AdminEmptyState, FilterChips, RoleGuard, SearchBar, SelectField } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useTickets } from '@/hooks/useTickets';
-import { useGetSupportDashboardStatsQuery } from '@/services/api/adminSupportApi';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
@@ -51,6 +50,7 @@ export function TicketListScreen({ navigation }: Props) {
   const {
     tickets,
     allTickets,
+    stats,
     filters,
     updateFilters,
     resetFilters,
@@ -59,7 +59,6 @@ export function TicketListScreen({ navigation }: Props) {
     onRefresh,
     error,
   } = useTickets();
-  const { data: stats } = useGetSupportDashboardStatsQuery();
 
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -128,12 +127,12 @@ export function TicketListScreen({ navigation }: Props) {
         <View style={styles.statsRow}>
           <StatsCard
             label="Open"
-            value={stats?.openTickets ?? 0}
+            value={stats.totalOpen}
             onPress={() => updateFilters({ status: 'Open' })}
           />
           <StatsCard
             label="In Progress"
-            value={stats?.inProgressTickets ?? 0}
+            value={stats.totalInProgress}
             onPress={() => updateFilters({ status: 'In Progress' })}
           />
           <StatsCard
@@ -194,8 +193,8 @@ export function TicketListScreen({ navigation }: Props) {
       filters.sortBy,
       filters.status,
       handleExport,
-      stats?.inProgressTickets,
-      stats?.openTickets,
+      stats?.totalInProgress,
+      stats?.totalOpen,
       stats?.slaBreaches,
       tickets.length,
       updateFilters,

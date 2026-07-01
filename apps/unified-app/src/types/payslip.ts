@@ -1,5 +1,13 @@
 // Payslip module types — hourly-rate payroll from shifts attendance (read-only input).
 
+import type {
+  AttendanceDayIssue,
+  AttendanceIssueCategory,
+  AttendanceIssueSummary,
+} from '@/services/payslip/calculatePayslipCore';
+
+export type { AttendanceDayIssue, AttendanceIssueCategory, AttendanceIssueSummary };
+
 export const PAYSLIP_STATUSES = [
   'draft',
   'pending_review',
@@ -25,6 +33,9 @@ export type EmployeeCompensation = {
   effectiveTo: string | null;
   createdBy: string | null;
   createdAt: string;
+  source: string | null;
+  contractTermId: string | null;
+  isOrphan: boolean;
 };
 
 export type PayTypeRule = {
@@ -112,6 +123,8 @@ export type Payslip = {
   voidedBy: string | null;
   voidReason: string | null;
   calculationWarnings: string[];
+  adminOverrideDayCount: number;
+  adminOverrideDates: string[];
   createdAt: string;
   updatedAt: string;
   dailyBreakdown?: PayslipDailyBreakdown[];
@@ -185,6 +198,7 @@ export type AttendancePeriodSummary = {
   incompleteDates: string[];
   canGenerate: boolean;
   noShiftAssigned: boolean;
+  issueSummary: AttendanceIssueSummary;
   warnings: string[];
 };
 
@@ -206,6 +220,7 @@ export type PayrollDashboardEntry = {
   missingOfficerFields: string[];
   hasCompensation: boolean;
   hasShiftAssignment: boolean;
+  fixIssuesHint: string | null;
 };
 
 export type PayslipAuditLogEntry = {
@@ -232,6 +247,15 @@ export type PayrollGenerationPreview = {
   hasShiftAssignment: boolean;
   canGenerate: boolean;
   warnings: string[];
+  compensationWarnings?: string[];
+  compensationNotices?: string[];
+  contractCompensations?: Array<{
+    id: string;
+    monthlySalary: number;
+    effectiveFrom: string;
+    effectiveTo: string | null;
+  }>;
+  shiftDefinition?: import('@/services/payslip/calculatePayslipCore').ShiftDefinitionInput;
 };
 
 export type GeneratePayslipInput = {
@@ -251,6 +275,8 @@ export type DbEmployeeCompensationRow = {
   effective_to: string | null;
   created_by: string | null;
   created_at: string;
+  source?: string | null;
+  contract_term_id?: string | null;
 };
 
 export type DbPayTypeRuleRow = {
@@ -314,6 +340,8 @@ export type DbPayslipRow = {
   voided_by: string | null;
   void_reason: string | null;
   calculation_warnings: string[] | null;
+  admin_override_day_count?: number | null;
+  admin_override_dates?: string[] | null;
   created_at: string;
   updated_at: string;
   officers?: { full_name?: string };
@@ -346,6 +374,7 @@ export type DbPayslipLineItemRow = {
 };
 
 export function mapEmployeeCompensation(row: DbEmployeeCompensationRow): EmployeeCompensation {
+  const source = row.source ?? 'legacy_manual';
   return {
     id: row.id,
     officerId: row.officer_id,
@@ -354,6 +383,9 @@ export function mapEmployeeCompensation(row: DbEmployeeCompensationRow): Employe
     effectiveTo: row.effective_to,
     createdBy: row.created_by,
     createdAt: row.created_at,
+    source,
+    contractTermId: row.contract_term_id ?? null,
+    isOrphan: source === 'legacy_manual' || !row.contract_term_id,
   };
 }
 
@@ -454,6 +486,10 @@ export function mapPayslip(row: DbPayslipRow): Payslip {
     voidReason: row.void_reason ?? null,
     calculationWarnings: Array.isArray(row.calculation_warnings)
       ? (row.calculation_warnings as string[])
+      : [],
+    adminOverrideDayCount: Number(row.admin_override_day_count ?? 0),
+    adminOverrideDates: Array.isArray(row.admin_override_dates)
+      ? (row.admin_override_dates as string[])
       : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,

@@ -9,6 +9,7 @@ import type {
   InvoiceTypeFilter,
   SendInvoiceInput,
 } from '@/types/invoice';
+import { parseSupabaseFunctionError } from '@/utils/supabaseFunctionError';
 import {
   computeInvoiceTotals,
   INVOICES_BUCKET,
@@ -243,6 +244,15 @@ export const adminFinanceApi = baseApi.injectEndpoints({
             .single();
           if (error) throw error;
           const invoice = mapDbRowToInvoiceRecord(data as Record<string, unknown>);
+          if (!body.saveAsDraft && body.deliveryChannel === 'whatsapp') {
+            void client.functions
+              .invoke('send-invoice-whatsapp', {
+                body: {
+                  invoice_id: invoice.id,
+                },
+              })
+              .catch(() => undefined);
+          }
           return { invoiceId: invoice.id, invoice };
         },
       }),
@@ -342,7 +352,7 @@ export const adminFinanceApi = baseApi.injectEndpoints({
       query: (body) => ({
         handler: async (client) => {
           const { error } = await client.functions.invoke('send-invoice', { body });
-          if (error) throw error;
+          if (error) throw new Error(await parseSupabaseFunctionError(error, 'Failed to send invoice.'));
         },
       }),
       invalidatesTags: ['Invoices'],

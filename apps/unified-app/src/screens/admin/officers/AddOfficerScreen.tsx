@@ -32,10 +32,7 @@ import {
   parseSalary,
   type AdminCreateOfficerFormData,
 } from '@/schemas/adminCreateOfficer';
-import {
-  useCreateAdminOfficerMutation,
-  useGetOfficerRolesQuery,
-} from '@/store/api/endpoints';
+import { useCreateAdminOfficerMutation } from '@/store/api/endpoints';
 import type { AdminOfficersStackParamList } from '@/types/navigation';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -90,12 +87,6 @@ export function AddOfficerScreen({ navigation }: Props) {
   const [docNames, setDocNames] = useState<Partial<Record<OfficerDocumentType, string>>>({});
 
   const [createOfficer, { isLoading: saving }] = useCreateAdminOfficerMutation();
-  const { data: roles = [] } = useGetOfficerRolesQuery();
-
-  const roleOptions = useMemo(
-    () => roles.map((r) => ({ value: r.id, label: r.name })),
-    [roles],
-  );
 
   const {
     control,
@@ -127,7 +118,6 @@ export function AddOfficerScreen({ navigation }: Props) {
       ifscCode: '',
       emergencyContact1: { name: '', relationship: '', phone: '', address: '' },
       emergencyContact2: { name: '', relationship: '', phone: '', address: '' },
-      roleId: '',
       region: '',
       positionApplied: '',
       designation: '',
@@ -244,7 +234,6 @@ export function AddOfficerScreen({ navigation }: Props) {
         currentAddress: data.currentAddress,
         permanentAddress: data.permanentAddress,
         emergencyContacts,
-        roleId: data.roleId,
         joiningDate: data.contractStartDate,
         baseSalary: parseSalary(data.basicSalary),
         bankName: data.bankName,
@@ -659,20 +648,6 @@ export function AddOfficerScreen({ navigation }: Props) {
               {step === 3 ? (
                 <>
                   <AddOfficerSectionCard title="Role & Contract" subtitle={OFFICER_WIZARD_STEPS[2].subtitle}>
-                    <Controller
-                      control={control}
-                      name="roleId"
-                      render={({ field }) => (
-                        <SelectField
-                          label="Assigned Role*"
-                          options={roleOptions}
-                          value={field.value}
-                          onSelect={field.onChange}
-                          error={errMsg(errors.roleId)}
-                          {...pickerProps}
-                        />
-                      )}
-                    />
                     <Controller
                       control={control}
                       name="positionApplied"

@@ -23,6 +23,7 @@ export type DashboardKpis = {
   mrr: number;
   openRequests: number;
   officersOnline: number;
+  officersWithAssignments: number;
 };
 
 export type AnalyticsReport = {
@@ -51,7 +52,8 @@ export const analyticsApi = baseApi.injectEndpoints({
     getDashboardKpis: builder.query<DashboardKpis, void>({
       query: () => ({
         handler: async (client) => {
-          const [subs, payments, requests, activeShifts] = await Promise.all([
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+          const [subs, payments, requests, onlineOfficers, assignedOfficers] = await Promise.all([
             client.from('subscriptions').select('id', { count: 'exact', head: true }).eq('status', 'active'),
             client.from('payments').select('total_amount').eq('status', 'confirmed'),
             client
@@ -59,17 +61,28 @@ export const analyticsApi = baseApi.injectEndpoints({
               .select('id', { count: 'exact', head: true })
               .neq('status', 'resolved'),
             client
-              .from('shifts')
-              .select('id', { count: 'exact', head: true })
-              .eq('shift_date', new Date().toISOString().slice(0, 10))
-              .eq('status', 'active'),
+              .from('officer_locations')
+              .select('officer_id', { count: 'exact', head: true })
+              .eq('is_online', true)
+              .gte('last_seen_at', fiveMinutesAgo),
+            client
+              .from('ticket_sla_live')
+              .select('assigned_officer_id')
+              .not('status', 'in', '("Resolved","Closed")')
+              .not('assigned_officer_id', 'is', null),
           ]);
           const mrr = (payments.data ?? []).reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0);
+          const uniqueAssigned = new Set(
+            (assignedOfficers.data ?? [])
+              .map((row) => row.assigned_officer_id)
+              .filter(Boolean),
+          );
           return {
             activeSubscribers: subs.count ?? 0,
             mrr,
             openRequests: requests.count ?? 0,
-            officersOnline: activeShifts.count ?? 0,
+            officersOnline: onlineOfficers.count ?? 0,
+            officersWithAssignments: uniqueAssigned.size,
           };
         },
       }),

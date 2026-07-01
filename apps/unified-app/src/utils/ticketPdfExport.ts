@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 
 import type { Ticket, TicketFilters } from '@/types/tickets';
-import { formatSLARemaining, isSLABreached } from '@/utils/slaUtils';
+import { formatSLARemaining } from '@/utils/slaUtils';
 import { truncateTicketNumber } from '@/utils/ticketViewMappers';
 
 async function loadPrintModules() {
@@ -43,7 +43,8 @@ function buildNotesSection(ticket: Ticket): string {
 export async function exportTicketAsPDF(ticket: Ticket): Promise<void> {
   const { Print, Sharing } = await loadPrintModules();
   const generatedAt = format(new Date(), 'MMM dd, yyyy HH:mm');
-  const slaBreached = isSLABreached(ticket);
+  const slaBreached =
+    ticket.responseSlaStatus === 'breached' || ticket.resolutionSlaStatus === 'breached';
 
   const html = `
 <!DOCTYPE html>
@@ -129,7 +130,7 @@ function buildBulkRows(tickets: Ticket[]): string {
       <td>${escapeHtml(t.priority)}</td>
       <td>${escapeHtml(t.status)}</td>
       <td>${escapeHtml(t.assignedOfficerName ?? '—')}</td>
-      <td>${escapeHtml(isSLABreached(t) ? 'Breached' : 'OK')}</td>
+      <td>${escapeHtml(t.responseSlaStatus === 'breached' || t.resolutionSlaStatus === 'breached' ? 'Breached' : 'OK')}</td>
       <td>${escapeHtml(format(t.createdAt, 'MMM dd, yyyy HH:mm'))}</td>
     </tr>`,
     )

@@ -1,10 +1,10 @@
 import { serve } from 'https://deno.land/std@0.178.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.42.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { resolveContractCompensationForPayroll } from '../_shared/contractCompensation.ts';
 import {
   calculatePayslipCore,
   PayslipCalculationError,
-  type CompensationInput,
   type LabelThresholdInput,
   type PayTypeRuleInput,
   type ShiftDefinitionInput,
@@ -30,6 +30,8 @@ type DbShiftRow = {
   attendance_status: string | null;
   working_hours: number | null;
   status: string | null;
+  payroll_resolution_type: string | null;
+  payroll_bulk_pay_mode: 'paid' | 'unpaid' | null;
 };
 
 function periodLabelFromStart(payPeriodStart: string): string {
@@ -123,13 +125,18 @@ serve(async (req) => {
     const { data: userData } = await userClient.auth.getUser();
     const generatedBy = userData.user?.id ?? null;
 
-    const { data: existingPayslip } = await supabase
+    const { data: periodPayslip } = await supabase
       .from('payslips')
       .select('id, status')
       .eq('officer_id', officerId)
       .eq('pay_period_start', payPeriodStart)
       .eq('pay_period_end', payPeriodEnd)
       .maybeSingle();
+
+    const existingPayslip =
+      periodPayslip && !['voided', 'cancelled'].includes(periodPayslip.status)
+        ? periodPayslip
+        : null;
 
     if (existingPayslip) {
       if (['approved', 'paid'].includes(existingPayslip.status)) {
@@ -149,25 +156,33 @@ serve(async (req) => {
       }
     }
 
+    const { data: employmentContract, error: contractCompErr } = await supabase
+      .from('employment_contracts')
+      .select(
+        'id, officer_id, status, date_of_joining, ctc_annual, basic_salary_monthly, employee_designation, employee_department',
+      )
+      .eq('officer_id', officerId)
+      .maybeSingle();
+
+    if (contractCompErr) throw contractCompErr;
+
     const [
-      { data: compensations, error: compErr },
+      { data: explicitTerms },
       { data: shiftLink },
       { data: shifts },
       { data: holidays },
       { data: payRules },
       { data: thresholds },
       { data: officer },
-      { data: contract },
       { data: bankDetails },
       { data: companyDefaults },
       { data: companyInfo },
     ] = await Promise.all([
       supabase
-        .from('employee_compensation')
+        .from('contract_compensation_terms')
         .select('*')
         .eq('officer_id', officerId)
-        .lte('effective_from', payPeriodEnd)
-        .or(`effective_to.is.null,effective_to.gte.${payPeriodStart}`),
+        .order('effective_from', { ascending: true }),
       supabase
         .from('shift_definition_officers')
         .select('shift_definitions(start_time, end_time, working_days, is_overnight)')
@@ -177,7 +192,7 @@ serve(async (req) => {
       supabase
         .from('shifts')
         .select(
-          'id, shift_date, check_in_time, check_out_time, attendance_status, working_hours, status',
+          'id, shift_date, check_in_time, check_out_time, attendance_status, working_hours, status, payroll_resolution_type, payroll_bulk_pay_mode',
         )
         .eq('officer_id', officerId)
         .gte('shift_date', payPeriodStart)
@@ -195,11 +210,6 @@ serve(async (req) => {
         .eq('id', officerId)
         .single(),
       supabase
-        .from('employment_contracts')
-        .select('employee_designation, employee_department')
-        .eq('officer_id', officerId)
-        .maybeSingle(),
-      supabase
         .from('officer_bank_details')
         .select('account_number')
         .eq('officer_id', officerId)
@@ -208,7 +218,11 @@ serve(async (req) => {
       supabase.from('company_info').select('company_name, address, city, state').limit(1).maybeSingle(),
     ]);
 
-    if (compErr) throw compErr;
+    const { compensations, warnings: compensationWarnings } = resolveContractCompensationForPayroll({
+      officerId,
+      contract: employmentContract as never,
+      explicitTerms: (explicitTerms ?? []) as never,
+    });
 
     const rawDef = shiftLink?.shift_definitions as DbShiftDefinition | DbShiftDefinition[] | null;
     const shiftDefRow = rawDef ? (Array.isArray(rawDef) ? rawDef[0] : rawDef) : null;
@@ -217,7 +231,11 @@ serve(async (req) => {
 
     let preservedAdditions = 0;
     let preservedDeductions = 0;
-    let payslipId = existingPayslip?.id ?? null;
+    let payslipId =
+      existingPayslip?.id ??
+      (periodPayslip && ['voided', 'cancelled'].includes(periodPayslip.status)
+        ? periodPayslip.id
+        : null);
 
     if (payslipId) {
       const { data: items } = await supabase
@@ -235,21 +253,14 @@ serve(async (req) => {
         officerId,
         fullName: officer?.full_name,
         employeeId: officer?.employee_id,
-        department: contract?.employee_department,
-        designation: contract?.employee_designation,
+        department: employmentContract?.employee_department,
+        designation: employmentContract?.employee_designation,
         bankAccountNumber: bankDetails?.account_number,
       },
       payPeriodStart,
       payPeriodEnd,
       payPeriodLabel: periodLabelFromStart(payPeriodStart),
-      compensations: (compensations ?? []).map(
-        (c): CompensationInput => ({
-          id: c.id,
-          monthlySalary: Number(c.monthly_salary),
-          effectiveFrom: c.effective_from,
-          effectiveTo: c.effective_to,
-        }),
-      ),
+      compensations,
       shiftDefinition,
       hasShiftAssignment,
       shifts: (shifts ?? []).map(
@@ -261,6 +272,8 @@ serve(async (req) => {
           attendanceStatus: s.attendance_status,
           workingHours: s.working_hours != null ? Number(s.working_hours) : null,
           status: s.status,
+          payrollResolutionType: s.payroll_resolution_type,
+          payrollBulkPayMode: s.payroll_bulk_pay_mode,
         }),
       ),
       holidays: (holidays ?? []).map((h: { holiday_date: string }) => h.holiday_date),
@@ -283,6 +296,8 @@ serve(async (req) => {
       preservedDeductions,
     });
 
+    result.warnings = [...compensationWarnings, ...result.warnings];
+
     if (result.blocked) {
       return new Response(JSON.stringify(resultToApiResponse(null, result)), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -303,6 +318,15 @@ serve(async (req) => {
         : result.warnings.length
           ? 'needs_review'
           : 'draft';
+
+    const adminOverrideDates = (shifts ?? [])
+      .filter(
+        (s: DbShiftRow) =>
+          s.payroll_resolution_type === 'payroll_bulk_override' ||
+          s.payroll_resolution_type === 'triage_correction',
+      )
+      .map((s: DbShiftRow) => s.shift_date)
+      .sort();
 
     const payslipRow = {
       officer_id: officerId,
@@ -327,6 +351,11 @@ serve(async (req) => {
       net_pay: result.netPay,
       status: initialStatus,
       calculation_warnings: result.warnings,
+      admin_override_day_count: adminOverrideDates.length,
+      admin_override_dates: adminOverrideDates,
+      voided_at: null,
+      voided_by: null,
+      void_reason: null,
       attendance_snapshot: {
         summary: {
           working_days: result.workingDays,

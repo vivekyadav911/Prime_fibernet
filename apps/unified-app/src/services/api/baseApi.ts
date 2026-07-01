@@ -40,6 +40,9 @@ const api = createApi({
     'EmploymentContracts',
     'EmploymentContractVersions',
     'PayslipSettings',
+    'WhatsAppSettings',
+    'WhatsAppLogs',
+    'WhatsAppStatus',
   ],
   endpoints: () => ({}),
 });

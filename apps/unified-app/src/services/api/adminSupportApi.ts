@@ -168,6 +168,7 @@ export const adminSupportApi = baseApi.injectEndpoints({
             avgCsatScore: Number(row.avg_csat_score ?? 0),
             ticketsToday: Number(row.tickets_today ?? 0),
             ticketsThisWeek: Number(row.tickets_this_week ?? 0),
+            officersWithAssignments: Number(row.officers_with_assignments ?? 0),
           };
         },
       }),

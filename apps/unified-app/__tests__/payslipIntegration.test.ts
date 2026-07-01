@@ -145,6 +145,8 @@ function payslipFromResult(
     voidedBy: null,
     voidReason: null,
     calculationWarnings: result.warnings,
+    adminOverrideDayCount: 0,
+    adminOverrideDates: [],
     createdAt: result.generatedAt,
     updatedAt: result.generatedAt,
     dailyBreakdown: result.dailyBreakdown.map((d, i) => ({
