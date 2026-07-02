@@ -146,7 +146,7 @@ export function RequestDetailModal({
               <Ionicons name="close" size={24} color={colors.textPrimary} />
             </Pressable>
             <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>Request #{request.requestNumber}</Text>
+              <Text style={styles.headerTitle}>{request.requestNumber}</Text>
               <Text style={styles.headerDate}>{format(request.createdAt, 'MMM dd, yyyy HH:mm')}</Text>
             </View>
             <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>

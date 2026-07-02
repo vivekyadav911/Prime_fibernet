@@ -14,6 +14,8 @@ import {
   mapRequestActivity,
   OFFICER_USERS_EMBED,
 } from './mappers';
+import { isRequestUuid, warnInvalidRequestId } from '@/utils/requestId';
+import { resolveOfficerName } from '@/utils/resolveOfficerName';
 
 export type OfficerRequestDetail = ServiceRequest & {
   userName?: string | null;
@@ -76,19 +78,27 @@ export const officersApi = baseApi.injectEndpoints({
     getRequestDetail: builder.query<OfficerRequestDetail, string>({
       query: (requestId) => ({
         handler: async (client) => {
+          warnInvalidRequestId(requestId, 'getRequestDetail');
+
           const { data, error } = await client
             .from('service_requests')
             .select('*')
             .eq('id', requestId)
             .maybeSingle();
           if (error) throw error;
-          if (!data) throw new Error('Request not found');
+          if (!data) {
+            throw new Error(
+              isRequestUuid(requestId)
+                ? 'Request not found'
+                : 'Invalid request id — expected UUID primary key',
+            );
+          }
 
           const { data: activities, error: actError } = await client
             .from('request_activities')
             .select('*')
             .eq('request_id', requestId)
-            .order('timestamp', { ascending: true });
+            .order('created_at', { ascending: true });
           if (actError) throw actError;
 
           return mapOfficerRequestDetail(
@@ -116,13 +126,13 @@ export const officersApi = baseApi.injectEndpoints({
           const { error } = await client.from('request_activities').insert({
             request_id: body.requestId,
             actor_name: body.officerName,
-            action: 'Activity note',
-            notes: body.note,
+            action: 'note_added',
             note: body.note,
             photo_urls: body.photoUrls ?? [],
-            lat: body.latitude,
-            lng: body.longitude,
-            timestamp: new Date().toISOString(),
+            metadata: {
+              latitude: body.latitude,
+              longitude: body.longitude,
+            },
           });
           if (error) throw error;
         },
@@ -139,9 +149,12 @@ export const officersApi = baseApi.injectEndpoints({
             id: row.id as string,
             userId: (row.user_id as string) ?? null,
             name:
-              (row.full_name as string)?.trim() ||
-              (row.users as { name?: string })?.name?.trim() ||
-              'Unknown officer',
+              resolveOfficerName(row.id as string, {
+                fullName: (row.full_name as string) ?? null,
+                userName: (row.users as { name?: string })?.name?.trim() || null,
+                email: (row.users as { email?: string })?.email ?? String(row.email ?? ''),
+                context: 'getOfficers',
+              }) ?? 'Unknown officer',
             email: (row.users as { email?: string })?.email ?? String(row.email ?? ''),
             region: (row.region as string) ?? null,
             availabilityStatus: String(row.availability_status ?? 'offline'),

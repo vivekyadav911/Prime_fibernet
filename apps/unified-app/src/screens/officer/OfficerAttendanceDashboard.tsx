@@ -12,11 +12,11 @@ import { ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
 import {
   useCheckIn,
   useCheckOut,
-  useLiveGeofenceStatus,
   useRequestApproval,
   useTodayAttendance,
   useAttendanceHistory,
 } from '@/hooks/attendance/useAttendance';
+import { useMyAssignedZones } from '@/hooks/attendance/useMyAssignedZones';
 import { locationService } from '@/services/LocationService';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
@@ -25,6 +25,8 @@ import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { ApprovalType } from '@/types/attendance';
+import { AttendanceActionError } from '@/utils/attendanceErrors';
+import { formatOutsideZoneDistance } from '@/utils/formatDistance';
 import { queryErrorMessage } from '@/utils/queryError';
 
 import { GeofenceStatusBanner } from './components/GeofenceStatusBanner';
@@ -36,7 +38,6 @@ export function OfficerAttendanceDashboard() {
   const sheetRef = useRef<BottomSheetModal>(null);
   const [sheetMode, setSheetMode] = useState<'check_in' | 'approval'>('check_in');
   const [approvalIntent, setApprovalIntent] = useState<'check_in' | 'check_out'>('check_in');
-  const [limitedMode, setLimitedMode] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   const now = new Date();
@@ -45,18 +46,18 @@ export function OfficerAttendanceDashboard() {
     month: now.getMonth() + 1,
     year: now.getFullYear(),
   });
-  const geo = useLiveGeofenceStatus();
+  const zones = useMyAssignedZones();
   const [checkIn] = useCheckIn();
   const [checkOut] = useCheckOut();
   const [requestApproval] = useRequestApproval();
 
   useEffect(() => {
-    void locationService.clearGeofenceCache().then(() => geo.refresh());
+    void locationService.clearGeofenceCache().then(() => zones.refreshZones());
     void locationService.startBackgroundTracking().catch(() => undefined);
+    void locationService.verifyGeofenceRegistration();
     return () => {
       void locationService.stopBackgroundTracking();
     };
-    // Bust geofence cache once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -90,17 +91,9 @@ export function OfficerAttendanceDashboard() {
         if (sheetMode === 'check_in') {
           const result = await checkIn({
             notes: payload.notes,
-            uiSaysInside: geo.isInsideGeofence,
+            uiSaysInside: zones.geofenceStatus.isInside,
+            selectedGeofenceId: zones.selectedZone?.id,
           });
-          if (result.action === 'needs_approval') {
-            Alert.alert(
-              'Outside zone',
-              `You appear to be ${Math.round(result.distance)}m from ${result.geofenceName ?? 'the assigned zone'}. Request approval or move closer and try again.`,
-            );
-            setApprovalIntent('check_in');
-            setSheetMode('approval');
-            return;
-          }
           if (result.action === 'already_checked_in') {
             dispatch(
               enqueueToast({
@@ -134,7 +127,7 @@ export function OfficerAttendanceDashboard() {
             );
           }
         } else {
-          const coords = geo.currentLocation ?? (await locationService.getCurrentLocation());
+          const coords = zones.coords ?? (await locationService.getCurrentLocation());
           const approvalType: ApprovalType =
             approvalIntent === 'check_out' ? 'out_of_zone_checkout' : 'out_of_zone_checkin';
           await requestApproval({
@@ -142,6 +135,7 @@ export function OfficerAttendanceDashboard() {
             reason: payload.reason ?? '',
             coords,
             date: new Date().toISOString().slice(0, 10),
+            geofenceId: zones.selectedZone?.id,
           });
           dispatch(
             enqueueToast({
@@ -154,6 +148,20 @@ export function OfficerAttendanceDashboard() {
         sheetRef.current?.dismiss();
         refetch();
       } catch (e) {
+        if (e instanceof AttendanceActionError && e.code === 'outside_zone') {
+          Alert.alert('Outside zone', e.message, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Request approval',
+              onPress: () => {
+                setApprovalIntent('check_in');
+                setSheetMode('approval');
+                sheetRef.current?.present();
+              },
+            },
+          ]);
+          return;
+        }
         Alert.alert(
           'Attendance failed',
           e instanceof Error ? e.message : 'Could not complete attendance action.',
@@ -162,23 +170,16 @@ export function OfficerAttendanceDashboard() {
         setActionLoading(false);
       }
     },
-    [approvalIntent, checkIn, dispatch, geo.currentLocation, geo.isInsideGeofence, refetch, requestApproval, sheetMode],
+    [approvalIntent, checkIn, dispatch, refetch, requestApproval, sheetMode, zones.coords, zones.geofenceStatus.isInside, zones.selectedZone?.id],
   );
 
   const handleCheckOut = useCallback(async () => {
     setActionLoading(true);
     try {
-      const result = await checkOut({ uiSaysInside: geo.isInsideGeofence });
-      if (result.action === 'needs_approval') {
-        Alert.alert(
-          'Outside zone',
-          `You appear to be ${Math.round(result.distance)}m from the zone. Request approval or move closer.`,
-        );
-        setApprovalIntent('check_out');
-        setSheetMode('approval');
-        sheetRef.current?.present();
-        return;
-      }
+      const result = await checkOut({
+        uiSaysInside: zones.geofenceStatus.isInside,
+        selectedGeofenceId: zones.selectedZone?.id,
+      });
       if (result.action === 'not_checked_in') {
         Alert.alert('Not checked in', 'You need to check in before checking out.');
         return;
@@ -204,6 +205,20 @@ export function OfficerAttendanceDashboard() {
       }
       refetch();
     } catch (e) {
+      if (e instanceof AttendanceActionError && e.code === 'outside_zone') {
+        Alert.alert('Outside zone', e.message, [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Request approval',
+            onPress: () => {
+              setApprovalIntent('check_out');
+              setSheetMode('approval');
+              sheetRef.current?.present();
+            },
+          },
+        ]);
+        return;
+      }
       Alert.alert(
         'Check-out failed',
         e instanceof Error ? e.message : 'Could not complete check-out.',
@@ -211,7 +226,17 @@ export function OfficerAttendanceDashboard() {
     } finally {
       setActionLoading(false);
     }
-  }, [checkOut, dispatch, geo.isInsideGeofence, refetch]);
+  }, [checkOut, dispatch, refetch, zones.geofenceStatus.isInside, zones.selectedZone?.id]);
+
+  const hasZone = zones.hasZone;
+  const zoneLabel = !hasZone
+    ? 'No zone assigned'
+    : zones.geofenceStatus.isInside
+      ? `Inside ${zones.selectedZone?.name ?? 'zone'}`
+      : formatOutsideZoneDistance(
+          zones.geofenceStatus.distance,
+          zones.selectedZone?.geometry.shape === 'circle' ? zones.selectedZone.geometry.radius : null,
+        ) ?? 'Outside assigned zone';
 
   if (isLoading) {
     return (
@@ -229,7 +254,7 @@ export function OfficerAttendanceDashboard() {
     );
   }
 
-  const coords = geo.currentLocation ?? { latitude: 28.6139, longitude: 77.209 };
+  const coords = zones.coords ?? { latitude: 28.6139, longitude: 77.209 };
   const durationMs =
     today?.checkInTime && isCheckedIn
       ? Date.now() - new Date(today.checkInTime).getTime()
@@ -238,7 +263,7 @@ export function OfficerAttendanceDashboard() {
   const durationM = Math.floor((durationMs % 3600000) / 60000);
 
   return (
-    <LocationPermissionGate limitedMode={limitedMode} onLimitedMode={() => setLimitedMode(true)}>
+    <LocationPermissionGate>
       <ScreenWrapper>
         <Text style={styles.monthTitle}>
           Attendance — {now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
@@ -261,15 +286,31 @@ export function OfficerAttendanceDashboard() {
             </Text>
           ) : null}
 
-          <InfoRow
-            icon="📍"
-            label="Zone"
-            value={
-              geo.isInsideGeofence
-                ? `Inside ${geo.activeGeofence?.name ?? 'zone'}`
-                : `${Math.round(geo.distanceFromFence)}m away`
-            }
-          />
+          <InfoRow icon="📍" label="Zone" value={zoneLabel} />
+
+          {zones.status === 'multiple' ? (
+            <View style={styles.zonePicker}>
+              {zones.zones.map((z) => (
+                <Pressable
+                  key={z.id}
+                  style={[
+                    styles.zoneChip,
+                    zones.selectedZone?.id === z.id && styles.zoneChipActive,
+                  ]}
+                  onPress={() => zones.setSelectedZoneId(z.id)}
+                >
+                  <Text
+                    style={[
+                      styles.zoneChipText,
+                      zones.selectedZone?.id === z.id && styles.zoneChipTextActive,
+                    ]}
+                  >
+                    {z.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
 
           <View style={styles.actions}>
             {!isCheckedIn ? (
@@ -277,14 +318,14 @@ export function OfficerAttendanceDashboard() {
                 <Button
                   label="Check in"
                   onPress={openCheckInSheet}
-                  disabled={actionLoading}
+                  disabled={actionLoading || !hasZone || !zones.geofenceStatus.isInside}
                   style={styles.cta}
                 />
                 <Button
                   label="Request approval"
                   variant="secondary"
                   onPress={() => openApprovalSheet('check_in')}
-                  disabled={geo.isInsideGeofence || actionLoading}
+                  disabled={actionLoading}
                   style={styles.cta}
                 />
               </>
@@ -325,10 +366,10 @@ export function OfficerAttendanceDashboard() {
         <CheckInSheet
           ref={sheetRef}
           mode={sheetMode}
-          geofence={geo.activeGeofence}
+          geofence={zones.selectedZone}
           coords={coords}
-          distance={geo.distanceFromFence}
-          isInside={geo.isInsideGeofence}
+          distance={zones.geofenceStatus.distance ?? 0}
+          isInside={zones.geofenceStatus.isInside}
           onConfirm={(p) => void handleConfirm(p)}
           onDismiss={() => undefined}
           isLoading={actionLoading}
@@ -370,4 +411,15 @@ const styles = StyleSheet.create({
   recordHours: { color: colors.textSecondary, fontSize: 12 },
   leaveLink: { minHeight: 48, justifyContent: 'center', marginTop: spacing.md },
   leaveLinkText: { color: colors.accentTeal, fontWeight: '600', fontSize: 15 },
+  zonePicker: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  zoneChip: {
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  zoneChipActive: { borderColor: adminColors.primary, backgroundColor: colors.surfaceWhite },
+  zoneChipText: { fontSize: 12, color: colors.textSecondary },
+  zoneChipTextActive: { color: adminColors.primary, fontWeight: '600' },
 });

@@ -100,14 +100,14 @@ export function DashboardOpsSummary({
     <DashboardCard padding={dash.compactPad}>
       <View style={styles.row}>
         <OpsColumn
-          title="Requests"
+          title="Ticket Portal"
           metrics={[
             { value: requestSummary.pending, label: 'Pending' },
             { value: requestSummary.unassigned, label: 'Unassigned', warn: requestSummary.unassigned > 0 },
           ]}
           status={requestStatus}
           statusTone={requestSummary.unassigned > 0 ? 'warning' : 'success'}
-          onPress={() => navigation.navigate('Requests')}
+          onPress={() => navigation.navigate('TicketPortal')}
         />
         <OpsColumn
           title="Plans"
@@ -132,7 +132,7 @@ export function DashboardOpsSummary({
           statusTone={
             ticketSummary.breached > 0 ? 'danger' : ticketSummary.open > 0 ? 'warning' : 'success'
           }
-          onPress={() => navigation.navigate('TicketPortal', { screen: 'TicketList' })}
+          onPress={() => navigation.navigate('TicketPortal', { screen: 'TicketPortalHome', params: { initialTab: 'all' } })}
           showDivider
         />
       </View>

@@ -15,11 +15,8 @@ import {
   type MapSearchResult,
 } from '@/components/map';
 import { ErrorState, SkeletonLoader } from '@/components/common';
-import {
-  useAllAttendanceToday,
-  useGeofences,
-  useLiveOfficerLocations,
-} from '@/hooks/attendance/useAdminAttendance';
+import { useAttendanceRealtimeSync } from '@/hooks/attendance/useAttendanceRealtimeSync';
+import { useAttendanceStats } from '@/hooks/attendance/useAttendanceStats';
 import { useSavedMapPlaces } from '@/hooks/useSavedMapPlaces';
 import type { AttendanceRecord, CheckInMethod, Geofence, OfficerLiveLocation } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
@@ -503,10 +500,18 @@ function RecordsEmptyState({ onAddGeofence }: { onAddGeofence: () => void }) {
 }
 
 export function LiveAttendanceScreen({ navigation }: Props) {
-  const { data: locations, refetch: refetchLocations, isLoading: locationsLoading } =
-    useLiveOfficerLocations();
-  const { data: attendance, isLoading, isError, error, refetch } = useAllAttendanceToday();
-  const { data: geofences } = useGeofences();
+  useAttendanceRealtimeSync();
+  const {
+    stats,
+    isLoading,
+    isError,
+    error,
+    refetch: refetchStats,
+  } = useAttendanceStats();
+  const attendance = stats.records;
+  const locations = stats.locations;
+  const geofences = stats.geofences;
+  const locationsLoading = isLoading;
   const { places: savedPlaces, savePlace, clearPlace } = useSavedMapPlaces();
   const [userRefreshing, setUserRefreshing] = useState(false);
   const [lastFetchAt, setLastFetchAt] = useState<string | undefined>();
@@ -540,23 +545,18 @@ export function LiveAttendanceScreen({ navigation }: Props) {
     }
   }, [attendance, isLoading, locations, locationsLoading]);
 
-  const counts = useMemo(() => {
-    const records = attendance ?? [];
-    return {
-      present: records.filter((r) => r.status === 'present').length,
-      absent: records.filter((r) => !r.checkInTime).length,
-      late: records.filter((r) => r.isLate).length,
-    };
-  }, [attendance]);
+  const counts = useMemo(
+    () => ({
+      present: stats.present,
+      absent: stats.absent,
+      late: stats.late,
+    }),
+    [stats.absent, stats.late, stats.present],
+  );
 
   const opsSummary = useMemo(() => {
-    const locs = locations ?? [];
-    const records = attendance ?? [];
-    const activeGeofences = (geofences ?? []).filter((g) => g.isActive);
-    const inGeofence = locs.filter((l) => l.isInsideGeofence).length;
-    const checkedIn = records.filter((r) => r.checkInTime).length;
-    const exceptions = records.filter((r) => r.approvalRequestId || r.isLate).length;
-    const lastSync = [lastFetchAt, ...locs.map((l) => l.lastUpdated)]
+    const activeGeofenceList = (geofences ?? []).filter((g) => g.isActive);
+    const lastSync = [lastFetchAt, ...locations.map((l) => l.lastUpdated)]
       .filter(Boolean)
       .reduce<string | undefined>((latest, ts) => {
         if (!latest || new Date(ts!) > new Date(latest)) return ts;
@@ -564,8 +564,8 @@ export function LiveAttendanceScreen({ navigation }: Props) {
       }, undefined);
 
     const siteLabel =
-      activeGeofences.length > 0
-        ? activeGeofences
+      activeGeofenceList.length > 0
+        ? activeGeofenceList
             .slice(0, 2)
             .map((g) => g.name)
             .join(' · ')
@@ -574,15 +574,15 @@ export function LiveAttendanceScreen({ navigation }: Props) {
           : 'Monitoring all zones';
 
     return {
-      checkedIn,
-      inGeofence,
-      exceptions,
-      activeGeofences: activeGeofences.length,
+      checkedIn: stats.checkedIn,
+      inGeofence: stats.inGeofence,
+      exceptions: stats.exceptions,
+      activeGeofences: stats.activeGeofences,
       lastSync,
       siteLabel,
-      geofenceActive: activeGeofences.length > 0,
+      geofenceActive: stats.activeGeofences > 0,
     };
-  }, [attendance, geofences, lastFetchAt, locations]);
+  }, [geofences, lastFetchAt, locations, stats]);
 
   const renderItem = useCallback(
     ({ item }: { item: AttendanceRecord }) => <AttendanceRecordCard item={item} />,
@@ -591,11 +591,11 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 
   const handleRefresh = useCallback(() => {
     setUserRefreshing(true);
-    void Promise.all([refetch(), refetchLocations()]).finally(() => {
+    void Promise.all([refetchStats()]).finally(() => {
       setLastFetchAt(new Date().toISOString());
       setUserRefreshing(false);
     });
-  }, [refetch, refetchLocations]);
+  }, [refetchStats]);
 
   const geofenceOverlays = useMemo(
     () =>
@@ -685,7 +685,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
   if (isError) {
     return (
       <AdminScreenLayout>
-        <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
+        <ErrorState message={queryErrorMessage(error)} onRetry={refetchStats} />
       </AdminScreenLayout>
     );
   }

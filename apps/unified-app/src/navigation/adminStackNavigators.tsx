@@ -57,9 +57,7 @@ import { ContractPdfViewerScreen } from '@/screens/common/ContractPdfViewerScree
 import { OfficerListScreen } from '@/screens/admin/officers/OfficerListScreen';
 import { PlanFormScreenV2 } from '@/screens/admin/plans/PlanFormScreenV2';
 import { PlansScreen } from '@/screens/admin/plans/PlansScreen';
-import { RequestsScreen } from '@/screens/admin/requests/RequestsScreen';
 import { TicketDetailScreen } from '@/screens/admin/ticketPortal/TicketDetailScreen';
-import { TicketListScreen } from '@/screens/admin/ticketPortal/TicketListScreen';
 import { TicketPortalScreen } from '@/screens/admin/ticketPortal/TicketPortalScreen';
 import { ReportsScreen } from '@/screens/admin/ReportsScreen';
 import { AdminMapScreen } from '@/screens/admin/system/MapScreen';
@@ -110,6 +108,7 @@ import {
   PaymentDetailScreen,
   PaymentReviewScreen,
   PaymentsListScreen,
+  RecordPaymentScreen,
   RefundScreen,
 } from '@/screens/admin/payments';
 import type {
@@ -122,7 +121,6 @@ import type {
   AdminPaymentsStackParamList,
   AdminPlansStackParamList,
   AdminNotificationsStackParamList,
-  AdminRequestsStackParamList,
   AdminSupportStackParamList,
   AdminSettingsStackParamList,
   AdminTicketsStackParamList,
@@ -138,7 +136,6 @@ const UsersStack = createNativeStackNavigator<AdminUsersStackParamList>();
 const OfficersStack = createNativeStackNavigator<AdminOfficersStackParamList>();
 const AttendanceStack = createNativeStackNavigator<AdminAttendanceStackParamList>();
 const PayrollStack = createNativeStackNavigator<AdminPayrollStackParamList>();
-const RequestsStack = createNativeStackNavigator<AdminRequestsStackParamList>();
 const TicketsStack = createNativeStackNavigator<AdminTicketsStackParamList>();
 const PlansStack = createNativeStackNavigator<AdminPlansStackParamList>();
 const NotificationsStack = createNativeStackNavigator<AdminNotificationsStackParamList>();
@@ -277,20 +274,12 @@ export function AdminPayrollStackNav() {
   );
 }
 
-export function AdminRequestsStackNav() {
-  return (
-    <RequestsStack.Navigator screenOptions={adminStackScreenOptions}>
-      <RequestsStack.Screen name="RequestList" component={RequestsScreen} options={{ title: 'Requests' }} />
-    </RequestsStack.Navigator>
-  );
-}
-
 export function AdminTicketPortalStackNav() {
   return (
     <TicketsStack.Navigator screenOptions={adminStackScreenOptions}>
       <TicketsStack.Screen name="TicketPortalHome" component={TicketPortalScreen} options={{ title: 'Ticket Portal' }} />
-      <TicketsStack.Screen name="TicketList" component={TicketListScreen} options={{ title: 'All Tickets' }} />
       <TicketsStack.Screen name="TicketDetail" component={TicketDetailScreen} options={{ title: 'Ticket Detail' }} />
+      <TicketsStack.Screen name="CreateTicket" component={CreateTicketScreen} options={{ title: 'New Ticket' }} />
     </TicketsStack.Navigator>
   );
 }
@@ -363,6 +352,11 @@ export function AdminPaymentsStackNav() {
       <PaymentsStack.Screen name="GatewayConfig" component={GatewayConfigScreen} options={{ title: 'Payment gateways' }} />
       <PaymentsStack.Screen name="PaymentAnalytics" component={PaymentAnalyticsScreen} options={{ title: 'Payment analytics' }} />
       <PaymentsStack.Screen name="Refund" component={RefundScreen} options={{ title: 'Refund' }} />
+      <PaymentsStack.Screen
+        name="RecordPayment"
+        component={RecordPaymentScreen}
+        options={{ title: 'Record payment' }}
+      />
     </PaymentsStack.Navigator>
   );
 }

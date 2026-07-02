@@ -10,8 +10,14 @@ import { triggerAutoNotification } from '@/services/broadcastNotificationService
 import { getSupabase } from '@/services/supabase';
 import { store } from '@/store/store';
 import type { Officer, RequestFilters, ServiceRequest } from '@/types/requests';
-import { mapDbRowToServiceRequest, officerInitials } from '@/utils/requestViewMappers';
+import {
+  mapDbRowToServiceRequest,
+  mapSupportViewRowToServiceRequest,
+  officerInitials,
+} from '@/utils/requestViewMappers';
+import { toDbRequestType } from '@/constants/requestTypes';
 import { insertOfficerPortalNotification } from '@/utils/officerPortalNotification';
+import { resolveOfficerName } from '@/utils/resolveOfficerName';
 
 export async function fetchRequests(_filters?: Partial<RequestFilters>): Promise<ServiceRequest[]> {
   const client = getSupabase();
@@ -31,25 +37,32 @@ export async function fetchRequestById(id: string): Promise<ServiceRequest> {
     throw new Error('Please sign in to view requests.');
   }
 
-  const [planMap, requestResult] = await Promise.all([
-    fetchPlanMap(client),
+  const [requestResult, viewResult] = await Promise.all([
     client.from('service_requests').select('*').eq('id', id).maybeSingle(),
+    client.from('support_items_view').select('*').eq('request_id', id).maybeSingle(),
   ]);
 
   if (requestResult.error) throw requestResult.error;
   if (!requestResult.data) throw new Error('Request not found');
 
   const activities = await fetchActivitiesForRequest(client, id);
-  return mapDbRowToServiceRequest(
-    requestResult.data as Record<string, unknown>,
-    activities,
-    planMap,
-  );
+  const row = requestResult.data as Record<string, unknown>;
+
+  if (viewResult.data) {
+    return mapSupportViewRowToServiceRequest(
+      viewResult.data as Record<string, unknown>,
+      row,
+      activities,
+    );
+  }
+
+  const planMap = await fetchPlanMap(client);
+  return mapDbRowToServiceRequest(row, activities, planMap);
 }
 
 export async function fetchOfficers(): Promise<Officer[]> {
   const client = getSupabase();
-  const { data, error } = await client.from('officers').select('id, region, email, user_id');
+  const { data, error } = await client.from('officers').select('id, full_name, region, email, user_id');
   if (error) throw error;
 
   const rows = data ?? [];
@@ -65,7 +78,14 @@ export async function fetchOfficers(): Promise<Officer[]> {
 
   return rows.map((row) => {
     const userId = row.user_id ? String(row.user_id) : null;
-    const name = (userId && nameByUserId.get(userId)) || String(row.email ?? 'Officer');
+    const userName = userId ? nameByUserId.get(userId) : null;
+    const name =
+      resolveOfficerName(String(row.id), {
+        fullName: row.full_name ? String(row.full_name) : null,
+        userName,
+        email: String(row.email ?? ''),
+        context: 'fetchOfficers',
+      }) ?? 'Officer';
     const region = String(row.region ?? 'Unassigned area');
     return {
       id: String(row.id),
@@ -92,17 +112,6 @@ export async function assignOfficer(
     )
     .unwrap();
 
-  await store
-    .dispatch(
-      requestsApi.endpoints.addRequestActivity.initiate({
-        requestId,
-        action: 'Officer assigned',
-        officerName: adminName,
-        notes: `${officer.name} assigned to this request`,
-      }),
-    )
-    .unwrap();
-
   try {
     const client = getSupabase();
     const request = await fetchRequestById(requestId);
@@ -124,7 +133,7 @@ export async function assignOfficer(
       title: 'New service request assigned',
       body: `A ${request.type} service request has been assigned to you by ${adminName}.`,
       data: { requestId },
-      category: 'request',
+      category: 'ticket',
     });
   } catch {
     /* non-blocking */
@@ -142,17 +151,6 @@ export async function reassignOfficer(
         id: requestId,
         officerId: officer.id,
         officerName: officer.name,
-      }),
-    )
-    .unwrap();
-
-  await store
-    .dispatch(
-      requestsApi.endpoints.addRequestActivity.initiate({
-        requestId,
-        action: 'Officer reassigned',
-        officerName: adminName,
-        notes: `Reassigned to ${officer.name}`,
       }),
     )
     .unwrap();
@@ -177,7 +175,7 @@ export async function reassignOfficer(
       title: 'Service request reassigned to you',
       body: `A ${request.type} service request has been reassigned to you by ${adminName}.`,
       data: { requestId },
-      category: 'request',
+      category: 'ticket',
     });
   } catch {
     /* non-blocking */
@@ -231,20 +229,12 @@ export async function addNote(requestId: string, note: string, authorName: strin
 export async function createRequest(
   data: Omit<ServiceRequest, 'id' | 'requestNumber' | 'createdAt' | 'activityTimeline'>,
 ): Promise<ServiceRequest> {
-  const dbTypeMap: Record<string, string> = {
-    'New Connection': 'installation',
-    Issue: 'complaint',
-    Relocation: 'relocation',
-    Upgrade: 'upgrade',
-    Disconnection: 'disconnection',
-  };
-
   const client = getSupabase();
   const now = new Date().toISOString();
   const insertData: Record<string, unknown> = {
     user_id: data.customerId || null,
-    request_type: dbTypeMap[data.type] ?? 'complaint',
-    type: dbTypeMap[data.type] ?? 'complaint',
+    request_type: toDbRequestType(data.type),
+    type: toDbRequestType(data.type),
     status: 'pending',
     user_name: data.customerName,
     user_email: data.customerEmail,
@@ -266,14 +256,6 @@ export async function createRequest(
 
   const { data: row, error } = await client.from('service_requests').insert(insertData).select().single();
   if (error) throw error;
-
-  await client.from('request_activities').insert({
-    request_id: row.id,
-    actor_name: data.customerName,
-    action: 'Request created',
-    note: 'Service request created by admin',
-    created_at: now,
-  });
 
   return fetchRequestById(String(row.id));
 }

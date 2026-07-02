@@ -120,9 +120,13 @@ export function isSLABreached(ticket: Ticket, now = new Date()): boolean {
 }
 
 export function computeTicketStats(tickets: Ticket[], now = new Date()): TicketStats {
-  const open = tickets.filter((t) => t.status === 'Open' || t.status === 'Reopened').length;
+  const open = tickets.filter((t) => t.status === 'Open').length;
+  const reopened = tickets.filter((t) => t.status === 'Reopened').length;
   const inProgress = tickets.filter((t) => t.status === 'In Progress').length;
-  const resolved = tickets.filter((t) => isTicketTerminal(t.status)).length;
+  const awaitingCustomer = tickets.filter((t) => t.status === 'Awaiting Customer').length;
+  const awaitingParts = tickets.filter((t) => t.status === 'Awaiting Parts').length;
+  const resolved = tickets.filter((t) => t.status === 'Resolved').length;
+  const closed = tickets.filter((t) => t.status === 'Closed').length;
   const slaBreaches = tickets.filter((t) => isOpenTicketSlaBreached(t, now)).length;
   const officersWithAssignments = new Set(
     tickets
@@ -148,9 +152,14 @@ export function computeTicketStats(tickets: Ticket[], now = new Date()): TicketS
   }
 
   return {
-    totalOpen: open,
+    total: tickets.length,
+    totalOpen: open + reopened,
     totalInProgress: inProgress,
+    totalAwaitingCustomer: awaitingCustomer,
+    totalAwaitingParts: awaitingParts,
     totalResolved: resolved,
+    totalClosed: closed,
+    totalReopened: reopened,
     slaBreaches,
     officersWithAssignments,
     avgResolutionHours,

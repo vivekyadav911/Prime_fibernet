@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import * as Location from 'expo-location';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { GeofenceLocationControls } from '@/components/attendance/GeofenceLocationControls';
 import { GeofenceLocationPicker } from '@/components/attendance/GeofenceLocationPicker';
@@ -53,7 +54,24 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
         setCenter(existing.geometry.center);
         setRadius(existing.geometry.radius);
       }
+      return;
     }
+
+    void (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        const pos = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        setCenter({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        });
+      } catch {
+        // Keep DEFAULT_CENTER fallback when GPS unavailable.
+      }
+    })();
   }, [existing]);
 
   const suggestAddressFromCoordinates = useCallback(

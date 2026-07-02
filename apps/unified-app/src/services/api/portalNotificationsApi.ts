@@ -31,6 +31,7 @@ export const portalNotificationsApi = baseApi.injectEndpoints({
             .from('portal_notifications')
             .select('*')
             .eq('recipient_auth_id', auth.user.id)
+            .eq('is_test', false)
             .order('created_at', { ascending: false })
             .limit(limit);
           if (error) throw error;
@@ -50,6 +51,7 @@ export const portalNotificationsApi = baseApi.injectEndpoints({
             .from('portal_notifications')
             .select('id', { count: 'exact', head: true })
             .eq('recipient_auth_id', auth.user.id)
+            .eq('is_test', false)
             .eq('is_read', false);
           if (error) throw error;
           return count ?? 0;

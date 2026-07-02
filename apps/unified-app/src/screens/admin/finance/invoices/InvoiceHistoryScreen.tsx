@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -51,7 +51,7 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
   );
 
   const handleDownload = useCallback(
-    async (item: NonNullable<typeof data>[number]) => {
+    async (item: AdminInvoice) => {
       try {
         let path = item.pdfStoragePath;
         if (!path) {
@@ -71,10 +71,38 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
     [fetchInvoice, generateAndUploadPDF, navigation, refetch],
   );
 
+  const invoicesRef = useRef<AdminInvoice[]>([]);
+
+  const handleDownloadById = useCallback(
+    (invoiceId: string) => {
+      const item = invoicesRef.current.find((invoice) => invoice.id === invoiceId);
+      if (item) void handleDownload(item);
+    },
+    [handleDownload],
+  );
+
   const openSendModal = useCallback((item: AdminInvoice, channel: 'email' | 'whatsapp') => {
     setSendChannel(channel);
     setSendTarget(item);
   }, []);
+
+  const openSendModalById = useCallback(
+    (invoiceId: string, channel: 'email' | 'whatsapp') => {
+      const item = invoicesRef.current.find((invoice) => invoice.id === invoiceId);
+      if (item) openSendModal(item, channel);
+    },
+    [openSendModal],
+  );
+
+  const handleSendEmailById = useCallback(
+    (invoiceId: string) => openSendModalById(invoiceId, 'email'),
+    [openSendModalById],
+  );
+
+  const handleSendWhatsAppById = useCallback(
+    (invoiceId: string) => openSendModalById(invoiceId, 'whatsapp'),
+    [openSendModalById],
+  );
 
   const handleSendConfirm = useCallback(
     async (payload: SendInvoiceRecipientPayload) => {
@@ -97,32 +125,40 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: NonNullable<typeof data>[number] }) => (
+    ({ item }: { item: AdminInvoice }) => (
       <InvoiceListRow
         item={item}
-        onDownload={() => void handleDownload(item)}
-        onSendEmail={() => openSendModal(item, 'email')}
-        onSendWhatsApp={() => openSendModal(item, 'whatsapp')}
+        onDownload={handleDownloadById}
+        onSendEmail={handleSendEmailById}
+        onSendWhatsApp={handleSendWhatsAppById}
       />
     ),
-    [handleDownload, openSendModal],
+    [handleDownloadById, handleSendEmailById, handleSendWhatsAppById],
   );
 
-  const listHeader = (
-    <View style={adminScreenStyles.listHeader}>
-      {statsLoading || !stats ? (
-        <SkeletonLoader rows={1} rowHeight={72} shape="card" />
-      ) : (
-        <View style={styles.kpiRow}>
-          <AdminKPICard label="Total invoices" value={String(stats.totalInvoices)} icon="🧾" surface="blue" />
-          <AdminKPICard label="Non-GST" value={String(stats.nonGstCount)} icon="📋" surface="teal" />
-          <AdminKPICard label="GST" value={String(stats.gstCount)} icon="📄" surface="purple" />
-          <AdminKPICard label="Custom GST" value={String(stats.customGstCount)} icon="✏️" surface="amber" />
-        </View>
-      )}
-      <SearchBar value={search} onChangeText={setSearch} placeholder="Search customer or invoice ID…" />
-      <FilterChips options={typeOptions} selected={typeFilter} onSelect={setTypeFilter} />
-    </View>
+  const listHeader = useMemo(
+    () => (
+      <View style={adminScreenStyles.listHeader}>
+        {statsLoading || !stats ? (
+          <SkeletonLoader rows={1} rowHeight={72} shape="card" />
+        ) : (
+          <View style={styles.kpiRow}>
+            <AdminKPICard label="Total invoices" value={String(stats.totalInvoices)} icon="🧾" surface="blue" />
+            <AdminKPICard label="Non-GST" value={String(stats.nonGstCount)} icon="📋" surface="teal" />
+            <AdminKPICard label="GST" value={String(stats.gstCount)} icon="📄" surface="purple" />
+            <AdminKPICard label="Custom GST" value={String(stats.customGstCount)} icon="✏️" surface="amber" />
+          </View>
+        )}
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Search customer or invoice ID…" />
+        <FilterChips options={typeOptions} selected={typeFilter} onSelect={setTypeFilter} />
+      </View>
+    ),
+    [search, stats, statsLoading, typeFilter, typeOptions],
+  );
+
+  const listEmptyComponent = useMemo(
+    () => <EmptyState title="No invoice history" subtitle="Sent invoices will appear here" icon="🧾" />,
+    [],
   );
 
   if (isLoading && !data) {
@@ -142,6 +178,7 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
   }
 
   const invoices = data ?? [];
+  invoicesRef.current = invoices;
 
   return (
     <RoleGuard requiredPermission="invoices.view">
@@ -151,13 +188,15 @@ export function InvoiceHistoryScreen({ navigation }: Props) {
           keyExtractor={(i) => i.id}
           renderItem={renderItem}
           ListHeaderComponent={listHeader}
-          ListEmptyComponent={
-            <EmptyState title="No invoice history" subtitle="Sent invoices will appear here" icon="🧾" />
-          }
+          ListEmptyComponent={listEmptyComponent}
           refreshing={isFetching}
           onRefresh={refetch}
           contentContainerStyle={adminScreenStyles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews
         />
         <SendInvoiceRecipientModal
           visible={sendTarget != null}

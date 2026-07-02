@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 
+import { assertNoUnresolvedTemplateTokens } from '@/utils/notificationTemplate';
+
 import {
   fetchTemplates,
   saveAsTemplate,
@@ -220,6 +222,11 @@ export function useCreateNotification(
     if (scheduleErr) newErrors.schedule = scheduleErr;
     if (estimatedRecipientCount === 0) {
       newErrors.audience = 'No recipients found for the selected audience. Please adjust your targeting.';
+    }
+    try {
+      assertNoUnresolvedTemplateTokens(formData.title, formData.message);
+    } catch (e) {
+      newErrors.message = e instanceof Error ? e.message : 'Unresolved template placeholders';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

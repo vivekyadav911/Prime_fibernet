@@ -410,6 +410,8 @@ export async function deliverBroadcastNotification(
   const priority = String(notification.priority ?? 'Normal') as NotificationPriority;
   const eventType = String(notification.event_type ?? 'none');
   const deepLinkUrl = notification.deep_link_url ? String(notification.deep_link_url) : undefined;
+  const tags = Array.isArray(notification.tags) ? (notification.tags as string[]) : [];
+  const isTest = Boolean(notification.is_test) || tags.includes('test');
 
   await supabase
     .from('broadcast_notifications')
@@ -448,6 +450,7 @@ export async function deliverBroadcastNotification(
         type: eventType,
         title,
         body: message,
+        is_test: isTest,
         data: {
           notificationId,
           deepLinkUrl: deepLinkUrl ?? null,

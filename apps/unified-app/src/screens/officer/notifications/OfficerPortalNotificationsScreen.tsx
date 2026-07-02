@@ -20,7 +20,6 @@ const FILTERS: Array<{ id: FilterId; label: string }> = [
   { id: 'hr', label: 'HR' },
   { id: 'payment', label: 'Payments' },
   { id: 'ticket', label: 'Tickets' },
-  { id: 'request', label: 'Requests' },
   { id: 'system', label: 'System' },
 ];
 
@@ -52,6 +51,9 @@ export function OfficerPortalNotificationsScreen() {
 
   const filtered = useMemo(() => {
     if (filter === 'all') return notifications;
+    if (filter === 'ticket') {
+      return notifications.filter((n) => n.category === 'ticket' || n.category === 'request');
+    }
     return notifications.filter((n) => n.category === filter);
   }, [filter, notifications]);
 

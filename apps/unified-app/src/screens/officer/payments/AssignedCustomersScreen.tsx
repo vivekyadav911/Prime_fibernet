@@ -73,6 +73,13 @@ export function AssignedCustomersScreen() {
           Customers admin placed in the open pool. Search and claim to add them to My Work under
           Collections.
         </Text>
+        <View style={styles.collectCta}>
+          <Button
+            label="Record payment"
+            variant="secondary"
+            onPress={() => navigation.navigate('RecordPayment')}
+          />
+        </View>
       </View>
 
       <Text style={styles.label}>Search open pool</Text>
@@ -155,6 +162,7 @@ const styles = StyleSheet.create({
     borderColor: adminColors.permissionBoxBorder,
   },
   bannerText: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
+  collectCta: { marginTop: spacing.sm },
   label: {
     fontSize: 12,
     fontWeight: '600',

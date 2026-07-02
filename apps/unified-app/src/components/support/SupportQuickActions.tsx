@@ -1,11 +1,15 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
+import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
+type QuickActionIcon = keyof typeof Ionicons.glyphMap;
+
 type QuickAction = {
   label: string;
-  icon: string;
+  icon: QuickActionIcon;
   onPress: () => void;
 };
 
@@ -18,8 +22,8 @@ export function SupportQuickActions({ actions }: SupportQuickActionsProps) {
     <View style={styles.grid}>
       {actions.map((action) => (
         <View key={action.label} style={styles.cell}>
-          <Pressable style={styles.card} onPress={action.onPress}>
-            <Text style={styles.icon}>{action.icon}</Text>
+          <Pressable style={styles.card} onPress={action.onPress} accessibilityLabel={action.label}>
+            <Ionicons name={action.icon} size={24} color={adminColors.primary} />
             <Text style={styles.label} numberOfLines={2}>
               {action.label}
             </Text>
@@ -48,10 +52,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.xs,
     borderWidth: 1,
     borderColor: colors.borderDefault,
   },
-  icon: { fontSize: 24, marginBottom: spacing.xs },
   label: {
     fontSize: 12,
     fontWeight: '600',

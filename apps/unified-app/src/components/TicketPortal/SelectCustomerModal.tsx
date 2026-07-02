@@ -131,7 +131,7 @@ export function SelectCustomerModal({
         }}
       >
         <Pressable
-          style={[styles.card, { paddingBottom: insets.bottom + spacing.md }]}
+          style={[styles.card, { paddingBottom: insets.bottom + spacing.md, maxHeight: '85%' }]}
           onPress={(e) => e.stopPropagation()}
         >
           <View style={styles.header}>
@@ -177,20 +177,23 @@ export function SelectCustomerModal({
               onRetry={refetch}
             />
           ) : (
-            <DismissKeyboardFlatList
-              data={customers}
-              keyExtractor={(item) => item.id}
-              style={styles.list}
-              ListEmptyComponent={
-                <Text style={styles.empty}>
-                  {search.trim()
-                    ? 'No customers found for this search'
-                    : 'No active customers found'}
-                </Text>
-              }
-              ListFooterComponent={listFooter}
-              renderItem={renderCustomerRow}
-            />
+            <View style={styles.listWrap}>
+              <DismissKeyboardFlatList
+                data={customers}
+                keyExtractor={(item) => item.id}
+                style={styles.list}
+                contentContainerStyle={styles.listContent}
+                ListEmptyComponent={
+                  <Text style={styles.empty}>
+                    {search.trim()
+                      ? 'No customers found for this search'
+                      : 'No active customers found'}
+                  </Text>
+                }
+                ListFooterComponent={listFooter}
+                renderItem={renderCustomerRow}
+              />
+            </View>
           )}
         </Pressable>
       </Pressable>
@@ -209,6 +212,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     maxHeight: '85%',
+    minHeight: 360,
     padding: spacing.md,
   },
   header: {
@@ -265,8 +269,16 @@ const styles = StyleSheet.create({
   loader: {
     marginVertical: spacing.xl,
   },
+  listWrap: {
+    flex: 1,
+    minHeight: 220,
+    maxHeight: 420,
+  },
   list: {
-    flexGrow: 0,
+    flex: 1,
+  },
+  listContent: {
+    paddingBottom: spacing.sm,
   },
   row: {
     paddingVertical: spacing.sm,

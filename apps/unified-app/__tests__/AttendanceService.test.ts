@@ -38,7 +38,7 @@ jest.mock('@/services/offline/syncManager', () => ({
 import { locationService } from '@/services/LocationService';
 import { attendanceService } from '@/services/AttendanceService';
 import { store } from '@/store/store';
-import { attendanceApi } from '@/services/api/attendanceApi';
+import { AttendanceActionError } from '@/utils/attendanceErrors';
 import type { Geofence } from '@/types/attendance';
 
 const mockGeofence: Geofence = {
@@ -60,18 +60,19 @@ describe('AttendanceService', () => {
     jest.clearAllMocks();
   });
 
-  it('returns needs_approval when outside geofence', async () => {
+  it('throws outside_zone when outside geofence', async () => {
     (locationService.getCurrentLocation as jest.Mock).mockResolvedValue({
       latitude: 28.7,
       longitude: 77.3,
+      accuracy: 20,
     });
     (locationService.loadAssignedGeofences as jest.Mock).mockResolvedValue([mockGeofence]);
     (store.dispatch as jest.Mock).mockReturnValue({
       unwrap: jest.fn().mockResolvedValue(null),
     });
 
-    const result = await attendanceService.checkIn();
-    expect(result.action).toBe('needs_approval');
+    await expect(attendanceService.checkIn()).rejects.toBeInstanceOf(AttendanceActionError);
+    await expect(attendanceService.checkIn()).rejects.toMatchObject({ code: 'outside_zone' });
   });
 
   it('prevents double check-in', async () => {

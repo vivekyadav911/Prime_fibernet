@@ -24,6 +24,8 @@ const METHOD_ICONS: Record<PaymentMethod, keyof typeof MaterialCommunityIcons.gl
   wallet: 'wallet-outline',
   cash: 'cash',
   cheque: 'checkbook',
+  bank_transfer: 'bank-transfer',
+  other: 'dots-horizontal',
 };
 
 const METHOD_SUBTITLES: Partial<Record<PaymentMethod, string>> = {

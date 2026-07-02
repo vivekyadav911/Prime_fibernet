@@ -96,6 +96,19 @@ export const adminColors = {
     absent: '#FEF8F8',
     late: '#FFFCF5',
   },
+  /** Attendance records calendar day cell fills */
+  attendanceCalendarCell: {
+    present: '#1a4731',
+    absent: '#7f1d1d',
+    late: '#92400e',
+    half_day: '#134e4a',
+    on_leave: '#1e3a5f',
+    holiday: '#E5E7EB',
+    weekendEmpty: '#F3F4F6',
+    empty: '#FFFFFF',
+    densityPresent: '#22C55E',
+    densityAbsent: '#EF4444',
+  },
   /** Notification hub — sent tab and FAB */
   notificationHub: {
     sentTabBg: '#3B3F8C',

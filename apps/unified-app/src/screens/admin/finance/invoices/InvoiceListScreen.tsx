@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -59,7 +59,7 @@ export function InvoiceListScreen({ navigation }: Props) {
   );
 
   const handleDownload = useCallback(
-    async (item: NonNullable<typeof data>[number]) => {
+    async (item: AdminInvoice) => {
       try {
         let path = item.pdfStoragePath;
         if (!path) {
@@ -77,6 +77,16 @@ export function InvoiceListScreen({ navigation }: Props) {
       }
     },
     [fetchInvoice, generateAndUploadPDF, navigation, refetch],
+  );
+
+  const invoicesRef = useRef<AdminInvoice[]>([]);
+
+  const handleDownloadById = useCallback(
+    (invoiceId: string) => {
+      const item = invoicesRef.current.find((invoice) => invoice.id === invoiceId);
+      if (item) void handleDownload(item);
+    },
+    [handleDownload],
   );
 
   const handleSendConfirm = useCallback(
@@ -104,6 +114,24 @@ export function InvoiceListScreen({ navigation }: Props) {
     setSendTarget(item);
   }, []);
 
+  const openSendModalById = useCallback(
+    (invoiceId: string, channel: 'email' | 'whatsapp') => {
+      const item = invoicesRef.current.find((invoice) => invoice.id === invoiceId);
+      if (item) openSendModal(item, channel);
+    },
+    [openSendModal],
+  );
+
+  const handleSendEmailById = useCallback(
+    (invoiceId: string) => openSendModalById(invoiceId, 'email'),
+    [openSendModalById],
+  );
+
+  const handleSendWhatsAppById = useCallback(
+    (invoiceId: string) => openSendModalById(invoiceId, 'whatsapp'),
+    [openSendModalById],
+  );
+
   const handleBulkSend = useCallback(async () => {
     try {
       const result = await bulkSend({ invoiceType: bulkType, channel: bulkChannel }).unwrap();
@@ -120,84 +148,111 @@ export function InvoiceListScreen({ navigation }: Props) {
   }, [bulkChannel, bulkSend, bulkType, dispatch]);
 
   const renderItem = useCallback(
-    ({ item }: { item: NonNullable<typeof data>[number] }) => (
+    ({ item }: { item: AdminInvoice }) => (
       <InvoiceListRow
         item={item}
-        onDownload={() => void handleDownload(item)}
-        onSendEmail={() => openSendModal(item, 'email')}
-        onSendWhatsApp={() => openSendModal(item, 'whatsapp')}
+        onDownload={handleDownloadById}
+        onSendEmail={handleSendEmailById}
+        onSendWhatsApp={handleSendWhatsAppById}
       />
     ),
-    [handleDownload, openSendModal],
+    [handleDownloadById, handleSendEmailById, handleSendWhatsAppById],
   );
 
-  const listHeader = (
-    <View style={adminScreenStyles.listHeader}>
-      <View style={styles.toolbar}>
-        <View style={styles.toolbarActions}>
+  const listHeader = useMemo(
+    () => (
+      <View style={adminScreenStyles.listHeader}>
+        <View style={styles.toolbar}>
+          <View style={styles.toolbarActions}>
+            <Pressable
+              style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}
+              onPress={() => navigation.navigate('InvoiceSettings')}
+            >
+              <Text style={styles.btnSecondaryText}>Edit templates</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}
+              onPress={() => navigation.navigate('InvoiceHistory')}
+            >
+              <Text style={styles.btnSecondaryText}>History</Text>
+            </Pressable>
+          </View>
           <Pressable
-            style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}
-            onPress={() => navigation.navigate('InvoiceSettings')}
+            style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPressed]}
+            onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'gst' })}
           >
-            <Text style={styles.btnSecondaryText}>Edit templates</Text>
+            <Text style={styles.btnPrimaryText}>Create manual invoice</Text>
           </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}
-            onPress={() => navigation.navigate('InvoiceHistory')}
-          >
-            <Text style={styles.btnSecondaryText}>History</Text>
-          </Pressable>
+          <View style={styles.typeActions}>
+            <Pressable
+              style={({ pressed }) => [styles.btnGhost, pressed && styles.btnPressed]}
+              onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'non_gst' })}
+            >
+              <Text style={styles.btnGhostText}>Non-GST</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.btnGhost, pressed && styles.btnPressed]}
+              onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'custom_gst' })}
+            >
+              <Text style={styles.btnGhostText}>Custom GST</Text>
+            </Pressable>
+          </View>
         </View>
-        <Pressable
-          style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPressed]}
-          onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'gst' })}
-        >
-          <Text style={styles.btnPrimaryText}>Create manual invoice</Text>
-        </Pressable>
-        <View style={styles.typeActions}>
-          <Pressable
-            style={({ pressed }) => [styles.btnGhost, pressed && styles.btnPressed]}
-            onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'non_gst' })}
-          >
-            <Text style={styles.btnGhostText}>Non-GST</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.btnGhost, pressed && styles.btnPressed]}
-            onPress={() => navigation.navigate('CreateInvoice', { invoiceType: 'custom_gst' })}
-          >
-            <Text style={styles.btnGhostText}>Custom GST</Text>
-          </Pressable>
-        </View>
+
+        {statsLoading || !stats ? (
+          <SkeletonLoader rows={1} rowHeight={72} shape="card" />
+        ) : (
+          <View style={styles.kpiRow}>
+            <AdminKPICard label="Total revenue" value={formatINR(stats.totalRevenue)} icon="₹" surface="blue" />
+            <AdminKPICard
+              label="Completed"
+              value={String(stats.completedPayments)}
+              icon="✅"
+              surface="teal"
+              status="healthy"
+            />
+          </View>
+        )}
+
+        <SearchBar value={search} onChangeText={setSearch} placeholder="Search customer or invoice ID…" />
+
+        <BulkDispatchCard
+          invoiceType={bulkType}
+          channel={bulkChannel}
+          onInvoiceTypeChange={setBulkType}
+          onChannelChange={setBulkChannel}
+          onSend={() => void handleBulkSend()}
+          sending={bulkSending}
+        />
+
+        <FilterChips options={filterOptions} selected={listFilter} onSelect={setListFilter} />
       </View>
+    ),
+    [
+      bulkChannel,
+      bulkSending,
+      bulkType,
+      filterOptions,
+      handleBulkSend,
+      listFilter,
+      navigation,
+      search,
+      stats,
+      statsLoading,
+    ],
+  );
 
-      {statsLoading || !stats ? (
-        <SkeletonLoader rows={1} rowHeight={72} shape="card" />
-      ) : (
-        <View style={styles.kpiRow}>
-          <AdminKPICard label="Total revenue" value={formatINR(stats.totalRevenue)} icon="₹" surface="blue" />
-          <AdminKPICard
-            label="Completed"
-            value={String(stats.completedPayments)}
-            icon="✅"
-            surface="teal"
-            status="healthy"
-          />
-        </View>
-      )}
-
-      <SearchBar value={search} onChangeText={setSearch} placeholder="Search customer or invoice ID…" />
-
-      <BulkDispatchCard
-        invoiceType={bulkType}
-        channel={bulkChannel}
-        onInvoiceTypeChange={setBulkType}
-        onChannelChange={setBulkChannel}
-        onSend={() => void handleBulkSend()}
-        sending={bulkSending}
+  const listEmptyComponent = useMemo(
+    () => (
+      <EmptyState
+        title="No invoices yet"
+        subtitle="Create a manual invoice or wait for payment records"
+        icon="🧾"
+        actionLabel="Create invoice"
+        onAction={() => navigation.navigate('CreateInvoice', { invoiceType: 'gst' })}
       />
-
-      <FilterChips options={filterOptions} selected={listFilter} onSelect={setListFilter} />
-    </View>
+    ),
+    [navigation],
   );
 
   if (isLoading && !data) {
@@ -217,6 +272,7 @@ export function InvoiceListScreen({ navigation }: Props) {
   }
 
   const invoices = data ?? [];
+  invoicesRef.current = invoices;
 
   return (
     <RoleGuard requiredPermission="invoices.view">
@@ -226,19 +282,15 @@ export function InvoiceListScreen({ navigation }: Props) {
           keyExtractor={(i) => i.id}
           renderItem={renderItem}
           ListHeaderComponent={listHeader}
-          ListEmptyComponent={
-            <EmptyState
-              title="No invoices yet"
-              subtitle="Create a manual invoice or wait for payment records"
-              icon="🧾"
-              actionLabel="Create invoice"
-              onAction={() => navigation.navigate('CreateInvoice', { invoiceType: 'gst' })}
-            />
-          }
+          ListEmptyComponent={listEmptyComponent}
           refreshing={isFetching}
           onRefresh={refetch}
           contentContainerStyle={adminScreenStyles.listContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews
         />
         <SendInvoiceRecipientModal
           visible={sendTarget != null}

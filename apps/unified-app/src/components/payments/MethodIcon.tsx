@@ -2,10 +2,14 @@ import { StyleSheet, Text } from 'react-native';
 
 import { PAYMENT_METHOD_CONFIG, type PaymentMethod } from '@/types/payments';
 
-type Props = { method: PaymentMethod };
+type Props = { method: PaymentMethod | string };
 
 export function MethodIcon({ method }: Props) {
-  const cfg = PAYMENT_METHOD_CONFIG[method];
+  const cfg = PAYMENT_METHOD_CONFIG[method as PaymentMethod] ?? {
+    label: String(method),
+    icon: '💳',
+    color: '#64748B',
+  };
   return (
     <Text style={styles.row}>
       <Text style={styles.icon}>{cfg.icon}</Text>

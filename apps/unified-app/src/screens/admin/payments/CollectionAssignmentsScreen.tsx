@@ -96,6 +96,7 @@ export function CollectionAssignmentsScreen() {
     collectionStatus: filters.collectionStatus,
     claimFilter: filters.claimFilter,
     outstandingOnly: filters.outstandingOnly,
+    dueForCollectionOnly: filters.dueForCollectionOnly,
     sortBy,
     sortDir,
     page,
@@ -203,7 +204,19 @@ export function CollectionAssignmentsScreen() {
   const renderItem = useCallback(
     ({ item }: { item: CollectionAssignmentRow }) => {
       const isSelected = selected.includes(item.id);
-      const assignmentLabel = item.assignedOfficerName ?? 'Open pool';
+      const isOpenPool =
+        !item.assignedOfficerId &&
+        !item.claimedByOfficerId &&
+        item.collectionStatus === 'open';
+      const assignmentLabel = item.assignedOfficerName
+        ? item.assignedOfficerName
+        : isOpenPool
+          ? 'Open pool'
+          : 'Unassigned';
+      const isCollected = item.collectionStatus === 'collected';
+      const canAssign = !isCollected && item.collectionStatus !== 'collected';
+      const assignLabel =
+        item.assignedOfficerId || item.claimedByOfficerId ? 'Reassign' : 'Assign';
 
       return (
         <Pressable
@@ -236,9 +249,20 @@ export function CollectionAssignmentsScreen() {
                 variant={isSelected ? 'primary' : 'secondary'}
                 onPress={() => toggleSelect(item.id)}
               />
+            ) : isCollected ? (
+              <AdminButton
+                label="View"
+                variant="secondary"
+                onPress={() => navigation.navigate('CustomerCollectionDetail', { customerId: item.id })}
+              />
             ) : (
               <>
-                <AdminButton label="Assign" variant="secondary" onPress={() => openSingleAssign(item)} />
+                <AdminButton
+                  label={assignLabel}
+                  variant="secondary"
+                  onPress={() => openSingleAssign(item)}
+                  disabled={!canAssign}
+                />
                 {item.claimedByOfficerId ? (
                   <AdminButton
                     label="Revoke claim"
@@ -301,6 +325,7 @@ export function CollectionAssignmentsScreen() {
 
         <Text style={styles.summaryLine}>
           Page {page} of {totalPages} · {rows.length} shown · {total.toLocaleString()} total
+          {filters.dueForCollectionOnly ? ' · Due for collection' : ' · All customers'}
           {isFetching && !isLoading ? ' · Updating…' : ''}
         </Text>
       </View>
@@ -319,6 +344,7 @@ export function CollectionAssignmentsScreen() {
       sortKey,
       total,
       totalPages,
+      filters.dueForCollectionOnly,
     ],
   );
 

@@ -43,6 +43,11 @@ const CLAIM_OPTIONS = [
   { value: 'unclaimed' as const, label: 'Unclaimed' },
 ];
 
+const VIEW_MODE_OPTIONS = [
+  { value: 'due' as const, label: 'Due for collection' },
+  { value: 'all' as const, label: 'Show all customers' },
+];
+
 const BALANCE_OPTIONS = [
   { value: 'all' as const, label: 'All balances' },
   { value: 'outstanding' as const, label: 'Outstanding only' },
@@ -53,7 +58,8 @@ export function countActiveCollectionFilters(filters: CollectionAssignmentsFilte
   if (filters.officerFilter !== 'all') count += 1;
   if (filters.paymentStatus !== 'all') count += 1;
   if (filters.collectionStatus !== 'all') count += 1;
-  if (filters.outstandingOnly) count += 1;
+  if (!filters.dueForCollectionOnly) count += 1;
+  if (filters.outstandingOnly && !filters.dueForCollectionOnly) count += 1;
   if (filters.claimFilter !== 'all') count += 1;
   return count;
 }
@@ -77,7 +83,7 @@ export function CollectionAssignmentsFilterSheet({
   const officerOptions = useMemo(
     () => [
       { value: 'all' as const, label: 'All customers' },
-      { value: 'unassigned' as const, label: 'Unassigned' },
+      { value: 'open_pool' as const, label: 'Open pool' },
       ...officers.map((o) => ({ value: o.id, label: o.name })),
     ],
     [officers],
@@ -127,13 +133,28 @@ export function CollectionAssignmentsFilterSheet({
         />
 
         <SelectField
-          label="Balance"
-          value={localFilters.outstandingOnly ? 'outstanding' : 'all'}
-          options={BALANCE_OPTIONS}
+          label="Queue view"
+          value={localFilters.dueForCollectionOnly ? 'due' : 'all'}
+          options={VIEW_MODE_OPTIONS}
           onSelect={(value) =>
-            setLocalFilters((prev) => ({ ...prev, outstandingOnly: value === 'outstanding' }))
+            setLocalFilters((prev) => ({
+              ...prev,
+              dueForCollectionOnly: value === 'due',
+              outstandingOnly: value === 'due' ? true : prev.outstandingOnly,
+            }))
           }
         />
+
+        {!localFilters.dueForCollectionOnly ? (
+          <SelectField
+            label="Balance"
+            value={localFilters.outstandingOnly ? 'outstanding' : 'all'}
+            options={BALANCE_OPTIONS}
+            onSelect={(value) =>
+              setLocalFilters((prev) => ({ ...prev, outstandingOnly: value === 'outstanding' }))
+            }
+          />
+        ) : null}
 
         <SelectField
           label="Claim state"

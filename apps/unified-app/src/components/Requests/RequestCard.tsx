@@ -75,7 +75,7 @@ export function RequestCard({ request, variant, onPress, onAssign }: RequestCard
         ) : null}
       </View>
 
-      <Text style={styles.requestId}>{truncateRequestId(request.id)}</Text>
+      <Text style={styles.requestId}>{truncateRequestId(request.id, request.requestNumber)}</Text>
       <Text style={styles.requestType}>{request.type}</Text>
       <Text style={styles.relativeTime}>{relativeTime}</Text>
 

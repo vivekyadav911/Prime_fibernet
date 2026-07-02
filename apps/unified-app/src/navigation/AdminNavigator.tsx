@@ -25,7 +25,6 @@ import {
   AdminPaymentsStackNav,
   AdminPlansStackNav,
   AdminNotificationsStackNav,
-  AdminRequestsStackNav,
   AdminSettingsStackNav,
   AdminSupportStackNav,
   AdminTicketPortalStackNav,
@@ -72,7 +71,6 @@ function AdminDrawerNav() {
         <Drawer.Screen name="Attendance" component={AdminAttendanceStackNav} options={{ headerShown: false, title: 'Attendance' }} />
         <Drawer.Screen name="Payroll" component={AdminPayrollStackNav} options={{ headerShown: false, title: 'Payroll' }} />
         <Drawer.Screen name="RoleManagement" component={RoleManagementScreen} options={{ title: 'Role Management' }} />
-        <Drawer.Screen name="Requests" component={AdminRequestsStackNav} options={{ headerShown: false, title: 'Requests' }} />
         <Drawer.Screen name="TicketPortal" component={AdminTicketPortalStackNav} options={{ headerShown: false, title: 'Ticket Portal' }} />
         <Drawer.Screen name="Plans" component={AdminPlansStackNav} options={{ headerShown: false, title: 'Plans' }} />
         <Drawer.Screen name="Notifications" component={AdminNotificationsStackNav} options={{ headerShown: false, title: 'Notifications' }} />

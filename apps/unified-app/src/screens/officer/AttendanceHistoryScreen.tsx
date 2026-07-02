@@ -71,7 +71,8 @@ export function AttendanceHistoryScreen(_props: Props) {
         <AttendanceCalendar
           year={year}
           month={month}
-          records={records.map((r) => ({ date: r.date, status: r.status }))}
+          records={records}
+          selectedOfficerId={records[0]?.officerId ?? null}
         />
       </View>
       <FlatList

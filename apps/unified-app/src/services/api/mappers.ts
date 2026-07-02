@@ -1,5 +1,7 @@
 import type { Plan, RequestActivity, ServiceRequest } from '@prime/types';
 
+import { formatRequestTypeLabel } from '@/constants/requestTypes';
+import { resolveOfficerName } from '@/utils/resolveOfficerName';
 import type { TypedSupabaseClient } from './supabase';
 
 /** officers.user_id and officers.auth_user_id both reference users — hint PostgREST which FK to use. */
@@ -35,16 +37,20 @@ export function mapPlan(row: Record<string, unknown>): Plan {
 }
 
 export function mapRequest(row: Record<string, unknown>): ServiceRequest {
+  const rawType = row.request_type ?? row.type ?? 'installation';
   return {
     id: row.id as string,
     userId: (row.user_id as string) ?? '',
     officerId: (row.officer_id as string) ?? null,
-    requestType: (row.request_type ?? row.type ?? 'installation') as ServiceRequest['requestType'],
+    requestType: String(rawType) as ServiceRequest['requestType'],
+    requestTypeLabel: formatRequestTypeLabel(rawType),
     status: row.status as ServiceRequest['status'],
     priority: (row.priority as ServiceRequest['priority']) ?? 'P2',
     address: (row.address as string) ?? '',
     description: (row.description as string) ?? undefined,
     createdAt: row.created_at as string,
+    updatedAt: row.updated_at ? String(row.updated_at) : undefined,
+    completedAt: row.completed_at ? String(row.completed_at) : null,
   };
 }
 
@@ -93,7 +99,12 @@ export async function fetchOfficerNameMap(
     const userName = (officer.users as { name?: string } | null)?.name;
     map.set(
       officer.id as string,
-      (officer.full_name as string) ?? userName ?? (officer.email as string) ?? 'Officer',
+      resolveOfficerName(String(officer.id), {
+        fullName: officer.full_name as string | null,
+        userName,
+        email: officer.email as string | null,
+        context: 'fetchOfficerNameMap',
+      }) ?? 'Officer',
     );
   }
   return map;

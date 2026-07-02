@@ -1,86 +1,65 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { Button, Screen } from '@prime/ui';
 
-import { locationService } from '@/services/LocationService';
+import { useLocationPermissionState } from '@/hooks/attendance/useLocationPermissionState';
 import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
-import { useAppDispatch } from '@/store/hooks';
-import {
-  setBackgroundPermissionStatus,
-  setLocationPermissionStatus,
-} from '@/store/slices/attendanceSlice';
+import { radius, spacing } from '@/theme/spacing';
 
 type Props = {
   children: React.ReactNode;
-  limitedMode?: boolean;
-  onLimitedMode?: () => void;
 };
 
-export function LocationPermissionGate({ children, limitedMode, onLimitedMode }: Props) {
-  const dispatch = useAppDispatch();
-  const [foregroundGranted, setForegroundGranted] = useState<boolean | null>(null);
-  const [backgroundGranted, setBackgroundGranted] = useState<boolean | null>(null);
+export function LocationPermissionGate({ children }: Props) {
+  const { mode, checking, requestForeground, requestBackground, openSettings, isWeb } =
+    useLocationPermissionState();
 
-  const checkAll = useCallback(async () => {
-    const perms = await locationService.checkPermissions();
-    setForegroundGranted(perms.foreground);
-    setBackgroundGranted(perms.background);
-    dispatch(setLocationPermissionStatus(perms.foreground ? 'granted' : 'denied'));
-    dispatch(setBackgroundPermissionStatus(perms.background ? 'granted' : 'denied'));
-  }, [dispatch]);
+  if (isWeb) return <>{children}</>;
 
-  useEffect(() => {
-    void checkAll();
-  }, [checkAll]);
-
-  const requestPermissions = useCallback(async () => {
-    const perms = await locationService.requestPermissions();
-    setForegroundGranted(perms.foreground);
-    setBackgroundGranted(perms.background);
-    dispatch(setLocationPermissionStatus(perms.foreground ? 'granted' : 'denied'));
-    dispatch(setBackgroundPermissionStatus(perms.background ? 'granted' : 'denied'));
-  }, [dispatch]);
-
-  if (Platform.OS === 'web') return <>{children}</>;
-
-  if (foregroundGranted && (backgroundGranted || limitedMode)) {
+  if (checking) {
     return (
-      <>
-        {!backgroundGranted && limitedMode ? (
-          <View style={styles.banner}>
-            <Text style={styles.bannerText}>
-              Background location unavailable — limited attendance mode active.
-            </Text>
-          </View>
-        ) : null}
-        {children}
-      </>
+      <Screen>
+        <Text style={styles.title}>Checking location permissions…</Text>
+      </Screen>
     );
   }
 
-  if (foregroundGranted === null) {
+  if (mode === 'blocked') {
     return (
-      <Screen>
-        <Text style={styles.title}>Checking permissions…</Text>
+      <Screen style={styles.gate}>
+        <Text style={styles.emoji}>📍</Text>
+        <Text style={styles.title}>Location access required</Text>
+        <Text style={styles.body}>
+          Prime Fibernet uses your location to verify geofence-based attendance. Enable location
+          access to check in or request approval.
+        </Text>
+        <Button label="Enable location" onPress={() => void requestForeground()} />
+        <Button label="Open settings" variant="ghost" onPress={openSettings} />
       </Screen>
     );
   }
 
   return (
-    <Screen style={styles.gate}>
-      <Text style={styles.emoji}>📍</Text>
-      <Text style={styles.title}>Location access required</Text>
-      <Text style={styles.body}>
-        Prime Fibernet uses your location to verify geofence-based attendance during shifts.
-        Background access lets check-in reminders work when the app is closed.
-      </Text>
-      <Button label="Grant permission" onPress={() => void requestPermissions()} />
-      {onLimitedMode ? (
-        <Button label="Use limited mode" variant="ghost" onPress={onLimitedMode} />
+    <>
+      {mode === 'limited' ? (
+        <View style={styles.limitedBanner}>
+          <Text style={styles.limitedTitle}>Limited attendance mode</Text>
+          <Text style={styles.limitedBody}>
+            Foreground location only — manual check-in works, but automatic zone detection is off.
+          </Text>
+          <View style={styles.limitedActions}>
+            <Button label="Enable background" variant="secondary" onPress={() => void requestBackground()} />
+            <Button label="Settings" variant="ghost" onPress={openSettings} />
+          </View>
+        </View>
       ) : null}
-      <Button label="Open settings" variant="ghost" onPress={() => void Linking.openSettings()} />
-    </Screen>
+      {mode === 'full' ? (
+        <View style={styles.fullBanner}>
+          <Text style={styles.fullText}>Live geofence monitoring active</Text>
+        </View>
+      ) : null}
+      {children}
+    </>
   );
 }
 
@@ -89,6 +68,22 @@ const styles = StyleSheet.create({
   emoji: { fontSize: 48 },
   title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, textAlign: 'center' },
   body: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-  banner: { backgroundColor: colors.warningAmber, padding: spacing.sm },
-  bannerText: { color: colors.white, fontSize: 12, textAlign: 'center' },
+  limitedBanner: {
+    backgroundColor: colors.amberLight,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+  },
+  limitedTitle: { fontWeight: '700', color: colors.amber, marginBottom: spacing.xxs },
+  limitedBody: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm },
+  limitedActions: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  fullBanner: {
+    backgroundColor: colors.emeraldLight,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  fullText: { color: colors.emerald, fontWeight: '600', fontSize: 13, textAlign: 'center' },
 });

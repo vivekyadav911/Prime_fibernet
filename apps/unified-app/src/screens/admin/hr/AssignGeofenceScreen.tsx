@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { AdminButton, AdminScreenLayout, AdminStateShell, RoleGuard } from '@/components/admin';
+import { Button, Screen } from '@prime/ui';
+
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
+import { SkeletonLoader } from '@/components/common';
 import { useAssignGeofence, useGeofence } from '@/hooks/attendance/useAdminAttendance';
-import { useGetOfficersQuery } from '@/store/api/endpoints';
+import { useGetOfficersQuery } from '@/services/api/officersApi';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
-import { adminColors } from '@/theme/admin';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'AssignGeofence'>;
 
@@ -18,7 +20,8 @@ export function AssignGeofenceScreen({ route, navigation }: Props) {
   const { data: officers, isLoading: officersLoading } = useGetOfficersQuery();
   const [assign, { isLoading: saving }] = useAssignGeofence();
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [search] = useState('');
+  const [search, setSearch] = useState('');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (geofence) setSelected(new Set(geofence.assignedOfficers));
@@ -33,52 +36,92 @@ export function AssignGeofenceScreen({ route, navigation }: Props) {
     });
   }, []);
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return (officers ?? []).filter((o) => !q || o.name.toLowerCase().includes(q));
+  }, [officers, search]);
+
   const handleSave = useCallback(async () => {
-    await assign({ id: geofenceId, officerIds: [...selected] });
-    navigation.goBack();
+    setSaveError(null);
+    try {
+      await assign({ id: geofenceId, officerIds: [...selected] }).unwrap();
+      navigation.goBack();
+    } catch (e) {
+      const message = queryErrorMessage(e);
+      setSaveError(message);
+      Alert.alert('Assign failed', message);
+    }
   }, [assign, geofenceId, navigation, selected]);
 
-  const filtered = (officers ?? []).filter((o) =>
-    o.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  if (geoLoading || officersLoading) {
+    return (
+      <Screen>
+        <SkeletonLoader rows={8} />
+      </Screen>
+    );
+  }
 
   return (
     <RoleGuard requiredPermission="attendance.edit">
-      <AdminStateShell
-        isLoading={geoLoading || officersLoading}
-        loadingRows={8}
-      >
-        <AdminScreenLayout padded={false}>
+      <AdminScreenLayout>
+        <Text style={styles.title}>Assign officers — {geofence?.name}</Text>
+        <Text style={styles.subtitle}>
+          {selected.size} selected · {geofence?.assignedOfficers.length ?? 0} currently assigned
+        </Text>
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search officers"
+          style={styles.search}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {saveError ? <Text style={styles.error}>{saveError}</Text> : null}
         <FlatList
           data={filtered}
           keyExtractor={(o) => o.id}
-          ListHeaderComponent={<Text style={styles.title}>Assign officers — {geofence?.name}</Text>}
-          ListFooterComponent={
-            <AdminButton label={saving ? 'Saving…' : 'Save'} onPress={() => void handleSave()} disabled={saving} />
-          }
-          renderItem={({ item }) => (
-            <View style={styles.row}>
-              <Text style={styles.name}>{item.name}</Text>
-              <AdminButton
-                label={selected.has(item.id) ? '✓' : '○'}
-                variant="ghost"
-                onPress={() => toggle(item.id)}
-              />
-            </View>
-          )}
-          contentContainerStyle={adminScreenStyles.listContent}
-          style={styles.list}
-          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => {
+            const isSelected = selected.has(item.id);
+            return (
+              <View style={styles.row}>
+                <View style={styles.rowText}>
+                  <Text style={styles.name}>{item.name}</Text>
+                  {geofence?.assignedOfficers.includes(item.id) ? (
+                    <Text style={styles.assignedTag}>Currently assigned</Text>
+                  ) : null}
+                </View>
+                <Button
+                  label={isSelected ? 'Selected' : 'Select'}
+                  variant={isSelected ? 'primary' : 'ghost'}
+                  onPress={() => toggle(item.id)}
+                />
+              </View>
+            );
+          }}
         />
-        </AdminScreenLayout>
-      </AdminStateShell>
+        <Button
+          label={saving ? 'Saving…' : 'Save assignments'}
+          onPress={() => void handleSave()}
+          disabled={saving}
+        />
+      </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { flex: 1 },
-  title: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  title: { fontSize: 16, fontWeight: '600', marginBottom: spacing.xxs, color: colors.textPrimary },
+  subtitle: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.md },
+  search: {
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceWhite,
+  },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -87,5 +130,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: colors.borderDefault,
   },
-  name: { color: colors.textPrimary },
+  rowText: { flex: 1, marginRight: spacing.sm },
+  name: { color: colors.textPrimary, fontWeight: '600' },
+  assignedTag: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
+  error: { color: colors.errorRed, marginBottom: spacing.sm },
 });

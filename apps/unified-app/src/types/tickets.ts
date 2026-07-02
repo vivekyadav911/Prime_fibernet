@@ -170,9 +170,14 @@ export interface TicketFilters {
 }
 
 export interface TicketStats {
+  total: number;
   totalOpen: number;
   totalInProgress: number;
+  totalAwaitingCustomer: number;
+  totalAwaitingParts: number;
   totalResolved: number;
+  totalClosed: number;
+  totalReopened: number;
   /** Open / in-progress tickets with a live or frozen breach on response or resolution SLA */
   slaBreaches: number;
   officersWithAssignments: number;

@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AdminButton, AdminScreenLayout, AdminEmptyState, RoleGuard } from '@/components/admin';
 import { FreeMapView } from '@/components/map';
 import { ErrorState, SkeletonLoader, ToggleSwitch } from '@/components/common';
+import { useAttendanceRealtimeSync } from '@/hooks/attendance/useAttendanceRealtimeSync';
 import {
   useDeleteGeofence,
   useGeofences,
@@ -59,6 +60,7 @@ function GeofenceCard({
 }
 
 export function GeofenceManagementScreen({ navigation }: Props) {
+  useAttendanceRealtimeSync();
   const { data, isLoading, isError, error, refetch } = useGeofences();
   const [toggleGeofence] = useToggleGeofence();
   const [deleteGeofence] = useDeleteGeofence();

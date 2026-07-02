@@ -91,9 +91,10 @@ export type CollectionAssignmentsParams = {
   page?: number;
   limit?: number;
   search?: string;
-  officerFilter?: 'all' | 'unassigned' | string;
+  officerFilter?: 'all' | 'unassigned' | 'open_pool' | string;
   paymentStatus?: 'all' | 'paid' | 'pending' | 'overdue' | 'suspended';
   outstandingOnly?: boolean;
+  dueForCollectionOnly?: boolean;
   collectionStatus?: 'all' | 'inactive' | 'open' | 'assigned' | 'claimed' | 'collected';
   claimFilter?: 'all' | 'claimed' | 'unclaimed';
   sortBy?: 'due_date' | 'name' | 'outstanding' | 'collection_status';
@@ -101,10 +102,11 @@ export type CollectionAssignmentsParams = {
 };
 
 export type CollectionAssignmentsFilters = {
-  officerFilter: 'all' | 'unassigned' | string;
+  officerFilter: 'all' | 'unassigned' | 'open_pool' | string;
   paymentStatus: 'all' | 'paid' | 'pending' | 'overdue' | 'suspended';
   collectionStatus: 'all' | 'inactive' | 'open' | 'assigned' | 'claimed' | 'collected';
   outstandingOnly: boolean;
+  dueForCollectionOnly: boolean;
   claimFilter: 'all' | 'claimed' | 'unclaimed';
 };
 
@@ -112,7 +114,8 @@ export const DEFAULT_COLLECTION_ASSIGNMENTS_FILTERS: CollectionAssignmentsFilter
   officerFilter: 'all',
   paymentStatus: 'all',
   collectionStatus: 'all',
-  outstandingOnly: false,
+  outstandingOnly: true,
+  dueForCollectionOnly: true,
   claimFilter: 'all',
 };
 

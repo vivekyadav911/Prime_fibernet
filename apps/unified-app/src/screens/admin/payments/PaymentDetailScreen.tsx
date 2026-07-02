@@ -5,11 +5,15 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AmountDisplay, MethodIcon, PaymentTimeline, PaymentStatusBadge } from '@/components/payments';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { usePaymentDetail } from '@/hooks/usePayments';
-import { useLazyGetPaymentReceiptQuery } from '@/services/api/paymentCollectionApi';
+import {
+  useGetPaymentActivityTimelineQuery,
+  useLazyGetPaymentReceiptQuery,
+} from '@/services/api/paymentCollectionApi';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { formatPaymentCustomerLine } from '@/utils/formatPaymentCustomer';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminPaymentsStackParamList, 'PaymentDetail'>;
@@ -17,6 +21,7 @@ type Props = NativeStackScreenProps<AdminPaymentsStackParamList, 'PaymentDetail'
 export function PaymentDetailScreen({ route, navigation }: Props) {
   const { paymentId } = route.params;
   const { data: payment, isLoading, isError, error, refetch } = usePaymentDetail(paymentId);
+  const { data: activityEvents } = useGetPaymentActivityTimelineQuery(paymentId);
   const [fetchReceipt] = useLazyGetPaymentReceiptQuery();
 
   const onReceipt = useCallback(async () => {
@@ -51,7 +56,14 @@ export function PaymentDetailScreen({ route, navigation }: Props) {
       </View>
       <View style={styles.card}>
         <Text style={styles.section}>Customer</Text>
-        <Text style={styles.line}>{payment.customer_name} · {payment.account_number}</Text>
+        <Text style={styles.line}>
+          {formatPaymentCustomerLine({
+            name: payment.customer_name,
+            accountNumber: payment.account_number,
+            phone: payment.customer_phone,
+            customerId: payment.customer?.customer_id,
+          })}
+        </Text>
         {payment.customer_phone ? <Text style={styles.muted}>{payment.customer_phone}</Text> : null}
         {payment.plan_name ? <Text style={styles.muted}>Plan: {payment.plan_name}</Text> : null}
       </View>
@@ -70,7 +82,7 @@ export function PaymentDetailScreen({ route, navigation }: Props) {
       ) : null}
       <View style={styles.card}>
         <Text style={styles.section}>Timeline</Text>
-        <PaymentTimeline payment={payment} />
+        <PaymentTimeline payment={payment} activityEvents={activityEvents} />
       </View>
       {(payment.status === 'pending_review' || payment.status === 'cash_collected') && (
         <AdminButton

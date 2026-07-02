@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { useRecentOfficerCollections } from '@/hooks/usePayments';
 import { paymentCollectionApi } from '@/services/api/paymentCollectionApi';
@@ -7,32 +8,53 @@ import { getSupabase } from '@/services/supabase';
 import { useAppDispatch } from '@/store/hooks';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
+import { pageLayout } from '@/theme/pageLayout';
 import { radius, spacing } from '@/theme/spacing';
 import { formatINR } from '@/utils/currencyFormat';
+
+const CHANNEL_NAME = 'admin-collection-activity';
+let sharedChannel: RealtimeChannel | null = null;
+let subscriberCount = 0;
+
+function ensureActivityChannel(onInsert: () => void) {
+  if (sharedChannel) return sharedChannel;
+
+  const client = getSupabase();
+  sharedChannel = client
+    .channel(CHANNEL_NAME)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'payments' }, onInsert)
+    .subscribe();
+
+  return sharedChannel;
+}
+
+function releaseActivityChannel(): void {
+  if (subscriberCount > 0 || !sharedChannel) return;
+  void getSupabase().removeChannel(sharedChannel);
+  sharedChannel = null;
+}
 
 export function CollectionActivityTicker() {
   const dispatch = useAppDispatch();
   const { data, refetch } = useRecentOfficerCollections(8);
   const [tick, setTick] = useState(0);
+  const onInsertRef = useRef<() => void>(() => undefined);
+
+  onInsertRef.current = () => {
+    dispatch(paymentCollectionApi.util.invalidateTags(['Payments', 'Analytics']));
+    void refetch();
+    setTick((n) => n + 1);
+  };
 
   useEffect(() => {
-    const client = getSupabase();
-    const channel = client
-      .channel('admin-collection-activity')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'payments' },
-        () => {
-          dispatch(paymentCollectionApi.util.invalidateTags(['Payments', 'Analytics']));
-          void refetch();
-          setTick((n) => n + 1);
-        },
-      )
-      .subscribe();
+    subscriberCount += 1;
+    ensureActivityChannel(() => onInsertRef.current());
+
     return () => {
-      void client.removeChannel(channel);
+      subscriberCount = Math.max(0, subscriberCount - 1);
+      releaseActivityChannel();
     };
-  }, [dispatch, refetch]);
+  }, [dispatch]);
 
   const items = data ?? [];
   if (!items.length) return null;

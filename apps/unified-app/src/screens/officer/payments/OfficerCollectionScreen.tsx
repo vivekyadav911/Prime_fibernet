@@ -76,6 +76,7 @@ export function OfficerCollectionScreen() {
           Collected today: {formatINR(data?.todayTotal ?? 0)} · Confirmed: {data?.confirmedToday ?? 0}
         </Text>
         <View style={styles.collectCta}>
+          <Button label="Record payment" variant="secondary" onPress={() => navigation.navigate('RecordPayment')} />
           <Button label="View collection history" variant="secondary" onPress={onOpenHistory} />
         </View>
       </View>
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
   },
   summaryTitle: { fontWeight: '700', color: adminColors.primary, marginBottom: spacing.xs },
   summaryLine: { fontSize: 13, color: colors.textSecondary },
-  collectCta: { marginTop: spacing.sm },
+  collectCta: { marginTop: spacing.sm, gap: spacing.sm },
   list: { padding: spacing.md, paddingTop: 0 },
   card: {
     backgroundColor: colors.surfaceWhite,

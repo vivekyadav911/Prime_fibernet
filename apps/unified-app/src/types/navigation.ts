@@ -151,6 +151,7 @@ export type OfficerCollectionsStackParamList = {
     planName?: string;
   };
   CollectionHistory: undefined;
+  RecordPayment: undefined;
 };
 
 /**
@@ -313,9 +314,17 @@ export type AdminRequestsStackParamList = {
 };
 
 export type AdminTicketsStackParamList = {
-  TicketPortalHome: { linkedRequestId?: string; linkedRequestNumber?: string } | undefined;
+  TicketPortalHome:
+    | {
+        linkedRequestId?: string;
+        linkedRequestNumber?: string;
+        initialTab?: 'overview' | 'all';
+      }
+    | undefined;
+  /** @deprecated All Tickets tab on TicketPortalHome */
   TicketList: undefined;
   TicketDetail: { ticketId: string };
+  CreateTicket: { linkedRequestId?: string; linkedRequestNumber?: string; customerId?: string } | undefined;
 };
 
 export type AdminSupportStackParamList = {
@@ -361,6 +370,7 @@ export type AdminPaymentsStackParamList = {
   GatewayConfig: undefined;
   PaymentAnalytics: undefined;
   Refund: { paymentId: string };
+  RecordPayment: undefined;
 };
 
 export type AdminInvoicesStackParamList = {
@@ -441,7 +451,9 @@ export type AdminDrawerParamList = {
   Payroll: NavigatorScreenParams<AdminPayrollStackParamList> | undefined;
   PayRunReview: { payRunId: string };
   RoleManagement: undefined;
-  Requests: NavigatorScreenParams<AdminRequestsStackParamList> | undefined;
+  /** @deprecated Use TicketPortal */
+  Requests: NavigatorScreenParams<AdminTicketsStackParamList> | undefined;
+  TicketPortal: NavigatorScreenParams<AdminTicketsStackParamList> | undefined;
   Plans: NavigatorScreenParams<AdminPlansStackParamList> | undefined;
   EnhancedPlans: undefined;
   Notifications: NavigatorScreenParams<AdminNotificationsStackParamList> | undefined;
@@ -471,8 +483,6 @@ export type AdminDrawerParamList = {
   OfficerMap: undefined;
   BillingInvoices: undefined;
   Support: NavigatorScreenParams<AdminSupportStackParamList> | undefined;
-  /** @deprecated Use Support stack Tickets */
-  TicketPortal: NavigatorScreenParams<AdminTicketsStackParamList> | undefined;
   /** @deprecated Use Support */
   FaqSupport: undefined;
   Settings: NavigatorScreenParams<AdminSettingsStackParamList> | undefined;

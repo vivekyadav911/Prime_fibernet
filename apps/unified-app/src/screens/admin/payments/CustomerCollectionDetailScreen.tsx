@@ -1,7 +1,7 @@
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { CollectionStatusBadge } from '@/components/payments';
+import { CollectionStatusBadge, PaymentStatusBadge } from '@/components/payments';
 import { AdminScreenLayout, AdminStateShell } from '@/components/admin';
 import { useCustomerCollectionHistory } from '@/hooks/usePayments';
 import { useGetCustomerCollectionDetailQuery } from '@/services/api/collectionAssignmentsApi';
@@ -57,7 +57,11 @@ export function CustomerCollectionDetailScreen({ route }: Props) {
         renderItem={({ item }) => (
           <View style={styles.eventCard}>
             <View style={styles.eventHeader}>
-              <CollectionStatusBadge status={item.status} />
+              {item.event_source === 'payment' ? (
+                <PaymentStatusBadge status={item.status as 'confirmed' | 'refunded' | 'pending_review' | 'cash_collected'} />
+              ) : (
+                <CollectionStatusBadge status={item.status} />
+              )}
               <Text style={styles.eventDate}>{new Date(item.created_at).toLocaleString()}</Text>
             </View>
             {item.notes ? <Text style={styles.eventNotes}>{item.notes}</Text> : null}

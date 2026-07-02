@@ -17,3 +17,4 @@ export { FullScreenModalShell } from './FullScreenModalShell';
 export { DismissKeyboardScrollView } from './DismissKeyboardScrollView';
 export { DismissKeyboardFlatList } from './DismissKeyboardFlatList';
 export { ToggleSwitch } from './ToggleSwitch';
+export { ScreenErrorBoundary } from './ScreenErrorBoundary';

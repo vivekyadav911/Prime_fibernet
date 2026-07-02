@@ -5,4 +5,5 @@ export { PaymentAnalyticsScreen } from './PaymentAnalyticsScreen';
 export { PaymentDetailScreen } from './PaymentDetailScreen';
 export { PaymentReviewScreen } from './PaymentReviewScreen';
 export { PaymentsListScreen } from './PaymentsListScreen';
+export { RecordPaymentScreen } from './RecordPaymentScreen';
 export { RefundScreen } from './RefundScreen';

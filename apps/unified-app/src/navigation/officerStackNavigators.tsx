@@ -9,6 +9,7 @@ import {
   CustomerPaymentHistoryScreen,
   OfficerCollectionHistoryScreen,
   OfficerCollectionScreen,
+  OfficerRecordPaymentScreen,
 } from '@/screens/officer/payments';
 import { OfficerPortalNotificationsScreen } from '@/screens/officer/notifications/OfficerPortalNotificationsScreen';
 import { ApplyLeaveScreen } from '@/screens/officer/leave/ApplyLeaveScreen';
@@ -93,6 +94,11 @@ export function OfficerCollectionsStackNav() {
         name="CollectionHistory"
         component={OfficerCollectionHistoryScreen}
         options={{ title: 'Collection history' }}
+      />
+      <CollectionsStack.Screen
+        name="RecordPayment"
+        component={OfficerRecordPaymentScreen}
+        options={{ title: 'Record payment' }}
       />
     </CollectionsStack.Navigator>
   );

@@ -13,6 +13,7 @@ import type {
   NotificationStatus,
   NotificationTemplate,
 } from '@/types/notifications';
+import { assertNoUnresolvedTemplateTokens } from '@/utils/notificationTemplate';
 import {
   formDataToDbPayload,
   replaceTemplateVars,
@@ -648,6 +649,7 @@ export async function triggerAutoNotification(
   const vars = context.templateVars ?? {};
   const title = context.title ?? replaceTemplateVars(rule.titleTemplate, vars);
   const message = context.message ?? replaceTemplateVars(rule.messageTemplate, vars);
+  assertNoUnresolvedTemplateTokens(title, message);
   const priority = context.priority ?? rule.priority;
   const eventType = context.eventType ?? rule.eventType;
 
@@ -678,6 +680,7 @@ export async function sendAutoNotification(params: {
   channels?: AutomationChannels;
 }): Promise<AppNotification> {
   const { client, session } = await requireSession();
+  assertNoUnresolvedTemplateTokens(params.title, params.message);
   const estimatedCount = await resolveAudienceCount(params.audience);
   const admin = { id: session.user.id, name: session.user.email ?? 'System' };
   const channels = params.channels ?? { push: true, in_app: true, email: false, sms: false };

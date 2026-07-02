@@ -6,6 +6,7 @@ import {
   useApprovalRequests,
   useReviewApproval,
 } from '@/hooks/attendance/useAdminAttendance';
+import { useAttendanceRealtimeSync } from '@/hooks/attendance/useAttendanceRealtimeSync';
 import {
   useBulkReviewApprovalsMutation,
   useGetApprovalAuditLogQuery,
@@ -214,6 +215,7 @@ function SummaryStrip({
 }
 
 export function ApprovalRequestsScreen(_props: Props) {
+  useAttendanceRealtimeSync();
   const [tab, setTab] = useState<FilterTab>('pending');
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);

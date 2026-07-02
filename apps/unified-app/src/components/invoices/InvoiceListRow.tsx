@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -10,10 +11,10 @@ import { formatINR } from '@/utils/currencyFormat';
 
 type InvoiceListRowProps = {
   item: AdminInvoice;
-  onPress?: () => void;
-  onDownload?: () => void;
-  onSendEmail?: () => void;
-  onSendWhatsApp?: () => void;
+  onPress?: (invoiceId: string) => void;
+  onDownload?: (invoiceId: string) => void;
+  onSendEmail?: (invoiceId: string) => void;
+  onSendWhatsApp?: (invoiceId: string) => void;
   showDivider?: boolean;
 };
 
@@ -36,7 +37,7 @@ function formatShortDate(iso: string): string {
     .toUpperCase();
 }
 
-export function InvoiceListRow({
+export const InvoiceListRow = memo(function InvoiceListRow({
   item,
   onPress,
   onDownload,
@@ -49,7 +50,7 @@ export function InvoiceListRow({
   return (
     <Pressable
       style={[styles.row, showDivider && styles.rowDivider]}
-      onPress={onPress}
+      onPress={onPress ? () => onPress(item.id) : undefined}
       disabled={!onPress}
     >
       <View style={styles.topRow}>
@@ -81,19 +82,19 @@ export function InvoiceListRow({
 
       <View style={styles.actions}>
         {onDownload ? (
-          <Pressable style={styles.actionBtn} onPress={onDownload}>
+          <Pressable style={styles.actionBtn} onPress={() => onDownload(item.id)}>
             <Ionicons name="download-outline" size={14} color={adminColors.primary} />
             <Text style={styles.actionText}>PDF</Text>
           </Pressable>
         ) : null}
         {onSendEmail ? (
-          <Pressable style={styles.actionBtn} onPress={onSendEmail}>
+          <Pressable style={styles.actionBtn} onPress={() => onSendEmail(item.id)}>
             <Ionicons name="mail-outline" size={14} color={adminColors.primary} />
             <Text style={styles.actionText}>Email</Text>
           </Pressable>
         ) : null}
         {onSendWhatsApp ? (
-          <Pressable style={styles.actionBtn} onPress={onSendWhatsApp}>
+          <Pressable style={styles.actionBtn} onPress={() => onSendWhatsApp(item.id)}>
             <Ionicons name="logo-whatsapp" size={14} color={adminColors.primary} />
             <Text style={styles.actionText}>WhatsApp</Text>
           </Pressable>
@@ -101,7 +102,7 @@ export function InvoiceListRow({
       </View>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   row: {

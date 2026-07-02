@@ -21,7 +21,7 @@ function buildTableRows(requests: ServiceRequest[]): string {
     .map(
       (r) => `
     <tr>
-      <td>${escapeHtml(truncateRequestId(r.id))}</td>
+      <td>${escapeHtml(truncateRequestId(r.id, r.requestNumber))}</td>
       <td>${escapeHtml(r.type)}</td>
       <td>${escapeHtml(r.customerName)}</td>
       <td>${escapeHtml(r.planName)}</td>

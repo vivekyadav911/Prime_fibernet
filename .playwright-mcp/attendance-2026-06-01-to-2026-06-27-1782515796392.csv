@@ -1,0 +1,10 @@
+﻿Date,Officer,Status,Check In,Check Out,Hours,Geofence,Method,Late Minutes,Notes,Manual Entry
+2026-06-26,Unknown officer,present,09:00 AM,06:30 PM,9.5,Unassigned zone,admin_override,,Manually entered by Dev Admin: No internet,Yes
+2026-06-26,Unknown officer,present,09:00 AM,06:30 PM,9.5,Unassigned zone,admin_override,,Manually entered by Dev Admin: No internet,Yes
+2026-06-23,Harsh sharma,half_day,09:00 AM,03:30 PM,6.5,Unassigned zone,admin_override,,Manually entered by Dev Admin: got fever during work,Yes
+2026-06-22,Unknown officer,completed,01:05 PM,01:05 PM,0,Unassigned zone,manual_inside,,,
+2026-06-22,Unknown officer,completed,10:04 AM,10:04 AM,0,Unassigned zone,manual_inside,,,
+2026-06-16,Unknown officer,completed,02:35 PM,02:35 PM,0,Unassigned zone,manual_inside,,,
+2026-06-15,Unknown officer,completed,11:37 AM,02:32 PM,26.92,Unassigned zone,manual_inside,,,
+2026-06-14,Unknown officer,completed,09:56 AM,11:19 AM,1.38,Unassigned zone,manual_inside,,,
+2026-06-14,Unknown officer,completed,09:56 AM,11:37 AM,1.67,Unassigned zone,manual_inside,,,

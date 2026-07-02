@@ -6,10 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { signOut } from '@/hooks/useAuth';
-import { useUnassignedRequestCount } from '@/hooks/useAdminRequests';
 import { usePlansSidebarBadge } from '@/hooks/usePlans';
 import { useNotificationsSidebarBadge } from '@/hooks/useNotificationHub';
-import { useTicketPortalBadge } from '@/hooks/useTickets';
+import { useTicketPortalNavBadge } from '@/hooks/useTicketPortalStats';
 import { useChatSession } from '@/hooks/useChatSession';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { adminColors } from '@/theme/admin';
@@ -64,7 +63,7 @@ const SECTIONS: DrawerSection[] = [
     id: 'ops',
     label: 'Operations',
     items: [
-      { route: 'Requests', label: 'Requests', icon: 'document-text-outline', showBadge: true },
+      { route: 'TicketPortal', label: 'Ticket Portal', icon: 'document-text-outline', showBadge: true },
       { route: 'Plans', label: 'Plans', icon: 'cellular-outline', showBadge: true },
       { route: 'Notifications', label: 'Notifications', icon: 'notifications-outline', showBadge: true },
     ],
@@ -134,8 +133,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
-  const unassignedCount = useUnassignedRequestCount();
-  const ticketBadge = useTicketPortalBadge();
+  const ticketBadge = useTicketPortalNavBadge();
   const { waitingCount } = useChatSession();
   const plansBadge = usePlansSidebarBadge();
   const notificationsBadge = useNotificationsSidebarBadge();
@@ -147,26 +145,21 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
       if (!showBadge) return null;
 
       switch (route) {
-        case 'Requests':
-          return unassignedCount > 0 ? { kind: 'count', value: unassignedCount } : null;
-        case 'Support': {
-          const total = ticketBadge.breachedCount + waitingCount;
-          if (total > 0) {
-            return {
-              kind: 'pill',
-              label: `${formatNavCount(total)} alert`,
-              tone: ticketBadge.breachedCount > 0 ? 'danger' : 'warning',
-            };
-          }
-          if (ticketBadge.openCount > 0) {
-            return {
-              kind: 'pill',
-              label: `${formatNavCount(ticketBadge.openCount)} open`,
-              tone: 'primary',
-            };
-          }
-          return null;
-        }
+        case 'TicketPortal':
+          return ticketBadge.attentionCount > 0
+            ? {
+                kind: 'count',
+                value: ticketBadge.attentionCount,
+              }
+            : null;
+        case 'Support':
+          return waitingCount > 0
+            ? {
+                kind: 'pill',
+                label: `${formatNavCount(waitingCount)} waiting`,
+                tone: 'warning',
+              }
+            : null;
         case 'Plans':
           if (plansBadge.count > 0) {
             return {
@@ -192,7 +185,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
           return null;
       }
     },
-    [unassignedCount, ticketBadge, plansBadge.count, notificationsBadge],
+    [ticketBadge, waitingCount, plansBadge.count, notificationsBadge],
   );
 
   const navigate = useCallback(

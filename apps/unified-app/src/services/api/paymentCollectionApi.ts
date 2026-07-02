@@ -13,6 +13,8 @@ import type {
   PaymentFilters,
   PaymentGatewayRecord,
   PaymentRecord,
+  PaymentActivityEvent,
+  ManualPaymentPayload,
 } from '@/types/payments';
 
 import { baseApi } from './baseApi';
@@ -411,6 +413,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
               total_amount: body.amount,
               method,
               channel: 'officer_cash',
+              collection_source: 'field_collection',
               collected_by: officerId.data as string,
               cash_collection_notes: body.notes,
               cash_denominations: body.denominations,
@@ -666,6 +669,8 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             actor_role: (row.actor_role as string) ?? null,
             notes: (row.notes as string) ?? null,
             created_at: String(row.created_at),
+            event_source: (row.event_source as string) ?? null,
+            payment_id: (row.payment_id as string) ?? null,
           }));
         },
       }),
@@ -730,18 +735,68 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
     initiateRefundV2: builder.mutation<void, { paymentId: string; amount: number; reason: string }>({
       query: (body) => ({
         handler: async (client) => {
-          const { data: { user } } = await client.auth.getUser();
-          const { error } = await client.from('payment_refunds').insert({
-            payment_id: body.paymentId,
-            amount: body.amount,
-            reason: body.reason,
-            initiated_by: user?.id,
+          const { error } = await client.rpc('initiate_payment_refund', {
+            p_payment_id: body.paymentId,
+            p_amount: body.amount,
+            p_reason: body.reason,
           });
           if (error) throw error;
-          await client.from('payments').update({ status: 'refunded' }).eq('id', body.paymentId);
         },
       }),
-      invalidatesTags: ['Payments'],
+      invalidatesTags: ['Payments', 'CollectionAssignments'],
+    }),
+
+    recordManualPayment: builder.mutation<{ paymentId: string; status: string }, ManualPaymentPayload>({
+      query: (body) => ({
+        handler: async (client) => {
+          const { data, error } = await client.rpc('record_manual_payment', {
+            p_customer_id: body.customerId,
+            p_amount: body.amount,
+            p_method: body.method,
+            p_reference: body.reference ?? null,
+            p_notes: body.notes ?? null,
+            p_confirmed: body.confirmed ?? false,
+          });
+          if (error) throw error;
+          const result = data as { payment_id?: string; status?: string };
+          return {
+            paymentId: String(result.payment_id),
+            status: String(result.status ?? 'pending_review'),
+          };
+        },
+      }),
+      invalidatesTags: ['Payments', 'CollectionAssignments', 'Analytics'],
+    }),
+
+    getPaymentActivityTimeline: builder.query<PaymentActivityEvent[], string>({
+      query: (paymentId) => ({
+        handler: async (client) => {
+          const { data, error } = await client.rpc('get_payment_activity_timeline', {
+            p_payment_id: paymentId,
+          });
+          if (error) throw error;
+          return (data ?? []).map((row: Record<string, unknown>) => ({
+            id: String(row.id),
+            event_type: String(row.event_type),
+            status: (row.status as string) ?? null,
+            title: String(row.title),
+            notes: (row.notes as string) ?? null,
+            actor_role: (row.actor_role as string) ?? null,
+            created_at: String(row.created_at),
+          }));
+        },
+      }),
+      providesTags: (_r, _e, id) => [{ type: 'Payments', id: `timeline-${id}` }],
+    }),
+
+    verifyOpenPoolConsistency: builder.query<{ openPoolCount: number }, void>({
+      query: () => ({
+        handler: async (client) => {
+          const { data, error } = await client.rpc('count_collection_open_pool');
+          if (error) throw error;
+          return { openPoolCount: Number(data ?? 0) };
+        },
+      }),
     }),
   }),
 });
@@ -773,4 +828,7 @@ export const {
   useGetPaymentReceiptQuery,
   useLazyGetPaymentReceiptQuery,
   useInitiateRefundV2Mutation,
+  useRecordManualPaymentMutation,
+  useGetPaymentActivityTimelineQuery,
+  useVerifyOpenPoolConsistencyQuery,
 } = paymentCollectionApi;

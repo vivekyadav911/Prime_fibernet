@@ -1,146 +1,112 @@
-import { useCallback, useRef } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { formatDistanceToNow } from 'date-fns';
 
-
-import { CreateTicketForm } from '@/components/TicketPortal';
-import { PoolBadge, TicketStatusBadge } from '@/components/TicketPortal/TicketStatusBadge';
-import { AdminScreenLayout, RoleGuard, SectionCard } from '@/components/admin';
-import { useTickets } from '@/hooks/useTickets';
+import { ScreenErrorBoundary } from '@/components/common';
+import { AdminScreenLayout, AdminStateShell, RoleGuard } from '@/components/admin';
+import type { PortalStatusBucket } from '@/types/portalTicket';
 import { adminColors } from '@/theme/admin';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { AdminTicketsStackParamList } from '@/types/navigation';
-import type { Ticket } from '@/types/tickets';
+
+import { TicketPortalAllTicketsTab } from './TicketPortalAllTicketsTab';
+import { TicketPortalOverviewTab } from './TicketPortalOverviewTab';
 
 type Props = NativeStackScreenProps<AdminTicketsStackParamList, 'TicketPortalHome'>;
+type PortalTab = 'overview' | 'all';
 
 export function TicketPortalScreen({ navigation, route }: Props) {
-  const scrollRef = useRef<ScrollView>(null);
-  const linkedRequestId = route.params?.linkedRequestId;
-  const linkedRequestNumber = route.params?.linkedRequestNumber;
-  const { allTickets, reload } = useTickets();
+  const initialTab = route.params?.initialTab ?? 'overview';
+  const [activeTab, setActiveTab] = useState<PortalTab>(initialTab);
+  const [statusSeed, setStatusSeed] = useState<PortalStatusBucket | undefined>();
 
-  const recentTickets = allTickets.slice(0, 5);
-
-  const handleCreated = useCallback(async () => {
-    await reload(true);
-    scrollRef.current?.scrollToEnd({ animated: true });
-  }, [reload]);
-
-  const renderRecent = useCallback(
-    ({ item }: { item: Ticket }) => (
-      <Pressable
-        style={styles.recentCard}
-        onPress={() => navigation.navigate('TicketDetail', { ticketId: item.id })}
-      >
-        <Text style={styles.recentTitle} numberOfLines={1}>
-          {item.complaintType}
-        </Text>
-        <Text style={styles.recentSub} numberOfLines={1}>
-          {item.contactName} · {formatDistanceToNow(item.createdAt, { addSuffix: true })}
-        </Text>
-        <View style={styles.recentBadge}>
-          {item.assignedOfficerId ? (
-            <TicketStatusBadge status={item.status} compact />
-          ) : (
-            <PoolBadge />
-          )}
-        </View>
-      </Pressable>
-    ),
+  const openTicket = useCallback(
+    (ticketId: string) => {
+      navigation.navigate('TicketDetail', { ticketId });
+    },
     [navigation],
   );
 
+  const switchToAllTickets = useCallback((status?: PortalStatusBucket) => {
+    if (status) setStatusSeed(status);
+    setActiveTab('all');
+  }, []);
+
   return (
     <RoleGuard requiredPermission="requests.view">
-      <AdminScreenLayout>
-        <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll}>
-          <SectionCard title="">
-            <CreateTicketForm
-              linkedRequestId={linkedRequestId}
-              linkedRequestNumber={linkedRequestNumber}
-              onCreated={handleCreated}
-            />
-          </SectionCard>
+      <ScreenErrorBoundary screenName="Ticket Portal">
+        <AdminStateShell isLoading={false} isError={false} loadingRows={6} loadingShape="card">
+          <AdminScreenLayout>
+            <View style={styles.header}>
+              <Text style={styles.pageTitle}>Ticket Portal</Text>
+            </View>
 
-          <View style={styles.recentHeader}>
-            <Text style={styles.recentSectionTitle}>Recently Created</Text>
-            <Pressable onPress={() => navigation.navigate('TicketList')}>
-              <Text style={styles.viewAll}>View All</Text>
-            </Pressable>
-          </View>
+            <View style={styles.tabRow}>
+              <Pressable
+                style={[styles.tab, activeTab === 'overview' && styles.tabActive]}
+                onPress={() => setActiveTab('overview')}
+              >
+                <Text style={[styles.tabText, activeTab === 'overview' && styles.tabTextActive]}>
+                  Overview
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[styles.tab, activeTab === 'all' && styles.tabActive]}
+                onPress={() => setActiveTab('all')}
+              >
+                <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>
+                  All Tickets
+                </Text>
+              </Pressable>
+            </View>
 
-          <FlatList
-            data={recentTickets}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.recentList}
-            ListEmptyComponent={
-              <Text style={styles.emptyRecent}>No tickets yet — create your first ticket above.</Text>
-            }
-            renderItem={renderRecent}
-          />
-        </ScrollView>
-      </AdminScreenLayout>
+            {activeTab === 'overview' ? (
+              <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+                <TicketPortalOverviewTab
+                  onFilterStatus={(status) => switchToAllTickets(status)}
+                  onOpenItem={openTicket}
+                  onSwitchToAllTickets={() => switchToAllTickets()}
+                />
+              </ScrollView>
+            ) : (
+              <View style={styles.allTab}>
+                <TicketPortalAllTicketsTab
+                  navigation={navigation}
+                  initialStatus={statusSeed}
+                />
+              </View>
+            )}
+          </AdminScreenLayout>
+        </AdminStateShell>
+      </ScreenErrorBoundary>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
+  header: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+  pageTitle: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
+  tabRow: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.surfaceWhite,
+    borderRadius: 8,
+    padding: 4,
+  },
+  tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: 6 },
+  tabActive: { backgroundColor: adminColors.primaryTint },
+  tabText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  tabTextActive: { color: adminColors.primary },
   scroll: {
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
     paddingBottom: spacing.xxl,
   },
-  recentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  recentSectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  viewAll: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: adminColors.primary,
-  },
-  recentList: {
-    paddingBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  recentCard: {
-    width: 200,
-    backgroundColor: adminColors.cardBg,
-    borderRadius: 12,
-    padding: spacing.md,
-    marginRight: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-  },
-  recentTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  recentSub: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  recentBadge: {
-    marginTop: spacing.sm,
-  },
-  emptyRecent: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    paddingVertical: spacing.md,
+  allTab: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    minHeight: 0,
   },
 });

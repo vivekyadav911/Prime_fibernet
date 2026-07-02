@@ -12,15 +12,32 @@ import type {
   CheckInResult,
   CheckOutResult,
   Coordinates,
+  Geofence,
 } from '@/types/attendance';
+import {
+  AttendanceActionError,
+  mapLocationAccuracyError,
+  mapNoZoneError,
+  mapOutsideZoneError,
+  mapSupabaseError,
+} from '@/utils/attendanceErrors';
 import { checkGeofenceStatus } from '@/utils/geofenceUtils';
+
+const MAX_GPS_ACCURACY_M = 100;
+
+async function loadActiveZones(forceRefresh: boolean): Promise<Geofence[]> {
+  return locationService.loadAssignedGeofences(forceRefresh);
+}
 
 async function resolveGeofenceStatus(
   coords: Coordinates,
-  forceRefresh: boolean,
+  geofences: Geofence[],
 ): Promise<ReturnType<typeof checkGeofenceStatus>> {
-  const geofences = await locationService.loadAssignedGeofences(forceRefresh);
   return checkGeofenceStatus(coords, geofences, { accuracyMeters: coords.accuracy });
+}
+
+function zoneRadius(geofence: Geofence): number {
+  return geofence.geometry.shape === 'circle' ? geofence.geometry.radius : 0;
 }
 
 class AttendanceService {
@@ -28,6 +45,7 @@ class AttendanceService {
     notes?: string;
     photoProof?: string;
     uiSaysInside?: boolean;
+    selectedGeofenceId?: string;
   }): Promise<CheckInResult> {
     const today = await this.getTodayRecord();
     if (today?.checkInTime && !today.checkOutTime) {
@@ -35,61 +53,77 @@ class AttendanceService {
     }
 
     await locationService.clearGeofenceCache();
-    const coords = await locationService.getCurrentLocation();
-    let status = await resolveGeofenceStatus(coords, true);
-
-    if (!status.isInside && options?.uiSaysInside) {
-      await locationService.clearGeofenceCache();
-      status = await resolveGeofenceStatus(coords, true);
+    const geofences = await loadActiveZones(true);
+    if (geofences.length === 0) {
+      throw mapNoZoneError();
     }
 
-    if (!status.isInside) {
-      return {
-        action: 'needs_approval',
-        distance: status.distance,
-        geofenceName: status.geofence?.name,
-      };
+    let activeGeofences = geofences;
+    if (options?.selectedGeofenceId) {
+      const picked = geofences.find((g) => g.id === options.selectedGeofenceId);
+      if (!picked) throw mapNoZoneError();
+      activeGeofences = [picked];
+    }
+
+    let coords: Coordinates & { mocked?: boolean };
+    try {
+      coords = await locationService.getCurrentLocation();
+    } catch (e) {
+      throw mapSupabaseError(e, 'Location permission denied or GPS unavailable.');
+    }
+
+    const accuracyError = mapLocationAccuracyError(coords.accuracy, MAX_GPS_ACCURACY_M);
+    if (accuracyError) throw accuracyError;
+
+    let status = await resolveGeofenceStatus(coords, activeGeofences);
+
+    if (!status.isInside && options?.uiSaysInside) {
+      status = await resolveGeofenceStatus(coords, activeGeofences);
+    }
+
+    if (!status.isInside || !status.geofence) {
+      const radius = status.geofence ? zoneRadius(status.geofence) : 0;
+      throw mapOutsideZoneError(
+        Number.isFinite(status.distance) ? status.distance : 0,
+        radius,
+        status.geofence?.name,
+      );
     }
 
     const net = await NetInfo.fetch();
+    const payload = {
+      coords,
+      notes: options?.notes,
+      method: 'manual_inside',
+      geofenceId: status.geofence.id,
+      distanceFromFence: status.distance,
+      locationMocked: coords.mocked,
+    };
+
     if (!net.isConnected) {
       await SyncManager.enqueue({
         id: `checkin-${Date.now()}`,
         operation: 'attendanceCheckIn',
         endpoint: 'attendanceCheckIn',
-        payload: {
-          coords,
-          notes: options?.notes,
-          method: 'manual_inside',
-          geofenceId: status.geofence!.id,
-          distanceFromFence: status.distance,
-          locationMocked: coords.mocked,
-        },
+        payload,
       });
       return { action: 'offline_queued' };
     }
 
-    const record = await store
-      .dispatch(
-        attendanceApi.endpoints.checkIn.initiate({
-          coords,
-          notes: options?.notes,
-          method: 'manual_inside',
-          geofenceId: status.geofence!.id,
-          distanceFromFence: status.distance,
-          locationMocked: coords.mocked,
-        }),
-      )
-      .unwrap();
-
-    store.dispatch(setTodayRecord(record));
-    return { action: 'checked_in', record };
+    try {
+      const record = await store.dispatch(attendanceApi.endpoints.checkIn.initiate(payload)).unwrap();
+      store.dispatch(setTodayRecord(record));
+      return { action: 'checked_in', record };
+    } catch (e) {
+      throw mapSupabaseError(e, 'Check-in failed — please retry.');
+    }
   }
 
   async checkOut(options?: {
     notes?: string;
     photoProof?: string;
     uiSaysInside?: boolean;
+    selectedGeofenceId?: string;
   }): Promise<CheckOutResult> {
     const today = await this.getTodayRecord();
     if (!today?.checkInTime || today.checkOutTime) {
@@ -97,45 +131,65 @@ class AttendanceService {
     }
 
     await locationService.clearGeofenceCache();
-    const coords = await locationService.getCurrentLocation();
-    let status = await resolveGeofenceStatus(coords, true);
+    const geofences = await loadActiveZones(true);
+    if (geofences.length === 0) {
+      throw mapNoZoneError();
+    }
 
+    let activeGeofences = geofences;
+    if (options?.selectedGeofenceId) {
+      const picked = geofences.find((g) => g.id === options.selectedGeofenceId);
+      if (picked) activeGeofences = [picked];
+    }
+
+    let coords: Coordinates & { mocked?: boolean };
+    try {
+      coords = await locationService.getCurrentLocation();
+    } catch (e) {
+      throw mapSupabaseError(e, 'Location permission denied or GPS unavailable.');
+    }
+
+    const accuracyError = mapLocationAccuracyError(coords.accuracy, MAX_GPS_ACCURACY_M);
+    if (accuracyError) throw accuracyError;
+
+    let status = await resolveGeofenceStatus(coords, activeGeofences);
     if (!status.isInside && options?.uiSaysInside) {
-      await locationService.clearGeofenceCache();
-      status = await resolveGeofenceStatus(coords, true);
+      status = await resolveGeofenceStatus(coords, activeGeofences);
     }
 
     if (!status.isInside) {
-      return { action: 'needs_approval', distance: status.distance };
+      const radius = status.geofence ? zoneRadius(status.geofence) : 0;
+      throw mapOutsideZoneError(
+        Number.isFinite(status.distance) ? status.distance : 0,
+        radius,
+        status.geofence?.name,
+      );
     }
 
     const net = await NetInfo.fetch();
+    const payload = {
+      coords,
+      notes: options?.notes,
+      distanceFromFence: status.distance,
+    };
+
     if (!net.isConnected) {
       await SyncManager.enqueue({
         id: `checkout-${Date.now()}`,
         operation: 'attendanceCheckOut',
         endpoint: 'attendanceCheckOut',
-        payload: {
-          coords,
-          notes: options?.notes,
-          distanceFromFence: status.distance,
-        },
+        payload,
       });
       return { action: 'offline_queued' };
     }
 
-    const record = await store
-      .dispatch(
-        attendanceApi.endpoints.checkOut.initiate({
-          coords,
-          notes: options?.notes,
-          distanceFromFence: status.distance,
-        }),
-      )
-      .unwrap();
-
-    store.dispatch(setTodayRecord(record));
-    return { action: 'checked_out', record };
+    try {
+      const record = await store.dispatch(attendanceApi.endpoints.checkOut.initiate(payload)).unwrap();
+      store.dispatch(setTodayRecord(record));
+      return { action: 'checked_out', record };
+    } catch (e) {
+      throw mapSupabaseError(e, 'Check-out failed — please retry.');
+    }
   }
 
   async requestOutOfZoneApproval(payload: {
@@ -144,33 +198,58 @@ class AttendanceService {
     coords: Coordinates;
     photoProof?: string;
     date: string;
+    geofenceId?: string;
   }): Promise<ApprovalRequest> {
-    const geofences = await locationService.loadAssignedGeofences(true);
-    const status = checkGeofenceStatus(payload.coords, geofences, {
-      accuracyMeters: payload.coords.accuracy,
-    });
+    const geofences = await loadActiveZones(true);
+    const scoped = payload.geofenceId
+      ? geofences.filter((g) => g.id === payload.geofenceId)
+      : geofences;
 
-    const request = await store
-      .dispatch(
-        attendanceApi.endpoints.requestApproval.initiate({
-          type: payload.type,
-          reason: payload.reason,
-          coords: payload.coords,
-          photoProof: payload.photoProof,
-          date: payload.date,
-          distanceFromFence: status.distance,
-          geofenceId: status.geofence?.id,
-        }),
-      )
-      .unwrap();
+    const status =
+      scoped.length > 0
+        ? checkGeofenceStatus(payload.coords, scoped, { accuracyMeters: payload.coords.accuracy })
+        : { isInside: false, geofence: null as Geofence | null, distance: 0 };
 
-    store.dispatch(setPendingApproval(request));
-    return request;
+    const net = await NetInfo.fetch();
+    const body = {
+      type: payload.type,
+      reason: payload.reason,
+      coords: payload.coords,
+      photoProof: payload.photoProof,
+      date: payload.date,
+      distanceFromFence: Number.isFinite(status.distance) ? status.distance : 0,
+      geofenceId: status.geofence?.id ?? payload.geofenceId,
+    };
+
+    if (!net.isConnected) {
+      await SyncManager.enqueue({
+        id: `approval-${Date.now()}`,
+        operation: 'attendanceApproval',
+        endpoint: 'attendanceApproval',
+        payload: body,
+      });
+      throw new AttendanceActionError(
+        'No internet connection — approval request queued for sync.',
+        'offline_queued',
+      );
+    }
+
+    try {
+      const request = await store
+        .dispatch(attendanceApi.endpoints.requestApproval.initiate(body))
+        .unwrap();
+      store.dispatch(setPendingApproval(request));
+      return request;
+    } catch (e) {
+      throw mapSupabaseError(e, 'Could not submit approval request — please retry.');
+    }
   }
 
   async getTodayRecord(): Promise<AttendanceRecord | null> {
     try {
-      const record = await store.dispatch(attendanceApi.endpoints.getTodayAttendance.initiate()).unwrap();
+      const record = await store
+        .dispatch(attendanceApi.endpoints.getTodayAttendance.initiate(undefined, { forceRefetch: true }))
+        .unwrap();
       store.dispatch(setTodayRecord(record));
       return record;
     } catch {

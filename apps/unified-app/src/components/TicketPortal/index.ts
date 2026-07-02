@@ -1,8 +1,10 @@
 export { CreateTicketForm } from './CreateTicketForm';
 export { LinkRequestModal } from './LinkRequestModal';
+export { PortalTicketCard } from './PortalTicketCard';
 export { SelectCustomerModal } from './SelectCustomerModal';
 export { SLAIndicator, SLAProgressBar } from './SLAProgressBar';
 export { TicketCard } from './TicketCard';
 export { TicketFilterSheet } from './TicketFilterSheet';
+export { TicketPortalSummaryCard } from './TicketPortalSummaryCard';
 export { PoolBadge, TicketPriorityBadge, TicketStatusBadge } from './TicketStatusBadge';
 export { TicketTimeline } from './TicketTimeline';

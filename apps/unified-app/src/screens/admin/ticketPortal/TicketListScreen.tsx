@@ -98,29 +98,13 @@ export function TicketListScreen({ navigation }: Props) {
     [navigation],
   );
 
-  if (loading && !refreshing) {
-    return (
-      <AdminScreenLayout>
-        <SkeletonLoader rows={8} />
-      </AdminScreenLayout>
-    );
-  }
-
-  if (error && !allTickets.length) {
-    return (
-      <AdminScreenLayout>
-        <ErrorState message={error} onRetry={onRefresh} />
-      </AdminScreenLayout>
-    );
-  }
-
   const listHeader = useMemo(
     () => (
       <View style={adminScreenStyles.listHeader}>
         <View style={styles.header}>
           <Text style={styles.title}>All Tickets</Text>
           <View style={styles.countBadge}>
-            <Text style={styles.countText}>{tickets.length}</Text>
+            <Text style={styles.countText}>{stats.total}</Text>
           </View>
         </View>
 
@@ -136,8 +120,20 @@ export function TicketListScreen({ navigation }: Props) {
             onPress={() => updateFilters({ status: 'In Progress' })}
           />
           <StatsCard
+            label="Awaiting"
+            value={stats.totalAwaitingCustomer + stats.totalAwaitingParts}
+            onPress={() => updateFilters({ status: 'Awaiting Customer' })}
+          />
+          <StatsCard
+            label="Done"
+            value={stats.totalResolved + stats.totalClosed}
+            onPress={() => updateFilters({ status: 'Resolved' })}
+          />
+        </View>
+        <View style={styles.statsRowSecondary}>
+          <StatsCard
             label="SLA Breaches"
-            value={stats?.slaBreaches ?? 0}
+            value={stats.slaBreaches}
             tone="danger"
             onPress={() => updateFilters({ slaBreached: true })}
           />
@@ -196,10 +192,30 @@ export function TicketListScreen({ navigation }: Props) {
       stats?.totalInProgress,
       stats?.totalOpen,
       stats?.slaBreaches,
-      tickets.length,
+      stats?.total,
+      stats?.totalAwaitingCustomer,
+      stats?.totalAwaitingParts,
+      stats?.totalClosed,
+      stats?.totalResolved,
       updateFilters,
     ],
   );
+
+  if (loading && !refreshing) {
+    return (
+      <AdminScreenLayout>
+        <SkeletonLoader rows={8} />
+      </AdminScreenLayout>
+    );
+  }
+
+  if (error && !allTickets.length) {
+    return (
+      <AdminScreenLayout>
+        <ErrorState message={error} onRetry={onRefresh} />
+      </AdminScreenLayout>
+    );
+  }
 
   return (
     <RoleGuard requiredPermission="requests.view">
@@ -254,6 +270,11 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  statsRowSecondary: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
   },
   countBadge: {
     backgroundColor: `${adminColors.primary}22`,

@@ -35,8 +35,12 @@ export function useAttendanceHistory(filters: { month: number; year: number; pag
 export function useCheckIn() {
   const [, state] = useCheckInMutation();
   const checkIn = useCallback(
-    async (options?: { notes?: string; photoProof?: string; uiSaysInside?: boolean }) =>
-      attendanceService.checkIn(options),
+    async (options?: {
+      notes?: string;
+      photoProof?: string;
+      uiSaysInside?: boolean;
+      selectedGeofenceId?: string;
+    }) => attendanceService.checkIn(options),
     [],
   );
   return [checkIn, state] as const;
@@ -45,8 +49,12 @@ export function useCheckIn() {
 export function useCheckOut() {
   const [, state] = useCheckOutMutation();
   const checkOut = useCallback(
-    async (options?: { notes?: string; photoProof?: string; uiSaysInside?: boolean }) =>
-      attendanceService.checkOut(options),
+    async (options?: {
+      notes?: string;
+      photoProof?: string;
+      uiSaysInside?: boolean;
+      selectedGeofenceId?: string;
+    }) => attendanceService.checkOut(options),
     [],
   );
   return [checkOut, state] as const;
@@ -61,6 +69,7 @@ export function useRequestApproval() {
       coords: Coordinates;
       photoProof?: string;
       date: string;
+      geofenceId?: string;
     }) => attendanceService.requestOutOfZoneApproval(payload),
     [],
   );

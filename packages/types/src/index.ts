@@ -79,11 +79,14 @@ export const ServiceRequestSchema = z.object({
   userId: z.string().uuid(),
   officerId: z.string().uuid().nullable(),
   requestType: RequestTypeSchema,
+  requestTypeLabel: z.string().optional(),
   status: RequestStatusSchema,
   priority: z.enum(['P0', 'P1', 'P2', 'P3']),
   address: z.string(),
   description: z.string().optional(),
   createdAt: z.string(),
+  updatedAt: z.string().optional(),
+  completedAt: z.string().nullable().optional(),
 });
 
 export type ServiceRequest = z.infer<typeof ServiceRequestSchema>;

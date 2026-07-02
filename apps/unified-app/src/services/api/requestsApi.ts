@@ -10,7 +10,7 @@ async function attachActivities(client: TypedSupabaseClient, requests: Record<st
       .from('request_activities')
       .select('*')
       .eq('request_id', request.id as string)
-      .order('timestamp', { ascending: true });
+      .order('created_at', { ascending: true });
     request.activities = activities ?? [];
   }
 }
@@ -143,14 +143,6 @@ export const requestsApi = baseApi.injectEndpoints({
           const { data, error } = await client.from('service_requests').insert(insertData).select().single();
           if (error) throw error;
 
-          await client.from('request_activities').insert({
-            request_id: data.id,
-            actor_name: body.userName ?? 'Customer',
-            action: 'Request created',
-            notes: 'Service request submitted',
-            timestamp: now,
-          });
-
           return mapRequest(data as Record<string, unknown>);
         },
       }),
@@ -183,16 +175,13 @@ export const requestsApi = baseApi.injectEndpoints({
           const { error } = await client.from('service_requests').update(updates).eq('id', id);
           if (error) throw error;
 
-          if (note || officerName) {
+          if (note) {
             await client.from('request_activities').insert({
               request_id: id,
               officer_id: officerId,
               actor_name: officerName ?? 'Officer',
-              action: `Status updated to ${status}`,
-              notes: note ?? '',
-              lat: latitude,
-              lng: longitude,
-              timestamp: now,
+              action: 'note_added',
+              note,
             });
           }
         },
@@ -209,6 +198,7 @@ export const requestsApi = baseApi.injectEndpoints({
             .update({
               officer_id: officerId,
               officer_name: officerName,
+              assigned_at: now,
               status: 'assigned',
               priority: priority ?? 'P2',
               updated_at: now,
@@ -239,19 +229,12 @@ export const requestsApi = baseApi.injectEndpoints({
             .update({
               officer_id: officerId,
               officer_name: officerName,
+              assigned_at: now,
               status: 'assigned',
               updated_at: now,
             })
             .eq('id', requestId);
           if (error) throw error;
-
-          await client.from('request_activities').insert({
-            request_id: requestId,
-            actor_name: officerName,
-            action: 'Self-assigned',
-            notes: 'Officer picked this request to work on',
-            timestamp: now,
-          });
         },
       }),
       invalidatesTags: ['Requests'],
@@ -266,11 +249,8 @@ export const requestsApi = baseApi.injectEndpoints({
           const { error } = await client.from('request_activities').insert({
             request_id: body.requestId,
             actor_name: body.officerName,
-            action: body.action,
-            notes: body.notes ?? '',
-            lat: body.latitude,
-            lng: body.longitude,
-            timestamp: new Date().toISOString(),
+            action: body.action === 'Note added' ? 'note_added' : body.action.toLowerCase().replace(/\s+/g, '_'),
+            note: body.notes ?? body.action,
           });
           if (error) throw error;
         },

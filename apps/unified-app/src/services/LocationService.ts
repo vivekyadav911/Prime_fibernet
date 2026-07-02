@@ -20,7 +20,9 @@ import { getSupabase } from '@/services/api/supabase';
 import { notificationService } from '@/services/NotificationService';
 
 export const LOCATION_TASK_NAME = 'PRIME_FIBERNET_LOCATION_TASK';
+export const GEOFENCE_TASK_NAME = 'PRIME_FIBERNET_GEOFENCE_TASK';
 const GEOFENCES_CACHE_KEY = 'geofences_cache';
+const REGISTERED_GEOFENCES_KEY = 'registered_geofence_ids';
 const GEOFENCES_CACHE_TTL_MS = 15 * 60 * 1000;
 const LOCATION_SYNC_QUEUE_KEY = 'location_sync_queue';
 const MAX_QUEUE_SIZE = 500;
@@ -394,6 +396,7 @@ class LocationService {
         const parsed = JSON.parse(cached) as CachedGeofences;
         if (Date.now() - parsed.fetchedAt < GEOFENCES_CACHE_TTL_MS) {
           store.dispatch(setAssignedGeofences(parsed.geofences));
+          void this.syncBackgroundGeofences(parsed.geofences);
           return parsed.geofences;
         }
       }
@@ -406,6 +409,7 @@ class LocationService {
         JSON.stringify({ fetchedAt: Date.now(), geofences: result }),
       );
       store.dispatch(setAssignedGeofences(result));
+      void this.syncBackgroundGeofences(result);
       return result;
     } catch {
       const cached = await AsyncStorage.getItem(GEOFENCES_CACHE_KEY);
@@ -415,6 +419,56 @@ class LocationService {
       }
       return [];
     }
+  }
+
+  async syncBackgroundGeofences(geofences: Geofence[]): Promise<void> {
+    if (Platform.OS === 'web') return;
+
+    const { background } = await this.checkPermissions();
+    if (!background) return;
+
+    const regions = geofences
+      .filter((g) => g.isActive && g.geometry.shape === 'circle')
+      .map((g) => {
+        if (g.geometry.shape !== 'circle') return null;
+        return {
+          identifier: g.id,
+          latitude: g.geometry.center.latitude,
+          longitude: g.geometry.center.longitude,
+          radius: g.geometry.radius,
+          notifyOnEnter: true,
+          notifyOnExit: true,
+        };
+      })
+      .filter((r): r is NonNullable<typeof r> => r != null);
+
+    try {
+      const started = await Location.hasStartedGeofencingAsync(GEOFENCE_TASK_NAME);
+      if (started) {
+        await Location.stopGeofencingAsync(GEOFENCE_TASK_NAME);
+      }
+      if (regions.length > 0) {
+        await Location.startGeofencingAsync(GEOFENCE_TASK_NAME, regions);
+      }
+      await AsyncStorage.setItem(REGISTERED_GEOFENCES_KEY, JSON.stringify(regions.map((r) => r.identifier)));
+    } catch {
+      // Geofencing unavailable on this device/OS build — foreground check-in still works.
+    }
+  }
+
+  async verifyGeofenceRegistration(): Promise<{ expected: string[]; registered: string[] }> {
+    const geofences = await this.loadAssignedGeofences(true);
+    const expected = geofences.map((g) => g.id);
+    const raw = await AsyncStorage.getItem(REGISTERED_GEOFENCES_KEY);
+    let registered: string[] = raw ? (JSON.parse(raw) as string[]) : [];
+    const mismatch =
+      expected.length !== registered.length || expected.some((id) => !registered.includes(id));
+    if (mismatch) {
+      await this.syncBackgroundGeofences(geofences);
+      const nextRaw = await AsyncStorage.getItem(REGISTERED_GEOFENCES_KEY);
+      registered = nextRaw ? (JSON.parse(nextRaw) as string[]) : [];
+    }
+    return { expected, registered };
   }
 
   async checkGeofenceStatus(coords: Coordinates) {
@@ -439,5 +493,11 @@ if (Platform.OS !== 'web' && !TaskManager.isTaskDefined(LOCATION_TASK_NAME)) {
     if (data) {
       await processBackgroundLocation(data as LocationTaskData);
     }
+  });
+}
+
+if (Platform.OS !== 'web' && !TaskManager.isTaskDefined(GEOFENCE_TASK_NAME)) {
+  TaskManager.defineTask(GEOFENCE_TASK_NAME, async () => {
+    await locationService.loadAssignedGeofences(true);
   });
 }

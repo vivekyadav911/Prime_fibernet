@@ -32,7 +32,7 @@ import { AccordionRow, SectionEyebrow } from './components/ui/DashboardPrimitive
 import { dash } from './dashboardUi';
 
 const QUICK_ACCESS_BASE: Omit<QuickAccessItem, 'badge' | 'badgeTone' | 'alertDot'>[] = [
-  { id: 'requests', label: 'Requests', icon: 'document-text-outline', route: 'Requests', surface: 'amber', priority: 'primary' },
+  { id: 'tickets', label: 'Ticket Portal', icon: 'ticket-outline', route: 'TicketPortal', surface: 'amber', priority: 'primary' },
   { id: 'users', label: 'Users', icon: 'people-outline', route: 'Users', surface: 'blue', priority: 'primary' },
   { id: 'payments', label: 'Payments', icon: 'card-outline', route: 'Payments', surface: 'purple', priority: 'primary' },
   { id: 'officers', label: 'Officers', icon: 'shield-checkmark-outline', route: 'Officers', surface: 'teal', priority: 'primary' },
@@ -127,7 +127,7 @@ export function DashboardScreen() {
       return {
         headline: `${requestSummary.unassigned} request${requestSummary.unassigned === 1 ? '' : 's'} need assignment`,
         subline: 'Field work is waiting for an officer',
-        onPress: () => navigation.navigate('Requests'),
+        onPress: () => navigation.navigate('TicketPortal'),
       };
     }
     if (renewalsDueToday > 0) {
@@ -141,7 +141,7 @@ export function DashboardScreen() {
       return {
         headline: `${ticketSummary.breached} ticket${ticketSummary.breached === 1 ? '' : 's'} breached SLA`,
         subline: 'Open tickets need immediate action',
-        onPress: () => navigation.navigate('TicketPortal', { screen: 'TicketList' }),
+        onPress: () => navigation.navigate('TicketPortal', { screen: 'TicketPortalHome', params: { initialTab: 'all' } }),
       };
     }
     if (urgentRenewals.length > 0) {
@@ -155,7 +155,7 @@ export function DashboardScreen() {
       return {
         headline: `${ticketSummary.open} ticket${ticketSummary.open === 1 ? '' : 's'} need review`,
         subline: 'Customer support queue needs attention',
-        onPress: () => navigation.navigate('TicketPortal', { screen: 'TicketList' }),
+        onPress: () => navigation.navigate('TicketPortal', { screen: 'TicketPortalHome', params: { initialTab: 'all' } }),
       };
     }
     return {

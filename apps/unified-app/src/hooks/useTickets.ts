@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { fetchTickets, subscribeToTickets } from '@/services/ticketsService';
+import { useTicketPortalNavBadge } from '@/hooks/useTicketPortalStats';
 import { useAppSelector } from '@/store/hooks';
 import type { Ticket, TicketFilters, TicketStats } from '@/types/tickets';
 import { applyTicketFilters } from '@/utils/ticketViewMappers';
@@ -84,8 +85,8 @@ export function useTickets(initialFilters?: Partial<TicketFilters>) {
   );
 
   const stats = useMemo<TicketStats>(
-    () => computeTicketStats(ticketsWithSla),
-    [ticketsWithSla],
+    () => computeTicketStats(filteredTickets),
+    [filteredTickets],
   );
 
   const updateFilters = useCallback((patch: Partial<TicketFilters>) => {
@@ -140,12 +141,15 @@ export function useTicketStats() {
   };
 }
 
+/** @deprecated Use useTicketPortalNavBadge from useTicketPortalStats */
 export function useTicketPortalBadge() {
-  const { openCount, breachedCount } = useTickets();
+  const { attentionCount, isBreached, openCount, breachedCount, unassignedCount } =
+    useTicketPortalNavBadge();
   return {
-    showBadge: openCount > 0 || breachedCount > 0,
-    isBreached: breachedCount > 0,
+    showBadge: attentionCount > 0,
+    isBreached,
     openCount,
     breachedCount,
+    unassignedCount,
   };
 }

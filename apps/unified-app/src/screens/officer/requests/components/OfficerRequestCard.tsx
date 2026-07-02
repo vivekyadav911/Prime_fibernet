@@ -21,7 +21,7 @@ export const OfficerRequestCard = React.memo(function OfficerRequestCard({
   return (
     <Pressable style={styles.card} onPress={() => onPress(request.id)}>
       <View style={styles.header}>
-        <Text style={styles.type}>{request.requestType}</Text>
+        <Text style={styles.type}>{request.requestTypeLabel ?? request.requestType}</Text>
         <StatusChip status={request.priority} />
       </View>
       <Text style={styles.address}>{request.address}</Text>

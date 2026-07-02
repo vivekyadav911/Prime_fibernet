@@ -1,0 +1,5 @@
+﻿Date,Officer,Status,Check In,Check Out,Hours,Geofence,Method,Late Minutes,Notes,Manual Entry
+2026-06-27,Harsh sharma,present,09:00 AM,07:20 PM,10.33,Unassigned zone,admin_override,,Manually entered by Dev Admin: offline,Yes
+2026-06-23,Harsh sharma,half_day,09:00 AM,03:30 PM,6.5,Unassigned zone,admin_override,,Manually entered by Dev Admin: got fever during work,Yes
+2026-06-12,Harsh sharma,absent,09:00 AM,,,Unassigned zone,admin_override,,Manually entered by Dev Admin: sick,Yes
+2026-06-03,Harsh sharma,present,11:00 AM,08:00 PM,9,Unassigned zone,admin_override,,Manually entered by Dev Admin: Forgot to clock in,Yes

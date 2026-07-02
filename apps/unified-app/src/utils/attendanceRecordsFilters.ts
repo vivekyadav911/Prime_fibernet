@@ -31,10 +31,15 @@ export function filterAndSortAttendanceRecords(
   searchQuery: string,
   statusFilter: AttendanceStatusFilter,
   sortBy: AttendanceRecordsSortKey,
+  officerId?: string | null,
 ): AttendanceRecord[] {
   const query = searchQuery.trim().toLowerCase();
 
   let filtered = records;
+
+  if (officerId) {
+    filtered = filtered.filter((record) => record.officerId === officerId);
+  }
 
   if (query) {
     filtered = filtered.filter((record) => {

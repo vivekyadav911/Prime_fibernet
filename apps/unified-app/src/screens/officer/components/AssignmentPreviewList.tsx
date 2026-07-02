@@ -53,7 +53,7 @@ export function AssignmentPreviewList({ requests, limit = 3 }: AssignmentPreview
         <View key={item.id} style={styles.card}>
           <View style={styles.cardHeader}>
             <PriorityBadge priority={item.priority} />
-            <Text style={styles.type}>{item.requestType}</Text>
+            <Text style={styles.type}>{item.requestTypeLabel ?? item.requestType}</Text>
           </View>
           <Text style={styles.desc} numberOfLines={2}>
             {item.description ?? item.address}

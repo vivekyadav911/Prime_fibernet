@@ -14,6 +14,7 @@ import type {
 } from '@/types/tickets';
 import { getSupabase } from '@/services/supabase';
 import { triggerAutoNotification } from '@/services/broadcastNotificationService';
+import { fetchOfficerNameMap } from '@/services/api/mappers';
 import { fetchOfficers } from '@/services/requestsService';
 import {
   buildSlaInsertFields,
@@ -112,13 +113,31 @@ export async function fetchTickets(_filters?: Partial<TicketFilters>): Promise<T
   if (error) throw error;
 
   const rows = data ?? [];
+  const officerIds = [
+    ...new Set(
+      rows
+        .map((row) => row.assigned_officer_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0),
+    ),
+  ];
+  const officerNameById = await fetchOfficerNameMap(client, officerIds);
+
   const tickets = await Promise.all(
     rows.map(async (row) => {
+      const rowRecord = row as Record<string, unknown>;
+      const officerId = rowRecord.assigned_officer_id ? String(rowRecord.assigned_officer_id) : null;
+      const resolvedOfficerName = officerId
+        ? officerNameById.get(officerId) ?? (rowRecord.assigned_officer_name as string | null)
+        : null;
+      const enrichedRow = {
+        ...rowRecord,
+        assigned_officer_name: resolvedOfficerName,
+      };
       const { activities, notes, attachments } = await loadTicketRelations(
         client,
         String(row.id),
       );
-      return mapDbRowToTicket(row as Record<string, unknown>, activities, notes, attachments);
+      return mapDbRowToTicket(enrichedRow, activities, notes, attachments);
     }),
   );
 
@@ -131,8 +150,19 @@ export async function fetchTicketById(id: string): Promise<Ticket> {
   if (error) throw error;
   if (!data) throw new Error('Ticket not found');
 
+  const rowRecord = data as Record<string, unknown>;
+  const officerId = rowRecord.assigned_officer_id ? String(rowRecord.assigned_officer_id) : null;
+  let enrichedRow = rowRecord;
+  if (officerId) {
+    const nameMap = await fetchOfficerNameMap(client, [officerId]);
+    enrichedRow = {
+      ...rowRecord,
+      assigned_officer_name: nameMap.get(officerId) ?? rowRecord.assigned_officer_name,
+    };
+  }
+
   const { activities, notes, attachments } = await loadTicketRelations(client, id);
-  return mapDbRowToTicket(data as Record<string, unknown>, activities, notes, attachments);
+  return mapDbRowToTicket(enrichedRow, activities, notes, attachments);
 }
 
 export async function createTicket(
@@ -178,6 +208,7 @@ export async function createTicket(
     linked_request_id: form.linkedRequestId,
     linked_request_number: form.linkedRequestNumber,
     customer_id: form.customerId,
+    is_ad_hoc_contact: !form.customerId,
     account_number: form.accountNumber || null,
     tags: form.tags,
     ...slaFields,
@@ -213,6 +244,11 @@ export async function createTicket(
   }
 
   if (form.linkedRequestId) {
+    await client
+      .from('service_requests')
+      .update({ linked_ticket_id: ticketId })
+      .eq('id', form.linkedRequestId);
+
     await insertActivity(client, ticketId, {
       type: 'linked_to_request',
       description: `Linked to request ${form.linkedRequestNumber ?? form.linkedRequestId}`,

@@ -1,13 +1,16 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { useLiveGeofenceStatus } from '@/hooks/attendance/useAttendance';
+import { useMyAssignedZones } from '@/hooks/attendance/useMyAssignedZones';
+import { useLocationPermissionState } from '@/hooks/attendance/useLocationPermissionState';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { formatOutsideZoneDistance } from '@/utils/formatDistance';
 
 export function GeofenceStatusBanner() {
-  const geo = useLiveGeofenceStatus();
+  const zones = useMyAssignedZones();
+  const { mode } = useLocationPermissionState();
 
-  if (geo.isLoading && geo.geofences.length === 0) {
+  if (zones.isLoading) {
     return (
       <View style={[styles.banner, styles.neutral]}>
         <Text style={styles.neutralText}>Loading assigned zones…</Text>
@@ -15,48 +18,52 @@ export function GeofenceStatusBanner() {
     );
   }
 
-  if (geo.geofences.length === 0) {
+  if (!zones.hasZone) {
     return (
       <View style={[styles.banner, styles.warn]}>
         <Text style={styles.warnText}>
-          No zone assigned — contact your admin to assign a geofence.
+          No zone assigned — contact your admin. Only Request approval is available until a zone is
+          assigned.
         </Text>
       </View>
     );
   }
 
-  if (!geo.currentLocation) {
+  if (mode === 'blocked') {
     return (
       <View style={[styles.banner, styles.warn]}>
-        <Text style={styles.warnText}>
-          Location unavailable — enable GPS to check in.
-        </Text>
+        <Text style={styles.warnText}>Location blocked — enable GPS to check in.</Text>
       </View>
     );
   }
 
-  if (geo.isInsideGeofence) {
-    const zoneName = geo.activeGeofence?.name ?? 'office zone';
+  if (!zones.coords) {
+    return (
+      <View style={[styles.banner, styles.warn]}>
+        <Text style={styles.warnText}>Location unavailable — enable GPS to check in.</Text>
+      </View>
+    );
+  }
+
+  if (zones.geofenceStatus.isInside) {
+    const zoneName = zones.geofenceStatus.geofence?.name ?? zones.selectedZone?.name ?? 'zone';
     return (
       <View style={[styles.banner, styles.ok]}>
-        <Text style={styles.okText}>
-          Inside {zoneName}. You can check in.
-        </Text>
+        <Text style={styles.okText}>Inside {zoneName}. You can check in.</Text>
       </View>
     );
   }
 
-  const dist =
-    geo.distanceFromFence < 1000
-      ? `${Math.round(geo.distanceFromFence)}m`
-      : `${(geo.distanceFromFence / 1000).toFixed(1)}km`;
-
-  const zoneName = geo.activeGeofence?.name ?? 'office';
+  const radiusM =
+    zones.selectedZone?.geometry.shape === 'circle' ? zones.selectedZone.geometry.radius : null;
+  const outsideLabel = formatOutsideZoneDistance(zones.geofenceStatus.distance, radiusM);
+  const zoneName = zones.selectedZone?.name ?? 'office';
 
   return (
     <View style={[styles.banner, styles.warn]}>
       <Text style={styles.warnText}>
-        Outside {zoneName} — {dist} away. Move into the zone or request approval.
+        Outside {zoneName}
+        {outsideLabel ? ` — ${outsideLabel}` : ''}. Move into the zone or request approval.
       </Text>
     </View>
   );

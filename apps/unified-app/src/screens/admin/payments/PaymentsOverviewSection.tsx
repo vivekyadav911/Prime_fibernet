@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { AdminKPICard, SectionCard } from '@/components/admin';
+import { AdminButton, AdminKPICard, SectionCard } from '@/components/admin';
 import { ExportButton, type PaymentFilterState } from '@/components/payments';
 import { SkeletonLoader } from '@/components/common';
 import { useCollectionDashboardKpis } from '@/hooks/usePayments';
@@ -29,6 +29,10 @@ export function PaymentsOverviewSection({ filters, pendingSum, onFilterPendingRe
     <View style={styles.section}>
       <SectionCard title="Payments overview">
         <View style={styles.actions}>
+          <AdminButton
+            label="Record payment"
+            onPress={() => navigation.navigate('RecordPayment')}
+          />
           <Pressable onPress={() => navigation.navigate('CollectionAssignments')}>
             <Text style={styles.link}>Assignments</Text>
           </Pressable>

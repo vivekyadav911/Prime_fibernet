@@ -110,10 +110,20 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
             query = query.or(buildUserSearchOrFilter(search));
           }
 
-          if (filters.officerFilter === 'unassigned') {
-            query = query.is('assigned_officer_id', null);
+          if (filters.officerFilter === 'open_pool' || filters.officerFilter === 'unassigned') {
+            query = query
+              .is('assigned_officer_id', null)
+              .is('claimed_by_officer_id', null)
+              .eq('collection_status', 'open');
           } else if (filters.officerFilter && filters.officerFilter !== 'all') {
             query = query.eq('assigned_officer_id', filters.officerFilter);
+          }
+
+          if (filters.dueForCollectionOnly) {
+            query = query
+              .gt('outstanding_amount', 0)
+              .not('payment_status', 'eq', 'suspended')
+              .in('collection_status', ['open', 'assigned', 'claimed']);
           }
 
           if (filters.paymentStatus && filters.paymentStatus !== 'all') {

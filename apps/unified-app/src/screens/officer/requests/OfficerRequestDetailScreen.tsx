@@ -30,6 +30,8 @@ import type { OfficerStackParamList } from '@/types/navigation';
 import { NavigationButton } from '../components/NavigationButton';
 import { StatusStepper } from '../components/StatusStepper';
 import { radius, spacing } from '@/theme/spacing';
+import { queryErrorMessage } from '@/utils/queryError';
+import { warnInvalidRequestId } from '@/utils/requestId';
 
 type Props = NativeStackScreenProps<OfficerStackParamList, 'RequestDetail'>;
 
@@ -55,6 +57,7 @@ function getStatusAction(status: string): StatusAction | null {
 
 export function OfficerRequestDetailScreen({ route }: Props) {
   const { requestId } = route.params;
+  warnInvalidRequestId(requestId, 'OfficerRequestDetailScreen');
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
   const { data: request, isLoading, error, refetch } = useGetRequestDetailQuery(requestId);
@@ -177,7 +180,10 @@ export function OfficerRequestDetailScreen({ route }: Props) {
   if (error || !request) {
     return (
       <Screen>
-        <ErrorState message="Request not found" onRetry={refetch} />
+        <ErrorState
+          message={error ? queryErrorMessage(error) : 'Request not found'}
+          onRetry={refetch}
+        />
       </Screen>
     );
   }

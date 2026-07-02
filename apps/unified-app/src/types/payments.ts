@@ -16,7 +16,9 @@ export type PaymentMethod =
   | 'netbanking'
   | 'wallet'
   | 'cash'
-  | 'cheque';
+  | 'cheque'
+  | 'bank_transfer'
+  | 'other';
 
 export type PaymentChannel =
   | 'online_app'
@@ -122,6 +124,27 @@ export type CollectionAssignmentEvent = {
   actor_role: string | null;
   notes: string | null;
   created_at: string;
+  event_source?: 'payment' | 'assignment' | string | null;
+  payment_id?: string | null;
+};
+
+export type PaymentActivityEvent = {
+  id: string;
+  event_type: string;
+  status: string | null;
+  title: string;
+  notes: string | null;
+  actor_role: string | null;
+  created_at: string;
+};
+
+export type ManualPaymentPayload = {
+  customerId: string;
+  amount: number;
+  method: 'cash' | 'card' | 'upi' | 'bank_transfer' | 'other';
+  reference?: string;
+  notes?: string;
+  confirmed?: boolean;
 };
 
 export type CollectionDashboardKpis = {
@@ -322,6 +345,8 @@ export const PAYMENT_METHOD_CONFIG: Record<
   wallet: { label: 'Wallet', icon: '👛', color: adminColors.badgePending },
   cash: { label: 'Cash', icon: '💵', color: adminColors.badgeActive },
   cheque: { label: 'Cheque', icon: '📄', color: colors.textSecondary },
+  bank_transfer: { label: 'Bank transfer', icon: '🏦', color: colors.accentTeal },
+  other: { label: 'Other', icon: '📝', color: colors.textSecondary },
 };
 
 export const DENOMINATION_NOTES: CashDenomination['note'][] = [500, 200, 100, 50, 20, 10, 5, 2, 1];

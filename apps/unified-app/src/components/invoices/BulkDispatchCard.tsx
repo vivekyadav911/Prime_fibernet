@@ -1,9 +1,20 @@
+import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@prime/ui';
 
 import { FilterChips, SectionCard } from '@/components/admin';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+
+const INVOICE_TYPE_OPTIONS = [
+  { value: 'non_gst' as const, label: 'Non-GST' },
+  { value: 'gst' as const, label: 'GST' },
+];
+
+const CHANNEL_OPTIONS = [
+  { value: 'email' as const, label: 'Email' },
+  { value: 'whatsapp' as const, label: 'WhatsApp' },
+];
 
 type BulkDispatchCardProps = {
   invoiceType: 'non_gst' | 'gst';
@@ -14,7 +25,7 @@ type BulkDispatchCardProps = {
   sending?: boolean;
 };
 
-export function BulkDispatchCard({
+export const BulkDispatchCard = memo(function BulkDispatchCard({
   invoiceType,
   channel,
   onInvoiceTypeChange,
@@ -26,18 +37,12 @@ export function BulkDispatchCard({
     <SectionCard title="Bulk dispatch">
       <Text style={styles.hint}>Send all pending invoices of the selected type</Text>
       <FilterChips
-        options={[
-          { value: 'non_gst', label: 'Non-GST' },
-          { value: 'gst', label: 'GST' },
-        ]}
+        options={INVOICE_TYPE_OPTIONS}
         selected={invoiceType}
         onSelect={onInvoiceTypeChange}
       />
       <FilterChips
-        options={[
-          { value: 'email', label: 'Email' },
-          { value: 'whatsapp', label: 'WhatsApp' },
-        ]}
+        options={CHANNEL_OPTIONS}
         selected={channel}
         onSelect={onChannelChange}
       />
@@ -46,7 +51,7 @@ export function BulkDispatchCard({
       </View>
     </SectionCard>
   );
-}
+});
 
 const styles = StyleSheet.create({
   hint: {

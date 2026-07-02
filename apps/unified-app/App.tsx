@@ -101,6 +101,31 @@ function Root() {
           .unwrap();
         return;
       }
+      if (op === 'attendanceApproval') {
+        const payload = mutation.payload as {
+          type: import('@/types/attendance').ApprovalType;
+          reason: string;
+          coords: { latitude: number; longitude: number; accuracy?: number };
+          photoProof?: string;
+          date: string;
+          distanceFromFence?: number;
+          geofenceId?: string;
+        };
+        await store
+          .dispatch(
+            attendanceApi.endpoints.requestApproval.initiate({
+              type: payload.type,
+              reason: payload.reason,
+              coords: payload.coords,
+              photoProof: payload.photoProof,
+              date: payload.date,
+              distanceFromFence: payload.distanceFromFence ?? 0,
+              geofenceId: payload.geofenceId,
+            }),
+          )
+          .unwrap();
+        return;
+      }
       if (op === 'locationUpdate') {
         const payload = mutation.payload as {
           coords: { latitude: number; longitude: number };
