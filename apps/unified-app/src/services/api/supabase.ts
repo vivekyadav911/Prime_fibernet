@@ -51,10 +51,30 @@ export async function getStoredAccessToken(): Promise<string | null> {
   }
 }
 
+function isInvalidRefreshTokenError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const message = String((error as { message?: string }).message ?? '');
+  return /invalid refresh token|refresh token not found/i.test(message);
+}
+
+async function clearStaleAuthSession(supabase: TypedSupabaseClient): Promise<void> {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch {
+    // Best-effort local cleanup when refresh token is already invalid.
+  }
+}
+
 async function ensureValidSession(supabase: TypedSupabaseClient): Promise<void> {
   await refreshMutex.runExclusive(async () => {
     const { data, error } = await supabase.auth.getSession();
-    if (error) throw error;
+    if (error) {
+      if (isInvalidRefreshTokenError(error)) {
+        await clearStaleAuthSession(supabase);
+        return;
+      }
+      throw error;
+    }
 
     const session = data.session;
     if (!session) return;
@@ -64,7 +84,13 @@ async function ensureValidSession(supabase: TypedSupabaseClient): Promise<void> 
     if (expiresInSec > 60) return;
 
     const { error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError) throw refreshError;
+    if (refreshError) {
+      if (isInvalidRefreshTokenError(refreshError)) {
+        await clearStaleAuthSession(supabase);
+        return;
+      }
+      throw refreshError;
+    }
   });
 }
 
@@ -119,6 +145,8 @@ export const supabaseBaseQuery: BaseQueryFn<
 
   return { error: { status: 'CUSTOM_ERROR', error: 'Request failed after retries' } };
 };
+
+export { isInvalidRefreshTokenError };
 
 export type FcmTokenMetadata = {
   userType?: string;

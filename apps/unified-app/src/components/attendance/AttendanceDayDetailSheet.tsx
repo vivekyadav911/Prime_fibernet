@@ -8,6 +8,7 @@ import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { AttendanceRecord } from '@/types/attendance';
+import type { AttendanceStatusDayRow, CanonicalAttendanceStatus } from '@/utils/attendanceStatus';
 import { formatAttendanceDuration } from '@/utils/attendanceDuration';
 import { parseLocalDateString } from '@/utils/dateUtils';
 
@@ -15,6 +16,7 @@ type AttendanceDayDetailSheetProps = {
   visible: boolean;
   date: string | null;
   records: AttendanceRecord[];
+  statusRows?: AttendanceStatusDayRow[];
   selectedOfficerId: string | null;
   onClose: () => void;
 };
@@ -77,10 +79,23 @@ export function AttendanceDayDetailSheet({
   visible,
   date,
   records,
+  statusRows = [],
   selectedOfficerId,
   onClose,
 }: AttendanceDayDetailSheetProps) {
   const snapPoints = useMemo(() => ['65%'], []);
+
+  const canonicalStatuses = useMemo(() => {
+    if (!date) return [] as Array<{ officerId: string; officerName: string; status: CanonicalAttendanceStatus }>;
+    return statusRows
+      .filter((row) => row.shiftDate === date)
+      .filter((row) => (selectedOfficerId ? row.officerId === selectedOfficerId : true))
+      .map((row) => ({
+        officerId: row.officerId,
+        officerName: row.officerName,
+        status: row.status,
+      }));
+  }, [date, selectedOfficerId, statusRows]);
 
   const dayRecords = useMemo(() => {
     if (!date) return [];
@@ -116,13 +131,26 @@ export function AttendanceDayDetailSheet({
             : `${dayRecords.length} employee${dayRecords.length === 1 ? '' : 's'}`}
         </Text>
 
-        {dayRecords.length === 0 ? (
+        {dayRecords.length === 0 && canonicalStatuses.length === 0 ? (
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyTitle}>No attendance logged</Text>
             <Text style={styles.emptySubtitle}>No records were found for this day.</Text>
           </View>
         ) : (
-          dayRecords.map((record) => <RecordDetailCard key={record.id} record={record} />)
+          <>
+            {canonicalStatuses.map((entry) => (
+              <View key={`${entry.officerId}-${entry.status}`} style={styles.canonicalRow}>
+                <Text style={styles.recordName}>{entry.officerName}</Text>
+                <StatusBadge status={entry.status === 'not_yet_recorded' ? 'absent' : entry.status} />
+                {entry.status === 'not_yet_recorded' ? (
+                  <Text style={styles.metaText}>Pending — not yet recorded</Text>
+                ) : null}
+              </View>
+            ))}
+            {dayRecords.map((record) => (
+              <RecordDetailCard key={record.id} record={record} />
+            ))}
+          </>
         )}
       </BottomSheetScrollView>
     </BottomSheet>
@@ -205,6 +233,13 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  canonicalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingVertical: spacing.xxs,
   },
   emptyWrap: {
     paddingVertical: spacing.lg,

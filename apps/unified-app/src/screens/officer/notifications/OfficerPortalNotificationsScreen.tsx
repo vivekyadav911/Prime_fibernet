@@ -70,7 +70,7 @@ export function OfficerPortalNotificationsScreen() {
       }
 
       if (isSignContractNotification(item)) {
-        navigation.navigate('ProfileStack', {
+        navigation.getParent()?.navigate('ProfileStack', {
           screen: 'EmploymentContract',
           params: { highlightSign: true },
         });
@@ -78,12 +78,12 @@ export function OfficerPortalNotificationsScreen() {
       }
 
       if (isCollectionNotification(item)) {
-        navigation.navigate('CollectionsStack', { screen: 'CollectionsList' });
+        navigation.getParent()?.navigate('CollectionsStack', { screen: 'CollectionsList' });
         return;
       }
 
       if (item.category === 'ticket' || item.category === 'request') {
-        navigation.navigate('RequestsStack');
+        navigation.getParent()?.navigate('RequestsStack');
         return;
       }
     },

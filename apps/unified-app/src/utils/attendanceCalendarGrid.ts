@@ -1,4 +1,5 @@
-import type { AttendanceRecord, AttendanceStatus } from '@/types/attendance';
+import type { AttendanceStatus } from '@/types/attendance';
+import type { CanonicalAttendanceStatus, DayStatusAggregate } from '@/utils/attendanceStatus';
 import { parseLocalDateString } from '@/utils/dateUtils';
 
 export type CalendarDayCell = {
@@ -6,27 +7,20 @@ export type CalendarDayCell = {
   day: number;
   inMonth: boolean;
   isWeekend: boolean;
-  status?: AttendanceStatus;
-  density?: DayAttendanceDensity;
+  status?: CanonicalAttendanceStatus;
+  density?: DayStatusAggregate;
 };
 
-export type DayAttendanceDensity = {
-  present: number;
-  absent: number;
-  late: number;
-  halfDay: number;
-  onLeave: number;
-  holiday: number;
-  total: number;
-};
+export type DayAttendanceDensity = DayStatusAggregate;
 
-export const CALENDAR_STATUS_COLORS: Record<AttendanceStatus, string> = {
+export const CALENDAR_STATUS_COLORS: Record<CanonicalAttendanceStatus, string> = {
   present: '#1a4731',
   absent: '#7f1d1d',
   late: '#92400e',
   half_day: '#134e4a',
   on_leave: '#1e3a5f',
   holiday: '#E5E7EB',
+  not_yet_recorded: '#F9FAFB',
 };
 
 function getDaysInMonth(year: number, month: number): number {
@@ -38,66 +32,11 @@ function isWeekendDate(year: number, monthIndex: number, day: number): boolean {
   return weekday === 0 || weekday === 6;
 }
 
-export function buildDayDensityMap(records: AttendanceRecord[]): Map<string, DayAttendanceDensity> {
-  const map = new Map<string, DayAttendanceDensity>();
-
-  records.forEach((record) => {
-    const existing = map.get(record.date) ?? {
-      present: 0,
-      absent: 0,
-      late: 0,
-      halfDay: 0,
-      onLeave: 0,
-      holiday: 0,
-      total: 0,
-    };
-
-    existing.total += 1;
-    switch (record.status) {
-      case 'present':
-        existing.present += 1;
-        break;
-      case 'absent':
-        existing.absent += 1;
-        break;
-      case 'late':
-        existing.late += 1;
-        break;
-      case 'half_day':
-        existing.halfDay += 1;
-        break;
-      case 'on_leave':
-        existing.onLeave += 1;
-        break;
-      case 'holiday':
-        existing.holiday += 1;
-        break;
-      default:
-        break;
-    }
-
-    map.set(record.date, existing);
-  });
-
-  return map;
-}
-
-export function buildStatusByDateForOfficer(
-  records: AttendanceRecord[],
-  officerId: string,
-): Map<string, AttendanceStatus> {
-  const map = new Map<string, AttendanceStatus>();
-  records
-    .filter((record) => record.officerId === officerId)
-    .forEach((record) => map.set(record.date, record.status));
-  return map;
-}
-
 export function buildCalendarMonthCells(
   year: number,
   month: number,
-  statusByDate: Map<string, AttendanceStatus>,
-  densityByDate: Map<string, DayAttendanceDensity> = new Map(),
+  statusByDate: Map<string, CanonicalAttendanceStatus>,
+  densityByDate: Map<string, DayStatusAggregate> = new Map(),
 ): CalendarDayCell[] {
   const monthIndex = month - 1;
   const daysInMonth = getDaysInMonth(year, month);
@@ -193,4 +132,14 @@ export function formatMonthYearLabel(year: number, month: number): string {
     month: 'short',
     year: 'numeric',
   });
+}
+
+/** @deprecated Use buildDayAggregateMap from attendanceStatus instead */
+export function buildDayDensityMap(): Map<string, DayStatusAggregate> {
+  return new Map();
+}
+
+/** @deprecated Use buildStatusByDateFromRows from attendanceStatus instead */
+export function buildStatusByDateForOfficer(): Map<string, AttendanceStatus> {
+  return new Map();
 }

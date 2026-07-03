@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Screen } from '@prime/ui';
@@ -10,6 +10,7 @@ import type { AttendanceRecord } from '@/types/attendance';
 import type { OfficerDrawerParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
+import { mapRecordsToProvisionalStatusRows } from '@/utils/attendanceStatus';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<OfficerDrawerParamList, 'AttendanceHistory'>;
@@ -56,6 +57,8 @@ export function AttendanceHistoryScreen(_props: Props) {
   }
 
   const records = data ?? [];
+  const statusRows = useMemo(() => mapRecordsToProvisionalStatusRows(records), [records]);
+  const officerId = records[0]?.officerId ?? null;
   const present = records.filter((r) => r.status === 'present').length;
   const absent = records.filter((r) => r.status === 'absent').length;
   const late = records.filter((r) => r.isLate).length;
@@ -71,8 +74,8 @@ export function AttendanceHistoryScreen(_props: Props) {
         <AttendanceCalendar
           year={year}
           month={month}
-          records={records}
-          selectedOfficerId={records[0]?.officerId ?? null}
+          statusRows={statusRows}
+          selectedOfficerId={officerId}
         />
       </View>
       <FlatList

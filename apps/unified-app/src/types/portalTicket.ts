@@ -31,8 +31,8 @@ export interface PortalTicketItem {
   assignedOfficerId: string | null;
   assignedOfficerName: string | null;
   assignedOfficerRole: string | null;
-  createdAt: Date;
-  assignedAt: Date | null;
+  createdAt: string;
+  assignedAt: string | null;
   slaBreached: boolean;
   ticket: Ticket | null;
   request: ServiceRequest | null;

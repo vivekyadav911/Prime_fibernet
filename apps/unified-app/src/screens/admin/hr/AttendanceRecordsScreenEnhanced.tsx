@@ -5,7 +5,7 @@ import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
 import { AttendanceDayDetailSheet } from '@/components/attendance/AttendanceDayDetailSheet';
 import { EmployeeSelector } from '@/components/attendance/EmployeeSelector';
 import { AdminButton, AdminScreenLayout, AdminStateShell, DateField, FilterChips, RoleGuard, SearchBar, SelectField, StatusBadge } from '@/components/admin';
-import { useAdminAttendance } from '@/hooks/attendance/useAdminAttendance';
+import { useAdminAttendance, useAttendanceStatusByDay } from '@/hooks/attendance/useAdminAttendance';
 import { useGetOfficersQuery } from '@/services/api/officersApi';
 import { setAdminRecordsPrefs } from '@/store/slices/attendanceSlice';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -16,7 +16,8 @@ import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { shareAttendanceCsv, shareAttendancePdf, resolveExportCalendarMonths, downloadAttendanceCsvInBrowser } from '@/utils/attendanceExport';
-import { formatMonthYearLabel, getMonthIsoRange } from '@/utils/attendanceCalendarGrid';
+import { formatMonthYearLabel, getMonthIsoRange, listMonthsBetween } from '@/utils/attendanceCalendarGrid';
+import { countAttendanceStatuses, filterRowsForMonth } from '@/utils/attendanceStatus';
 import { isWebBrowser } from '@/utils/webFileDownload';
 import { formatAttendanceDuration } from '@/utils/attendanceDuration';
 import {
@@ -88,34 +89,41 @@ function checkInMethodLabel(method: CheckInMethod): string {
 }
 
 function AttendanceSummaryStrip({
-  present,
-  absent,
-  late,
+  counts,
   subtitle,
 }: {
-  present: number;
-  absent: number;
-  late: number;
+  counts: {
+    present: number;
+    absent: number;
+    late: number;
+    halfDay: number;
+    onLeave: number;
+    holiday: number;
+  };
   subtitle: string;
 }) {
+  const tiles = [
+    { key: 'present', label: 'Present', value: counts.present, cellStyle: styles.kpiCellPresent, valueStyle: styles.kpiValuePresent },
+    { key: 'absent', label: 'Absent', value: counts.absent, cellStyle: styles.kpiCellAbsent, valueStyle: styles.kpiValueAbsent },
+    { key: 'late', label: 'Late', value: counts.late, cellStyle: styles.kpiCellLate, valueStyle: styles.kpiValueLate },
+    { key: 'halfDay', label: 'Half day', value: counts.halfDay, cellStyle: styles.kpiCellHalfDay, valueStyle: styles.kpiValueHalfDay },
+    { key: 'onLeave', label: 'On leave', value: counts.onLeave, cellStyle: styles.kpiCellOnLeave, valueStyle: styles.kpiValueOnLeave },
+    { key: 'holiday', label: 'Holiday', value: counts.holiday, cellStyle: styles.kpiCellHoliday, valueStyle: styles.kpiValueHoliday },
+  ] as const;
+
   return (
     <View style={styles.kpiCard}>
       <Text style={styles.kpiSubtitle}>{subtitle}</Text>
       <View style={styles.kpiStrip}>
-        <View style={[styles.kpiCell, styles.kpiCellPresent]}>
-          <Text style={[styles.kpiValue, styles.kpiValuePresent]}>{present}</Text>
-          <Text style={styles.kpiLabel}>Present</Text>
-        </View>
-        <View style={styles.kpiDivider} />
-        <View style={[styles.kpiCell, styles.kpiCellAbsent]}>
-          <Text style={[styles.kpiValue, styles.kpiValueAbsent]}>{absent}</Text>
-          <Text style={styles.kpiLabel}>Absent</Text>
-        </View>
-        <View style={styles.kpiDivider} />
-        <View style={[styles.kpiCell, styles.kpiCellLate]}>
-          <Text style={[styles.kpiValue, styles.kpiValueLate]}>{late}</Text>
-          <Text style={styles.kpiLabel}>Late</Text>
-        </View>
+        {tiles.map((tile, index) => (
+          <View key={tile.key} style={styles.kpiTileWrap}>
+            {index > 0 ? <View style={styles.kpiDivider} /> : null}
+            <View style={[styles.kpiCell, tile.cellStyle]}>
+              <Text style={[styles.kpiValue, tile.valueStyle]}>{tile.value}</Text>
+              <Text style={styles.kpiLabel}>{tile.label}</Text>
+            </View>
+          </View>
+        ))}
       </View>
     </View>
   );
@@ -303,7 +311,49 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
     viewMode,
   ]);
 
+  const statusQueryArgs = useMemo((): { from: string; to: string; officerId?: string } => {
+    if (viewMode === 'calendar' && !useDateRange) {
+      const monthRange = getMonthIsoRange(calendarYear, calendarMonth);
+      return {
+        from: monthRange.from,
+        to: monthRange.to,
+        ...(selectedOfficerId ? { officerId: selectedOfficerId } : {}),
+      };
+    }
+
+    if (useDateRange) {
+      return {
+        from: dateFrom,
+        to: dateTo,
+        ...(selectedOfficerId ? { officerId: selectedOfficerId } : {}),
+      };
+    }
+
+    return {
+      from: selectedDate,
+      to: selectedDate,
+      ...(selectedOfficerId ? { officerId: selectedOfficerId } : {}),
+    };
+  }, [
+    calendarMonth,
+    calendarYear,
+    dateFrom,
+    dateTo,
+    selectedDate,
+    selectedOfficerId,
+    useDateRange,
+    viewMode,
+  ]);
+
   const { data, isLoading, isError, error, refetch, isFetching } = useAdminAttendance(queryArgs);
+  const {
+    data: statusRows = [],
+    isLoading: statusLoading,
+    isError: statusIsError,
+    error: statusError,
+    refetch: refetchStatus,
+    isFetching: statusFetching,
+  } = useAttendanceStatusByDay(statusQueryArgs);
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
   const [includeCalendarInPdf, setIncludeCalendarInPdf] = useState(viewMode === 'calendar');
   const [exportError, setExportError] = useState<string | null>(null);
@@ -315,21 +365,28 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
     () => filterAndSortAttendanceRecords(records, searchQuery, statusFilter, sortBy, selectedOfficerId),
     [records, searchQuery, selectedOfficerId, sortBy, statusFilter],
   );
-  const counts = useMemo(
-    () => ({
-      present: filteredRecords.filter((r) => r.status === 'present').length,
-      absent: filteredRecords.filter((r) => r.status === 'absent' || !r.checkInTime).length,
-      late: filteredRecords.filter((r) => r.status === 'late' || r.isLate).length,
-    }),
-    [filteredRecords],
-  );
+  const counts = useMemo(() => {
+    const monthRows =
+      viewMode === 'calendar' && !useDateRange
+        ? filterRowsForMonth(statusRows, calendarYear, calendarMonth)
+        : statusRows;
+    return countAttendanceStatuses(monthRows);
+  }, [calendarMonth, calendarYear, statusRows, useDateRange, viewMode]);
+
+  const calendarMonths = useMemo(() => {
+    if (viewMode !== 'calendar') return [];
+    if (useDateRange) return listMonthsBetween(dateFrom, dateTo);
+    return [{ year: calendarYear, month: calendarMonth }];
+  }, [viewMode, useDateRange, dateFrom, dateTo, calendarYear, calendarMonth]);
 
   const selectedOfficerName = useMemo(() => {
     if (!selectedOfficerId) return 'All employees';
     return officers.find((officer) => officer.id === selectedOfficerId)?.name ?? 'Selected employee';
   }, [officers, selectedOfficerId]);
 
-  const statsSubtitle = `${selectedOfficerName} · ${formatMonthYearLabel(calendarYear, calendarMonth)}`;
+  const statsSubtitle = useDateRange
+    ? `${selectedOfficerName} · ${dateFrom} – ${dateTo}`
+    : `${selectedOfficerName} · ${formatMonthYearLabel(calendarYear, calendarMonth)}`;
   const rangeLabel = useDateRange ? `${dateFrom} to ${dateTo}` : selectedDate;
 
   const employeeSelectorOfficers = useMemo(
@@ -374,7 +431,7 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
 
     if (isWebBrowser()) {
       try {
-        downloadAttendanceCsvInBrowser(filteredRecords, rangeLabel.replace(/\s/g, '_'));
+        downloadAttendanceCsvInBrowser(filteredRecords, rangeLabel.replace(/\s/g, '_'), statusRows);
       } catch (e) {
         setExportError(queryErrorMessage(e));
       }
@@ -382,10 +439,10 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
     }
 
     setExporting('csv');
-    void shareAttendanceCsv(filteredRecords, rangeLabel.replace(/\s/g, '_'))
+    void shareAttendanceCsv(filteredRecords, rangeLabel.replace(/\s/g, '_'), statusRows)
       .catch((e) => setExportError(queryErrorMessage(e)))
       .finally(() => setExporting(null));
-  }, [filteredRecords, rangeLabel]);
+  }, [filteredRecords, rangeLabel, statusRows]);
 
   const handleExportPdf = useCallback(() => {
     setExportError(null);
@@ -397,6 +454,7 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
       calendarMonths: includeCalendarInPdf
         ? resolveExportCalendarMonths(filteredRecords, useDateRange, dateFrom, dateTo, selectedDate)
         : undefined,
+      statusRows,
     })
       .catch((e) => setExportError(queryErrorMessage(e)))
       .finally(() => setExporting(null));
@@ -408,6 +466,7 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
     rangeLabel,
     selectedDate,
     useDateRange,
+    statusRows,
   ]);
 
   const renderItem = useCallback(
@@ -482,23 +541,25 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
           {exportError ? <Text style={styles.exportError}>{exportError}</Text> : null}
         </View>
 
-        <AttendanceSummaryStrip
-          present={counts.present}
-          absent={counts.absent}
-          late={counts.late}
-          subtitle={statsSubtitle}
-        />
+        <AttendanceSummaryStrip counts={counts} subtitle={statsSubtitle} />
 
         {viewMode === 'calendar' ? (
           <View style={styles.calendarCard}>
-            <AttendanceCalendar
-              year={calendarYear}
-              month={calendarMonth}
-              records={records}
-              selectedOfficerId={selectedOfficerId}
-              selectedDate={selectedDate}
-              onDayPress={handleCalendarDayPress}
-            />
+            {calendarMonths.map(({ year, month }) => (
+              <View key={`${year}-${month}`} style={styles.calendarMonthBlock}>
+                {calendarMonths.length > 1 ? (
+                  <Text style={styles.calendarMonthTitle}>{formatMonthYearLabel(year, month)}</Text>
+                ) : null}
+                <AttendanceCalendar
+                  year={year}
+                  month={month}
+                  statusRows={statusRows}
+                  selectedOfficerId={selectedOfficerId}
+                  selectedDate={selectedDate}
+                  onDayPress={handleCalendarDayPress}
+                />
+              </View>
+            ))}
           </View>
         ) : (
           <>
@@ -536,11 +597,10 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
     );
   }, [
     activeViewTab,
+    calendarMonths,
     calendarMonth,
     calendarYear,
-    counts.absent,
-    counts.late,
-    counts.present,
+    counts,
     dateFrom,
     dateTo,
     employeeSelectorOfficers,
@@ -560,6 +620,7 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
     sortBy,
     statsSubtitle,
     statusFilter,
+    statusRows,
     updatePrefs,
     useDateRange,
     viewMode,
@@ -568,10 +629,13 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
   return (
     <RoleGuard requiredPermission="attendance.view">
       <AdminStateShell
-        isLoading={isLoading}
-        isError={isError}
-        error={error}
-        onRetry={refetch}
+        isLoading={isLoading || statusLoading}
+        isError={isError || statusIsError}
+        error={error ?? statusError}
+        onRetry={() => {
+          void refetch();
+          void refetchStatus();
+        }}
         loadingRows={8}
         loadingShape="card"
       >
@@ -584,8 +648,11 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
             ListHeaderComponent={listHeader}
             contentContainerStyle={adminScreenStyles.listContent}
             showsVerticalScrollIndicator={false}
-            refreshing={isFetching}
-            onRefresh={refetch}
+            refreshing={isFetching || statusFetching}
+            onRefresh={() => {
+              void refetch();
+              void refetchStatus();
+            }}
           />
         ) : (
           <FlatList
@@ -595,8 +662,11 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
             ListHeaderComponent={listHeader}
             contentContainerStyle={adminScreenStyles.listContent}
             showsVerticalScrollIndicator={false}
-            refreshing={isFetching}
-            onRefresh={refetch}
+            refreshing={isFetching || statusFetching}
+            onRefresh={() => {
+              void refetch();
+              void refetchStatus();
+            }}
             ListEmptyComponent={
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyTitle}>
@@ -616,6 +686,7 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
           visible={dayDetailDate !== null}
           date={dayDetailDate}
           records={records}
+          statusRows={statusRows}
           selectedOfficerId={selectedOfficerId}
           onClose={() => setDayDetailDate(null)}
         />
@@ -694,6 +765,12 @@ const styles = StyleSheet.create({
   },
   kpiStrip: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  kpiTileWrap: {
+    flexDirection: 'row',
+    width: '33.33%',
+    minWidth: '33.33%',
   },
   kpiCell: {
     flex: 1,
@@ -705,6 +782,9 @@ const styles = StyleSheet.create({
   kpiCellPresent: { backgroundColor: adminColors.attendanceKpiCell.present },
   kpiCellAbsent: { backgroundColor: adminColors.attendanceKpiCell.absent },
   kpiCellLate: { backgroundColor: adminColors.attendanceKpiCell.late },
+  kpiCellHalfDay: { backgroundColor: adminColors.attendanceKpiExtended.halfDay },
+  kpiCellOnLeave: { backgroundColor: adminColors.attendanceKpiExtended.onLeave },
+  kpiCellHoliday: { backgroundColor: adminColors.attendanceKpiExtended.holiday },
   kpiDivider: {
     width: StyleSheet.hairlineWidth,
     backgroundColor: colors.borderDefault,
@@ -720,6 +800,9 @@ const styles = StyleSheet.create({
   kpiValuePresent: { color: adminColors.badgeActive },
   kpiValueAbsent: { color: adminColors.badgeBlocked },
   kpiValueLate: { color: adminColors.badgePending },
+  kpiValueHalfDay: { color: adminColors.chipTones.success.text },
+  kpiValueOnLeave: { color: adminColors.chipTones.info.text },
+  kpiValueHoliday: { color: colors.textSecondary },
   kpiLabel: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
   calendarCard: {
     backgroundColor: adminColors.cardBg,
@@ -727,6 +810,15 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.borderDefault,
     padding: spacing.md,
+  },
+  calendarMonthBlock: {
+    marginBottom: spacing.md,
+  },
+  calendarMonthTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
   sectionHeader: {
     flexDirection: 'row',

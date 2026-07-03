@@ -8,6 +8,7 @@ import {
   useDeleteGeofenceMutation,
   useDeleteShiftDefinitionMutation,
   useGetAdminAttendanceQuery,
+  useGetAttendanceStatusByDayQuery,
   useGetAdminLeaveRequestsQuery,
   useGetAllAttendanceTodayQuery,
   useGetApprovalRequestsQuery,
@@ -144,6 +145,14 @@ export function useAdminAttendance(filters: {
   status?: string;
 }) {
   return useGetAdminAttendanceQuery(filters);
+}
+
+export function useAttendanceStatusByDay(filters: {
+  from: string;
+  to: string;
+  officerId?: string;
+}) {
+  return useGetAttendanceStatusByDayQuery(filters);
 }
 
 export function useAttendanceSummary(officerId: string, month: number, year: number) {

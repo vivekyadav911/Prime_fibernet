@@ -3,9 +3,10 @@ import type { ServiceRequest } from '@/types/requests';
 import type { Ticket, TicketActivityEvent, TicketStatus } from '@/types/tickets';
 
 import { baseApi } from './baseApi';
+import { fetchPlanMap } from './adminRequestsBoardApi';
 import { fetchOfficerNameMap, getOfficerIdForUser } from './mappers';
 import type { TypedSupabaseClient } from './supabase';
-import { buildPortalItems } from '@/utils/portalTicketMappers';
+import { buildPortalItems, serializePortalItemForCache, serializePortalItemsForCache } from '@/utils/portalTicketMappers';
 import { mapDbRowToServiceRequest } from '@/utils/requestViewMappers';
 import { mapDbRowToTicket } from '@/utils/ticketViewMappers';
 import { getPortalItemCoordinates } from '@/utils/officerPortalCoordinates';
@@ -57,7 +58,7 @@ async function loadTicketActivities(client: TypedSupabaseClient, ticketId: strin
 }
 
 async function fetchOfficerPortalItems(client: TypedSupabaseClient, officerId: string): Promise<PortalTicketItem[]> {
-  const [ticketResult, requestResult] = await Promise.all([
+  const [ticketResult, requestResult, planMap] = await Promise.all([
     client
       .from('ticket_sla_live')
       .select('*')
@@ -68,6 +69,7 @@ async function fetchOfficerPortalItems(client: TypedSupabaseClient, officerId: s
       .select('*')
       .eq('officer_id', officerId)
       .order('created_at', { ascending: false }),
+    fetchPlanMap(client),
   ]);
 
   if (ticketResult.error) throw ticketResult.error;
@@ -91,19 +93,21 @@ async function fetchOfficerPortalItems(client: TypedSupabaseClient, officerId: s
   const requests: ServiceRequest[] = await Promise.all(
     requestRows.map(async (row) => {
       const activities = await loadRequestActivities(client, String(row.id));
-      return mapDbRowToServiceRequest(row, activities);
+      return mapDbRowToServiceRequest(row, activities, planMap);
     }),
   );
 
   const items = buildPortalItems(tickets, requests);
 
-  return items.map((item) => {
-    if (item.kind !== 'ticket' || !item.ticket?.linkedRequestId) return item;
-    const linkedRow = requestRowById.get(item.ticket.linkedRequestId);
-    if (!linkedRow) return item;
-    const linkedRequest = mapDbRowToServiceRequest(linkedRow, []);
-    return { ...item, request: linkedRequest };
-  });
+  return serializePortalItemsForCache(
+    items.map((item) => {
+      if (item.kind !== 'ticket' || !item.ticket?.linkedRequestId) return item;
+      const linkedRow = requestRowById.get(item.ticket.linkedRequestId);
+      if (!linkedRow) return item;
+      const linkedRequest = mapDbRowToServiceRequest(linkedRow, [], planMap);
+      return { ...item, request: linkedRequest };
+    }),
+  );
 }
 
 function mapDetailFromItem(
@@ -193,7 +197,9 @@ export const officerPortalApi = baseApi.injectEndpoints({
               }
               const item = buildPortalItems([ticket], [])[0];
               if (!item) throw new Error('Ticket not found');
-              return mapDetailFromItem(item, linkedRequestRow);
+              return serializePortalItemForCache(
+                mapDetailFromItem(item, linkedRequestRow),
+              ) as OfficerPortalItemDetail;
             }
             if (kind === 'ticket') throw new Error('Ticket not found');
           }
@@ -207,10 +213,13 @@ export const officerPortalApi = baseApi.injectEndpoints({
           if (!requestRow) throw new Error('Ticket not found');
 
           const activities = await loadRequestActivities(client, itemId);
-          const request = mapDbRowToServiceRequest(requestRow as Record<string, unknown>, activities);
+          const planMap = await fetchPlanMap(client);
+          const request = mapDbRowToServiceRequest(requestRow as Record<string, unknown>, activities, planMap);
           const item = buildPortalItems([], [request])[0];
           if (!item) throw new Error('Ticket not found');
-          return mapDetailFromItem(item, requestRow as Record<string, unknown>);
+          return serializePortalItemForCache(
+            mapDetailFromItem(item, requestRow as Record<string, unknown>),
+          ) as OfficerPortalItemDetail;
         },
       }),
       providesTags: (_result, _error, arg) => [{ type: 'OfficerPortal', id: arg.itemId }],

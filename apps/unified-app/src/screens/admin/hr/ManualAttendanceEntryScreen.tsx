@@ -7,7 +7,6 @@ import { useGetOfficersQuery } from '@/services/api/officersApi';
 import { setAdminRecordsPrefs } from '@/store/slices/attendanceSlice';
 import { useAppDispatch } from '@/store/hooks';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { getLocalDateString } from '@/utils/dateUtils';
@@ -23,6 +22,8 @@ const STATUS_OPTIONS = [
   { value: 'on_leave', label: 'On leave' },
 ];
 
+const FUTURE_ALLOWED_STATUSES = new Set(['on_leave', 'holiday']);
+
 export function ManualAttendanceEntryScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
   const { data: officers, isLoading: officersLoading, isError, error } = useGetOfficersQuery();
@@ -34,6 +35,7 @@ export function ManualAttendanceEntryScreen({ navigation }: Props) {
   const [checkOutTime, setCheckOutTime] = useState('');
   const [status, setStatus] = useState('present');
   const [reason, setReason] = useState('');
+  const [confirmOverride, setConfirmOverride] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const officerOptions = useMemo(
@@ -44,6 +46,8 @@ export function ManualAttendanceEntryScreen({ navigation }: Props) {
       })),
     [officers],
   );
+
+  const isFutureDate = date > getLocalDateString();
 
   const buildIsoTime = useCallback(
     (time: string) => {
@@ -66,6 +70,11 @@ export function ManualAttendanceEntryScreen({ navigation }: Props) {
       return;
     }
 
+    if (isFutureDate && !FUTURE_ALLOWED_STATUSES.has(status)) {
+      setFormError('Future dates only allow on leave or holiday status');
+      return;
+    }
+
     setFormError(null);
 
     try {
@@ -76,6 +85,7 @@ export function ManualAttendanceEntryScreen({ navigation }: Props) {
         checkOut: checkOutTime ? buildIsoTime(checkOutTime) : undefined,
         status,
         reason: reason.trim(),
+        confirmOverride,
       }).unwrap();
 
       dispatch(
@@ -90,14 +100,23 @@ export function ManualAttendanceEntryScreen({ navigation }: Props) {
         navigation.goBack();
       }
     } catch (e) {
-      setFormError(queryErrorMessage(e));
+      const message = queryErrorMessage(e);
+      if (message.includes('CONFIRM_OVERRIDE_REQUIRED')) {
+        setFormError(
+          'This date has a geofence-verified check-in. Enable override confirmation below and provide a reason.',
+        );
+        return;
+      }
+      setFormError(message);
     }
   }, [
     buildIsoTime,
     checkInTime,
     checkOutTime,
+    confirmOverride,
     date,
     dispatch,
+    isFutureDate,
     navigation,
     officerId,
     override,
@@ -111,12 +130,17 @@ export function ManualAttendanceEntryScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.scroll}>
           <Text style={styles.title}>Manual attendance entry</Text>
           <Text style={styles.subtitle}>
-            Use for device failure, GPS issues, or other edge cases. Entries are flagged as
-            admin overrides in records.
+            Use for device failure, GPS issues, or other edge cases. Entries are validated server-side,
+            upserted per officer/date, and written to the audit trail.
           </Text>
 
           {formError ? <Text style={styles.error}>{formError}</Text> : null}
           {isError ? <Text style={styles.error}>{queryErrorMessage(error)}</Text> : null}
+          {isFutureDate && !FUTURE_ALLOWED_STATUSES.has(status) ? (
+            <Text style={styles.warning}>
+              Future dates cannot be marked present, absent, late, or half day.
+            </Text>
+          ) : null}
 
           <SelectField
             label="Officer"
@@ -158,6 +182,17 @@ export function ManualAttendanceEntryScreen({ navigation }: Props) {
             multiline
           />
 
+          <View style={styles.overrideRow}>
+            <Text style={styles.overrideLabel}>
+              Confirm override of geofence-verified check-in
+            </Text>
+            <AdminButton
+              label={confirmOverride ? 'Override confirmed' : 'Enable override'}
+              variant={confirmOverride ? 'primary' : 'secondary'}
+              onPress={() => setConfirmOverride((value) => !value)}
+            />
+          </View>
+
           <AdminButton
             label={saving ? 'Saving…' : 'Save manual entry'}
             onPress={() => void handleSave()}
@@ -174,4 +209,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   subtitle: { fontSize: 13, lineHeight: 18, color: colors.textSecondary },
   error: { color: colors.errorRed, fontSize: 13 },
+  warning: { color: colors.textSecondary, fontSize: 13 },
+  overrideRow: { gap: spacing.xs },
+  overrideLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
 });

@@ -79,7 +79,10 @@ async function loadAdminRequestBoard(client: TypedSupabaseClient): Promise<Servi
 
   const rows = (requestsResult.data ?? []) as Record<string, unknown>[];
   const requestIds = rows.map((r) => String(r.id));
-  const activitiesByRequest = await fetchAllActivities(client, requestIds);
+  const [activitiesByRequest, planMap] = await Promise.all([
+    fetchAllActivities(client, requestIds),
+    fetchPlanMap(client),
+  ]);
 
   return rows.map((row) => {
     const requestId = String(row.id);
@@ -90,7 +93,7 @@ async function loadAdminRequestBoard(client: TypedSupabaseClient): Promise<Servi
       return mapSupportViewRowToServiceRequest(enriched, row, activities);
     }
 
-    return mapDbRowToServiceRequest(row, activities);
+    return mapDbRowToServiceRequest(row, activities, planMap);
   });
 }
 

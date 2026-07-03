@@ -42,8 +42,8 @@ export function ticketToPortalItem(ticket: Ticket): PortalTicketItem {
     assignedOfficerId: ticket.assignedOfficerId,
     assignedOfficerName: ticket.assignedOfficerName,
     assignedOfficerRole: ticket.assignedOfficerRole,
-    createdAt: ticket.createdAt,
-    assignedAt: ticket.assignedAt,
+    createdAt: ticket.createdAt.toISOString(),
+    assignedAt: ticket.assignedAt?.toISOString() ?? null,
     slaBreached: isOpenTicketSlaBreached(ticket),
     ticket,
     request: null,
@@ -67,8 +67,8 @@ export function requestToPortalItem(request: ServiceRequest): PortalTicketItem {
     assignedOfficerId: request.assignedOfficerId,
     assignedOfficerName: request.assignedOfficerName,
     assignedOfficerRole: request.assignedOfficerRole,
-    createdAt: new Date(request.createdAt),
-    assignedAt: request.assignedAt ? new Date(request.assignedAt) : null,
+    createdAt: request.createdAt,
+    assignedAt: request.assignedAt,
     slaBreached: false,
     ticket: null,
     request,
@@ -88,8 +88,17 @@ export function buildPortalItems(tickets: Ticket[], requests: ServiceRequest[]):
   const requestItems = orphanRequests.map(requestToPortalItem);
 
   return [...ticketItems, ...requestItems].sort(
-    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
   );
+}
+
+/** JSON-safe copy for RTK Query cache (Date → ISO string in nested ticket/request). */
+export function serializePortalItemsForCache(items: PortalTicketItem[]): PortalTicketItem[] {
+  return JSON.parse(JSON.stringify(items)) as PortalTicketItem[];
+}
+
+export function serializePortalItemForCache(item: PortalTicketItem): PortalTicketItem {
+  return JSON.parse(JSON.stringify(item)) as PortalTicketItem;
 }
 
 function priorityRank(priority: TicketPriority | null): number {
@@ -144,14 +153,17 @@ export function applyPortalFilters(items: PortalTicketItem[], filters: PortalTic
   result.sort((a, b) => {
     switch (filters.sortBy) {
       case 'oldest':
-        return a.createdAt.getTime() - b.createdAt.getTime();
+        return Date.parse(a.createdAt) - Date.parse(b.createdAt);
       case 'priority_high':
         return priorityRank(b.priority) - priorityRank(a.priority);
       case 'sla_urgent':
-        return Number(b.slaBreached) - Number(a.slaBreached) || b.createdAt.getTime() - a.createdAt.getTime();
+        return (
+          Number(b.slaBreached) - Number(a.slaBreached) ||
+          Date.parse(b.createdAt) - Date.parse(a.createdAt)
+        );
       case 'newest':
       default:
-        return b.createdAt.getTime() - a.createdAt.getTime();
+        return Date.parse(b.createdAt) - Date.parse(a.createdAt);
     }
   });
 

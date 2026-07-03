@@ -1,6 +1,7 @@
 export {
   getSupabase,
   getStoredAccessToken,
+  isInvalidRefreshTokenError,
   registerFcmToken,
   supabaseBaseQuery,
 } from '@/services/api/supabase';

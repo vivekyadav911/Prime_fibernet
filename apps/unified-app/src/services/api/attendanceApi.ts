@@ -33,6 +33,7 @@ import {
 import type { AttendanceReportData } from './attendanceMappers';
 import { getOfficerIdForUser } from './mappers';
 import { getLocalDateString } from '@/utils/dateUtils';
+import { mapAttendanceStatusDayRow, type AttendanceStatusDayRow } from '@/utils/attendanceStatus';
 
 const GEOFENCE_SELECT = '*, geofence_officer_assignments(officer_id)';
 const OFFICER_EMBED = 'full_name, profile_photo_url';
@@ -235,6 +236,24 @@ export const attendanceApi = baseApi.injectEndpoints({
       providesTags: ['Attendance'],
     }),
 
+    getAttendanceStatusByDay: builder.query<
+      AttendanceStatusDayRow[],
+      { from: string; to: string; officerId?: string }
+    >({
+      query: ({ from, to, officerId }) => ({
+        handler: async (client) => {
+          const { data, error } = await client.rpc('get_attendance_status_by_day', {
+            p_from_date: from,
+            p_to_date: to,
+            p_officer_id: officerId ?? null,
+          });
+          if (error) throw error;
+          return (data ?? []).map((row: Record<string, unknown>) => mapAttendanceStatusDayRow(row));
+        },
+      }),
+      providesTags: ['Attendance'],
+    }),
+
     getAttendanceSummary: builder.query<
       AttendanceSummary,
       { officerId: string; month: number; year: number }
@@ -268,51 +287,27 @@ export const attendanceApi = baseApi.injectEndpoints({
         status: string;
         notes?: string;
         reason: string;
+        confirmOverride?: boolean;
       }
     >({
       query: (body) => ({
         handler: async (client) => {
-          const { data: session } = await client.auth.getSession();
-          const userId = session.session?.user?.id;
-          let adminName = 'Admin';
-          if (userId) {
-            const { data: userRow } = await client
-              .from('users')
-              .select('email, name')
-              .eq('id', userId)
-              .maybeSingle();
-            adminName = userRow?.name?.trim() || userRow?.email || 'Admin';
-          }
+          const { data: shiftId, error: rpcError } = await client.rpc('admin_manual_attendance_entry', {
+            p_officer_id: body.officerId,
+            p_shift_date: body.date,
+            p_status: body.status,
+            p_check_in_time: body.checkIn ?? null,
+            p_check_out_time: body.checkOut ?? null,
+            p_reason: body.reason,
+            p_confirm_override: body.confirmOverride ?? false,
+          });
 
-          const manualNote = `Manually entered by ${adminName}${body.reason ? `: ${body.reason}` : ''}`;
-
-          const workingHours =
-            body.checkIn && body.checkOut
-              ? Math.round(
-                  ((new Date(body.checkOut).getTime() - new Date(body.checkIn).getTime()) /
-                    3_600_000) *
-                    100,
-                ) / 100
-              : undefined;
+          if (rpcError) throw rpcError;
 
           const { data, error } = await client
             .from('shifts')
-            .upsert({
-              officer_id: body.officerId,
-              shift_date: body.date,
-              check_in_time: body.checkIn,
-              check_out_time: body.checkOut,
-              attendance_status: body.status,
-              check_in_method: 'admin_override',
-              notes: manualNote,
-              status: body.checkOut ? 'completed' : 'active',
-              working_hours: workingHours,
-              manual_entry_by: userId,
-              manual_entry_by_name: adminName,
-              manual_entry_reason: body.reason,
-              manual_entry_at: new Date().toISOString(),
-            })
             .select(ATTENDANCE_SELECT)
+            .eq('id', shiftId as string)
             .single();
           if (error) throw error;
           return mapAttendanceRow(data as never);
@@ -1032,6 +1027,7 @@ export const {
   useAssignGeofenceOfficersMutation,
   useGetAllAttendanceTodayQuery,
   useGetAdminAttendanceQuery,
+  useGetAttendanceStatusByDayQuery,
   useGetOfficerAttendanceRecordsQuery,
   useGetAttendanceSummaryQuery,
   useAttendanceOverrideMutation,

@@ -104,10 +104,21 @@ export const adminColors = {
     half_day: '#134e4a',
     on_leave: '#1e3a5f',
     holiday: '#E5E7EB',
+    not_yet_recorded: '#F9FAFB',
     weekendEmpty: '#F3F4F6',
     empty: '#FFFFFF',
     densityPresent: '#22C55E',
     densityAbsent: '#EF4444',
+    densityLate: '#F59E0B',
+    densityHalfDay: '#0D9488',
+    densityOnLeave: '#3B82F6',
+    densityHoliday: '#9CA3AF',
+  },
+  /** Live attendance KPI cell backgrounds — extended canonical breakdown */
+  attendanceKpiExtended: {
+    halfDay: '#F0FDFA',
+    onLeave: '#EFF6FF',
+    holiday: '#F9FAFB',
   },
   /** Notification hub — sent tab and FAB */
   notificationHub: {
