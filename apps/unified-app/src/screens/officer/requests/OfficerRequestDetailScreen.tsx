@@ -15,54 +15,51 @@ import { Marker } from 'react-native-maps';
 import { Button, Screen } from '@prime/ui';
 import { colors } from '@/theme/colors';
 
-import { ErrorState, LoadingOverlay, PriorityBadge, SkeletonLoader, StatusChip, ScreenWrapper } from '@/components/common';
+import { TicketStatusBadge, TicketTimeline } from '@/components/TicketPortal';
+import { ErrorState, LoadingOverlay, SkeletonLoader, ScreenWrapper } from '@/components/common';
 import { FreeMapView } from '@/components/map';
 import { useCamera } from '@/hooks/useCamera';
 import {
   useAddActivityNoteMutation,
-  useGetRequestDetailQuery,
 } from '@/services/api/officersApi';
+import {
+  useAddOfficerTicketNoteMutation,
+  useGetOfficerPortalItemDetailQuery,
+  useUpdateOfficerTicketStatusMutation,
+} from '@/services/api/officerPortalApi';
 import { useUpdateRequestStatusMutation } from '@/services/api/requestsApi';
 import { SyncManager } from '@/services/offline/syncManager';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import type { OfficerStackParamList } from '@/types/navigation';
 import { NavigationButton } from '../components/NavigationButton';
-import { StatusStepper } from '../components/StatusStepper';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 import { warnInvalidRequestId } from '@/utils/requestId';
+import {
+  getOfficerTicketAdvanceLabel,
+  nextRequestStatusForOfficer,
+  nextTicketStatusForOfficer,
+} from '@/utils/officerTicketActions';
+import { truncateTicketNumber } from '@/utils/ticketViewMappers';
 
 type Props = NativeStackScreenProps<OfficerStackParamList, 'RequestDetail'>;
 
-type StatusAction = {
-  label: string;
-  nextStatus: string;
-};
-
-function getStatusAction(status: string): StatusAction | null {
-  switch (status) {
-    case 'pending':
-    case 'assigned':
-      return { label: 'Accept', nextStatus: 'in_transit' };
-    case 'in_transit':
-      return { label: 'Arrived', nextStatus: 'on_site' };
-    case 'on_site':
-    case 'working':
-      return { label: 'Resolve', nextStatus: 'resolved' };
-    default:
-      return null;
-  }
-}
-
 export function OfficerRequestDetailScreen({ route }: Props) {
-  const { requestId } = route.params;
+  const { requestId, kind } = route.params;
   warnInvalidRequestId(requestId, 'OfficerRequestDetailScreen');
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
-  const { data: request, isLoading, error, refetch } = useGetRequestDetailQuery(requestId);
-  const [updateStatus, { isLoading: updatingStatus }] = useUpdateRequestStatusMutation();
-  const [addNote, { isLoading: addingNote }] = useAddActivityNoteMutation();
+  const { data: detail, isLoading, error, refetch } = useGetOfficerPortalItemDetailQuery({
+    itemId: requestId,
+    kind,
+  });
+  const [updateRequestStatus, { isLoading: updatingRequestStatus }] = useUpdateRequestStatusMutation();
+  const [updateTicketStatus, { isLoading: updatingTicketStatus }] = useUpdateOfficerTicketStatusMutation();
+  const [addRequestNote, { isLoading: addingRequestNote }] = useAddActivityNoteMutation();
+  const [addTicketNote, { isLoading: addingTicketNote }] = useAddOfficerTicketNoteMutation();
+  const updatingStatus = updatingRequestStatus || updatingTicketStatus;
+  const addingNote = addingRequestNote || addingTicketNote;
   const { takePhoto, pickFromGallery, uploadToSupabase, isUploading } = useCamera();
 
   const sheetRef = useRef<BottomSheet>(null);
@@ -78,42 +75,50 @@ export function OfficerRequestDetailScreen({ route }: Props) {
     [],
   );
 
-  const activityCount = request?.activities?.length ?? 0;
-  const statusAction = request ? getStatusAction(request.status) : null;
+  const activityCount = detail?.activityTimeline.length ?? 0;
+  const statusActionLabel = detail ? getOfficerTicketAdvanceLabel(detail.statusBucket) : null;
 
   const onStatusPress = async () => {
-    if (!request || !statusAction || !user) return;
+    if (!detail || !statusActionLabel || !user) return;
 
-    const applyStatus = async () => {
-      await updateStatus({
-        id: request.id,
-        status: statusAction.nextStatus,
-        note:
-          statusAction.nextStatus === 'resolved'
-            ? 'Request resolved'
-            : `Status changed to ${statusAction.nextStatus}`,
-        officerName: user.name,
-      }).unwrap();
-    };
-
-    if (statusAction.nextStatus === 'resolved') {
-      if (activityCount < 1) {
+    if (detail.kind === 'ticket' && detail.ticket) {
+      const next = nextTicketStatusForOfficer(detail.ticket.status);
+      if (!next) return;
+      if (next === 'Resolved' && activityCount < 1) {
         setPendingResolve(true);
         sheetRef.current?.expand();
         return;
       }
       try {
-        await applyStatus();
+        await updateTicketStatus({
+          ticketId: detail.ticket.id,
+          status: next,
+          note: `Status updated to ${next}`,
+          officerName: user.name,
+        }).unwrap();
       } catch {
-        await SyncManager.enqueue({
-          id: `${request.id}-resolved-${Date.now()}`,
-          operation: 'updateRequestStatus',
-          endpoint: 'updateRequestStatus',
-          payload: { id: request.id, status: 'resolved', note: 'Request resolved' },
-        });
-        dispatch(enqueueToast({ id: 'off-res', type: 'info', message: 'Saved offline' }));
+        dispatch(enqueueToast({ id: 'off-ticket', type: 'info', message: 'Could not update ticket' }));
       }
       refetch();
+      return;
+    }
+
+    const currentStatus = String(detail.request?.status ?? '');
+    const next = nextRequestStatusForOfficer(currentStatus);
+    if (!next || !detail.request) return;
+
+    const applyStatus = async () => {
+      await updateRequestStatus({
+        id: detail.request!.id,
+        status: next,
+        note: next === 'resolved' ? 'Ticket resolved' : `Status changed to ${next}`,
+        officerName: user.name,
+      }).unwrap();
+    };
+
+    if (next === 'resolved' && activityCount < 1) {
+      setPendingResolve(true);
+      sheetRef.current?.expand();
       return;
     }
 
@@ -121,14 +126,10 @@ export function OfficerRequestDetailScreen({ route }: Props) {
       await applyStatus();
     } catch {
       await SyncManager.enqueue({
-        id: `${request.id}-${statusAction.nextStatus}-${Date.now()}`,
+        id: `${detail.id}-${next}-${Date.now()}`,
         operation: 'updateRequestStatus',
         endpoint: 'updateRequestStatus',
-        payload: {
-          id: request.id,
-          status: statusAction.nextStatus,
-          note: `Status changed to ${statusAction.nextStatus}`,
-        },
+        payload: { id: detail.request.id, status: next, note: `Status changed to ${next}` },
       });
       dispatch(enqueueToast({ id: 'off-st', type: 'info', message: 'Saved offline' }));
     }
@@ -136,21 +137,29 @@ export function OfficerRequestDetailScreen({ route }: Props) {
   };
 
   const onSubmitNote = async () => {
-    if (!request || !user || !noteText.trim()) return;
+    if (!detail || !user || !noteText.trim()) return;
 
     let photoUrls: string[] = [];
-    if (pendingPhotoUri) {
-      const path = `requests/${request.id}/${Date.now()}.jpg`;
+    if (pendingPhotoUri && detail.kind === 'request') {
+      const path = `requests/${detail.id}/${Date.now()}.jpg`;
       const url = await uploadToSupabase(pendingPhotoUri, 'request-photos', path);
       photoUrls = [url];
     }
 
-    await addNote({
-      requestId: request.id,
-      officerName: user.name,
-      note: noteText.trim(),
-      photoUrls,
-    }).unwrap();
+    if (detail.kind === 'ticket' && detail.ticket) {
+      await addTicketNote({
+        ticketId: detail.ticket.id,
+        note: noteText.trim(),
+        officerName: user.name,
+      }).unwrap();
+    } else if (detail.request) {
+      await addRequestNote({
+        requestId: detail.request.id,
+        officerName: user.name,
+        note: noteText.trim(),
+        photoUrls,
+      }).unwrap();
+    }
 
     setNoteText('');
     setPendingPhotoUri(null);
@@ -158,12 +167,21 @@ export function OfficerRequestDetailScreen({ route }: Props) {
 
     if (pendingResolve) {
       setPendingResolve(false);
-      await updateStatus({
-        id: request.id,
-        status: 'resolved',
-        note: noteText.trim(),
-        officerName: user.name,
-      }).unwrap();
+      if (detail.kind === 'ticket' && detail.ticket) {
+        await updateTicketStatus({
+          ticketId: detail.ticket.id,
+          status: 'Resolved',
+          note: noteText.trim(),
+          officerName: user.name,
+        }).unwrap();
+      } else if (detail.request) {
+        await updateRequestStatus({
+          id: detail.request.id,
+          status: 'resolved',
+          note: noteText.trim(),
+          officerName: user.name,
+        }).unwrap();
+      }
     }
 
     refetch();
@@ -177,42 +195,49 @@ export function OfficerRequestDetailScreen({ route }: Props) {
     );
   }
 
-  if (error || !request) {
+  if (error || !detail) {
     return (
       <Screen>
         <ErrorState
-          message={error ? queryErrorMessage(error) : 'Request not found'}
+          message={error ? queryErrorMessage(error) : 'Ticket not found'}
           onRetry={refetch}
         />
       </Screen>
     );
   }
 
-  const hasLocation = request.latitude != null && request.longitude != null;
+  const hasLocation = detail.coordinates != null;
+  const ticketEvents =
+    detail.ticket?.activityTimeline.map((event) => ({
+      ...event,
+      timestamp: event.timestamp,
+    })) ?? [];
 
   return (
     <ScreenWrapper scrollable={false} padded={false}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <View style={styles.headerRow}>
-            <Text style={styles.customerName}>{request.userName ?? 'Customer'}</Text>
-            <PriorityBadge priority={request.priority} />
+            <Text style={styles.ticketNumber}>{truncateTicketNumber(detail.displayNumber)}</Text>
           </View>
-          {request.userPhone ? (
-            <Pressable onPress={() => void Linking.openURL(`tel:${request.userPhone}`)}>
-              <Text style={styles.meta}>📞 {request.userPhone}</Text>
+          <Text style={styles.category}>{detail.categoryLabel}</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.customerName}>{detail.customerName}</Text>
+          </View>
+          {detail.contactPhone ? (
+            <Pressable onPress={() => void Linking.openURL(`tel:${detail.contactPhone}`)}>
+              <Text style={styles.meta}>{detail.contactPhone}</Text>
             </Pressable>
           ) : null}
-          {request.userEmail ? <Text style={styles.meta}>✉️ {request.userEmail}</Text> : null}
-          <StatusChip status={request.status} />
+          {detail.contactEmail ? <Text style={styles.meta}>{detail.contactEmail}</Text> : null}
+          <TicketStatusBadge status={detail.statusBucket} />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Status progress</Text>
-          <StatusStepper status={request.status} />
-          {statusAction ? (
+          <Text style={styles.sectionTitle}>Status</Text>
+          {statusActionLabel ? (
             <Button
-              label={statusAction.label}
+              label={statusActionLabel}
               onPress={() => void onStatusPress()}
               disabled={updatingStatus}
               style={styles.statusCta}
@@ -222,16 +247,16 @@ export function OfficerRequestDetailScreen({ route }: Props) {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Issue</Text>
-          <Text style={styles.body}>{request.description ?? request.address}</Text>
-          <Text style={styles.address}>{request.address}</Text>
+          <Text style={styles.body}>{detail.description || detail.customerAddress}</Text>
+          <Text style={styles.address}>{detail.customerAddress}</Text>
         </View>
 
-        {request.photoUrls.length ? (
+        {detail.photoUrls.length ? (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Photos</Text>
             <FlatList
               horizontal
-              data={request.photoUrls}
+              data={detail.photoUrls}
               keyExtractor={(uri, i) => `${uri}-${i}`}
               renderItem={({ item }) => <Image source={{ uri: item }} style={styles.photo} />}
             />
@@ -243,9 +268,9 @@ export function OfficerRequestDetailScreen({ route }: Props) {
             <Text style={styles.sectionTitle}>Customer location</Text>
             {hasLocation ? (
               <NavigationButton
-                address={request.address}
-                latitude={request.latitude}
-                longitude={request.longitude}
+                address={detail.customerAddress}
+                latitude={detail.coordinates!.latitude}
+                longitude={detail.coordinates!.longitude}
                 variant="primary"
               />
             ) : null}
@@ -254,16 +279,19 @@ export function OfficerRequestDetailScreen({ route }: Props) {
             <FreeMapView
               style={styles.map}
               initialRegion={{
-                latitude: request.latitude!,
-                longitude: request.longitude!,
+                latitude: detail.coordinates!.latitude,
+                longitude: detail.coordinates!.longitude,
                 latitudeDelta: 0.01,
                 longitudeDelta: 0.01,
               }}
             >
               <Marker
-                coordinate={{ latitude: request.latitude!, longitude: request.longitude! }}
-                title={request.userName ?? 'Customer'}
-                description={request.address}
+                coordinate={{
+                  latitude: detail.coordinates!.latitude,
+                  longitude: detail.coordinates!.longitude,
+                }}
+                title={detail.customerName}
+                description={detail.customerAddress}
               />
             </FreeMapView>
           ) : (
@@ -271,7 +299,7 @@ export function OfficerRequestDetailScreen({ route }: Props) {
           )}
         </View>
 
-        {statusAction ? (
+        {statusActionLabel ? (
           <View style={styles.actions}>
             <Button
               label="Add activity note"
@@ -286,15 +314,21 @@ export function OfficerRequestDetailScreen({ route }: Props) {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Activity timeline</Text>
-          {[...(request.activities ?? [])].reverse().map((activity) => (
-            <View key={activity.id} style={styles.timelineItem}>
-              <Text style={styles.timelineTime}>
-                {new Date(activity.createdAt).toLocaleString()}
-              </Text>
-              <Text style={styles.timelineNote}>{activity.note ?? '—'}</Text>
-            </View>
-          ))}
-          {!request.activities?.length ? (
+          {detail.kind === 'ticket' && ticketEvents.length > 0 ? (
+            <TicketTimeline events={ticketEvents} />
+          ) : (
+            detail.activityTimeline.map((activity) => (
+              <View key={activity.id} style={styles.timelineItem}>
+                <Text style={styles.timelineTime}>
+                  {new Date(activity.timestamp).toLocaleString()}
+                </Text>
+                <Text style={styles.timelineNote}>
+                  {activity.performedBy} — {activity.description}
+                </Text>
+              </View>
+            ))
+          )}
+          {!detail.activityTimeline.length ? (
             <Text style={styles.meta}>No activity notes yet</Text>
           ) : null}
         </View>
@@ -349,6 +383,8 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDefault,
   },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  ticketNumber: { fontSize: 16, fontWeight: '700', color: colors.primaryNavy },
+  category: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   customerName: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   meta: { color: colors.textSecondary, fontSize: 14 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },

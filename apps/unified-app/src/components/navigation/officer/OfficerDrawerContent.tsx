@@ -6,6 +6,7 @@ import {
 } from '@react-navigation/drawer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { OfficerDrawerIcon } from '@/components/navigation/officer/OfficerDrawerIcon';
 import { useActiveShift, usePendingCollections, useRequestCounts } from '@/hooks/officer';
 import { signOut } from '@/hooks/useAuth';
 import { useGetPortalUnreadCountQuery } from '@/services/api/portalNotificationsApi';
@@ -19,7 +20,7 @@ type DrawerItem = {
   route: keyof OfficerDrawerParamList;
   screen?: 'AssignedCustomers' | 'CollectionsList';
   label: string;
-  icon: string;
+  iconRoute: string;
   showBadge?: boolean;
 };
 
@@ -30,50 +31,50 @@ type DrawerSection = {
 };
 
 const SECTIONS: DrawerSection[] = [
-  { id: 'top', label: '', items: [{ route: 'Dashboard', label: 'Dashboard', icon: '🏠' }] },
+  { id: 'top', label: '', items: [{ route: 'Dashboard', label: 'Dashboard', iconRoute: 'Dashboard' }] },
   {
     id: 'field',
     label: 'Field',
     items: [
-      { route: 'RequestsStack', label: 'Requests', icon: '📋', showBadge: true },
-      { route: 'Map', label: 'Map', icon: '🗺️' },
-      { route: 'Attendance', label: 'Attendance', icon: '📅' },
+      { route: 'RequestsStack', label: 'My Tickets', iconRoute: 'RequestsStack', showBadge: true },
+      { route: 'Map', label: 'Map', iconRoute: 'Map' },
+      { route: 'Attendance', label: 'Attendance', iconRoute: 'Attendance' },
     ],
   },
   {
     id: 'finance',
     label: 'Finance',
     items: [
-      { route: 'CollectionsStack', label: 'Collections', icon: '💰', showBadge: true },
+      { route: 'CollectionsStack', label: 'Collections', iconRoute: 'CollectionsStack', showBadge: true },
       {
         route: 'CollectionsStack',
         screen: 'AssignedCustomers',
         label: 'Collect Payment',
-        icon: '💵',
+        iconRoute: 'AssignedCustomers',
       },
-      { route: 'Invoice', label: 'Invoice', icon: '🧾' },
+      { route: 'Invoice', label: 'Invoice', iconRoute: 'Invoice' },
     ],
   },
   {
     id: 'assets',
     label: 'Assets',
-    items: [{ route: 'Inventory', label: 'Inventory', icon: '📦' }],
+    items: [{ route: 'Inventory', label: 'Inventory', iconRoute: 'Inventory' }],
   },
   {
     id: 'workforce',
     label: 'Workforce',
     items: [
-      { route: 'Payslip', label: 'Payslip', icon: '💳' },
-      { route: 'LeaveStack', label: 'Leave', icon: '🌿' },
+      { route: 'Payslip', label: 'Payslip', iconRoute: 'Payslip' },
+      { route: 'LeaveStack', label: 'Leave', iconRoute: 'LeaveStack' },
     ],
   },
   {
     id: 'account',
     label: 'Account',
     items: [
-      { route: 'NotificationsStack', label: 'Notifications', icon: '🔔', showBadge: true },
-      { route: 'Support', label: 'Support', icon: '💬' },
-      { route: 'ProfileStack', label: 'Profile', icon: '👤' },
+      { route: 'NotificationsStack', label: 'Notifications', iconRoute: 'NotificationsStack', showBadge: true },
+      { route: 'Support', label: 'Support', iconRoute: 'Support' },
+      { route: 'ProfileStack', label: 'Profile', iconRoute: 'ProfileStack' },
     ],
   },
 ];
@@ -152,7 +153,11 @@ export function OfficerDrawerContent(props: DrawerContentComponentProps) {
                 onPress={() => navigate(item.route, item.screen)}
               >
                 {isActiveItem ? <View style={styles.activeBar} /> : null}
-                <Text style={styles.itemIcon}>{item.icon}</Text>
+                <OfficerDrawerIcon
+                  route={item.iconRoute}
+                  screen={item.screen}
+                  focused={isActiveItem}
+                />
                 <Text
                   style={[styles.itemLabel, isActiveItem && styles.itemLabelActive]}
                   numberOfLines={1}
@@ -342,11 +347,6 @@ const styles = StyleSheet.create({
     width: 3,
     backgroundColor: adminColors.activeBorder,
     borderRadius: 2,
-  },
-  itemIcon: {
-    width: 28,
-    fontSize: 20,
-    textAlign: 'center',
   },
   itemLabel: {
     flex: 1,

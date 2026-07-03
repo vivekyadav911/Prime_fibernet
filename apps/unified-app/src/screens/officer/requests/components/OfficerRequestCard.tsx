@@ -1,46 +1,62 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { ServiceRequest } from '@prime/types';
-import { Button, StatusChip } from '@prime/ui';
-import { colors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
+import { Button } from '@prime/ui';
 
-type OfficerRequestCardProps = {
-  request: ServiceRequest;
+import { TicketPriorityBadge, TicketStatusBadge } from '@/components/TicketPortal';
+import type { PortalTicketItem } from '@/types/portalTicket';
+import { colors } from '@/theme/colors';
+import { radius, spacing } from '@/theme/spacing';
+import { truncateTicketNumber } from '@/utils/ticketViewMappers';
+
+type OfficerTicketCardProps = {
+  item: PortalTicketItem;
   advanceLabel?: string;
-  onPress: (requestId: string) => void;
-  onAdvance?: (requestId: string, status: string) => void;
+  onPress: (itemId: string, kind: PortalTicketItem['kind']) => void;
+  onAdvance?: (item: PortalTicketItem) => void;
 };
 
-export const OfficerRequestCard = React.memo(function OfficerRequestCard({
-  request,
+export const OfficerTicketCard = React.memo(function OfficerTicketCard({
+  item,
   advanceLabel,
   onPress,
   onAdvance,
-}: OfficerRequestCardProps) {
+}: OfficerTicketCardProps) {
   return (
-    <Pressable style={styles.card} onPress={() => onPress(request.id)}>
+    <Pressable style={styles.card} onPress={() => onPress(item.id, item.kind)}>
       <View style={styles.header}>
-        <Text style={styles.type}>{request.requestTypeLabel ?? request.requestType}</Text>
-        <StatusChip status={request.priority} />
+        <Text style={styles.number}>{truncateTicketNumber(item.displayNumber)}</Text>
+        {item.priority ? <TicketPriorityBadge priority={item.priority} /> : null}
       </View>
-      <Text style={styles.address}>{request.address}</Text>
-      <StatusChip status={request.status} />
+      <Text style={styles.category}>{item.categoryLabel}</Text>
+      <Text style={styles.customer} numberOfLines={1}>
+        {item.customerName}
+      </Text>
+      <Text style={styles.address} numberOfLines={2}>
+        {item.customerAddress}
+      </Text>
+      <TicketStatusBadge status={item.statusBucket} />
       {advanceLabel && onAdvance ? (
-        <Button
-          label={advanceLabel}
-          onPress={() => onAdvance(request.id, request.status)}
-          style={styles.btn}
-        />
+        <Button label={advanceLabel} onPress={() => onAdvance(item)} style={styles.btn} />
       ) : null}
     </Pressable>
   );
 });
 
+/** @deprecated Use OfficerTicketCard */
+export const OfficerRequestCard = OfficerTicketCard;
+
 const styles = StyleSheet.create({
-  card: { padding: spacing.md, borderBottomWidth: 1, borderColor: colors.borderDefault, gap: spacing.xs },
+  card: {
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderColor: colors.borderDefault,
+    gap: spacing.xs,
+    backgroundColor: colors.surfaceWhite,
+  },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  type: { textTransform: 'capitalize', fontWeight: '600', fontSize: 16 },
-  address: { color: colors.textSecondary },
-  btn: { marginTop: 8 },
+  number: { fontWeight: '700', fontSize: 15, color: colors.primaryNavy },
+  category: { fontWeight: '600', fontSize: 14, color: colors.textPrimary },
+  customer: { color: colors.textSecondary, fontSize: 13 },
+  address: { color: colors.textSecondary, fontSize: 13 },
+  btn: { marginTop: spacing.xs },
 });

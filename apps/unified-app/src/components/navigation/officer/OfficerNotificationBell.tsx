@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { DrawerActions, useNavigation } from '@react-navigation/native';
 
 import { useGetPortalUnreadCountQuery } from '@/services/api/portalNotificationsApi';
 import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { officerHeaderTheme } from '@/theme/officerHeader';
+import { radius } from '@/theme/spacing';
 
 export function OfficerNotificationBell() {
   const navigation = useNavigation();
@@ -19,8 +21,9 @@ export function OfficerNotificationBell() {
       style={styles.wrap}
       onPress={openNotifications}
       accessibilityLabel="Notifications"
+      hitSlop={8}
     >
-      <Text style={styles.icon}>🔔</Text>
+      <Ionicons name="notifications-outline" size={22} color={colors.white} />
       {unread > 0 ? (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text>
@@ -31,19 +34,23 @@ export function OfficerNotificationBell() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginRight: spacing.sm, padding: spacing.xs },
-  icon: { fontSize: 20, color: colors.white },
+  wrap: {
+    width: officerHeaderTheme.buttonSize,
+    height: officerHeaderTheme.buttonSize,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   badge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    minWidth: 18,
-    height: 18,
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
     borderRadius: radius.full,
     backgroundColor: colors.errorRed,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
   },
-  badgeText: { color: colors.white, fontSize: 10, fontWeight: '700' },
+  badgeText: { color: colors.white, fontSize: 9, fontWeight: '700' },
 });

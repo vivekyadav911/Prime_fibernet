@@ -10,12 +10,12 @@ import {
 } from 'react-native';
 import { Button } from '@prime/ui';
 
-import { ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import { KeyboardDismissView, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
 import { useOfficerProfile } from '@/hooks/officer';
 import { useAppSelector } from '@/store/hooks';
 import {
-  createChatSession,
   fetchChatMessages,
+  fetchOrCreateOfficerSupportSession,
   sendChatMessage,
   subscribeToChatMessages,
 } from '@/services/chatService';
@@ -23,15 +23,26 @@ import type { ChatMessage } from '@/types/support';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
+function senderLabel(message: ChatMessage, isMe: boolean): string {
+  if (isMe) return 'You';
+  if (message.senderType === 'agent') return `Support · ${message.senderName}`;
+  if (message.senderType === 'customer') return message.senderName;
+  if (message.senderType === 'system') return 'System';
+  return message.senderName;
+}
+
 function ChatBubble({ message, isMe }: { message: ChatMessage; isMe: boolean }) {
   return (
-    <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleAgent]}>
-      {!isMe ? <Text style={styles.sender}>{message.senderName}</Text> : null}
+    <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+      <Text style={[styles.sender, isMe && styles.senderMe]}>{senderLabel(message, isMe)}</Text>
       <Text style={[styles.bubbleText, isMe && styles.bubbleTextMe]}>{message.message}</Text>
     </View>
   );
 }
 
+/**
+ * Internal officer ↔ dispatch/support channel (not customer ticket threads).
+ */
 export function OfficerSupportChatScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const { profile } = useOfficerProfile();
@@ -48,11 +59,10 @@ export function OfficerSupportChatScreen() {
     let cancelled = false;
     void (async () => {
       try {
-        const session = await createChatSession({
-          customerId: user.id,
-          customerName: profile?.name ?? user.name ?? 'Officer',
-          channel: 'officer_app',
-        });
+        const session = await fetchOrCreateOfficerSupportSession(
+          user.id,
+          profile?.name ?? user.name ?? 'Officer',
+        );
         if (cancelled) return;
         setSessionId(session.id);
         const initial = await fetchChatMessages(session.id);
@@ -91,7 +101,7 @@ export function OfficerSupportChatScreen() {
     try {
       await sendChatMessage({
         sessionId,
-        senderType: 'agent',
+        senderType: 'customer',
         senderId: user.id,
         senderName: profile?.name ?? user.name ?? 'Officer',
         message: text,
@@ -126,41 +136,59 @@ export function OfficerSupportChatScreen() {
 
   return (
     <ScreenWrapper scrollable={false} padded={false}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <FlatList
-          ref={listRef}
-          data={messages}
-          keyExtractor={(m) => m.id}
-          contentContainerStyle={styles.list}
-          keyboardShouldPersistTaps="handled"
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-          renderItem={({ item }) => (
-            <ChatBubble message={item} isMe={item.senderType === 'agent'} />
-          )}
-          ListEmptyComponent={
-            <Text style={styles.empty}>Chat started — an agent will join shortly.</Text>
-          }
-        />
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            value={draft}
-            onChangeText={setDraft}
-            placeholder="Type a message…"
-            placeholderTextColor={colors.textSecondary}
-          />
-          <Button label={sending ? '…' : 'Send'} onPress={() => void onSend()} disabled={sending} />
+      <KeyboardDismissView style={styles.flex}>
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>
+            Internal support chat with dispatch — not customer ticket threads.
+          </Text>
         </View>
-      </KeyboardAvoidingView>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <FlatList
+            ref={listRef}
+            data={messages}
+            keyExtractor={(m) => m.id}
+            contentContainerStyle={styles.list}
+            keyboardShouldPersistTaps="handled"
+            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            renderItem={({ item }) => (
+              <ChatBubble
+                message={item}
+                isMe={item.senderType === 'customer' && item.senderId === user?.id}
+              />
+            )}
+            ListEmptyComponent={
+              <Text style={styles.empty}>No messages yet — say hello to dispatch.</Text>
+            }
+          />
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="Message dispatch…"
+              placeholderTextColor={colors.textSecondary}
+            />
+            <Button label={sending ? '…' : 'Send'} onPress={() => void onSend()} disabled={sending} />
+          </View>
+        </KeyboardAvoidingView>
+      </KeyboardDismissView>
     </ScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  banner: {
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  bannerText: { fontSize: 12, color: colors.textSecondary, textAlign: 'center' },
   list: { padding: spacing.md, paddingBottom: spacing.sm },
   empty: { textAlign: 'center', color: colors.textSecondary, marginTop: spacing.xl },
   bubble: {
@@ -173,13 +201,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     backgroundColor: colors.primaryNavy,
   },
-  bubbleAgent: {
+  bubbleOther: {
     alignSelf: 'flex-start',
     backgroundColor: colors.surfaceWhite,
     borderWidth: 1,
     borderColor: colors.borderDefault,
   },
-  sender: { fontSize: 11, color: colors.textSecondary, marginBottom: 2 },
+  sender: { fontSize: 11, color: colors.textSecondary, marginBottom: 2, fontWeight: '600' },
+  senderMe: { color: 'rgba(255,255,255,0.8)' },
   bubbleText: { color: colors.textPrimary, fontSize: 15 },
   bubbleTextMe: { color: colors.white },
   inputRow: {

@@ -1,21 +1,20 @@
 import { useMemo } from 'react';
 
 import { useGetOfficerDashboardStatsQuery } from '@/services/api/officersApi';
-import { useGetAssignedRequestsQuery } from '@/store/api/endpoints';
-import { computeOfficerDashboardStats } from '@/utils/officerDashboardStats';
+import { useGetOfficerAssignedPortalItemsQuery } from '@/services/api/officerPortalApi';
+import { computeOfficerPortalDashboardStats } from '@/utils/officerDashboardStats';
 
 /**
- * Officer dashboard KPIs derived from the same assigned-request query as Today's Assignments.
- * Collections today still comes from the payments RPC (canonical payment source).
+ * Officer dashboard KPIs derived from the same portal-item query as Today's Assignments.
  */
 export function useOfficerDashboardStats(userId: string | undefined) {
   const {
-    data: requests,
-    isLoading: requestsLoading,
-    isError: requestsError,
-    error: requestsQueryError,
-    refetch: refetchRequests,
-  } = useGetAssignedRequestsQuery(userId, { skip: !userId });
+    data: items,
+    isLoading: itemsLoading,
+    isError: itemsError,
+    error: itemsQueryError,
+    refetch: refetchItems,
+  } = useGetOfficerAssignedPortalItemsQuery(userId, { skip: !userId });
 
   const {
     data: paymentStats,
@@ -25,22 +24,20 @@ export function useOfficerDashboardStats(userId: string | undefined) {
     refetch: refetchPayments,
   } = useGetOfficerDashboardStatsQuery();
 
-  const derived = useMemo(
-    () => computeOfficerDashboardStats(requests ?? []),
-    [requests],
-  );
+  const derived = useMemo(() => computeOfficerPortalDashboardStats(items ?? []), [items]);
 
   return {
-    requests,
-    newRequests: derived.newRequests,
-    activeRequests: derived.activeRequests,
+    items,
+    requests: items,
+    newRequests: derived.newTickets,
+    activeRequests: derived.activeTickets,
     resolvedToday: derived.resolvedToday,
     collectionsToday: paymentStats?.collectionsToday ?? 0,
-    isLoading: requestsLoading || paymentsLoading,
-    isError: requestsError || paymentsError,
-    error: requestsQueryError ?? paymentsQueryError,
+    isLoading: itemsLoading || paymentsLoading,
+    isError: itemsError || paymentsError,
+    error: itemsQueryError ?? paymentsQueryError,
     refetch: () => {
-      void refetchRequests();
+      void refetchItems();
       void refetchPayments();
     },
   };

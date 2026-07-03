@@ -218,7 +218,7 @@ export type OfficerStackParamList = {
   LocationGate: undefined;
   OfficerDrawer: NavigatorScreenParams<OfficerDrawerParamList> | undefined;
   /** Flutter: `RequestDetailScreen.route` */
-  RequestDetail: { requestId: string };
+  RequestDetail: { requestId: string; kind?: 'ticket' | 'request' };
   OfficerLogin: undefined;
   OfficerAuth: undefined;
 };

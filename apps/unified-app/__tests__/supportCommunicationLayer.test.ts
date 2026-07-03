@@ -1,7 +1,8 @@
 import { formatRequestTypeLabel, normalizeRequestType, REQUEST_TYPE_LABELS } from '@/constants/requestTypes';
-import { computeOfficerDashboardStats } from '@/utils/officerDashboardStats';
+import { computeOfficerPortalDashboardStats } from '@/utils/officerDashboardStats';
+import { matchesOfficerTicketFilter } from '@/utils/officerTicketFilters';
 import { officerDisplayInitials, resolveOfficerName } from '@/utils/resolveOfficerName';
-import type { ServiceRequest } from '@prime/types';
+import type { PortalTicketItem } from '@/types/portalTicket';
 
 describe('formatRequestTypeLabel', () => {
   it('maps legacy DB values to canonical admin labels', () => {
@@ -41,33 +42,66 @@ describe('resolveOfficerName', () => {
   });
 });
 
-describe('computeOfficerDashboardStats', () => {
-  const base = {
-    userId: 'u1',
-    officerId: 'o1',
-    requestType: 'installation' as const,
-    priority: 'P2' as const,
-    address: 'Addr',
-    createdAt: new Date().toISOString(),
+function portalItem(
+  id: string,
+  statusBucket: PortalTicketItem['statusBucket'],
+  resolvedAt?: Date,
+): PortalTicketItem {
+  return {
+    id,
+    kind: 'ticket',
+    ticketId: id,
+    requestId: null,
+    displayNumber: `TKT-${id}`,
+    categoryLabel: 'Issue',
+    statusBucket,
+    source: 'customer',
+    customerName: 'Customer',
+    customerAddress: 'Addr',
+    planName: '—',
+    priority: 'Medium',
+    assignedOfficerId: 'o1',
+    assignedOfficerName: 'Officer',
+    assignedOfficerRole: 'Field Technician',
+    createdAt: new Date(),
+    assignedAt: new Date(),
+    slaBreached: false,
+    ticket: resolvedAt
+      ? ({
+          id,
+          ticketNumber: `TKT-${id}`,
+          status: statusBucket,
+          resolvedAt,
+        } as PortalTicketItem['ticket'])
+      : null,
+    request: null,
   };
+}
 
-  it('counts new, active, and resolved-today from the same assignment list', () => {
-    const today = new Date().toISOString();
-    const requests: ServiceRequest[] = [
-      { ...base, id: '1', status: 'assigned', requestTypeLabel: 'New Connection' },
-      { ...base, id: '2', status: 'working', requestTypeLabel: 'Issue' },
-      {
-        ...base,
-        id: '3',
-        status: 'resolved',
-        completedAt: today,
-        requestTypeLabel: 'New Connection',
-      },
+describe('computeOfficerPortalDashboardStats', () => {
+  it('counts new, active, and resolved-today from portal status buckets', () => {
+    const today = new Date();
+    const items: PortalTicketItem[] = [
+      portalItem('1', 'Open'),
+      portalItem('2', 'In Progress'),
+      portalItem('3', 'Resolved', today),
     ];
 
-    const stats = computeOfficerDashboardStats(requests);
-    expect(stats.newRequests).toBe(1);
-    expect(stats.activeRequests).toBe(1);
+    const stats = computeOfficerPortalDashboardStats(items);
+    expect(stats.newTickets).toBe(1);
+    expect(stats.activeTickets).toBe(1);
     expect(stats.resolvedToday).toBe(1);
+  });
+
+  it('maps officer filter tabs to the same buckets as admin Ticket Portal', () => {
+    const open = portalItem('1', 'Open');
+    const inProgress = portalItem('2', 'In Progress');
+    const awaiting = portalItem('3', 'Awaiting Customer');
+    const resolved = portalItem('4', 'Resolved');
+
+    expect(matchesOfficerTicketFilter(open, 'new')).toBe(true);
+    expect(matchesOfficerTicketFilter(inProgress, 'active')).toBe(true);
+    expect(matchesOfficerTicketFilter(awaiting, 'active')).toBe(true);
+    expect(matchesOfficerTicketFilter(resolved, 'done')).toBe(true);
   });
 });

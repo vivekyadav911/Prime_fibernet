@@ -34,6 +34,7 @@ const api = createApi({
     'Support',
     'CollectionAssignments',
     'PortalNotifications',
+    'OfficerPortal',
     'CustomerTickets',
     'PlanChangeRequests',
     'CustomerDashboard',

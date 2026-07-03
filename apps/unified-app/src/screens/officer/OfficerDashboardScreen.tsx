@@ -12,7 +12,7 @@ import {
   usePendingContractSignature,
 } from '@/hooks/officer';
 import { useAppSelector } from '@/store/hooks';
-import { useGetAssignedRequestsQuery } from '@/store/api/endpoints';
+import { useOfficerDashboardStats } from '@/hooks/officer';
 import type { OfficerStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
@@ -44,10 +44,7 @@ export function OfficerDashboardScreen() {
     navigateToSign,
     navigateToContractPdf,
   } = usePendingContractSignature();
-  const { data: requests, isLoading, isError, error, refetch } = useGetAssignedRequestsQuery(
-    user?.id,
-    { skip: !user?.id },
-  );
+  const { items, isLoading, isError, error, refetch } = useOfficerDashboardStats(user?.id);
 
   const [modalVisible, setModalVisible] = useState(false);
   const lastPromptKeyRef = useRef<string | null>(null);
@@ -123,7 +120,7 @@ export function OfficerDashboardScreen() {
     );
   }
 
-  const hasAssignments = (requests?.length ?? 0) > 0;
+  const hasAssignments = (items?.length ?? 0) > 0;
 
   return (
     <ScreenWrapper>
@@ -147,13 +144,12 @@ export function OfficerDashboardScreen() {
       <StatsRow />
 
       {hasAssignments ? (
-        <AssignmentPreviewList requests={requests} />
+        <AssignmentPreviewList items={items} />
       ) : (
         <EmptyState
           title="No assignments"
-          subtitle="New requests will appear here"
-          icon="📋"
-          actionLabel="View requests"
+          subtitle="New tickets will appear here"
+          actionLabel="View tickets"
           onAction={onViewAllRequests}
         />
       )}

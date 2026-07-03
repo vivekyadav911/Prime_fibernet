@@ -1,8 +1,6 @@
-import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { useOfficerCollectionsSync } from '@/hooks/officer/useOfficerCollectionsSync';
-import { OfficerNotificationBell } from '@/components/navigation/officer/OfficerNotificationBell';
 import {
   AssignedCustomersScreen,
   CashCollectionScreen,
@@ -27,7 +25,6 @@ import type {
   OfficerRequestsStackParamList,
 } from '@/types/navigation';
 import { colors, officerColors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
 
 const RequestsStack = createNativeStackNavigator<OfficerRequestsStackParamList>();
 const CollectionsStack = createNativeStackNavigator<OfficerCollectionsStackParamList>();
@@ -44,17 +41,13 @@ const stackScreenOptions = {
   headerShadowVisible: false,
 };
 
-function CollectionsHeaderRight() {
-  return <OfficerNotificationBell />;
-}
-
 export function OfficerRequestsStackNav() {
   return (
     <RequestsStack.Navigator screenOptions={stackScreenOptions}>
       <RequestsStack.Screen
         name="RequestsList"
         component={OfficerRequestsScreen}
-        options={{ title: 'My Requests' }}
+        options={{ title: 'My Tickets' }}
       />
     </RequestsStack.Navigator>
   );
@@ -64,12 +57,7 @@ export function OfficerCollectionsStackNav() {
   useOfficerCollectionsSync();
 
   return (
-    <CollectionsStack.Navigator
-      screenOptions={{
-        ...stackScreenOptions,
-        headerRight: CollectionsHeaderRight,
-      }}
-    >
+    <CollectionsStack.Navigator screenOptions={stackScreenOptions}>
       <CollectionsStack.Screen
         name="CollectionsList"
         component={OfficerCollectionScreen}
@@ -160,12 +148,3 @@ export function OfficerProfileStackNav() {
   );
 }
 
-function DrawerHeaderRight() {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-      <OfficerNotificationBell />
-    </View>
-  );
-}
-
-export { DrawerHeaderRight };

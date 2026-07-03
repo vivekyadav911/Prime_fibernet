@@ -228,6 +228,35 @@ export async function linkChatToTicket(sessionId: string, ticketId: string): Pro
   if (error) throw error;
 }
 
+export async function fetchOrCreateOfficerSupportSession(
+  officerUserId: string,
+  officerName: string,
+): Promise<ChatSession> {
+  const { client } = await requireSession();
+  const officerId = await getOfficerIdForUser(client, officerUserId);
+  if (!officerId) throw new Error('No officer profile linked to this account.');
+
+  const accountKey = `officer:${officerId}`;
+  const { data: existing, error: lookupError } = await client
+    .from('chat_sessions')
+    .select('*')
+    .eq('channel', 'officer_app')
+    .eq('account_number', accountKey)
+    .in('status', ['waiting', 'active'])
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (existing) return mapSession(existing as Record<string, unknown>);
+
+  return createChatSession({
+    customerId: null,
+    customerName: officerName,
+    accountNumber: accountKey,
+    channel: 'officer_app',
+  });
+}
+
 function mapSession(row: Record<string, unknown>): ChatSession {
   return {
     id: String(row.id),

@@ -11,6 +11,11 @@ import type { OfficerDrawerParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import {
+  isJunkPortalNotification,
+  portalNotificationCategoryLabel,
+  resolveNotificationText,
+} from '@/utils/portalNotificationDisplay';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type FilterId = 'all' | NotificationCategory;
@@ -27,7 +32,7 @@ const CATEGORY_LABELS: Record<NotificationCategory, string> = {
   payment: 'Payment',
   plan: 'Plan',
   ticket: 'Ticket',
-  request: 'Request',
+  request: 'Ticket',
   outage: 'Outage',
   promo: 'Promo',
   system: 'System',
@@ -50,11 +55,12 @@ export function OfficerPortalNotificationsScreen() {
     usePortalNotifications();
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return notifications;
+    const production = notifications.filter((n) => !isJunkPortalNotification(n));
+    if (filter === 'all') return production;
     if (filter === 'ticket') {
-      return notifications.filter((n) => n.category === 'ticket' || n.category === 'request');
+      return production.filter((n) => n.category === 'ticket' || n.category === 'request');
     }
-    return notifications.filter((n) => n.category === filter);
+    return production.filter((n) => n.category === filter);
   }, [filter, notifications]);
 
   const onPress = useCallback(
@@ -140,16 +146,18 @@ export function OfficerPortalNotificationsScreen() {
             onPress={() => void onPress(item)}
           >
             <View style={styles.cardHeader}>
-              <Text style={styles.title}>{item.title}</Text>
+              <Text style={styles.title}>{resolveNotificationText(item.title, item.data)}</Text>
               {item.category ? (
                 <View style={styles.categoryBadge}>
                   <Text style={styles.categoryText}>
-                    {CATEGORY_LABELS[item.category] ?? item.category}
+                    {portalNotificationCategoryLabel(item.category)}
                   </Text>
                 </View>
               ) : null}
             </View>
-            {item.body ? <Text style={styles.body}>{item.body}</Text> : null}
+            {item.body ? (
+              <Text style={styles.body}>{resolveNotificationText(item.body, item.data)}</Text>
+            ) : null}
             <Text style={styles.time}>{new Date(item.created_at).toLocaleString()}</Text>
           </Pressable>
         )}

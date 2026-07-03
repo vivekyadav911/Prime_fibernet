@@ -3,6 +3,9 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { OfficerDrawerContent, ShiftPulseChip } from '@/components/navigation/officer';
+import { OfficerNotificationBell } from '@/components/navigation/officer/OfficerNotificationBell';
+import { OfficerDrawerHeader } from '@/components/navigation/officer/OfficerDrawerHeader';
+import { useOfficerTicketsSync } from '@/hooks/officer';
 import { usePortalNotificationsSync } from '@/hooks/usePortalNotificationsSync';
 import { OfficerSupportChatScreen } from '@/screens/officer/support/OfficerSupportChatScreen';
 import { CollectPaymentScreen } from '@/screens/officer/CollectPaymentScreen';
@@ -22,7 +25,6 @@ import { ThemeProvider } from '@/theme/ThemeProvider';
 
 import { AdminDrawerToggleButton } from './AdminDrawerToggleButton';
 import {
-  DrawerHeaderRight,
   OfficerCollectionsStackNav,
   OfficerLeaveStackNav,
   OfficerNotificationsStackNav,
@@ -39,7 +41,7 @@ const OFFICER_HEADER_PURPLE = officerColors.navBar;
 function DrawerHeaderActions() {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-      <DrawerHeaderRight />
+      <OfficerNotificationBell />
       <ShiftPulseChip />
     </View>
   );
@@ -47,6 +49,7 @@ function DrawerHeaderActions() {
 
 function OfficerDrawerNav() {
   usePortalNotificationsSync();
+  useOfficerTicketsSync();
 
   const { width } = useWindowDimensions();
   const isWebSidebar = Platform.OS === 'web' && width >= 1024;
@@ -56,6 +59,7 @@ function OfficerDrawerNav() {
       <Drawer.Navigator
         drawerContent={(props) => <OfficerDrawerContent {...props} />}
         screenOptions={{
+          header: (props) => <OfficerDrawerHeader {...props} />,
           headerStyle: { backgroundColor: OFFICER_HEADER_PURPLE },
           headerTintColor: colors.white,
           headerTitleStyle: { fontSize: 20, fontWeight: '600' },
@@ -81,7 +85,7 @@ function OfficerDrawerNav() {
         <Drawer.Screen
           name="RequestsStack"
           component={OfficerRequestsStackNav}
-          options={{ title: 'My Requests', headerShown: false }}
+          options={{ title: 'My Tickets', headerShown: false }}
         />
         <Drawer.Screen name="Map" component={OfficerMapScreen} options={{ title: 'Map' }} />
         <Drawer.Screen
@@ -144,7 +148,7 @@ export function OfficerNavigator() {
       <Stack.Screen
         name="RequestDetail"
         component={OfficerRequestDetailScreen}
-        options={{ title: 'Request detail' }}
+        options={{ title: 'Ticket detail' }}
       />
     </Stack.Navigator>
   );

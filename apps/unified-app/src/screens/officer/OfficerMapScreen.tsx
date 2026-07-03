@@ -1,37 +1,51 @@
 import { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import { Marker } from 'react-native-maps';
-import type { ServiceRequest } from '@prime/types';
 import { Screen } from '@prime/ui';
 import { colors } from '@/theme/colors';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
 import { FreeMapView } from '@/components/map';
+import { useOfficerAssignedTickets } from '@/hooks/officer';
 import { useAppSelector } from '@/store/hooks';
-import { useGetAssignedRequestsQuery } from '@/store/api/endpoints';
+import type { PortalTicketItem } from '@/types/portalTicket';
+import { getPortalItemCoordinates } from '@/utils/officerPortalCoordinates';
+import { officerTicketPriorityRank } from '@/utils/officerTicketFilters';
 import { queryErrorMessage } from '@/utils/queryError';
 
 import { MapRequestPin, openMapsNavigation } from './components/MapRequestPin';
 
-const PRIORITY_COLORS: Record<string, string> = {
+const PRIORITY_PIN_COLORS: Record<string, string> = {
+  Critical: colors.errorRed,
+  High: colors.warningAmber,
+  Medium: colors.accentTeal,
+  Low: colors.textSecondary,
   P0: colors.errorRed,
   P1: colors.warningAmber,
   P2: colors.accentTeal,
   P3: colors.textSecondary,
 };
 
-type RequestWithCoords = ServiceRequest & { latitude: number; longitude: number };
+type MappedTicketItem = PortalTicketItem & {
+  latitude: number;
+  longitude: number;
+  mapAddress: string;
+};
 
 export function OfficerMapScreen() {
   const user = useAppSelector((s) => s.auth.user);
-  const { data: requests, isLoading, isError, error, refetch } = useGetAssignedRequestsQuery(user?.id, {
-    skip: !user?.id,
-  });
+  const { items, isLoading, isError, error, refetch } = useOfficerAssignedTickets(user?.id);
 
-  const withCoords = useMemo<RequestWithCoords[]>(() => {
-    return ((requests ?? []) as Array<ServiceRequest & { latitude?: number | null; longitude?: number | null }>)
-      .filter((r) => r.latitude != null && r.longitude != null) as RequestWithCoords[];
-  }, [requests]);
+  const withCoords = useMemo<MappedTicketItem[]>(() => {
+    return items
+      .map((item) => {
+        const coords = getPortalItemCoordinates(item);
+        if (!coords) return null;
+        return { ...item, latitude: coords.latitude, longitude: coords.longitude, mapAddress: coords.address };
+      })
+      .filter((item): item is MappedTicketItem => item != null)
+      .sort((a, b) => officerTicketPriorityRank(a) - officerTicketPriorityRank(b));
+  }, [items]);
 
   const initialRegion = useMemo(() => {
     const first = withCoords[0];
@@ -47,11 +61,17 @@ export function OfficerMapScreen() {
     openMapsNavigation(address);
   }, []);
 
-  const keyExtractor = useCallback((item: ServiceRequest) => item.id, []);
+  const keyExtractor = useCallback((item: MappedTicketItem) => `${item.kind}-${item.id}`, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: RequestWithCoords }) => (
-      <MapRequestPin request={item} onNavigate={handleNavigate} />
+    ({ item }: { item: MappedTicketItem }) => (
+      <MapRequestPin
+        title={item.displayNumber}
+        category={item.categoryLabel}
+        address={item.mapAddress || item.customerAddress}
+        priority={item.priority ?? 'Medium'}
+        onNavigate={handleNavigate}
+      />
     ),
     [handleNavigate],
   );
@@ -76,8 +96,12 @@ export function OfficerMapScreen() {
     return (
       <Screen>
         <EmptyState
-          title="No mapped requests"
-          subtitle="Assigned requests with GPS coordinates will appear here."
+          title="No mapped tickets"
+          subtitle={
+            items.length > 0
+              ? 'Assigned tickets need GPS coordinates on the address — contact dispatch if pins are missing.'
+              : 'Assigned tickets with GPS coordinates will appear here.'
+          }
         />
       </Screen>
     );
@@ -86,13 +110,13 @@ export function OfficerMapScreen() {
   return (
     <Screen padded={false}>
       <FreeMapView style={styles.map} initialRegion={initialRegion}>
-        {withCoords.map((req) => (
+        {withCoords.map((item) => (
           <Marker
-            key={req.id}
-            coordinate={{ latitude: req.latitude, longitude: req.longitude }}
-            title={req.requestType ?? 'Request'}
-            description={req.address}
-            pinColor={PRIORITY_COLORS[req.priority] ?? colors.primaryNavy}
+            key={`${item.kind}-${item.id}`}
+            coordinate={{ latitude: item.latitude, longitude: item.longitude }}
+            title={item.displayNumber}
+            description={item.categoryLabel}
+            pinColor={PRIORITY_PIN_COLORS[item.priority ?? 'Medium'] ?? colors.primaryNavy}
           />
         ))}
       </FreeMapView>

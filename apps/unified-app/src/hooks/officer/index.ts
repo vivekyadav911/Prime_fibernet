@@ -3,6 +3,8 @@ export { useOfficerProfile } from './useOfficerProfile';
 export type { OfficerProfileView } from './useOfficerProfile';
 export { useRequestCounts } from './useRequestCounts';
 export { useOfficerDashboardStats } from './useOfficerDashboardStats';
+export { useOfficerAssignedTickets } from './useOfficerAssignedTickets';
+export { useOfficerTicketsSync } from './useOfficerTicketsSync';
 export { usePendingCollections } from './usePendingCollections';
 export { useOfficerCollectionsSync } from './useOfficerCollectionsSync';
 export { usePendingContractSignature, contractSignaturePromptKey } from './usePendingContractSignature';

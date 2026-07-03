@@ -37,7 +37,7 @@ export function StatsRow() {
 
   return (
     <View style={styles.row}>
-      <StatTile value={String(newRequests)} label="New Reqs" />
+      <StatTile value={String(newRequests)} label="New Tickets" />
       <StatTile value={String(activeRequests)} label="Active" />
       <StatTile value={String(resolvedToday)} label="Done Today" />
       <StatTile

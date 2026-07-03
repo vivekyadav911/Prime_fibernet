@@ -2,121 +2,118 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { ServiceRequest } from '@prime/types';
 
 import { EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import { useOfficerAssignedTickets } from '@/hooks/officer';
 import { SyncManager } from '@/services/offline/syncManager';
+import {
+  useUpdateOfficerTicketStatusMutation,
+} from '@/services/api/officerPortalApi';
+import { useUpdateRequestStatusMutation } from '@/store/api/endpoints';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { useGetAssignedRequestsQuery, useUpdateRequestStatusMutation } from '@/store/api/endpoints';
 import { enqueueToast } from '@/store/slices/uiSlice';
+import type { PortalTicketItem } from '@/types/portalTicket';
 import type { OfficerStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import {
+  getOfficerTicketAdvanceLabel,
+  nextRequestStatusForOfficer,
+  nextTicketStatusForOfficer,
+} from '@/utils/officerTicketActions';
+import {
+  matchesOfficerTicketFilter,
+  OFFICER_TICKET_FILTERS,
+  officerTicketPriorityRank,
+  type OfficerTicketFilterKey,
+} from '@/utils/officerTicketFilters';
 import { queryErrorMessage } from '@/utils/queryError';
 
-import { OfficerRequestCard } from './requests/components/OfficerRequestCard';
-
-type FilterKey = 'all' | 'new' | 'active' | 'done';
-
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'new', label: 'New' },
-  { key: 'active', label: 'Active' },
-  { key: 'done', label: 'Done' },
-];
-
-const PRIORITY_ORDER: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
-
-const STATUS_FLOW: Record<string, string | null> = {
-  pending: 'in_transit',
-  assigned: 'in_transit',
-  in_transit: 'on_site',
-  on_site: 'working',
-  working: 'resolved',
-};
-
-function advanceLabel(status: string): string | undefined {
-  switch (status) {
-    case 'pending':
-    case 'assigned':
-      return 'Accept';
-    case 'in_transit':
-      return 'Arrived';
-    case 'on_site':
-    case 'working':
-      return 'Mark resolved';
-    default:
-      return undefined;
-  }
-}
-
-function matchesFilter(status: string, filter: FilterKey): boolean {
-  if (filter === 'all') return true;
-  if (filter === 'new') return status === 'pending' || status === 'assigned';
-  if (filter === 'active') return ['in_transit', 'on_site', 'working', 'accepted'].includes(status);
-  if (filter === 'done') return status === 'resolved' || status === 'closed';
-  return true;
-}
+import { OfficerTicketCard } from './requests/components/OfficerRequestCard';
 
 export function OfficerRequestsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<OfficerStackParamList>>();
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
-  const [filter, setFilter] = useState<FilterKey>('all');
-  const { data: requests, isLoading, isError, error, refetch } = useGetAssignedRequestsQuery(user?.id, {
-    skip: !user?.id,
-  });
-  const [updateStatus] = useUpdateRequestStatusMutation();
+  const [filter, setFilter] = useState<OfficerTicketFilterKey>('all');
+  const { items, isLoading, isError, error, refetch } = useOfficerAssignedTickets(user?.id);
+  const [updateRequestStatus] = useUpdateRequestStatusMutation();
+  const [updateTicketStatus] = useUpdateOfficerTicketStatusMutation();
 
   const sorted = useMemo(() => {
-    return [...(requests ?? [])]
-      .filter((r) => matchesFilter(r.status, filter))
-      .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
-  }, [filter, requests]);
+    return [...items]
+      .filter((item) => matchesOfficerTicketFilter(item, filter))
+      .sort((a, b) => officerTicketPriorityRank(a) - officerTicketPriorityRank(b));
+  }, [filter, items]);
 
   const handlePress = useCallback(
-    (requestId: string) => navigation.navigate('RequestDetail', { requestId }),
+    (itemId: string, kind: PortalTicketItem['kind']) => {
+      navigation.navigate('RequestDetail', { requestId: itemId, kind });
+    },
     [navigation],
   );
 
   const handleAdvance = useCallback(
-    async (id: string, currentStatus: string) => {
-      const next = STATUS_FLOW[currentStatus];
-      if (!next) return;
-      const payload = { id, status: next, note: `Status changed to ${next}` };
+    async (item: PortalTicketItem) => {
+      if (!user) return;
+
+      if (item.kind === 'ticket' && item.ticket) {
+        const next = nextTicketStatusForOfficer(item.ticket.status);
+        if (!next) return;
+        try {
+          await updateTicketStatus({
+            ticketId: item.ticket.id,
+            status: next,
+            note: `Status updated to ${next}`,
+            officerName: user.name,
+          }).unwrap();
+          refetch();
+        } catch {
+          dispatch(
+            enqueueToast({
+              id: `offline-ticket-${item.id}`,
+              type: 'info',
+              message: 'Could not update ticket — try again when online',
+            }),
+          );
+        }
+        return;
+      }
+
+      const currentStatus = String(item.request?.status ?? '').toLowerCase();
+      const next = nextRequestStatusForOfficer(currentStatus);
+      if (!next || !item.request) return;
+
+      const payload = { id: item.request.id, status: next, note: `Status changed to ${next}` };
       try {
-        await updateStatus(payload).unwrap();
-        // RTK Query tag invalidation triggers an automatic re-fetch; no manual refetch needed.
+        await updateRequestStatus(payload).unwrap();
         refetch();
       } catch {
-        // Network unavailable — queue for later sync. Skip refetch so the
-        // optimistic state (still showing old status) is not overwritten with
-        // stale server data from a request that would return before the sync runs.
         await SyncManager.enqueue({
-          id: `${id}-${next}-${Date.now()}`,
+          id: `${item.id}-${next}-${Date.now()}`,
           operation: 'updateRequestStatus',
           endpoint: 'updateRequestStatus',
           payload,
         });
         dispatch(
           enqueueToast({
-            id: `offline-${id}`,
+            id: `offline-${item.id}`,
             type: 'info',
             message: 'Saved offline — will sync when connected',
           }),
         );
       }
     },
-    [dispatch, refetch, updateStatus],
+    [dispatch, refetch, updateRequestStatus, updateTicketStatus, user],
   );
 
-  const keyExtractor = useCallback((item: ServiceRequest) => item.id, []);
+  const keyExtractor = useCallback((item: PortalTicketItem) => `${item.kind}-${item.id}`, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: ServiceRequest }) => (
-      <OfficerRequestCard
-        request={item}
-        advanceLabel={advanceLabel(item.status)}
+    ({ item }: { item: PortalTicketItem }) => (
+      <OfficerTicketCard
+        item={item}
+        advanceLabel={getOfficerTicketAdvanceLabel(item.statusBucket)}
         onPress={handlePress}
         onAdvance={handleAdvance}
       />
@@ -126,7 +123,7 @@ export function OfficerRequestsScreen() {
 
   const listHeader = (
     <View style={styles.filters}>
-      {FILTERS.map((f) => (
+      {OFFICER_TICKET_FILTERS.map((f) => (
         <Pressable
           key={f.key}
           style={[styles.chip, filter === f.key && styles.chipActive]}
@@ -158,7 +155,7 @@ export function OfficerRequestsScreen() {
     return (
       <ScreenWrapper scrollable={false}>
         {listHeader}
-        <EmptyState title="No requests" subtitle="Nothing in this filter" icon="✅" />
+        <EmptyState title="No tickets" subtitle="Nothing in this filter" />
       </ScreenWrapper>
     );
   }

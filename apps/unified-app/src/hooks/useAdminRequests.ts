@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { adminRequestsBoardApi, useGetAdminRequestBoardQuery } from '@/services/api/adminRequestsBoardApi';
 import {
@@ -21,6 +22,35 @@ const DEFAULT_FILTERS: RequestFilters = {
   sortBy: 'newest',
   searchQuery: '',
 };
+
+let adminRequestsChannel: RealtimeChannel | null = null;
+let adminRequestsSubscriberCount = 0;
+
+function ensureAdminRequestsChannel(
+  dispatch: ReturnType<typeof useAppDispatch>,
+): RealtimeChannel {
+  if (adminRequestsChannel) return adminRequestsChannel;
+
+  const client = getSupabase();
+  adminRequestsChannel = client
+    .channel('admin-service-requests')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'service_requests' },
+      () => {
+        dispatch(adminRequestsBoardApi.util.invalidateTags(['Requests']));
+      },
+    )
+    .subscribe();
+
+  return adminRequestsChannel;
+}
+
+function releaseAdminRequestsChannel(): void {
+  if (adminRequestsSubscriberCount > 0 || !adminRequestsChannel) return;
+  void getSupabase().removeChannel(adminRequestsChannel);
+  adminRequestsChannel = null;
+}
 
 export function selectUnassignedRequestCount(requests: ServiceRequest[]): number {
   return requests.filter((r) => !r.assignedOfficerId).length;
@@ -44,20 +74,12 @@ export function useAdminRequests() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const client = getSupabase();
-    const channel = client
-      .channel('admin-service-requests')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'service_requests' },
-        () => {
-          dispatch(adminRequestsBoardApi.util.invalidateTags(['Requests']));
-        },
-      )
-      .subscribe();
+    adminRequestsSubscriberCount += 1;
+    ensureAdminRequestsChannel(dispatch);
 
     return () => {
-      void client.removeChannel(channel);
+      adminRequestsSubscriberCount = Math.max(0, adminRequestsSubscriberCount - 1);
+      releaseAdminRequestsChannel();
     };
   }, [dispatch, isAuthenticated]);
 
