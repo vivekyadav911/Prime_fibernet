@@ -56,6 +56,7 @@ import { EmploymentContractVersionHistoryScreen } from '@/screens/admin/officers
 import { ContractPdfViewerScreen } from '@/screens/common/ContractPdfViewerScreen';
 import { OfficerListScreen } from '@/screens/admin/officers/OfficerListScreen';
 import { PlanFormScreenV2 } from '@/screens/admin/plans/PlanFormScreenV2';
+import { PlanChangeRequestsScreen } from '@/screens/admin/plans/PlanChangeRequestsScreen';
 import { PlansScreen } from '@/screens/admin/plans/PlansScreen';
 import { TicketDetailScreen } from '@/screens/admin/ticketPortal/TicketDetailScreen';
 import { TicketPortalScreen } from '@/screens/admin/ticketPortal/TicketPortalScreen';
@@ -289,6 +290,11 @@ export function AdminPlansStackNav() {
     <PlansStack.Navigator screenOptions={adminStackScreenOptions}>
       <PlansStack.Screen name="PlanList" component={PlansScreen} options={{ title: 'Plans' }} />
       <PlansStack.Screen name="PlanForm" component={PlanFormScreenV2} options={{ title: 'Plan form' }} />
+      <PlansStack.Screen
+        name="PlanChangeRequests"
+        component={PlanChangeRequestsScreen}
+        options={{ title: 'Plan change requests' }}
+      />
     </PlansStack.Navigator>
   );
 }

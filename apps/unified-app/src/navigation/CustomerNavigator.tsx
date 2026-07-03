@@ -18,6 +18,7 @@ import { CustomerBillScreen } from '@/screens/customer/payments/CustomerBillScre
 import { PaymentMethodScreen } from '@/screens/customer/payments/PaymentMethodScreen';
 import { GatewayWebViewScreen } from '@/screens/customer/payments/GatewayWebViewScreen';
 import { PaymentHistoryScreenV2 } from '@/screens/customer/payments/PaymentHistoryScreenV2';
+import { PaymentResultScreen } from '@/screens/customer/payments/PaymentResultScreen';
 import { ReceiptScreen } from '@/screens/customer/payments/ReceiptScreen';
 import { PlansScreen } from '@/screens/customer/plans/PlansScreen';
 import { PlanChangeRequestScreen } from '@/screens/customer/plans/PlanChangeRequestScreen';
@@ -122,7 +123,7 @@ function CustomerStackNavigator() {
       }}
     >
       <Stack.Screen name="CustomerTabs" component={CustomerTabsWithDeepLinks} options={{ headerShown: false }} />
-      <Stack.Screen name="PlanDetails" component={PlanDetailsScreen} options={{ title: 'Plan details' }} />
+      <Stack.Screen name="PlanDetails" component={PlanDetailsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanChangeRequest" component={PlanChangeRequestScreen} options={{ title: 'Plan change' }} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ title: 'Checkout' }} />
       <Stack.Screen name="PaymentGateway" component={PaymentGatewayScreen} options={{ title: 'Payment gateway' }} />
@@ -131,6 +132,7 @@ function CustomerStackNavigator() {
       <Stack.Screen name="CustomerBill" component={CustomerBillScreen} options={{ title: 'My bill' }} />
       <Stack.Screen name="Receipt" component={ReceiptScreen} options={{ title: 'Receipt' }} />
       <Stack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} options={{ title: 'Success', headerShown: false }} />
+      <Stack.Screen name="PaymentResult" component={PaymentResultScreen} options={{ title: 'Payment', headerShown: false }} />
       <Stack.Screen name="MakePayment" component={MakePaymentScreen} options={{ title: 'Make payment' }} />
       <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreenV2} options={{ title: 'Payment history' }} />
       <Stack.Screen name="MyBills" component={MyBillsScreen} options={{ title: 'My bills' }} />

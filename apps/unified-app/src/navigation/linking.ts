@@ -58,6 +58,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
           MakePayment: 'make-payment',
           PaymentHistory: 'payment-history',
           PaymentSuccess: 'payment/result',
+          PaymentResult: 'payment/verify',
           GatewayWebView: 'payment/checkout',
           Notifications: 'notifications',
           CustomerTicketList: 'tickets',

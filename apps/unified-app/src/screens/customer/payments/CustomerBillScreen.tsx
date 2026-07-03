@@ -1,10 +1,11 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Share, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 
+import { EasebuzzCheckout } from '@/components/customer/payments/EasebuzzCheckout';
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import {
   CustomerButton,
@@ -19,19 +20,19 @@ import { DismissKeyboardScrollView } from '@/components/common';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useAppSelector } from '@/store/hooks';
 import {
+  useCreatePaymentOrderV2Mutation,
   useGetActivePaymentGatewayQuery,
   useGetCustomerBillQuery,
   useGetCustomerPaymentHistoryV2Query,
   useLazyGetPaymentReceiptQuery,
 } from '@/services/api/paymentCollectionApi';
-import { PAYMENT_METHOD_CONFIG, type PaymentMethod } from '@/types/payments';
+import type { PaymentCheckoutSession } from '@/services/payment/PaymentProvider';
+import { getPaymentProvider, resolvePaymentProviderSlug } from '@/services/payment/PaymentProvider';
 import type { PaymentRecord } from '@/types/payments';
 import { formatINR } from '@/utils/currencyFormat';
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { CustomerTheme } from '@/theme/customer';
 import { queryErrorMessage } from '@/utils/queryError';
-
-const QUICK_METHODS: PaymentMethod[] = ['upi', 'card', 'netbanking', 'wallet'];
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
@@ -48,6 +49,11 @@ function statusTone(status: PaymentRecord['status']): 'paid' | 'failed' | 'pendi
   return 'pending';
 }
 
+function isGatewayNotConfigured(message: string): boolean {
+  const lower = message.toLowerCase();
+  return lower.includes('no active payment gateway') || lower.includes('gateway not configured');
+}
+
 export function CustomerBillScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const styles = useThemedStyles(createStyles);
@@ -55,26 +61,93 @@ export function CustomerBillScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const authId = user?.id ?? '';
 
+  const [checkoutSession, setCheckoutSession] = useState<PaymentCheckoutSession | null>(null);
+  const [checkoutVisible, setCheckoutVisible] = useState(false);
+  const [payLabel, setPayLabel] = useState<'Pay Now via Easebuzz' | 'Pay in Advance'>('Pay Now via Easebuzz');
+
   const { data: bill, isLoading, isError, error, refetch } = useGetCustomerBillQuery(authId, {
     skip: !authId,
   });
-  const { data: history = [], isLoading: historyLoading } = useGetCustomerPaymentHistoryV2Query(authId, {
-    skip: !authId,
-  });
+  const { data: history = [], isLoading: historyLoading, refetch: refetchHistory } = useGetCustomerPaymentHistoryV2Query(
+    authId,
+    { skip: !authId },
+  );
   const { data: activeGateway } = useGetActivePaymentGatewayQuery();
+  const [createOrder, { isLoading: orderLoading }] = useCreatePaymentOrderV2Mutation();
   const [fetchReceipt] = useLazyGetPaymentReceiptQuery();
 
-  const onPay = useCallback(
-    (method?: PaymentMethod) => {
-      if (!bill) return;
-      navigation.navigate('PaymentMethod', {
-        amount: bill.totalPayable,
-        planName: bill.planName ?? 'Broadband',
-        customerId: bill.customerId,
-        paymentMethod: method,
-      });
+  const provider = getPaymentProvider(resolvePaymentProviderSlug(activeGateway?.slug));
+  const payButtonLabel =
+    activeGateway?.slug === 'easebuzz' ? 'Pay Now via Easebuzz' : `Pay Now via ${provider.displayName}`;
+
+  const initiateCheckout = useCallback(
+    async (advance = false) => {
+      if (!bill || !user) return;
+      setPayLabel(advance ? 'Pay in Advance' : 'Pay Now via Easebuzz');
+
+      try {
+        const session = await createOrder({
+          customerId: bill.customerId,
+          userName: user.name,
+          userEmail: user.email,
+          userPhone: '',
+          amount: bill.totalPayable,
+          planName: bill.planName ?? 'Broadband',
+          billingPeriodStart: bill.billingPeriodStart ?? undefined,
+          billingPeriodEnd: bill.billingPeriodEnd ?? undefined,
+          dueDate: bill.dueDate ?? undefined,
+        }).unwrap();
+
+        setCheckoutSession({
+          paymentId: session.paymentId,
+          orderId: session.orderId,
+          gatewaySlug: resolvePaymentProviderSlug(session.gatewaySlug),
+          keyId: session.keyId,
+          amount: session.amount,
+          checkoutUrl: session.checkoutUrl,
+          checkoutParams: session.checkoutParams,
+        });
+        setCheckoutVisible(true);
+      } catch (e) {
+        const message = queryErrorMessage(e);
+        if (isGatewayNotConfigured(message)) {
+          Alert.alert(
+            'Online payments unavailable',
+            'Your ISP is finishing payment gateway setup. You can pay cash to your field officer or visit our office.',
+          );
+        } else {
+          Alert.alert('Could not start checkout', message);
+        }
+      }
     },
-    [bill, navigation],
+    [bill, createOrder, user],
+  );
+
+  const onCheckoutComplete = useCallback(
+    (result: { success: boolean; paymentId: string; orderId?: string; reason?: string }) => {
+      setCheckoutVisible(false);
+      setCheckoutSession(null);
+
+      if (!bill) return;
+
+      if (result.success) {
+        navigation.navigate('PaymentResult', {
+          paymentId: result.paymentId,
+          orderId: result.orderId,
+          amount: bill.totalPayable,
+          planName: bill.planName ?? 'Broadband',
+          gatewaySlug: activeGateway?.slug,
+        });
+        void refetch();
+        void refetchHistory();
+        return;
+      }
+
+      if (result.reason && result.reason !== 'dismissed') {
+        Alert.alert('Payment incomplete', result.reason);
+      }
+    },
+    [activeGateway?.slug, bill, navigation, refetch, refetchHistory],
   );
 
   const onReceipt = useCallback(
@@ -122,40 +195,58 @@ export function CustomerBillScreen() {
     );
   }
 
+  const hasOutstanding = bill.totalPayable > 0;
+
   return (
     <View style={styles.canvas}>
       <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
       <DismissKeyboardScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <GlassCard style={styles.balanceCard} glow padded>
           <Text style={styles.balanceTitle}>Outstanding Balance</Text>
-          {bill.dueDate ? (
+          {bill.dueDate && hasOutstanding ? (
             <Text style={styles.balanceDue}>Due by {formatDate(bill.dueDate)}</Text>
           ) : null}
           <Text style={styles.balanceAmount}>{formatINR(bill.totalPayable)}</Text>
-          <CustomerButton label="Pay Now" icon="credit-card-outline" onPress={() => onPay()} />
+          {hasOutstanding && activeGateway ? (
+            <CustomerButton
+              label={orderLoading && payLabel === 'Pay Now via Easebuzz' ? 'Starting checkout…' : payButtonLabel}
+              icon="credit-card-outline"
+              onPress={() => void initiateCheckout(false)}
+              disabled={orderLoading}
+            />
+          ) : null}
+          {!hasOutstanding ? (
+            <Text style={styles.paidUp}>You are all caught up for this billing cycle.</Text>
+          ) : null}
         </GlassCard>
 
-        <GlassCard style={styles.quickCard} padded>
-          <View style={styles.quickRow}>
-            {QUICK_METHODS.slice(0, 2).map((m) => {
-              const cfg = PAYMENT_METHOD_CONFIG[m];
-              return (
-                <PressableScale key={m} style={styles.quickAction} onPress={() => onPay(m)}>
-                  <MaterialCommunityIcons name="receipt" size={24} color={theme.colors.primary} />
-                  <Text style={styles.quickLabel}>{cfg.label === 'UPI' ? 'Auto-Pay' : cfg.label}</Text>
-                </PressableScale>
-              );
-            })}
-          </View>
-        </GlassCard>
+        {bill.dueDate ? (
+          <GlassCard style={styles.dueCard} padded>
+            <View style={styles.dueHeader}>
+              <MaterialCommunityIcons name="calendar-clock" size={22} color={theme.colors.primary} />
+              <Text style={styles.dueTitle}>Next Due Date</Text>
+            </View>
+            <Text style={styles.dueDate}>{formatDate(bill.dueDate)}</Text>
+            {bill.planName ? <Text style={styles.duePlan}>{bill.planName} · {formatINR(bill.planAmount)}/cycle</Text> : null}
+            {activeGateway ? (
+              <CustomerButton
+                label={orderLoading && payLabel === 'Pay in Advance' ? 'Starting checkout…' : 'Pay in Advance'}
+                variant="outline"
+                icon="wallet-outline"
+                onPress={() => void initiateCheckout(true)}
+                disabled={orderLoading}
+              />
+            ) : null}
+          </GlassCard>
+        ) : null}
 
         <GlassCard style={styles.historyCard} padded>
           <View style={styles.historyHeader}>
             <Text style={styles.historyTitle}>Payment History</Text>
-            <PressableScale accessibilityLabel="Filter payments">
+            <PressableScale onPress={() => navigation.navigate('PaymentHistory')}>
               <View style={styles.filterBtn}>
-                <MaterialCommunityIcons name="filter-variant" size={18} color={theme.colors.primary} />
-                <Text style={styles.filterText}>Filter</Text>
+                <MaterialCommunityIcons name="history" size={18} color={theme.colors.primary} />
+                <Text style={styles.filterText}>View all</Text>
               </View>
             </PressableScale>
           </View>
@@ -167,7 +258,7 @@ export function CustomerBillScreen() {
               icon="💳"
             />
           ) : (
-            history.map((item) => {
+            history.slice(0, 8).map((item) => {
               const tone = statusTone(item.status);
               return (
                 <PressableScale
@@ -203,17 +294,34 @@ export function CustomerBillScreen() {
           )}
         </GlassCard>
 
-        {!activeGateway ? (
+        {activeGateway ? (
+          <Text style={styles.gatewayHint}>Secured by {activeGateway.display_name ?? provider.displayName}</Text>
+        ) : (
           <View style={styles.notice}>
-            <Text style={styles.noticeTitle}>Online checkout coming soon</Text>
+            <Text style={styles.noticeTitle}>Cash & office payments</Text>
             <Text style={styles.noticeBody}>
-              Your admin is setting up the payment gateway. You can still pay cash to your field officer or at our office.
+              Online checkout is not active yet. Pay cash to your field officer or visit our office.
             </Text>
           </View>
-        ) : (
-          <Text style={styles.gatewayHint}>Secured by {activeGateway.display_name}</Text>
         )}
       </DismissKeyboardScrollView>
+
+      {user ? (
+        <EasebuzzCheckout
+          visible={checkoutVisible}
+          session={checkoutSession}
+          customer={{
+            name: user.name,
+            email: user.email,
+            phone: '',
+          }}
+          onClose={() => {
+            setCheckoutVisible(false);
+            setCheckoutSession(null);
+          }}
+          onComplete={onCheckoutComplete}
+        />
+      ) : null}
     </View>
   );
 }
@@ -250,21 +358,35 @@ const createStyles = (theme: CustomerTheme) =>
       fontFamily: theme.fonts.monoBold,
       marginVertical: theme.spacing.sm,
     },
-    quickCard: { borderRadius: theme.radius.lg },
-    quickRow: { flexDirection: 'row', gap: theme.spacing.sm },
-    quickAction: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: theme.spacing.sm,
-      borderRadius: theme.radius.sm,
-      gap: theme.spacing.xs,
-      minHeight: 72,
-    },
-    quickLabel: {
-      ...theme.typography.caption,
-      color: theme.colors.onSurfaceVariant,
+    paidUp: {
+      ...theme.typography.body,
+      color: theme.colors.secondary,
       fontFamily: theme.fonts.bodyMedium,
+    },
+    dueCard: {
+      borderRadius: theme.radius.lg,
+      gap: theme.spacing.sm,
+    },
+    dueHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    dueTitle: {
+      ...theme.typography.displayMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+    },
+    dueDate: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.monoBold,
+    },
+    duePlan: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
     },
     historyCard: { borderRadius: theme.radius.lg },
     historyHeader: {
@@ -295,7 +417,7 @@ const createStyles = (theme: CustomerTheme) =>
       borderRadius: theme.radius.sm,
       backgroundColor: theme.colors.surfaceContainerLow,
       borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.05)',
+      borderColor: theme.colors.borderSubtle,
       marginBottom: theme.spacing.sm,
     },
     historyLeft: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, flex: 1 },
@@ -307,7 +429,7 @@ const createStyles = (theme: CustomerTheme) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    historyIconError: { backgroundColor: 'rgba(147,0,10,0.2)' },
+    historyIconError: { backgroundColor: theme.colors.errorContainer },
     historyMonth: {
       ...theme.typography.bodyLg,
       color: theme.colors.onSurface,
@@ -337,12 +459,12 @@ const createStyles = (theme: CustomerTheme) =>
       justifyContent: 'center',
     },
     statusPaid: {
-      backgroundColor: 'rgba(0,165,114,0.2)',
-      borderColor: 'rgba(78,222,163,0.3)',
+      backgroundColor: theme.colors.secondaryContainer,
+      borderColor: theme.colors.secondary,
     },
     statusFailed: {
-      backgroundColor: 'rgba(147,0,10,0.2)',
-      borderColor: 'rgba(255,180,171,0.3)',
+      backgroundColor: theme.colors.errorContainer,
+      borderColor: theme.colors.error,
     },
     statusDot: { width: 6, height: 6, borderRadius: 3 },
     statusDotPaid: { backgroundColor: theme.colors.secondary },
@@ -355,7 +477,7 @@ const createStyles = (theme: CustomerTheme) =>
       borderRadius: theme.radius.md,
       padding: theme.spacing.md,
       borderWidth: 1,
-      borderColor: theme.colors.accentWarning,
+      borderColor: theme.colors.borderSubtle,
     },
     noticeTitle: {
       fontSize: 13,

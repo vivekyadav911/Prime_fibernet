@@ -1,3 +1,7 @@
+export { ConnectionStatusCard } from './ConnectionStatusCard';
+export { LiveSpeedBar } from './LiveSpeedBar';
+export type { SpeedReading } from './LiveSpeedBar';
+export { SpeedTestModal } from './SpeedTestModal';
 export { SignalHero } from './SignalHero';
 export { PlanCard } from './PlanCard';
 export { DashboardPlanCard } from './DashboardPlanCard';

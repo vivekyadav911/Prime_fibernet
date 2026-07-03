@@ -9,6 +9,7 @@ import {
   CustomerSkeletonLoader,
   PressableScale,
 } from '@/components/customer/ui';
+import { CustomerTicketTimeline } from '@/components/customer/tickets/CustomerTicketTimeline';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
 import { DismissKeyboardFlatList } from '@/components/common';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
@@ -19,14 +20,24 @@ import { formatRelativeIst } from '@/utils/formatDate';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'CustomerTicketList'>;
 
+function formatSubmittedDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function statusTone(status: string): 'info' | 'success' | 'warning' {
+  if (status === 'Resolved' || status === 'Closed') return 'success';
+  if (status === 'Awaiting Customer' || status === 'Awaiting Parts') return 'warning';
+  return 'info';
+}
+
 function TicketListContent({ navigation }: Props) {
   const styles = useThemedStyles(createStyles);
-  const { data, isLoading, error, refetch } = useGetMyTicketsQuery();
+  const { data, isLoading, error, refetch, isFetching } = useGetMyTicketsQuery();
 
   if (isLoading) {
     return (
       <View style={styles.canvas}>
-        <CustomerSkeletonLoader rows={4} rowHeight={88} />
+        <CustomerSkeletonLoader rows={4} rowHeight={160} />
       </View>
     );
   }
@@ -50,6 +61,8 @@ function TicketListContent({ navigation }: Props) {
         data={data ?? []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        refreshing={isFetching}
+        onRefresh={refetch}
         ListEmptyComponent={
           <CustomerEmptyState
             title="No tickets yet"
@@ -66,14 +79,16 @@ function TicketListContent({ navigation }: Props) {
             accessibilityLabel={`Ticket ${item.ticketNumber}`}
           >
             <View style={styles.card}>
-              <Text style={styles.number}>{item.ticketNumber}</Text>
-              <Text style={styles.subject} numberOfLines={2}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.number}>#{item.ticketNumber}</Text>
+                <CustomerBadge label={item.status} tone={statusTone(item.status)} />
+              </View>
+              <Text style={styles.subject} numberOfLines={1}>
                 {item.title}
               </Text>
-              <View style={styles.meta}>
-                <CustomerBadge label={item.status} tone="info" />
-                <Text style={styles.date}>{formatRelativeIst(item.updatedAt)}</Text>
-              </View>
+              <Text style={styles.submitted}>Submitted: {formatSubmittedDate(item.createdAt)}</Text>
+              <CustomerTicketTimeline items={item.timeline} compact />
+              <Text style={styles.viewDetails}>View Details →</Text>
             </View>
           </PressableScale>
         )}
@@ -102,24 +117,35 @@ const createStyles = (theme: CustomerTheme) =>
       padding: theme.spacing.md,
       borderWidth: 1,
       borderColor: theme.colors.borderSubtle,
+      gap: theme.spacing.sm,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
     },
     number: {
       fontFamily: theme.fonts.mono,
       color: theme.colors.accentGlow,
       fontSize: 12,
-      marginBottom: theme.spacing.xs,
+      flex: 1,
     },
     subject: {
       color: theme.colors.textPrimary,
-      fontFamily: theme.fonts.bodyMedium,
-      fontSize: 15,
-      fontWeight: '600',
+      fontFamily: theme.fonts.bodySemiBold,
+      fontSize: 16,
     },
-    meta: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginTop: theme.spacing.sm,
+    submitted: {
+      ...theme.typography.caption,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
     },
-    date: { color: theme.colors.textMuted, fontSize: 11 },
+    viewDetails: {
+      ...theme.typography.caption,
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.bodySemiBold,
+      textAlign: 'right',
+      marginTop: theme.spacing.xs,
+    },
   });

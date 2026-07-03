@@ -33,6 +33,9 @@ export function ProfileScreen() {
   const dispatch = useAppDispatch();
   const {
     authUser,
+    accountId,
+    memberSince,
+    addressFromServer,
     profilePictureUrl,
     defaultValues,
     pushEnabled,
@@ -131,6 +134,7 @@ export function ProfileScreen() {
           name={defaultValues.name || authUser.name}
           email={authUser.email}
           photoUrl={profilePictureUrl}
+          memberSince={memberSince}
           isDev={isDev}
           uploading={uploadingPhoto}
           onChangePhoto={onPhoto}
@@ -139,7 +143,8 @@ export function ProfileScreen() {
         <ProfileForm
           defaultValues={defaultValues}
           email={authUser.email}
-          accountId={authUser.id ? `PFN-${authUser.id.slice(0, 8).toUpperCase()}` : undefined}
+          accountId={accountId}
+          addressHint={!addressFromServer ? 'No installation address on file. Add yours below or contact support if it looks wrong.' : undefined}
           saving={isSaving}
           onSubmit={onSave}
         />

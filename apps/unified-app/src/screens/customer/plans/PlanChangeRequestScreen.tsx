@@ -9,8 +9,11 @@ import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useGetActiveSubscriptionQuery, useGetPlanByIdQuery } from '@/services/api';
 import { usePlanChangeRequest } from '@/hooks/usePlanChangeRequest';
 import { useAppSelector } from '@/store/hooks';
-import type { CustomerStackParamList } from '@/types/navigation';
+import { queryErrorMessage } from '@/utils/queryError';
 import type { CustomerTheme } from '@/theme/customer';
+import type { CustomerStackParamList } from '@/types/navigation';
+
+import { PlanChangeConfirmSheet } from './components/PlanChangeConfirmSheet';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'PlanChangeRequest'>;
 
@@ -24,7 +27,11 @@ function PlanChangeContent({ route, navigation }: Props) {
   const { data: subscription } = useGetActiveSubscriptionQuery(user?.id ?? '', { skip: !user?.id });
   const [cycle, setCycle] = useState<BillingCycle>('monthly');
   const [reason, setReason] = useState('');
+  const [confirmVisible, setConfirmVisible] = useState(false);
   const { submitRequest, isSubmitting } = usePlanChangeRequest();
+
+  const currentName = subscription?.planName ?? 'None';
+  const requestedName = plan?.name ?? planId;
 
   const onSubmit = async () => {
     try {
@@ -34,45 +41,57 @@ function PlanChangeContent({ route, navigation }: Props) {
         requestedCycle: cycle,
         reason: reason.trim() || undefined,
       }).unwrap();
+      setConfirmVisible(false);
       Alert.alert(
-        'Request submitted',
-        'Our team will contact you within 24 hours.',
+        'Request submitted!',
+        'Our team will process it within 24 hours.',
         [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
     } catch (e) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Could not submit request');
+      Alert.alert('Could not submit request', queryErrorMessage(e, 'Try again in a moment.'));
     }
   };
 
   return (
-    <ScrollView style={styles.canvas} contentContainerStyle={styles.content}>
-      <Text style={styles.heading}>Request plan change</Text>
-      <Text style={styles.sub}>
-        Current: {subscription?.planName ?? 'None'} → Requested: {plan?.name ?? planId}
-      </Text>
-      <Text style={styles.label}>Billing cycle</Text>
-      {CYCLES.map((c) => (
-        <CustomerButton
-          key={c}
-          label={c.charAt(0).toUpperCase() + c.slice(1)}
-          variant={cycle === c ? 'primary' : 'ghost'}
-          onPress={() => setCycle(c)}
+    <>
+      <ScrollView style={styles.canvas} contentContainerStyle={styles.content}>
+        <Text style={styles.heading}>Request plan change</Text>
+        <Text style={styles.sub}>
+          Current: {currentName} → Requested: {requestedName}
+        </Text>
+        <Text style={styles.label}>Billing cycle</Text>
+        {CYCLES.map((c) => (
+          <CustomerButton
+            key={c}
+            label={c.charAt(0).toUpperCase() + c.slice(1)}
+            variant={cycle === c ? 'primary' : 'ghost'}
+            onPress={() => setCycle(c)}
+          />
+        ))}
+        <CustomerInput
+          label="Reason (optional)"
+          value={reason}
+          onChangeText={setReason}
+          multiline
+          numberOfLines={4}
+          style={styles.textarea}
         />
-      ))}
-      <CustomerInput
-        label="Reason (optional)"
-        value={reason}
-        onChangeText={setReason}
-        multiline
-        numberOfLines={4}
-        style={styles.textarea}
+        <CustomerButton
+          label="Review request"
+          onPress={() => setConfirmVisible(true)}
+          disabled={isSubmitting}
+        />
+      </ScrollView>
+
+      <PlanChangeConfirmSheet
+        visible={confirmVisible}
+        currentPlanName={currentName}
+        requestedPlanName={requestedName}
+        loading={isSubmitting}
+        onConfirm={() => void onSubmit()}
+        onCancel={() => setConfirmVisible(false)}
       />
-      <CustomerButton
-        label={isSubmitting ? 'Submitting...' : 'Submit request'}
-        onPress={() => void onSubmit()}
-        disabled={isSubmitting}
-      />
-    </ScrollView>
+    </>
   );
 }
 
@@ -87,7 +106,7 @@ export function PlanChangeRequestScreen(props: Props) {
 const createStyles = (theme: CustomerTheme) =>
   StyleSheet.create({
     canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
-    content: { padding: theme.spacing.lg, gap: theme.spacing.md },
+    content: { padding: theme.spacing.lg, gap: theme.spacing.md, paddingBottom: theme.spacing.xxxl },
     heading: {
       color: theme.colors.textPrimary,
       fontFamily: theme.fonts.display,

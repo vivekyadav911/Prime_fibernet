@@ -12,12 +12,13 @@ export const plansApi = baseApi.injectEndpoints({
             .from('plans')
             .select('*')
             .eq('is_active', true)
-            .order('price', { ascending: true });
+            .order('speed_mbps', { ascending: true });
           if (error) throw error;
           return (data ?? []).map((row) => mapPlan(row as Record<string, unknown>));
         },
       }),
       providesTags: ['Plans'],
+      keepUnusedDataFor: 60,
     }),
 
     getPlanById: builder.query<Plan, string>({

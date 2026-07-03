@@ -165,18 +165,53 @@ export const authApi = baseApi.injectEndpoints({
     getCustomerProfile: builder.query<UserProfile, void>({
       query: () => ({
         handler: async (client) => {
-          const { data, error } = await client.rpc('get_customer_profile');
+          const { data: auth } = await client.auth.getUser();
+          if (!auth.user) throw new Error('Sign in required');
+
+          const { data: customerId, error: cidErr } = await client.rpc('current_customer_user_id');
+          if (cidErr) throw cidErr;
+
+          const resolvedId = customerId ?? auth.user.id;
+          const { data, error } = await client
+            .from('users')
+            .select('id, email, name, phone, role, is_blocked, customer_id')
+            .eq('id', resolvedId)
+            .maybeSingle();
           if (error) throw error;
-          if (!data || typeof data !== 'object') throw new Error('Profile not found');
-          const row = data as Record<string, unknown>;
+          if (!data) throw new Error('Profile not found');
+
           return {
-            id: String(row.id),
-            email: String(row.email ?? ''),
-            name: String(row.name ?? ''),
-            phone: (row.phone as string) ?? null,
-            role: (row.role as AppRole) ?? 'customer',
-            isBlocked: Boolean(row.is_blocked),
+            id: String(data.id),
+            email: String(data.email ?? auth.user.email ?? ''),
+            name: String(data.name ?? ''),
+            phone: (data.phone as string) ?? null,
+            role: (data.role as AppRole) ?? 'customer',
+            isBlocked: Boolean(data.is_blocked),
           };
+        },
+      }),
+      providesTags: ['Profile'],
+    }),
+
+    getCustomerUserRecord: builder.query<Record<string, unknown>, void>({
+      query: () => ({
+        handler: async (client) => {
+          const { data: auth } = await client.auth.getUser();
+          if (!auth.user) throw new Error('Sign in required');
+
+          const { data: customerId, error: cidErr } = await client.rpc('current_customer_user_id');
+          if (cidErr) throw cidErr;
+          if (!customerId) throw new Error('Customer profile not found');
+
+          const { data, error } = await client
+            .from('users')
+            .select(
+              'id, email, name, phone, role, customer_id, address, city, district, pincode, profile_picture_url, notification_prefs, created_at',
+            )
+            .eq('id', customerId)
+            .single();
+          if (error) throw error;
+          return data as Record<string, unknown>;
         },
       }),
       providesTags: ['Profile'],
@@ -245,7 +280,7 @@ export const authApi = baseApi.injectEndpoints({
           if (error) throw error;
         },
       }),
-      invalidatesTags: ['Profile', 'Users'],
+      invalidatesTags: ['Profile', 'Users', 'CustomerDashboard'],
     }),
 
     getAllUsers: builder.query<UserProfile[], void>({
@@ -361,6 +396,7 @@ export const {
   useRequestAccountDeletionMutation,
   useVerifyAdminTotpMutation,
   useGetCustomerProfileQuery,
+  useGetCustomerUserRecordQuery,
   useGetOfficerSessionProfileQuery,
   useGetUserByEmailQuery,
   useGetUserByIdQuery,

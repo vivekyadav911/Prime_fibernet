@@ -85,6 +85,34 @@ function ensureChannels(
           },
           () => invalidate(),
         )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'tickets',
+            filter: `customer_id=eq.${customerUserId}`,
+          },
+          () => invalidate(),
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'ticket_activity_events',
+          },
+          () => invalidate(),
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'ticket_customer_messages',
+          },
+          () => invalidate(),
+        )
         .subscribe(),
       client
         .channel(`my-payments-${customerUserId}`)

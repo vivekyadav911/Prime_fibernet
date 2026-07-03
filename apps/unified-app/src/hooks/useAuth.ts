@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 
 import { useBiometrics } from '@/hooks/useBiometrics';
-import { getSupabase } from '@/services/supabase';
+import { getSupabase, isInvalidRefreshTokenError } from '@/services/supabase';
 import { useAppDispatch } from '@/store/hooks';
 import { DEV_AUTH_CREDENTIALS, type AppRole } from '@prime/types';
 
@@ -23,7 +23,10 @@ export function useAuthBootstrap() {
           }),
         );
       })
-      .catch(() => {
+      .catch(async (error: unknown) => {
+        if (isInvalidRefreshTokenError(error)) {
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+        }
         dispatch(setSession({ session: null, user: null }));
       });
 

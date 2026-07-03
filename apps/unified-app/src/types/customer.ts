@@ -101,6 +101,19 @@ export const CustomerTicketSchema = z.object({
 });
 export type CustomerTicket = z.infer<typeof CustomerTicketSchema>;
 
+export const CustomerTicketTimelineItemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  timestamp: z.string().nullable(),
+  isComplete: z.boolean(),
+});
+export type CustomerTicketTimelineItem = z.infer<typeof CustomerTicketTimelineItemSchema>;
+
+export type CustomerTicketWithTimeline = CustomerTicket & {
+  timeline: CustomerTicketTimelineItem[];
+  assignedOfficerName: string | null;
+};
+
 export const CustomerPortalNotificationSchema = z.object({
   id: z.string().uuid(),
   type: z.string(),
@@ -145,6 +158,7 @@ export type CustomerDashboard = {
     id: string;
     planName: string;
     speedMbps: number;
+    planPrice: number;
     status: SubscriptionStatus;
     endAt: string;
     daysUntilExpiry: number;
@@ -155,6 +169,7 @@ export type CustomerDashboard = {
     isUnlimited: boolean;
   } | null;
   outstanding: number;
+  nextDueDate: string | null;
   recentPayments: Array<{ id: string; amount: number; status: string; createdAt: string }>;
   openTickets: number;
   unreadNotifications: number;

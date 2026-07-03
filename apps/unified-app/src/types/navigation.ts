@@ -71,6 +71,13 @@ export type CustomerStackParamList = {
     planName: string;
     activationDate: string;
   };
+  PaymentResult: {
+    paymentId: string;
+    amount: number;
+    planName: string;
+    orderId?: string;
+    gatewaySlug?: string;
+  };
   CustomerBill: undefined;
   PaymentMethod: { amount: number; planName: string; customerId: string; paymentMethod?: PaymentMethod };
   GatewayWebView: {
@@ -348,6 +355,7 @@ export type AdminSupportStackParamList = {
 export type AdminPlansStackParamList = {
   PlanList: undefined;
   PlanForm: { mode: 'create' | 'edit'; planId?: string } | undefined;
+  PlanChangeRequests: undefined;
 };
 
 export type AdminNotificationsStackParamList = {

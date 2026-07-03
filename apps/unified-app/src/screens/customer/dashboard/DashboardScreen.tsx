@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
@@ -6,11 +6,13 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import {
+  ConnectionStatusCard,
   CustomerInfoHeader,
-  DashboardPlanCard,
+  LiveSpeedBar,
   QuickActionsGrid,
-  SpeedGauge,
+  SpeedTestModal,
 } from '@/components/customer/dashboard';
+import type { SpeedReading } from '@/components/customer/dashboard';
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerTopBar } from '@/components/customer/shell';
 import { CustomerEmptyState, CustomerSkeletonLoader, CustomerToast, CustomerErrorState, FadeInSection } from '@/components/customer/ui';
@@ -23,6 +25,7 @@ import { useCustomerUiStore } from '@/store/customerUiStore';
 import { useAppSelector } from '@/store/hooks';
 import type { CustomerTheme } from '@/theme/customer';
 import type { CustomerStackParamList, CustomerTabParamList } from '@/types/navigation';
+import { formatCustomerAccountId } from '@/utils/customerAccount';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<CustomerTabParamList, 'Home'>,
@@ -41,6 +44,9 @@ export function DashboardScreen() {
   });
   const toast = useCustomerUiStore((s) => s.toast);
   const clearToast = useCustomerUiStore((s) => s.clearToast);
+
+  const [speedModalVisible, setSpeedModalVisible] = useState(false);
+  const [speedReading, setSpeedReading] = useState<SpeedReading | null>(null);
 
   const connectionStatus = useMemo(() => {
     if (!data?.subscription) return 'expired' as const;
@@ -73,8 +79,9 @@ export function DashboardScreen() {
 
   const sub = data?.subscription;
   const displayName = data?.profile.name ?? authUser?.name ?? 'Customer';
-  const accountId = data?.profile.customerId ?? `ACC-${userId.slice(0, 8)}`;
+  const accountId = formatCustomerAccountId(data?.profile.customerId, userId);
   const isActive = connectionStatus === 'active';
+  const planSpeedMbps = sub?.speedMbps ?? 0;
 
   return (
     <View style={styles.canvas}>
@@ -104,25 +111,21 @@ export function DashboardScreen() {
         </FadeInSection>
 
         <FadeInSection delayMs={100}>
-          <View style={styles.heroRow}>
-            <View style={styles.gaugeCol}>
-              <SpeedGauge speedMbps={sub?.speedMbps ?? 100} maxSpeedMbps={sub?.speedMbps ?? 500} />
-            </View>
-            {sub ? (
-              <View style={styles.planCol}>
-                <DashboardPlanCard
-                  planName={sub.planName}
-                  renewalDate={sub.endAt}
-                  isUnlimited={sub.isUnlimited}
-                  onPayNow={() => navigation.navigate('Payments')}
-                />
-              </View>
-            ) : null}
-          </View>
+          <ConnectionStatusCard
+            isActive={isActive}
+            planName={sub?.planName}
+            speedMbps={sub?.speedMbps}
+            planPrice={sub?.planPrice}
+            nextDueDate={data?.nextDueDate}
+            outstandingAmount={data?.outstanding}
+            onPayNow={() => navigation.navigate('Payments')}
+            onViewInvoice={() => navigation.navigate('PaymentHistory')}
+            onContactSupport={() => navigation.navigate('Support')}
+          />
         </FadeInSection>
 
         {!sub ? (
-          <FadeInSection delayMs={200}>
+          <FadeInSection delayMs={150}>
             <CustomerEmptyState
               title="No active plan"
               subtitle="Browse plans to get connected"
@@ -133,10 +136,19 @@ export function DashboardScreen() {
           </FadeInSection>
         ) : null}
 
+        <FadeInSection delayMs={200}>
+          <LiveSpeedBar
+            isActive={isActive}
+            planSpeedMbps={planSpeedMbps}
+            reading={speedReading}
+            onPress={() => setSpeedModalVisible(true)}
+          />
+        </FadeInSection>
+
         <FadeInSection delayMs={300}>
           <QuickActionsGrid
             actions={[
-              { id: 'pay', label: 'Pay Bill', icon: 'receipt', onPress: () => navigation.navigate('Payments') },
+              { id: 'pay', label: 'Pay Bill', icon: 'credit-card-outline', onPress: () => navigation.navigate('Payments') },
               { id: 'tickets', label: 'My Tickets', icon: 'ticket-confirmation-outline', onPress: () => navigation.navigate('CustomerTicketList') },
               { id: 'plan', label: 'Change Plan', icon: 'swap-horizontal', onPress: () => navigation.navigate('Plans') },
               { id: 'support', label: 'Support', icon: 'headset', onPress: () => navigation.navigate('Support') },
@@ -144,6 +156,16 @@ export function DashboardScreen() {
           />
         </FadeInSection>
       </ScrollView>
+
+      <SpeedTestModal
+        visible={speedModalVisible}
+        isActive={isActive}
+        planSpeedMbps={planSpeedMbps}
+        onClose={() => setSpeedModalVisible(false)}
+        onComplete={(result) =>
+          setSpeedReading({ downloadMbps: result.downloadMbps, uploadMbps: result.uploadMbps })
+        }
+      />
     </View>
   );
 }
@@ -162,10 +184,6 @@ const createStyles = (theme: CustomerTheme) =>
       paddingHorizontal: theme.spacing.marginMobile,
       paddingTop: theme.spacing.md,
       paddingBottom: theme.spacing.xxxl,
+      gap: theme.spacing.md,
     },
-    heroRow: {
-      gap: theme.spacing.gutter,
-    },
-    gaugeCol: {},
-    planCol: {},
   });

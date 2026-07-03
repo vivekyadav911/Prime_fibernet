@@ -32,7 +32,7 @@ export function QuickActionsGrid({ actions }: QuickActionsGridProps) {
         >
           <GlassCard style={styles.card} padded>
             <View style={styles.iconWrap}>
-              <MaterialCommunityIcons name={action.icon} size={24} color={theme.colors.onSurfaceVariant} />
+              <MaterialCommunityIcons name={action.icon} size={32} color={theme.colors.onSurfaceVariant} />
             </View>
             <Text style={styles.label} numberOfLines={1}>
               {action.label}
@@ -59,14 +59,15 @@ const createStyles = (theme: CustomerTheme) =>
     card: {
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: 120,
+      minHeight: 100,
       borderRadius: theme.radius.lg,
-      gap: theme.spacing.sm,
+      gap: theme.spacing.xs,
+      paddingVertical: theme.spacing.sm,
     },
     iconWrap: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: theme.colors.surfaceContainer,
       alignItems: 'center',
       justifyContent: 'center',

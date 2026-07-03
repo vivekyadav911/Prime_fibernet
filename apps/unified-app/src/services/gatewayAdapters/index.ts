@@ -86,10 +86,50 @@ export function parseWebViewPaymentMessage(data: string): {
     return {
       success: Boolean(parsed.success),
       reason: parsed.reason as string | undefined,
+      paymentId: (parsed.paymentId as string) ?? undefined,
       orderId: (parsed.razorpay_order_id as string) ?? undefined,
       signature: (parsed.razorpay_signature as string) ?? undefined,
     };
   } catch {
     return { success: false, reason: 'invalid_response' };
   }
+}
+
+export function parsePaymentCallbackUrl(url: string): {
+  isCallback: boolean;
+  success?: boolean;
+  paymentId?: string;
+  orderId?: string;
+} {
+  const lower = url.toLowerCase();
+
+  if (lower.includes('verify-payment')) {
+    try {
+      const parsed = new URL(url);
+      const paymentId = parsed.searchParams.get('paymentId') ?? undefined;
+      const dev = parsed.searchParams.get('dev');
+      return {
+        isCallback: true,
+        success: dev === '1' || parsed.searchParams.get('status') === 'success',
+        paymentId,
+        orderId: parsed.searchParams.get('orderId') ?? undefined,
+      };
+    } catch {
+      return { isCallback: true, success: true };
+    }
+  }
+
+  if (lower.includes('payment-webhook')) {
+    return { isCallback: true, success: true };
+  }
+
+  if (lower.includes('payment_success') || lower.includes('razorpay_payment_id')) {
+    return { isCallback: true, success: true };
+  }
+
+  if (lower.includes('payment_failed') || lower.includes('/cancel')) {
+    return { isCallback: true, success: false };
+  }
+
+  return { isCallback: false };
 }

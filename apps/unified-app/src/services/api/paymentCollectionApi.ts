@@ -17,6 +17,8 @@ import type {
   ManualPaymentPayload,
 } from '@/types/payments';
 
+import { formatCustomerAccountId } from '@/utils/customerAccount';
+
 import { baseApi } from './baseApi';
 
 function mapOfficerJoin(raw: unknown): PaymentRecord['officer'] {
@@ -520,7 +522,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
           return {
             customerId: user.id,
             customerName: user.name,
-            accountNumber: user.customer_id ?? `ACC-${String(user.id).slice(0, 8)}`,
+            accountNumber: formatCustomerAccountId(user.customer_id, user.id),
             planName: planName ?? null,
             planAmount,
             taxAmount,
@@ -798,6 +800,32 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
         },
       }),
     }),
+
+    createGstInvoiceRequest: builder.mutation<
+      { id: string },
+      { paymentId: string; gstin: string; businessName?: string; billingAddress?: string }
+    >({
+      query: (body) => ({
+        handler: async (client) => {
+          const { data: { user } } = await client.auth.getUser();
+          const customerId = await resolveCustomerUserId(client, user?.id);
+
+          const { data, error } = await client
+            .from('gst_invoice_requests')
+            .insert({
+              payment_id: body.paymentId,
+              customer_id: customerId,
+              gstin: body.gstin.trim().toUpperCase(),
+              business_name: body.businessName?.trim() ?? null,
+              billing_address: body.billingAddress?.trim() ?? null,
+            })
+            .select('id')
+            .single();
+          if (error) throw error;
+          return { id: String(data.id) };
+        },
+      }),
+    }),
   }),
 });
 
@@ -831,4 +859,5 @@ export const {
   useRecordManualPaymentMutation,
   useGetPaymentActivityTimelineQuery,
   useVerifyOpenPoolConsistencyQuery,
+  useCreateGstInvoiceRequestMutation,
 } = paymentCollectionApi;

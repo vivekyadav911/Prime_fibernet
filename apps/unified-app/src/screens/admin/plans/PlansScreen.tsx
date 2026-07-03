@@ -289,6 +289,11 @@ export function PlansScreen({ navigation }: Props) {
             <Pressable style={styles.iconBtn} onPress={onRefresh}>
               <Ionicons name="refresh-outline" size={22} color={colors.textSecondary} />
             </Pressable>
+            <AdminButton
+              label="Requests"
+              variant="secondary"
+              onPress={() => navigation.navigate('PlanChangeRequests')}
+            />
             <AdminButton label="+ New Plan" onPress={handleCreate} />
           </View>
         </View>

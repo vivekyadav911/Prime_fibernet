@@ -44,7 +44,8 @@ export function useCamera() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: 'images',
       allowsEditing: true,
-      quality: 1,
+      aspect: [1, 1],
+      quality: 0.8,
     });
     if (result.canceled || !result.assets[0]?.uri) {
       throw new Error('No image selected');

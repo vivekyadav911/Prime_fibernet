@@ -11,7 +11,9 @@ export const customerDashboardApi = baseApi.injectEndpoints({
         handler: async (client) => {
           const { data: user, error: userErr } = await client
             .from('users')
-            .select('id, name, email, phone, customer_id, outstanding_amount, payment_status')
+            .select(
+              'id, name, email, phone, customer_id, outstanding_amount, payment_status, next_due_date',
+            )
             .eq('id', userId)
             .maybeSingle();
           if (userErr) throw userErr;
@@ -19,7 +21,7 @@ export const customerDashboardApi = baseApi.injectEndpoints({
 
           const { data: subRow } = await client
             .from('subscriptions')
-            .select('*, plans(speed_mbps, data_limit_gb, is_unlimited)')
+            .select('*, plans(speed_mbps, data_limit_gb, is_unlimited, price, price_quarterly, price_annual)')
             .eq('user_id', userId)
             .eq('status', 'active')
             .order('end_at', { ascending: false })
@@ -32,21 +34,28 @@ export const customerDashboardApi = baseApi.injectEndpoints({
             const endMs = new Date(endAt).getTime();
             const daysUntilExpiry = Math.ceil((endMs - Date.now()) / (1000 * 60 * 60 * 24));
             const planJoin = subRow.plans as Record<string, unknown> | null;
+            const billingCycle = (subRow.billing_cycle as 'monthly' | 'quarterly' | 'annual') ?? 'monthly';
+            const mappedPlan = planJoin ? mapPlan(planJoin) : null;
+            const planPrice = mappedPlan ? getPriceForCycle(mappedPlan, billingCycle) : 0;
             subscription = {
               id: String(subRow.id),
               planName: String(subRow.plan_name ?? ''),
               speedMbps: Number(subRow.speed_mbps ?? planJoin?.speed_mbps ?? 0),
+              planPrice,
               status: (subRow.status as SubscriptionStatus) ?? 'active',
               endAt,
               daysUntilExpiry,
               isExpiringSoon: daysUntilExpiry <= 7 && daysUntilExpiry >= 0,
               isOverdue: daysUntilExpiry < 0 || user.payment_status === 'overdue',
-              billingCycle: (subRow.billing_cycle as 'monthly' | 'quarterly' | 'annual') ?? null,
+              billingCycle,
               dataLimitGb:
                 planJoin?.data_limit_gb != null ? Number(planJoin.data_limit_gb) : null,
               isUnlimited: Boolean(planJoin?.is_unlimited),
             };
           }
+
+          const nextDueDate =
+            (user.next_due_date as string | null) ?? subscription?.endAt ?? null;
 
           const { data: payments } = await client
             .from('payments')
@@ -82,6 +91,7 @@ export const customerDashboardApi = baseApi.injectEndpoints({
             },
             subscription,
             outstanding: Number(user.outstanding_amount ?? 0),
+            nextDueDate,
             recentPayments: (payments ?? []).map((p) => ({
               id: String(p.id),
               amount: Number(p.total_amount),

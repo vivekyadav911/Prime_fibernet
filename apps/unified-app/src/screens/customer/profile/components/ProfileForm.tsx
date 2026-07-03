@@ -22,6 +22,7 @@ type ProfileFormProps = {
   defaultValues: ProfileFormValues;
   email: string;
   accountId?: string;
+  addressHint?: string;
   saving?: boolean;
   onSubmit: (values: ProfileFormValues) => Promise<void>;
 };
@@ -37,7 +38,7 @@ function FieldIcon({
   return <MaterialCommunityIcons name={name} size={20} color={theme.colors.outline} style={fieldIconStyle} />;
 }
 
-export function ProfileForm({ defaultValues, email, accountId, saving, onSubmit }: ProfileFormProps) {
+export function ProfileForm({ defaultValues, email, accountId, addressHint, saving, onSubmit }: ProfileFormProps) {
   const styles = useThemedStyles(createStyles);
   const { theme } = useCustomerTheme();
   const { control, handleSubmit, reset } = useForm<ProfileFormValues>({
@@ -110,7 +111,7 @@ export function ProfileForm({ defaultValues, email, accountId, saving, onSubmit 
               <FieldIcon name="map-marker-outline" fieldIconStyle={styles.fieldIcon} />
               <TextInput
                 style={[styles.input, styles.textarea]}
-                placeholder="Address"
+                placeholder="Street, area, city"
                 placeholderTextColor={theme.colors.textMuted}
                 multiline
                 value={value}
@@ -120,6 +121,7 @@ export function ProfileForm({ defaultValues, email, accountId, saving, onSubmit 
               />
             </View>
             {error ? <Text style={styles.error}>{error.message}</Text> : null}
+            {!value && addressHint ? <Text style={styles.hint}>{addressHint}</Text> : null}
           </View>
         )}
       />
@@ -199,6 +201,12 @@ const createStyles = (theme: CustomerTheme) =>
     textarea: { minHeight: 64, textAlignVertical: 'top' },
     readOnly: { opacity: 0.5, borderStyle: 'dashed' },
     error: { color: theme.colors.error, fontSize: 12, fontFamily: theme.fonts.body },
+    hint: {
+      color: theme.colors.textMuted,
+      fontSize: 12,
+      fontFamily: theme.fonts.body,
+      lineHeight: 18,
+    },
     divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: theme.spacing.sm },
     btn: { marginTop: theme.spacing.md },
   });
