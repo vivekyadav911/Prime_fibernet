@@ -145,6 +145,28 @@ export type ManualPaymentPayload = {
   reference?: string;
   notes?: string;
   confirmed?: boolean;
+  ticketId?: string;
+  bankAccountId?: string;
+  verificationMethod?: 'manual' | 'webhook';
+};
+
+export type BankAccountRecord = {
+  id: string;
+  nickname: string;
+  upi_vpa: string;
+  bank_name: string | null;
+  is_active: boolean;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BankAccountInput = {
+  nickname: string;
+  upi_vpa: string;
+  bank_name?: string;
+  is_active?: boolean;
+  is_default?: boolean;
 };
 
 export type CollectionDashboardKpis = {

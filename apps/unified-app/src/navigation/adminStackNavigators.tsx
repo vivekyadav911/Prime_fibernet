@@ -102,6 +102,7 @@ import { UserEditScreen } from '@/screens/admin/users/UserEditScreen';
 import { UserListScreen } from '@/screens/admin/users/UserListScreen';
 import { AdminAuditScreen } from '@/screens/admin/AdminAuditScreen';
 import {
+  BankAccountsScreen,
   CollectionAssignmentsScreen,
   CustomerCollectionDetailScreen,
   GatewayConfigScreen,
@@ -356,6 +357,7 @@ export function AdminPaymentsStackNav() {
       <PaymentsStack.Screen name="PaymentDetail" component={PaymentDetailScreen} options={{ title: 'Payment detail' }} />
       <PaymentsStack.Screen name="PaymentReview" component={PaymentReviewScreen} options={{ title: 'Review payment' }} />
       <PaymentsStack.Screen name="GatewayConfig" component={GatewayConfigScreen} options={{ title: 'Payment gateways' }} />
+      <PaymentsStack.Screen name="BankAccounts" component={BankAccountsScreen} options={{ title: 'Bank accounts' }} />
       <PaymentsStack.Screen name="PaymentAnalytics" component={PaymentAnalyticsScreen} options={{ title: 'Payment analytics' }} />
       <PaymentsStack.Screen name="Refund" component={RefundScreen} options={{ title: 'Refund' }} />
       <PaymentsStack.Screen

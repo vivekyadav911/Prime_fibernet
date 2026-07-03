@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type {
+  BankAccountInput,
+  BankAccountRecord,
   CashCollectionPayload,
   CollectionAssignmentEvent,
   CollectionDashboardKpis,
@@ -78,6 +80,19 @@ function mapPayment(row: Record<string, unknown>): PaymentRecord {
     customer: row.customer as PaymentRecord['customer'],
     officer: mapOfficerJoin(row.officer),
     gateway: row.gateway as PaymentRecord['gateway'],
+  };
+}
+
+function mapBankAccount(row: Record<string, unknown>): BankAccountRecord {
+  return {
+    id: String(row.id),
+    nickname: String(row.nickname),
+    upi_vpa: String(row.upi_vpa),
+    bank_name: (row.bank_name as string) ?? null,
+    is_active: Boolean(row.is_active),
+    is_default: Boolean(row.is_default),
+    created_at: String(row.created_at),
+    updated_at: String(row.updated_at ?? row.created_at),
   };
 }
 
@@ -758,6 +773,9 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             p_reference: body.reference ?? null,
             p_notes: body.notes ?? null,
             p_confirmed: body.confirmed ?? false,
+            p_ticket_id: body.ticketId ?? null,
+            p_bank_account_id: body.bankAccountId ?? null,
+            p_verification_method: body.verificationMethod ?? 'manual',
           });
           if (error) throw error;
           const result = data as { payment_id?: string; status?: string };
@@ -768,6 +786,72 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
         },
       }),
       invalidatesTags: ['Payments', 'CollectionAssignments', 'Analytics'],
+    }),
+
+    getBankAccounts: builder.query<BankAccountRecord[], void>({
+      query: () => ({
+        handler: async (client) => {
+          const { data, error } = await client
+            .from('bank_accounts')
+            .select('*')
+            .eq('is_active', true)
+            .order('is_default', { ascending: false })
+            .order('nickname', { ascending: true });
+          if (error) throw error;
+          return (data ?? []).map((row) => mapBankAccount(row as Record<string, unknown>));
+        },
+      }),
+      providesTags: [{ type: 'Payments', id: 'bank-accounts' }],
+    }),
+
+    getBankAccountsAdmin: builder.query<BankAccountRecord[], void>({
+      query: () => ({
+        handler: async (client) => {
+          const { data, error } = await client
+            .from('bank_accounts')
+            .select('*')
+            .order('is_default', { ascending: false })
+            .order('nickname', { ascending: true });
+          if (error) throw error;
+          return (data ?? []).map((row) => mapBankAccount(row as Record<string, unknown>));
+        },
+      }),
+      providesTags: [{ type: 'Payments', id: 'bank-accounts-admin' }],
+    }),
+
+    upsertBankAccount: builder.mutation<BankAccountRecord, BankAccountInput & { id?: string }>({
+      query: (body) => ({
+        handler: async (client) => {
+          const payload = {
+            nickname: body.nickname.trim(),
+            upi_vpa: body.upi_vpa.trim(),
+            bank_name: body.bank_name?.trim() ?? null,
+            is_active: body.is_active ?? true,
+            is_default: body.is_default ?? false,
+          };
+          if (body.id) {
+            const { data, error } = await client
+              .from('bank_accounts')
+              .update(payload)
+              .eq('id', body.id)
+              .select('*')
+              .single();
+            if (error) throw error;
+            return mapBankAccount(data as Record<string, unknown>);
+          }
+          const { data, error } = await client
+            .from('bank_accounts')
+            .insert(payload)
+            .select('*')
+            .single();
+          if (error) throw error;
+          return mapBankAccount(data as Record<string, unknown>);
+        },
+      }),
+      invalidatesTags: [
+        { type: 'Payments', id: 'bank-accounts' },
+        { type: 'Payments', id: 'bank-accounts-admin' },
+      ],
     }),
 
     getPaymentActivityTimeline: builder.query<PaymentActivityEvent[], string>({
@@ -858,6 +942,9 @@ export const {
   useInitiateRefundV2Mutation,
   useRecordManualPaymentMutation,
   useGetPaymentActivityTimelineQuery,
+  useGetBankAccountsQuery,
+  useGetBankAccountsAdminQuery,
+  useUpsertBankAccountMutation,
   useVerifyOpenPoolConsistencyQuery,
   useCreateGstInvoiceRequestMutation,
 } = paymentCollectionApi;

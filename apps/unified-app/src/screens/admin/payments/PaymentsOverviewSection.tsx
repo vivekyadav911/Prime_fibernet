@@ -36,6 +36,9 @@ export function PaymentsOverviewSection({ filters, pendingSum, onFilterPendingRe
           <Pressable onPress={() => navigation.navigate('CollectionAssignments')}>
             <Text style={styles.link}>Assignments</Text>
           </Pressable>
+          <Pressable onPress={() => navigation.navigate('BankAccounts')}>
+            <Text style={styles.link}>Bank accounts</Text>
+          </Pressable>
           <Pressable onPress={() => navigation.navigate('GatewayConfig')}>
             <Text style={styles.link}>Gateways</Text>
           </Pressable>

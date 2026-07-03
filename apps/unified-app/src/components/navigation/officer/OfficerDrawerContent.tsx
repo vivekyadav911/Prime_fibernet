@@ -19,6 +19,7 @@ import type { OfficerDrawerParamList } from '@/types/navigation';
 type DrawerItem = {
   route: keyof OfficerDrawerParamList;
   screen?: 'AssignedCustomers' | 'CollectionsList';
+  screenParams?: { initialTab?: 'assigned' | 'open_pool' };
   label: string;
   iconRoute: string;
   showBadge?: boolean;
@@ -48,7 +49,8 @@ const SECTIONS: DrawerSection[] = [
       { route: 'CollectionsStack', label: 'Collections', iconRoute: 'CollectionsStack', showBadge: true },
       {
         route: 'CollectionsStack',
-        screen: 'AssignedCustomers',
+        screen: 'CollectionsList',
+        screenParams: { initialTab: 'open_pool' },
         label: 'Collect Payment',
         iconRoute: 'AssignedCustomers',
       },
@@ -106,10 +108,10 @@ export function OfficerDrawerContent(props: DrawerContentComponentProps) {
   );
 
   const navigate = useCallback(
-    (route: keyof OfficerDrawerParamList, screen?: DrawerItem['screen']) => {
+    (route: keyof OfficerDrawerParamList, screen?: DrawerItem['screen'], screenParams?: DrawerItem['screenParams']) => {
       if (screen) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        navigation.navigate(route as any, { screen });
+        navigation.navigate(route as any, { screen, params: screenParams });
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         navigation.navigate(route as any);
@@ -150,7 +152,7 @@ export function OfficerDrawerContent(props: DrawerContentComponentProps) {
               <Pressable
                 key={itemKey}
                 style={[styles.item, isActiveItem && styles.itemActive]}
-                onPress={() => navigate(item.route, item.screen)}
+                onPress={() => navigate(item.route, item.screen, item.screenParams)}
               >
                 {isActiveItem ? <View style={styles.activeBar} /> : null}
                 <OfficerDrawerIcon

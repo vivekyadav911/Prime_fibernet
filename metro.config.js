@@ -27,6 +27,11 @@ config.resolver.extraNodeModules = {
     monorepoRoot,
     'node_modules/react-native-signature-canvas',
   ),
+  'react-native-qrcode-svg': path.join(
+    monorepoRoot,
+    'node_modules/react-native-qrcode-svg',
+  ),
+  qrcode: path.join(monorepoRoot, 'node_modules/qrcode'),
   jspdf: path.join(monorepoRoot, 'node_modules/jspdf'),
   html2canvas: path.join(monorepoRoot, 'node_modules/html2canvas'),
 };

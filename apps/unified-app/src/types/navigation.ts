@@ -146,7 +146,7 @@ export type OfficerRequestsStackParamList = {
 };
 
 export type OfficerCollectionsStackParamList = {
-  CollectionsList: undefined;
+  CollectionsList: { initialTab?: 'assigned' | 'open_pool' } | undefined;
   AssignedCustomers: undefined;
   CustomerPaymentHistory: { customerId: string; customerName: string };
   CashCollection: {
@@ -376,6 +376,7 @@ export type AdminPaymentsStackParamList = {
   PaymentDetail: { paymentId: string };
   PaymentReview: { paymentId: string };
   GatewayConfig: undefined;
+  BankAccounts: undefined;
   PaymentAnalytics: undefined;
   Refund: { paymentId: string };
   RecordPayment: undefined;
