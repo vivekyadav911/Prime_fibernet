@@ -12,13 +12,15 @@ export const plansApi = baseApi.injectEndpoints({
             .from('plans')
             .select('*')
             .eq('is_active', true)
-            .order('speed_mbps', { ascending: true });
+            .eq('is_deleted', false)
+            .order('sort_order', { ascending: true })
+            .order('price', { ascending: true });
           if (error) throw error;
           return (data ?? []).map((row) => mapPlan(row as Record<string, unknown>));
         },
       }),
       providesTags: ['Plans'],
-      keepUnusedDataFor: 60,
+      keepUnusedDataFor: 120,
     }),
 
     getPlanById: builder.query<Plan, string>({
@@ -84,7 +86,7 @@ export const plansApi = baseApi.injectEndpoints({
     deletePlan: builder.mutation<void, string>({
       query: (id) => ({
         handler: async (client) => {
-          const { error } = await client.from('plans').update({ is_active: false }).eq('id', id);
+          const { error } = await client.from('plans').update({ is_deleted: true, is_active: false }).eq('id', id);
           if (error) throw error;
         },
       }),

@@ -17,6 +17,7 @@ import { CategoriesScreen } from '@/screens/admin/assets/inventory/CategoriesScr
 import { InventoryHistoryScreen } from '@/screens/admin/assets/inventory/InventoryHistoryScreen';
 import { InvoiceHistoryScreen } from '@/screens/admin/finance/invoices/InvoiceHistoryScreen';
 import { InvoiceListScreen } from '@/screens/admin/finance/invoices/InvoiceListScreen';
+import { GstInvoiceRequestsScreen } from '@/screens/admin/finance/invoices/GstInvoiceRequestsScreen';
 import { CreateInvoiceScreen } from '@/screens/admin/finance/invoices/CreateInvoiceScreen';
 import { InvoiceSettingsScreen } from '@/screens/admin/finance/invoices/InvoiceSettingsScreen';
 import { ManualGSTInvoiceScreen } from '@/screens/admin/finance/invoices/ManualGSTInvoiceScreen';
@@ -373,6 +374,11 @@ export function AdminInvoicesStackNav() {
   return (
     <InvoicesStack.Navigator screenOptions={adminStackScreenOptions}>
       <InvoicesStack.Screen name="InvoiceList" component={InvoiceListScreen} options={{ title: 'Invoices' }} />
+      <InvoicesStack.Screen
+        name="GstInvoiceRequests"
+        component={GstInvoiceRequestsScreen}
+        options={{ title: 'GST invoice requests' }}
+      />
       <InvoicesStack.Screen name="InvoiceHistory" component={InvoiceHistoryScreen} options={{ title: 'Invoice history' }} />
       <InvoicesStack.Screen name="CreateInvoice" component={CreateInvoiceScreen} options={{ title: 'Create invoice' }} />
       <InvoicesStack.Screen name="ManualGstInvoice" component={ManualGSTInvoiceScreen} options={{ title: 'Manual GST invoice' }} />

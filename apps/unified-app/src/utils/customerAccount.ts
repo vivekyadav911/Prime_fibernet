@@ -1,11 +1,13 @@
-/** Display account number from DB (`users.customer_id`) without client-side prefixes. */
+/** Display account number from DB (`users.customer_id`) with PFN fallback. */
 export function formatCustomerAccountId(
   customerId: string | null | undefined,
   fallbackUserId?: string,
 ): string {
   const trimmed = customerId?.trim();
   if (trimmed) return trimmed;
-  if (fallbackUserId) return fallbackUserId;
+  if (fallbackUserId) {
+    return `PFN-${fallbackUserId.replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+  }
   return '—';
 }
 

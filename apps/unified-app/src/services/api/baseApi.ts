@@ -23,6 +23,7 @@ const api = createApi({
     'Audit',
     'Notifications',
     'Invoices',
+    'GstInvoiceRequests',
     'Payroll',
     'Roles',
     'Reports',

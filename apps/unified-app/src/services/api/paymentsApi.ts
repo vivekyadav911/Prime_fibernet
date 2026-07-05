@@ -203,8 +203,16 @@ export const paymentsApi = baseApi.injectEndpoints({
     }),
 
     verifyPayment: builder.mutation<
-      { success: boolean; status?: string },
-      { paymentId: string; orderId?: string; gateway?: PaymentGateway; paymentResponse?: Record<string, unknown> }
+      { success: boolean; status?: string; verified?: boolean },
+      {
+        paymentId: string;
+        orderId?: string;
+        gateway?: PaymentGateway;
+        paymentResponse?: Record<string, unknown>;
+        razorpayPaymentId?: string;
+        razorpaySignature?: string;
+        pollOnly?: boolean;
+      }
     >({
       query: (body) => ({
         handler: async (client) => {
@@ -232,16 +240,45 @@ export const paymentsApi = baseApi.injectEndpoints({
               paymentId: body.paymentId,
               orderId: body.orderId,
               gateway: body.gateway,
+              razorpayPaymentId: body.razorpayPaymentId,
+              razorpaySignature: body.razorpaySignature,
+              pollOnly: body.pollOnly ? '1' : undefined,
             },
           });
           if (error) throw error;
           return {
             success: Boolean((data as { success?: boolean })?.success),
             status: (data as { status?: string })?.status,
+            verified: Boolean((data as { verified?: boolean })?.verified),
           };
         },
       }),
       invalidatesTags: ['Payments', 'Subscriptions'],
+    }),
+
+    pollPaymentVerification: builder.mutation<
+      { success: boolean; status?: string; verified?: boolean },
+      { paymentId: string; orderId?: string; gateway?: PaymentGateway }
+    >({
+      query: (body) => ({
+        handler: async (client) => {
+          const { data, error } = await client.functions.invoke('verify-payment', {
+            body: {
+              paymentId: body.paymentId,
+              orderId: body.orderId,
+              gateway: body.gateway ?? 'razorpay',
+              pollOnly: '1',
+            },
+          });
+          if (error) throw error;
+          return {
+            success: Boolean((data as { success?: boolean })?.success),
+            status: (data as { status?: string })?.status,
+            verified: Boolean((data as { verified?: boolean })?.verified),
+          };
+        },
+      }),
+      invalidatesTags: ['Payments'],
     }),
 
     confirmPayment: builder.mutation<
@@ -415,6 +452,7 @@ export const {
   useCreatePaymentOrderMutation,
   useInitiateEasebuzzPaymentMutation,
   useVerifyPaymentMutation,
+  usePollPaymentVerificationMutation,
   useConfirmPaymentMutation,
   useGetPaymentStatusQuery,
   useGetInvoiceQuery,

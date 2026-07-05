@@ -377,6 +377,73 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_manual_audit_log: {
+        Row: {
+          action: string
+          edited_at: string
+          edited_by: string | null
+          edited_by_name: string
+          id: string
+          metadata: Json
+          new_value: Json
+          officer_id: string
+          previous_value: Json
+          reason: string
+          shift_date: string
+          shift_id: string | null
+        }
+        Insert: {
+          action: string
+          edited_at?: string
+          edited_by?: string | null
+          edited_by_name?: string
+          id?: string
+          metadata?: Json
+          new_value?: Json
+          officer_id: string
+          previous_value?: Json
+          reason: string
+          shift_date: string
+          shift_id?: string | null
+        }
+        Update: {
+          action?: string
+          edited_at?: string
+          edited_by?: string | null
+          edited_by_name?: string
+          id?: string
+          metadata?: Json
+          new_value?: Json
+          officer_id?: string
+          previous_value?: Json
+          reason?: string
+          shift_date?: string
+          shift_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_manual_audit_log_edited_by_fkey"
+            columns: ["edited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_manual_audit_log_officer_id_fkey"
+            columns: ["officer_id"]
+            isOneToOne: false
+            referencedRelation: "officers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_manual_audit_log_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -433,6 +500,39 @@ export type Database = {
           },
         ]
       }
+      bank_accounts: {
+        Row: {
+          bank_name: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          nickname: string
+          updated_at: string
+          upi_vpa: string
+        }
+        Insert: {
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          nickname: string
+          updated_at?: string
+          upi_vpa: string
+        }
+        Update: {
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          nickname?: string
+          updated_at?: string
+          upi_vpa?: string
+        }
+        Relationships: []
+      }
       broadcast_notifications: {
         Row: {
           audience_area: string | null
@@ -455,6 +555,7 @@ export type Database = {
           is_auto_generated: boolean | null
           is_draft: boolean | null
           is_scheduled: boolean | null
+          is_test: boolean
           linked_plan_id: string | null
           linked_request_id: string | null
           linked_ticket_id: string | null
@@ -496,6 +597,7 @@ export type Database = {
           is_auto_generated?: boolean | null
           is_draft?: boolean | null
           is_scheduled?: boolean | null
+          is_test?: boolean
           linked_plan_id?: string | null
           linked_request_id?: string | null
           linked_ticket_id?: string | null
@@ -537,6 +639,7 @@ export type Database = {
           is_auto_generated?: boolean | null
           is_draft?: boolean | null
           is_scheduled?: boolean | null
+          is_test?: boolean
           linked_plan_id?: string | null
           linked_request_id?: string | null
           linked_ticket_id?: string | null
@@ -1601,6 +1704,59 @@ export type Database = {
           },
         ]
       }
+      entity_activity_timeline: {
+        Row: {
+          actor_id: string | null
+          actor_role: string | null
+          created_at: string
+          customer_id: string | null
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          status: string | null
+          title: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string
+          customer_id?: string | null
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          status?: string | null
+          title: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string
+          customer_id?: string | null
+          entity_id?: string
+          entity_type?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          status?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_activity_timeline_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faq_categories: {
         Row: {
           color: string
@@ -1712,6 +1868,59 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "officers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gateway_events: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          gateway_order_id: string | null
+          gateway_payment_id: string | null
+          gateway_slug: string
+          id: string
+          payment_id: string | null
+          processed: boolean
+          processed_at: string | null
+          raw_payload: Json
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          gateway_order_id?: string | null
+          gateway_payment_id?: string | null
+          gateway_slug?: string
+          id?: string
+          payment_id?: string | null
+          processed?: boolean
+          processed_at?: string | null
+          raw_payload?: Json
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          gateway_order_id?: string | null
+          gateway_payment_id?: string | null
+          gateway_slug?: string
+          id?: string
+          payment_id?: string | null
+          processed?: boolean
+          processed_at?: string | null
+          raw_payload?: Json
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gateway_events_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
             referencedColumns: ["id"]
           },
         ]
@@ -1982,24 +2191,40 @@ export type Database = {
       }
       geofence_officer_assignments: {
         Row: {
+          active: boolean
+          assigned_at: string
+          assigned_by: string | null
           created_at: string
           geofence_id: string
           id: string
           officer_id: string
         }
         Insert: {
+          active?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
           created_at?: string
           geofence_id: string
           id?: string
           officer_id: string
         }
         Update: {
+          active?: boolean
+          assigned_at?: string
+          assigned_by?: string | null
           created_at?: string
           geofence_id?: string
           id?: string
           officer_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "geofence_officer_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "geofence_officer_assignments_geofence_id_fkey"
             columns: ["geofence_id"]
@@ -2068,6 +2293,60 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gst_invoice_requests: {
+        Row: {
+          admin_notes: string | null
+          billing_address: string | null
+          business_name: string | null
+          created_at: string
+          customer_id: string
+          gstin: string
+          id: string
+          payment_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          billing_address?: string | null
+          business_name?: string | null
+          created_at?: string
+          customer_id: string
+          gstin: string
+          id?: string
+          payment_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          billing_address?: string | null
+          business_name?: string | null
+          created_at?: string
+          customer_id?: string
+          gstin?: string
+          id?: string
+          payment_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gst_invoice_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gst_invoice_requests_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
             referencedColumns: ["id"]
           },
         ]
@@ -4357,12 +4636,16 @@ export type Database = {
       }
       payment_gateways: {
         Row: {
+          bank_account_id: string | null
           created_at: string | null
           credentials: Json | null
           display_name: string | null
           id: string
           is_active: boolean | null
           is_default: boolean | null
+          last_test_at: string | null
+          last_test_message: string | null
+          last_test_ok: boolean | null
           logo_url: string | null
           name: string
           slug: string
@@ -4372,12 +4655,16 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
+          bank_account_id?: string | null
           created_at?: string | null
           credentials?: Json | null
           display_name?: string | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
+          last_test_at?: string | null
+          last_test_message?: string | null
+          last_test_ok?: boolean | null
           logo_url?: string | null
           name: string
           slug: string
@@ -4387,12 +4674,16 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
+          bank_account_id?: string | null
           created_at?: string | null
           credentials?: Json | null
           display_name?: string | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
+          last_test_at?: string | null
+          last_test_message?: string | null
+          last_test_ok?: boolean | null
           logo_url?: string | null
           name?: string
           slug?: string
@@ -4401,7 +4692,15 @@ export type Database = {
           updated_at?: string | null
           webhook_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payment_gateways_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_notifications: {
         Row: {
@@ -4566,6 +4865,7 @@ export type Database = {
         Row: {
           account_number: string
           amount: number
+          bank_account_id: string | null
           billing_period_end: string | null
           billing_period_start: string | null
           cash_collection_notes: string | null
@@ -4574,9 +4874,11 @@ export type Database = {
           collected_by: string | null
           collection_latitude: number | null
           collection_longitude: number | null
+          collection_source: string | null
           confirmed_at: string | null
           created_at: string | null
           currency: string | null
+          customer_email_snapshot: string | null
           customer_id: string
           customer_name: string
           customer_phone: string | null
@@ -4589,6 +4891,7 @@ export type Database = {
           gateway_order_id: string | null
           gateway_payment_id: string | null
           gateway_raw_response: Json | null
+          gateway_reference: string | null
           gateway_signature: string | null
           gateway_slug: string | null
           id: string
@@ -4596,21 +4899,28 @@ export type Database = {
           legacy_user_payment_id: string | null
           method: Database["public"]["Enums"]["payment_method"]
           next_due_date: string | null
+          notes: string | null
           paid_at: string | null
           payment_number: string
+          plan_id: string | null
           plan_name: string | null
+          product_id: string | null
           receipt_number: string | null
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["payment_status"] | null
           tax_amount: number | null
+          ticket_id: string | null
           total_amount: number
           updated_at: string | null
+          verification_method: string | null
+          version: number
         }
         Insert: {
           account_number: string
           amount: number
+          bank_account_id?: string | null
           billing_period_end?: string | null
           billing_period_start?: string | null
           cash_collection_notes?: string | null
@@ -4619,9 +4929,11 @@ export type Database = {
           collected_by?: string | null
           collection_latitude?: number | null
           collection_longitude?: number | null
+          collection_source?: string | null
           confirmed_at?: string | null
           created_at?: string | null
           currency?: string | null
+          customer_email_snapshot?: string | null
           customer_id: string
           customer_name: string
           customer_phone?: string | null
@@ -4634,6 +4946,7 @@ export type Database = {
           gateway_order_id?: string | null
           gateway_payment_id?: string | null
           gateway_raw_response?: Json | null
+          gateway_reference?: string | null
           gateway_signature?: string | null
           gateway_slug?: string | null
           id?: string
@@ -4641,21 +4954,28 @@ export type Database = {
           legacy_user_payment_id?: string | null
           method: Database["public"]["Enums"]["payment_method"]
           next_due_date?: string | null
+          notes?: string | null
           paid_at?: string | null
           payment_number: string
+          plan_id?: string | null
           plan_name?: string | null
+          product_id?: string | null
           receipt_number?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           tax_amount?: number | null
+          ticket_id?: string | null
           total_amount: number
           updated_at?: string | null
+          verification_method?: string | null
+          version?: number
         }
         Update: {
           account_number?: string
           amount?: number
+          bank_account_id?: string | null
           billing_period_end?: string | null
           billing_period_start?: string | null
           cash_collection_notes?: string | null
@@ -4664,9 +4984,11 @@ export type Database = {
           collected_by?: string | null
           collection_latitude?: number | null
           collection_longitude?: number | null
+          collection_source?: string | null
           confirmed_at?: string | null
           created_at?: string | null
           currency?: string | null
+          customer_email_snapshot?: string | null
           customer_id?: string
           customer_name?: string
           customer_phone?: string | null
@@ -4679,6 +5001,7 @@ export type Database = {
           gateway_order_id?: string | null
           gateway_payment_id?: string | null
           gateway_raw_response?: Json | null
+          gateway_reference?: string | null
           gateway_signature?: string | null
           gateway_slug?: string | null
           id?: string
@@ -4686,19 +5009,32 @@ export type Database = {
           legacy_user_payment_id?: string | null
           method?: Database["public"]["Enums"]["payment_method"]
           next_due_date?: string | null
+          notes?: string | null
           paid_at?: string | null
           payment_number?: string
+          plan_id?: string | null
           plan_name?: string | null
+          product_id?: string | null
           receipt_number?: string | null
           review_notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["payment_status"] | null
           tax_amount?: number | null
+          ticket_id?: string | null
           total_amount?: number
           updated_at?: string | null
+          verification_method?: string | null
+          version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_collected_by_fkey"
             columns: ["collected_by"]
@@ -4717,7 +5053,35 @@ export type Database = {
             foreignKeyName: "payments_gateway_id_fkey"
             columns: ["gateway_id"]
             isOneToOne: false
+            referencedRelation: "gateway_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_gateway_id_fkey"
+            columns: ["gateway_id"]
+            isOneToOne: false
             referencedRelation: "payment_gateways"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_sla_live"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
             referencedColumns: ["id"]
           },
         ]
@@ -5114,6 +5478,80 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_change_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          current_plan_id: string | null
+          customer_id: string
+          effective_date: string | null
+          id: string
+          reason: string | null
+          requested_cycle: string
+          requested_plan_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          current_plan_id?: string | null
+          customer_id: string
+          effective_date?: string | null
+          id?: string
+          reason?: string | null
+          requested_cycle: string
+          requested_plan_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          current_plan_id?: string | null
+          customer_id?: string
+          effective_date?: string | null
+          id?: string
+          reason?: string | null
+          requested_cycle?: string
+          requested_plan_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_change_requests_current_plan_id_fkey"
+            columns: ["current_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_change_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_change_requests_requested_plan_id_fkey"
+            columns: ["requested_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_change_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           category: string | null
@@ -5192,6 +5630,7 @@ export type Database = {
           data: Json | null
           id: string
           is_read: boolean | null
+          is_test: boolean
           recipient_auth_id: string
           recipient_officer_id: string | null
           title: string
@@ -5205,6 +5644,7 @@ export type Database = {
           data?: Json | null
           id?: string
           is_read?: boolean | null
+          is_test?: boolean
           recipient_auth_id: string
           recipient_officer_id?: string | null
           title: string
@@ -5218,6 +5658,7 @@ export type Database = {
           data?: Json | null
           id?: string
           is_read?: boolean | null
+          is_test?: boolean
           recipient_auth_id?: string
           recipient_officer_id?: string | null
           title?: string
@@ -5338,28 +5779,40 @@ export type Database = {
       }
       request_activities: {
         Row: {
+          action: string | null
+          actor_name: string | null
           created_at: string | null
           id: string
+          metadata: Json
           note: string | null
           officer_id: string | null
+          performed_by_role: string
           photo_urls: string[] | null
           request_id: string | null
           updated_at: string | null
         }
         Insert: {
+          action?: string | null
+          actor_name?: string | null
           created_at?: string | null
           id?: string
+          metadata?: Json
           note?: string | null
           officer_id?: string | null
+          performed_by_role?: string
           photo_urls?: string[] | null
           request_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          action?: string | null
+          actor_name?: string | null
           created_at?: string | null
           id?: string
+          metadata?: Json
           note?: string | null
           officer_id?: string | null
+          performed_by_role?: string
           photo_urls?: string[] | null
           request_id?: string | null
           updated_at?: string | null
@@ -5381,9 +5834,25 @@ export type Database = {
           },
         ]
       }
+      request_number_sequences: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
       service_requests: {
         Row: {
           address: string | null
+          assigned_at: string | null
           category: string | null
           city: string | null
           completed_at: string | null
@@ -5393,14 +5862,17 @@ export type Database = {
           id: string
           is_escalated: boolean | null
           latitude: number | null
+          linked_ticket_id: string | null
           location_address: string | null
           location_lat: number | null
           location_lng: number | null
           longitude: number | null
           notes: string | null
           officer_id: string | null
+          officer_name: string | null
           plan_id: string | null
           priority: string | null
+          request_number: string
           request_type: string | null
           scheduled_at: string | null
           source: string | null
@@ -5416,6 +5888,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          assigned_at?: string | null
           category?: string | null
           city?: string | null
           completed_at?: string | null
@@ -5425,14 +5898,17 @@ export type Database = {
           id?: string
           is_escalated?: boolean | null
           latitude?: number | null
+          linked_ticket_id?: string | null
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
           longitude?: number | null
           notes?: string | null
           officer_id?: string | null
+          officer_name?: string | null
           plan_id?: string | null
           priority?: string | null
+          request_number: string
           request_type?: string | null
           scheduled_at?: string | null
           source?: string | null
@@ -5448,6 +5924,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          assigned_at?: string | null
           category?: string | null
           city?: string | null
           completed_at?: string | null
@@ -5457,14 +5934,17 @@ export type Database = {
           id?: string
           is_escalated?: boolean | null
           latitude?: number | null
+          linked_ticket_id?: string | null
           location_address?: string | null
           location_lat?: number | null
           location_lng?: number | null
           longitude?: number | null
           notes?: string | null
           officer_id?: string | null
+          officer_name?: string | null
           plan_id?: string | null
           priority?: string | null
+          request_number?: string
           request_type?: string | null
           scheduled_at?: string | null
           source?: string | null
@@ -5479,6 +5959,20 @@ export type Database = {
           user_phone?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "service_requests_linked_ticket_id_fkey"
+            columns: ["linked_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_sla_live"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_linked_ticket_id_fkey"
+            columns: ["linked_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_requests_officer_id_fkey"
             columns: ["officer_id"]
@@ -6082,6 +6576,51 @@ export type Database = {
           },
         ]
       }
+      ticket_customer_messages: {
+        Row: {
+          attachments: Json
+          created_at: string
+          id: string
+          message: string
+          sender_id: string | null
+          sender_type: string
+          ticket_id: string
+        }
+        Insert: {
+          attachments?: Json
+          created_at?: string
+          id?: string
+          message: string
+          sender_id?: string | null
+          sender_type: string
+          ticket_id: string
+        }
+        Update: {
+          attachments?: Json
+          created_at?: string
+          id?: string
+          message?: string
+          sender_id?: string | null
+          sender_type?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_customer_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_sla_live"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_customer_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_internal_notes: {
         Row: {
           author_id: string | null
@@ -6242,8 +6781,12 @@ export type Database = {
           escalation_level: number
           first_response_at: string | null
           id: string
+          is_ad_hoc_contact: boolean
+          lat: number | null
           linked_request_id: string | null
           linked_request_number: string | null
+          lng: number | null
+          plan_id: string | null
           priority: string
           resolution_sla_status: string
           resolution_summary: string | null
@@ -6261,6 +6804,7 @@ export type Database = {
           ticket_number: string
           title: string
           updated_at: string
+          version: number
         }
         Insert: {
           account_number?: string | null
@@ -6287,8 +6831,12 @@ export type Database = {
           escalation_level?: number
           first_response_at?: string | null
           id?: string
+          is_ad_hoc_contact?: boolean
+          lat?: number | null
           linked_request_id?: string | null
           linked_request_number?: string | null
+          lng?: number | null
+          plan_id?: string | null
           priority: string
           resolution_sla_status?: string
           resolution_summary?: string | null
@@ -6306,6 +6854,7 @@ export type Database = {
           ticket_number: string
           title: string
           updated_at?: string
+          version?: number
         }
         Update: {
           account_number?: string | null
@@ -6332,8 +6881,12 @@ export type Database = {
           escalation_level?: number
           first_response_at?: string | null
           id?: string
+          is_ad_hoc_contact?: boolean
+          lat?: number | null
           linked_request_id?: string | null
           linked_request_number?: string | null
+          lng?: number | null
+          plan_id?: string | null
           priority?: string
           resolution_sla_status?: string
           resolution_summary?: string | null
@@ -6351,6 +6904,7 @@ export type Database = {
           ticket_number?: string
           title?: string
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -6379,6 +6933,13 @@ export type Database = {
             columns: ["linked_request_id"]
             isOneToOne: false
             referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
             referencedColumns: ["id"]
           },
         ]
@@ -6894,6 +7455,80 @@ export type Database = {
       }
     }
     Views: {
+      gateway_configs: {
+        Row: {
+          bank_account_id: string | null
+          created_at: string | null
+          display_name: string | null
+          environment: string | null
+          environment_is_test: boolean | null
+          id: string | null
+          is_active: boolean | null
+          is_configured: boolean | null
+          is_default: boolean | null
+          is_test_mode: boolean | null
+          last_test_at: string | null
+          last_test_message: string | null
+          last_test_ok: boolean | null
+          logo_url: string | null
+          name: string | null
+          provider: string | null
+          supported_methods: string[] | null
+          updated_at: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          bank_account_id?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          environment?: never
+          environment_is_test?: never
+          id?: string | null
+          is_active?: boolean | null
+          is_configured?: never
+          is_default?: boolean | null
+          is_test_mode?: boolean | null
+          last_test_at?: string | null
+          last_test_message?: string | null
+          last_test_ok?: boolean | null
+          logo_url?: string | null
+          name?: string | null
+          provider?: string | null
+          supported_methods?: string[] | null
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          bank_account_id?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          environment?: never
+          environment_is_test?: never
+          id?: string | null
+          is_active?: boolean | null
+          is_configured?: never
+          is_default?: boolean | null
+          is_test_mode?: boolean | null
+          last_test_at?: string | null
+          last_test_message?: string | null
+          last_test_ok?: boolean | null
+          logo_url?: string | null
+          name?: string | null
+          provider?: string | null
+          supported_methods?: string[] | null
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_gateways_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       geography_columns: {
         Row: {
           coord_dimension: number | null
@@ -6967,6 +7602,36 @@ export type Database = {
           sla_breaches: number | null
           tickets_this_week: number | null
           tickets_today: number | null
+        }
+        Relationships: []
+      }
+      support_items_view: {
+        Row: {
+          customer_address: string | null
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          item_kind: string | null
+          linked_request_id: string | null
+          officer_full_name: string | null
+          officer_id: string | null
+          officer_name: string | null
+          officer_role: string | null
+          officer_user_name: string | null
+          plan_id: string | null
+          plan_is_active: boolean | null
+          plan_name: string | null
+          request_created_at: string | null
+          request_id: string | null
+          request_number: string | null
+          request_status: string | null
+          ticket_created_at: string | null
+          ticket_id: string | null
+          ticket_number: string | null
+          ticket_priority: string | null
+          ticket_status: string | null
+          updated_at: string | null
         }
         Relationships: []
       }
@@ -7234,6 +7899,10 @@ export type Database = {
         Returns: unknown
       }
       _st_within: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      active_officer_headcount_on_date: {
+        Args: { p_date: string }
+        Returns: number
+      }
       addauth: { Args: { "": string }; Returns: boolean }
       addgeometrycolumn:
         | {
@@ -7272,6 +7941,22 @@ export type Database = {
             }
             Returns: string
           }
+      admin_manual_attendance_entry: {
+        Args: {
+          p_check_in_time?: string
+          p_check_out_time?: string
+          p_confirm_override?: boolean
+          p_officer_id: string
+          p_reason?: string
+          p_shift_date: string
+          p_status: string
+        }
+        Returns: string
+      }
+      attendance_manual_edit_anomaly_count: {
+        Args: { p_hours?: number }
+        Returns: number
+      }
       backfill_ticket_sla: { Args: { p_dry_run?: boolean }; Returns: Json }
       bulk_assign_collection_officer: {
         Args: { p_customer_ids: string[]; p_officer_id?: string }
@@ -7281,6 +7966,7 @@ export type Database = {
         Args: { p_customer_id: string }
         Returns: Json
       }
+      count_collection_open_pool: { Args: never; Returns: number }
       current_customer_user_id: { Args: never; Returns: string }
       current_officer_id: { Args: never; Returns: string }
       disablelongtransactions: { Args: never; Returns: string }
@@ -7322,6 +8008,7 @@ export type Database = {
       }
       generate_complaint_number: { Args: never; Returns: string }
       generate_invoice_number: { Args: never; Returns: string }
+      generate_request_number: { Args: never; Returns: string }
       generate_ticket_number: { Args: never; Returns: string }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
@@ -7431,27 +8118,40 @@ export type Database = {
           test_mode: boolean
         }[]
       }
+      get_attendance_status_by_day: {
+        Args: { p_from_date: string; p_officer_id?: string; p_to_date: string }
+        Returns: {
+          active_headcount: number
+          check_in_method: string
+          check_in_time: string
+          check_out_time: string
+          geofence_verified: boolean
+          is_scheduled_working_day: boolean
+          officer_id: string
+          officer_name: string
+          shift_date: string
+          shift_id: string
+          status: string
+        }[]
+      }
       get_collection_dashboard_kpis: { Args: never; Returns: Json }
       get_customer_collection_history: {
         Args: { p_customer_id: string }
         Returns: {
-          actor_id: string | null
-          actor_role: string | null
-          assigned_officer_id: string | null
-          claimed_by_officer_id: string | null
-          created_at: string | null
+          actor_id: string
+          actor_role: string
+          assigned_officer_id: string
+          claimed_by_officer_id: string
+          created_at: string
           customer_id: string
+          event_source: string
           id: string
-          notes: string | null
+          notes: string
+          payment_id: string
           status: string
         }[]
-        SetofOptions: {
-          from: "*"
-          to: "collection_assignment_events"
-          isOneToOne: false
-          isSetofReturn: true
-        }
       }
+      get_customer_id: { Args: never; Returns: string }
       get_officer_assigned_customers: {
         Args: { p_query?: string }
         Returns: {
@@ -7485,6 +8185,7 @@ export type Database = {
         Returns: {
           account_number: string
           amount: number
+          bank_account_id: string | null
           billing_period_end: string | null
           billing_period_start: string | null
           cash_collection_notes: string | null
@@ -7493,9 +8194,11 @@ export type Database = {
           collected_by: string | null
           collection_latitude: number | null
           collection_longitude: number | null
+          collection_source: string | null
           confirmed_at: string | null
           created_at: string | null
           currency: string | null
+          customer_email_snapshot: string | null
           customer_id: string
           customer_name: string
           customer_phone: string | null
@@ -7508,6 +8211,7 @@ export type Database = {
           gateway_order_id: string | null
           gateway_payment_id: string | null
           gateway_raw_response: Json | null
+          gateway_reference: string | null
           gateway_signature: string | null
           gateway_slug: string | null
           id: string
@@ -7515,17 +8219,23 @@ export type Database = {
           legacy_user_payment_id: string | null
           method: Database["public"]["Enums"]["payment_method"]
           next_due_date: string | null
+          notes: string | null
           paid_at: string | null
           payment_number: string
+          plan_id: string | null
           plan_name: string | null
+          product_id: string | null
           receipt_number: string | null
           review_notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["payment_status"] | null
           tax_amount: number | null
+          ticket_id: string | null
           total_amount: number
           updated_at: string | null
+          verification_method: string | null
+          version: number
         }[]
         SetofOptions: {
           from: "*"
@@ -7535,6 +8245,32 @@ export type Database = {
         }
       }
       get_officer_dashboard_stats: { Args: never; Returns: Json }
+      get_officer_invoices: {
+        Args: never
+        Returns: {
+          amount: number
+          created_at: string
+          customer_name: string
+          id: string
+          invoice_number: string
+          payment_id: string
+          pdf_url: string
+          status: string
+          total_amount: number
+        }[]
+      }
+      get_payment_activity_timeline: {
+        Args: { p_payment_id: string }
+        Returns: {
+          actor_role: string
+          created_at: string
+          event_type: string
+          id: string
+          notes: string
+          status: string
+          title: string
+        }[]
+      }
       get_public_company_settings: {
         Args: never
         Returns: {
@@ -7557,8 +8293,42 @@ export type Database = {
         }[]
       }
       gettransactionid: { Args: never; Returns: unknown }
+      initiate_payment_refund: {
+        Args: { p_amount: number; p_payment_id: string; p_reason: string }
+        Returns: Json
+      }
       is_admin: { Args: never; Returns: boolean }
       is_admin_user: { Args: never; Returns: boolean }
+      list_gateway_configs: {
+        Args: never
+        Returns: {
+          bank_account_id: string | null
+          created_at: string | null
+          display_name: string | null
+          environment: string | null
+          environment_is_test: boolean | null
+          id: string | null
+          is_active: boolean | null
+          is_configured: boolean | null
+          is_default: boolean | null
+          is_test_mode: boolean | null
+          last_test_at: string | null
+          last_test_message: string | null
+          last_test_ok: boolean | null
+          logo_url: string | null
+          name: string | null
+          provider: string | null
+          supported_methods: string[] | null
+          updated_at: string | null
+          webhook_url: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "gateway_configs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       log_collection_assignment_event: {
         Args: {
           p_actor_id?: string
@@ -7570,6 +8340,33 @@ export type Database = {
           p_status: string
         }
         Returns: undefined
+      }
+      log_entity_activity: {
+        Args: {
+          p_actor_id?: string
+          p_actor_role?: string
+          p_customer_id: string
+          p_entity_id: string
+          p_entity_type: string
+          p_event_type: string
+          p_metadata?: Json
+          p_notes?: string
+          p_status: string
+          p_title: string
+        }
+        Returns: undefined
+      }
+      log_support_activity: {
+        Args: {
+          p_action: string
+          p_actor_name?: string
+          p_actor_role?: string
+          p_description: string
+          p_entity_id: string
+          p_entity_type: string
+          p_metadata?: Json
+        }
+        Returns: string
       }
       longtransactionsenabled: { Args: never; Returns: boolean }
       map_legacy_payment_method: {
@@ -7598,6 +8395,10 @@ export type Database = {
       notify_officer_contract_signature: {
         Args: { p_contract_id: string }
         Returns: undefined
+      }
+      officer_is_scheduled_working_day: {
+        Args: { p_date: string; p_officer_id: string }
+        Returns: boolean
       }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
@@ -7723,6 +8524,33 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      record_manual_payment: {
+        Args: {
+          p_amount: number
+          p_bank_account_id?: string
+          p_confirmed?: boolean
+          p_customer_id: string
+          p_method: string
+          p_notes?: string
+          p_reference?: string
+          p_ticket_id?: string
+          p_verification_method?: string
+        }
+        Returns: Json
+      }
+      record_officer_cash_collection: {
+        Args: {
+          p_amount: number
+          p_customer_id: string
+          p_denominations?: Json
+          p_evidence_url?: string
+          p_latitude?: number
+          p_longitude?: number
+          p_notes?: string
+          p_ticket_id: string
+        }
+        Returns: Json
+      }
       release_collection_claim: {
         Args: { p_customer_id: string }
         Returns: Json
@@ -7749,6 +8577,7 @@ export type Database = {
           phone: string
         }[]
       }
+      seed_attendance_canonical_test_data: { Args: never; Returns: undefined }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
@@ -8526,8 +9355,12 @@ export type Database = {
           escalation_level: number
           first_response_at: string | null
           id: string
+          is_ad_hoc_contact: boolean
+          lat: number | null
           linked_request_id: string | null
           linked_request_number: string | null
+          lng: number | null
+          plan_id: string | null
           priority: string
           resolution_sla_status: string
           resolution_summary: string | null
@@ -8545,6 +9378,7 @@ export type Database = {
           ticket_number: string
           title: string
           updated_at: string
+          version: number
         }
         SetofOptions: {
           from: "*"
@@ -8591,8 +9425,12 @@ export type Database = {
           escalation_level: number
           first_response_at: string | null
           id: string
+          is_ad_hoc_contact: boolean
+          lat: number | null
           linked_request_id: string | null
           linked_request_number: string | null
+          lng: number | null
+          plan_id: string | null
           priority: string
           resolution_sla_status: string
           resolution_summary: string | null
@@ -8610,6 +9448,7 @@ export type Database = {
           ticket_number: string
           title: string
           updated_at: string
+          version: number
         }
         SetofOptions: {
           from: "tickets"
@@ -8646,6 +9485,8 @@ export type Database = {
         | "wallet"
         | "cash"
         | "cheque"
+        | "bank_transfer"
+        | "other"
       payment_status:
         | "initiated"
         | "pending_review"
@@ -8798,7 +9639,16 @@ export const Constants = {
         "officer_online",
         "auto_debit",
       ],
-      payment_method: ["card", "upi", "netbanking", "wallet", "cash", "cheque"],
+      payment_method: [
+        "card",
+        "upi",
+        "netbanking",
+        "wallet",
+        "cash",
+        "cheque",
+        "bank_transfer",
+        "other",
+      ],
       payment_status: [
         "initiated",
         "pending_review",

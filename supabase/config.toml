@@ -4,3 +4,12 @@ project_id = "afsaadjdhqnvsgkmmupq"
 
 [db]
 major_version = 15
+
+[functions.payment-webhook]
+verify_jwt = false
+
+[functions.verify-payment]
+verify_jwt = false
+
+[functions.create-payment-order]
+verify_jwt = false

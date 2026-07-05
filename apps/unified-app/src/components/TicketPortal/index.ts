@@ -1,4 +1,5 @@
 export { CreateTicketForm } from './CreateTicketForm';
+export { TicketAssignmentBoardModal } from './TicketAssignmentBoardModal';
 export { LinkRequestModal } from './LinkRequestModal';
 export { PortalTicketCard } from './PortalTicketCard';
 export { SelectCustomerModal } from './SelectCustomerModal';

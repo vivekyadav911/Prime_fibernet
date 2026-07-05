@@ -141,6 +141,45 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
           })}
         </View>
 
+        {!isCurrentPlan && currentPlan && plan ? (
+          <GlassCard style={styles.section} padded>
+            <Text style={styles.sectionTitle}>Plan comparison</Text>
+            <View style={styles.compareHeader}>
+              <Text style={styles.compareColTitle}>Current</Text>
+              <Text style={styles.compareArrow}>→</Text>
+              <Text style={styles.compareColTitle}>Selected</Text>
+            </View>
+            <View style={styles.compareRow}>
+              <Text style={styles.compareLabel}>{currentPlan.name}</Text>
+              <Text style={styles.compareSpacer} />
+              <Text style={styles.compareValue}>{plan.name}</Text>
+            </View>
+            <View style={styles.compareRow}>
+              <Text style={styles.compareMuted}>{currentPlan.speedMbps} Mbps</Text>
+              <Text style={styles.compareSpacer} />
+              <Text style={styles.compareValue}>{plan.speedMbps} Mbps</Text>
+            </View>
+            <View style={styles.compareRow}>
+              <Text style={styles.compareMuted}>
+                {formatCurrencyInr(getPriceForCycle(currentPlan, billingCycle))}/mo
+              </Text>
+              <Text style={styles.compareSpacer} />
+              <Text style={styles.compareValue}>
+                {formatCurrencyInr(getPriceForCycle(plan, billingCycle))}/mo
+              </Text>
+            </View>
+            <View style={styles.compareRow}>
+              <Text style={styles.compareMuted}>
+                {currentPlan.isUnlimited ? 'Unlimited data' : `${currentPlan.dataLimitGb ?? '—'} GB`}
+              </Text>
+              <Text style={styles.compareSpacer} />
+              <Text style={styles.compareValue}>
+                {plan.isUnlimited ? 'Unlimited data' : `${plan.dataLimitGb ?? '—'} GB`}
+              </Text>
+            </View>
+          </GlassCard>
+        ) : null}
+
         {isCurrentPlan && subscription ? (
           <GlassCard style={styles.section} padded>
             <Text style={styles.sectionTitle}>Renewal</Text>
@@ -159,7 +198,9 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
           <PlanFeatureList plan={plan} />
         </GlassCard>
 
-        <Text style={styles.gatewayNote}>Payments via {gatewayLabel}</Text>
+        <Text style={styles.gatewayNote}>
+          {activeGateway?.slug === 'razorpay' ? 'Secured by Razorpay' : `Payments via ${gatewayLabel}`}
+        </Text>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -309,6 +350,52 @@ const createStyles = (theme: CustomerTheme) =>
       color: theme.colors.onSurfaceVariant,
       fontFamily: theme.fonts.body,
       flex: 1,
+    },
+    compareHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: theme.spacing.xs,
+    },
+    compareColTitle: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      fontFamily: theme.fonts.bodySemiBold,
+      flex: 1,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    compareArrow: {
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.bodySemiBold,
+      paddingHorizontal: theme.spacing.sm,
+    },
+    compareRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xs,
+    },
+    compareLabel: {
+      ...theme.typography.bodyMedium,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.body,
+      flex: 1,
+    },
+    compareMuted: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+      flex: 1,
+    },
+    compareSpacer: {
+      width: 24,
+    },
+    compareValue: {
+      ...theme.typography.bodyMedium,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+      flex: 1,
+      textAlign: 'right',
     },
     gatewayNote: {
       textAlign: 'center',

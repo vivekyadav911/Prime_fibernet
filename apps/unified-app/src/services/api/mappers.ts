@@ -34,7 +34,7 @@ export function mapPlan(row: Record<string, unknown>): Plan {
 
   return {
     id: row.id as string,
-    name: row.name as string,
+    name: String(row.display_name ?? row.name ?? ''),
     speedMbps: speedFromLegacy,
     price: Number(row.price),
     priceQuarterly: row.price_quarterly != null ? Number(row.price_quarterly) : null,

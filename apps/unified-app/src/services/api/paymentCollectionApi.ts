@@ -256,6 +256,23 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
       providesTags: (_r, _e, id) => [{ type: 'Payments', id }],
     }),
 
+    getCustomerPaymentDetail: builder.query<PaymentRecord, string>({
+      query: (paymentId) => ({
+        handler: async (client) => {
+          const customerId = await resolveCustomerUserId(client);
+          const { data, error } = await client
+            .from('payments')
+            .select('*')
+            .eq('id', paymentId)
+            .eq('customer_id', customerId)
+            .single();
+          if (error) throw error;
+          return mapPayment(data as Record<string, unknown>);
+        },
+      }),
+      providesTags: (_r, _e, id) => [{ type: 'Payments', id }],
+    }),
+
     confirmPaymentV2: builder.mutation<void, ConfirmPaymentPayload>({
       query: ({ paymentId, nextDueDate, reviewNotes, cashDenominations, receiptNumber }) => ({
         handler: async (client) => {
@@ -974,6 +991,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
 export const {
   useGetPaymentsQuery,
   useGetPaymentDetailQuery,
+  useGetCustomerPaymentDetailQuery,
   useConfirmPaymentV2Mutation,
   useRejectPaymentV2Mutation,
   useGetPaymentAnalyticsV2Query,

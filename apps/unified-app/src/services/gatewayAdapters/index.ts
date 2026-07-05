@@ -79,6 +79,7 @@ export function parseWebViewPaymentMessage(data: string): {
   reason?: string;
   paymentId?: string;
   orderId?: string;
+  razorpayPaymentId?: string;
   signature?: string;
 } {
   try {
@@ -88,6 +89,7 @@ export function parseWebViewPaymentMessage(data: string): {
       reason: parsed.reason as string | undefined,
       paymentId: (parsed.paymentId as string) ?? undefined,
       orderId: (parsed.razorpay_order_id as string) ?? undefined,
+      razorpayPaymentId: (parsed.razorpay_payment_id as string) ?? undefined,
       signature: (parsed.razorpay_signature as string) ?? undefined,
     };
   } catch {

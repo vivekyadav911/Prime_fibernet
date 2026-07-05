@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { Plan } from '@prime/types';
 
 import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
@@ -8,24 +8,46 @@ import {
   useGetActiveSubscriptionQuery,
   useGetPlansQuery,
 } from '@/services/api';
-import { dedupePlansBySpeed } from '@/utils/dedupePlans';
+import { plansApi } from '@/services/api/plansApi';
+import { getSupabase } from '@/services/supabase';
+import { useAppDispatch } from '@/store/hooks';
 
 export type PlanSortKey = 'price' | 'speed' | 'popularity';
 
 export function usePlans() {
+  const dispatch = useAppDispatch();
   const { authUser: user, userId } = useCustomerIdentity();
   const plansQuery = useGetPlansQuery();
+  const { refetch: refetchPlans } = plansQuery;
   const gatewayQuery = useGetActivePaymentGatewayQuery();
   const subscriptionQuery = useGetActiveSubscriptionQuery(userId, { skip: !userId });
+
+  useEffect(() => {
+    const client = getSupabase();
+    const channel = client
+      .channel('customer-plans-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plans' }, () => {
+        dispatch(plansApi.util.invalidateTags(['Plans']));
+      })
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          void refetchPlans();
+        }
+      });
+
+    return () => {
+      void client.removeChannel(channel);
+    };
+  }, [dispatch, refetchPlans]);
 
   const currentPlanId = subscriptionQuery.data?.planId ?? null;
 
   const plans = useMemo(() => {
-    const deduped = dedupePlansBySpeed(plansQuery.data ?? []);
-    if (!currentPlanId) return deduped;
-    const current = deduped.find((plan) => plan.id === currentPlanId);
-    if (!current) return deduped;
-    return [current, ...deduped.filter((plan) => plan.id !== currentPlanId)];
+    const sorted = plansQuery.data ?? [];
+    if (!currentPlanId) return sorted;
+    const current = sorted.find((plan) => plan.id === currentPlanId);
+    if (!current) return sorted;
+    return [current, ...sorted.filter((plan) => plan.id !== currentPlanId)];
   }, [currentPlanId, plansQuery.data]);
 
   const currentPlan = useMemo(
@@ -34,6 +56,7 @@ export function usePlans() {
   );
 
   const paymentGateway = gatewayQuery.data?.display_name ?? 'Easebuzz';
+  const gatewaySlug = gatewayQuery.data?.slug ?? null;
 
   return {
     user,
@@ -43,6 +66,7 @@ export function usePlans() {
     currentPlanId,
     subscription: subscriptionQuery.data ?? null,
     paymentGateway,
+    gatewaySlug,
     isLoading: plansQuery.isLoading,
     error: plansQuery.error ?? gatewayQuery.error,
     refetch: plansQuery.refetch,

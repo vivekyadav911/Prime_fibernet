@@ -15,6 +15,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AssignOfficerModal } from '@/components/Requests/AssignOfficerModal';
 import { ExportRequestsModal } from '@/components/Requests/ExportRequestsModal';
 import { PortalTicketCard } from '@/components/TicketPortal/PortalTicketCard';
+import { TicketAssignmentBoardModal } from '@/components/TicketPortal/TicketAssignmentBoardModal';
 import { AdminEmptyState, FilterChips, SearchBar, SelectField } from '@/components/admin';
 import { useTicketPortal } from '@/hooks/useTicketPortal';
 import { useTicketPortalStats } from '@/hooks/useTicketPortalStats';
@@ -79,6 +80,7 @@ export function TicketPortalAllTicketsTab({ navigation, initialStatus }: Props) 
   } = useTicketPortal();
 
   const [mobileTab, setMobileTab] = useState<MobileAssignmentTab>('unassigned');
+  const [boardExpanded, setBoardExpanded] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<ServiceRequest | null>(null);
   const [assignTarget, setAssignTarget] = useState<PortalTicketItem | null>(null);
   const [exportVisible, setExportVisible] = useState(false);
@@ -120,6 +122,16 @@ export function TicketPortalAllTicketsTab({ navigation, initialStatus }: Props) 
       }
     },
     [navigation],
+  );
+
+  const handleBoardPressItem = useCallback(
+    (item: PortalTicketItem) => {
+      setBoardExpanded(false);
+      requestAnimationFrame(() => {
+        openItem(item);
+      });
+    },
+    [openItem],
   );
 
   const handleAssign = useCallback(
@@ -169,16 +181,21 @@ export function TicketPortalAllTicketsTab({ navigation, initialStatus }: Props) 
     }
   }, [exportRequests.length, exportTickets, filters]);
 
+  const handleAssignItem = useCallback((item: PortalTicketItem) => {
+    setAssignTarget(item);
+  }, []);
+
   const renderItem = useCallback(
     ({ item }: { item: PortalTicketItem }) => (
       <PortalTicketCard
         item={item}
         variant={item.assignedOfficerId ? 'assigned' : 'unassigned'}
+        density="compact"
         onPress={() => openItem(item)}
-        onAssign={!item.assignedOfficerId ? () => setAssignTarget(item) : undefined}
+        onAssign={!item.assignedOfficerId ? () => handleAssignItem(item) : undefined}
       />
     ),
-    [openItem],
+    [handleAssignItem, openItem],
   );
 
   const renderColumn = useCallback(
@@ -243,6 +260,15 @@ export function TicketPortalAllTicketsTab({ navigation, initialStatus }: Props) 
           </Text>
         </Pressable>
       </View>
+
+      {viewMode === 'assignment' ? (
+        <Pressable style={styles.expandBoardBtn} onPress={() => setBoardExpanded(true)}>
+          <Ionicons name="expand-outline" size={18} color={adminColors.primary} />
+          <Text style={styles.expandBoardText}>
+            Expand board ({unassignedItems.length} unassigned · {assignedItems.length} assigned)
+          </Text>
+        </Pressable>
+      ) : null}
 
       <SearchBar
         value={filters.searchQuery}
@@ -343,6 +369,17 @@ export function TicketPortalAllTicketsTab({ navigation, initialStatus }: Props) 
         />
       )}
 
+      <TicketAssignmentBoardModal
+        visible={boardExpanded}
+        onClose={() => setBoardExpanded(false)}
+        unassignedItems={unassignedItems}
+        assignedItems={assignedItems}
+        onPressItem={handleBoardPressItem}
+        onAssign={handleAssignItem}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+      />
+
       <RequestDetailModal
         visible={!!selectedRequest}
         request={selectedRequest}
@@ -393,6 +430,22 @@ const styles = StyleSheet.create({
   viewModeBtnActive: { backgroundColor: adminColors.primaryTint },
   viewModeText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   viewModeTextActive: { color: adminColors.primary },
+  expandBoardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: adminColors.primaryTint,
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 44,
+  },
+  expandBoardText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: adminColors.primary,
+  },
   controlsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

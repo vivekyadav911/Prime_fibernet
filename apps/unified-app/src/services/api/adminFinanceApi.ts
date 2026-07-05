@@ -19,6 +19,55 @@ import {
 
 import { baseApi } from './baseApi';
 
+export type GstInvoiceRequestStatus = 'pending' | 'processing' | 'issued' | 'rejected';
+
+export type GstInvoiceRequestRecord = {
+  id: string;
+  paymentId: string;
+  customerId: string;
+  customerName: string;
+  customerAccountId: string | null;
+  customerPhone: string | null;
+  paymentNumber: string | null;
+  paymentAmount: number | null;
+  paymentDate: string | null;
+  gstin: string;
+  businessName: string | null;
+  billingAddress: string | null;
+  status: GstInvoiceRequestStatus;
+  adminNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function mapGstInvoiceRequestRow(row: Record<string, unknown>): GstInvoiceRequestRecord {
+  const customer = row.customer as Record<string, unknown> | null | undefined;
+  const payment = row.payment as Record<string, unknown> | null | undefined;
+  return {
+    id: String(row.id),
+    paymentId: String(row.payment_id),
+    customerId: String(row.customer_id),
+    customerName: String(customer?.name ?? 'Customer'),
+    customerAccountId: customer?.customer_id != null ? String(customer.customer_id) : null,
+    customerPhone: customer?.phone != null ? String(customer.phone) : null,
+    paymentNumber: payment?.payment_number != null ? String(payment.payment_number) : null,
+    paymentAmount: payment?.total_amount != null ? Number(payment.total_amount) : null,
+    paymentDate:
+      payment?.confirmed_at != null
+        ? String(payment.confirmed_at)
+        : payment?.paid_at != null
+          ? String(payment.paid_at)
+          : null,
+    gstin: String(row.gstin),
+    businessName: row.business_name != null ? String(row.business_name) : null,
+    billingAddress: row.billing_address != null ? String(row.billing_address) : null,
+    status: row.status as GstInvoiceRequestStatus,
+    adminNotes: row.admin_notes != null ? String(row.admin_notes) : null,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at ?? row.created_at),
+  };
+}
+
 export type ManualGstLineItem = {
   description: string;
   quantity: number;
@@ -421,6 +470,54 @@ export const adminFinanceApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['Invoices'],
     }),
+
+    getGstInvoiceRequests: builder.query<
+      GstInvoiceRequestRecord[],
+      { status?: GstInvoiceRequestStatus | 'all' } | void
+    >({
+      query: (filters) => ({
+        handler: async (client) => {
+          let query = client
+            .from('gst_invoice_requests')
+            .select(
+              `
+              *,
+              customer:users!gst_invoice_requests_customer_id_fkey(id, name, customer_id, phone),
+              payment:payments!gst_invoice_requests_payment_id_fkey(id, payment_number, total_amount, confirmed_at)
+            `,
+            )
+            .order('created_at', { ascending: false })
+            .limit(200);
+          if (filters?.status && filters.status !== 'all') {
+            query = query.eq('status', filters.status);
+          }
+          const { data, error } = await query;
+          if (error) throw error;
+          return (data ?? []).map((row) => mapGstInvoiceRequestRow(row as Record<string, unknown>));
+        },
+      }),
+      providesTags: ['GstInvoiceRequests'],
+    }),
+
+    updateGstInvoiceRequest: builder.mutation<
+      void,
+      { id: string; status: GstInvoiceRequestStatus; adminNotes?: string }
+    >({
+      query: ({ id, status, adminNotes }) => ({
+        handler: async (client) => {
+          const { error } = await client
+            .from('gst_invoice_requests')
+            .update({
+              status,
+              admin_notes: adminNotes ?? null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', id);
+          if (error) throw error;
+        },
+      }),
+      invalidatesTags: ['GstInvoiceRequests'],
+    }),
   }),
 });
 
@@ -440,4 +537,6 @@ export const {
   useSendInvoiceMutation,
   useBulkSendInvoicesMutation,
   useCreateManualGstInvoiceMutation,
+  useGetGstInvoiceRequestsQuery,
+  useUpdateGstInvoiceRequestMutation,
 } = adminFinanceApi;

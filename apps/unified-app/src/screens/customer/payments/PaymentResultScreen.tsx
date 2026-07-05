@@ -27,7 +27,15 @@ type Props = NativeStackScreenProps<CustomerStackParamList, 'PaymentResult'>;
 type VerifyState = 'verifying' | 'success' | 'failed';
 
 export function PaymentResultScreen({ navigation, route }: Props) {
-  const { paymentId, amount, planName, orderId, gatewaySlug } = route.params;
+  const {
+    paymentId,
+    amount,
+    planName,
+    orderId,
+    gatewaySlug,
+    razorpayPaymentId,
+    razorpaySignature,
+  } = route.params;
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const { theme } = useCustomerTheme();
@@ -45,25 +53,52 @@ export function PaymentResultScreen({ navigation, route }: Props) {
   const runVerification = useCallback(async () => {
     setVerifyState('verifying');
     setVerifyError(null);
+
+    const gateway =
+      gatewaySlug === 'easebuzz' || gatewaySlug === 'razorpay'
+        ? (gatewaySlug === 'easebuzz' ? 'easybuzz' : 'razorpay')
+        : undefined;
+
+    const maxAttempts = razorpayPaymentId && razorpaySignature ? 1 : 5;
+
     try {
-      const result = await verifyPayment({
-        paymentId,
-        orderId,
-        gateway:
-          gatewaySlug === 'easebuzz' || gatewaySlug === 'razorpay'
-            ? (gatewaySlug === 'easebuzz' ? 'easybuzz' : 'razorpay')
-            : undefined,
-      }).unwrap();
-      dispatch(paymentCollectionApi.util.invalidateTags(['Payments']));
-      setVerifyState(result.success ? 'success' : 'failed');
-      if (!result.success) {
-        setVerifyError('Payment could not be confirmed. Contact support if money was debited.');
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const result = await verifyPayment({
+          paymentId,
+          orderId,
+          gateway,
+          razorpayPaymentId,
+          razorpaySignature,
+          pollOnly: attempt > 0 || (!razorpayPaymentId && !razorpaySignature),
+        }).unwrap();
+
+        if (result.success) {
+          dispatch(paymentCollectionApi.util.invalidateTags(['Payments']));
+          setVerifyState('success');
+          return;
+        }
+
+        if (result.status !== 'pending' || attempt === maxAttempts - 1) {
+          setVerifyState('failed');
+          setVerifyError('Payment could not be confirmed. Contact support if money was debited.');
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 3000));
       }
     } catch (e) {
       setVerifyState('failed');
       setVerifyError(e instanceof Error ? e.message : 'Verification failed');
     }
-  }, [dispatch, gatewaySlug, orderId, paymentId, verifyPayment]);
+  }, [
+    dispatch,
+    gatewaySlug,
+    orderId,
+    paymentId,
+    razorpayPaymentId,
+    razorpaySignature,
+    verifyPayment,
+  ]);
 
   useEffect(() => {
     void runVerification();

@@ -171,7 +171,14 @@ export function CustomerBillScreen() {
   );
 
   const onCheckoutComplete = useCallback(
-    (result: { success: boolean; paymentId: string; orderId?: string; reason?: string }) => {
+    (result: {
+      success: boolean;
+      paymentId: string;
+      orderId?: string;
+      reason?: string;
+      razorpayPaymentId?: string;
+      razorpaySignature?: string;
+    }) => {
       setCheckoutVisible(false);
       setCheckoutSession(null);
 
@@ -184,6 +191,8 @@ export function CustomerBillScreen() {
           amount: bill.totalPayable,
           planName: bill.planName ?? 'Broadband',
           gatewaySlug: activeGateway?.slug,
+          razorpayPaymentId: result.razorpayPaymentId,
+          razorpaySignature: result.razorpaySignature,
         });
         void refetch();
         void refetchHistory();

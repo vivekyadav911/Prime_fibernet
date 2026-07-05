@@ -7,6 +7,8 @@ import { decryptCredentials } from '../_shared/payments/crypto.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+const ONLINE_CHANNELS = new Set(['online_app', 'online_web']);
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -46,7 +48,7 @@ serve(async (req) => {
 
   const { data: existing } = await supabase
     .from('payments')
-    .select('id, status')
+    .select('id, status, channel')
     .eq('gateway_order_id', result.orderId)
     .maybeSingle();
 
@@ -54,7 +56,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Payment not found' }), { status: 404 });
   }
 
-  if (existing.status === 'pending_review' || existing.status === 'confirmed') {
+  if (existing.status === 'confirmed') {
     return new Response(JSON.stringify({ received: true, skipped: true }), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -75,20 +77,26 @@ serve(async (req) => {
     return new Response(JSON.stringify({ received: true }), { headers: { 'Content-Type': 'application/json' } });
   }
 
+  const isOnlineSelfServe = ONLINE_CHANNELS.has(String(existing.channel ?? ''));
+  const nextStatus = isOnlineSelfServe ? 'confirmed' : 'pending_review';
+  const paidAt = new Date().toISOString();
+
   await supabase
     .from('payments')
     .update({
-      status: 'pending_review',
+      status: nextStatus,
       gateway_payment_id: result.gatewayPaymentId,
       gateway_signature: result.signature,
       gateway_raw_response: result.raw,
       method: result.method ?? 'upi',
-      paid_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      paid_at: paidAt,
+      confirmed_at: isOnlineSelfServe ? paidAt : null,
+      verification_method: 'webhook',
+      updated_at: paidAt,
     })
     .eq('id', existing.id);
 
-  return new Response(JSON.stringify({ received: true }), {
+  return new Response(JSON.stringify({ received: true, status: nextStatus }), {
     headers: { 'Content-Type': 'application/json' },
   });
 });

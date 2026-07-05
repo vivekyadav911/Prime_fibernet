@@ -18,7 +18,14 @@ type EasebuzzCheckoutProps = {
   session: PaymentCheckoutSession | null;
   customer: PaymentCustomerContext;
   onClose: () => void;
-  onComplete: (result: { success: boolean; paymentId: string; orderId?: string; reason?: string }) => void;
+  onComplete: (result: {
+    success: boolean;
+    paymentId: string;
+    orderId?: string;
+    reason?: string;
+    razorpayPaymentId?: string;
+    razorpaySignature?: string;
+  }) => void;
 };
 
 export function EasebuzzCheckout({
@@ -56,14 +63,20 @@ export function EasebuzzCheckout({
   }, [customer.email, customer.name, customer.phone, session]);
 
   const finish = useCallback(
-    (success: boolean, reason?: string) => {
+    (
+      success: boolean,
+      reason?: string,
+      extras?: { orderId?: string; razorpayPaymentId?: string; razorpaySignature?: string },
+    ) => {
       if (!session || handledRef.current) return;
       handledRef.current = true;
       onComplete({
         success,
         paymentId: session.paymentId,
-        orderId: session.orderId,
+        orderId: extras?.orderId ?? session.orderId,
         reason,
+        razorpayPaymentId: extras?.razorpayPaymentId,
+        razorpaySignature: extras?.razorpaySignature,
       });
     },
     [onComplete, session],
@@ -73,7 +86,11 @@ export function EasebuzzCheckout({
     (data: string) => {
       const result = parseWebViewPaymentMessage(data);
       if (result.success) {
-        finish(true);
+        finish(true, undefined, {
+          orderId: result.orderId,
+          razorpayPaymentId: result.razorpayPaymentId,
+          razorpaySignature: result.signature,
+        });
       } else if (result.reason !== 'dismissed') {
         finish(false, result.reason ?? 'Payment failed');
       }

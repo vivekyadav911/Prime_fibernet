@@ -1,14 +1,20 @@
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CustomerPaymentStatusPill } from '@/components/customer/payments/CustomerPaymentStatusPill';
+import { GstInvoiceRequestSheet, type GstInvoiceFormValues } from '@/components/customer/payments/GstInvoiceRequestSheet';
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerButton, CustomerSkeletonLoader } from '@/components/customer/ui';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
-import { useGetPaymentDetailQuery } from '@/services/api/paymentCollectionApi';
+import {
+  useCreateGstInvoiceRequestMutation,
+  useGetCustomerPaymentDetailQuery,
+} from '@/services/api/paymentCollectionApi';
 import type { CustomerTheme } from '@/theme/customer';
 import { formatINR } from '@/utils/currencyFormat';
 import { formatDateIst } from '@/utils/formatDate';
+import { queryErrorMessage } from '@/utils/queryError';
 import { isFailedPayment, isPaidPayment } from '@/screens/customer/payments/utils/paymentHistoryFilters';
 
 type CustomerPaymentDetailSheetProps = {
@@ -30,6 +36,12 @@ function LineItem({ label, value, emphasis }: { label: string; value: string; em
   );
 }
 
+function formatPaymentMethod(method: string, gatewaySlug?: string | null): string {
+  const label = method.replace(/_/g, ' ').toUpperCase();
+  if (gatewaySlug) return `${label} · ${gatewaySlug.toUpperCase()}`;
+  return label;
+}
+
 export function CustomerPaymentDetailSheet({
   paymentId,
   visible,
@@ -41,12 +53,35 @@ export function CustomerPaymentDetailSheet({
   const insets = useSafeAreaInsets();
   const styles = useThemedStyles(createStyles);
   const { theme } = useCustomerTheme();
-  const { data: payment, isLoading, isError } = useGetPaymentDetailQuery(paymentId ?? '', {
-    skip: !visible || !paymentId,
-  });
+  const [gstSheetVisible, setGstSheetVisible] = useState(false);
+
+  const { data: payment, isLoading, isError, error, refetch } = useGetCustomerPaymentDetailQuery(
+    paymentId ?? '',
+    { skip: !visible || !paymentId },
+  );
+  const [createGstRequest, { isLoading: gstSubmitting }] = useCreateGstInvoiceRequestMutation();
 
   const failed = payment ? isFailedPayment(payment.status) : false;
   const paid = payment ? isPaidPayment(payment.status) : false;
+
+  const onGstSubmit = useCallback(
+    async (values: GstInvoiceFormValues) => {
+      if (!paymentId) return;
+      try {
+        await createGstRequest({
+          paymentId,
+          gstin: values.gstin,
+          businessName: values.businessName,
+          billingAddress: values.billingAddress,
+        }).unwrap();
+        setGstSheetVisible(false);
+        Alert.alert('Request submitted', 'We will process your GST invoice within 2 business days.');
+      } catch (e) {
+        Alert.alert('Could not submit request', queryErrorMessage(e, 'Please try again.'));
+      }
+    },
+    [createGstRequest, paymentId],
+  );
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -63,11 +98,16 @@ export function CustomerPaymentDetailSheet({
         {isLoading ? (
           <CustomerSkeletonLoader rows={4} rowHeight={48} />
         ) : isError || !payment ? (
-          <Text style={styles.error}>Could not load payment details.</Text>
+          <View style={styles.errorBlock}>
+            <Text style={styles.error}>
+              {queryErrorMessage(error, 'Could not load payment details.')}
+            </Text>
+            <CustomerButton label="Retry" variant="outline" onPress={() => void refetch()} />
+          </View>
         ) : (
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <View style={styles.topRow}>
-              <Text style={styles.invoiceNo}>Inv #{payment.payment_number}</Text>
+              <Text style={styles.invoiceNo}>Invoice #{payment.payment_number}</Text>
               <CustomerPaymentStatusPill status={payment.status} />
             </View>
 
@@ -89,14 +129,17 @@ export function CustomerPaymentDetailSheet({
               {payment.billing_period_start ? (
                 <LineItem
                   label="Period"
-                  value={`${formatDateIst(payment.billing_period_start)} – ${payment.billing_period_end ? formatDateIst(payment.billing_period_end) : '—'}`}
+                  value={new Date(payment.billing_period_start).toLocaleDateString('en-IN', {
+                    month: 'long',
+                    year: 'numeric',
+                  })}
                 />
               ) : null}
               {payment.due_date ? <LineItem label="Due date" value={formatDateIst(payment.due_date)} /> : null}
-              <LineItem label="Method" value={payment.method.replace('_', ' ').toUpperCase()} />
-              {payment.gateway_slug ? (
-                <LineItem label="Gateway" value={payment.gateway_slug.toUpperCase()} />
-              ) : null}
+              <LineItem
+                label="Method"
+                value={formatPaymentMethod(payment.method, payment.gateway_slug)}
+              />
               <LineItem
                 label="Date"
                 value={formatDateIst(payment.confirmed_at ?? payment.paid_at ?? payment.created_at)}
@@ -112,11 +155,19 @@ export function CustomerPaymentDetailSheet({
 
             <View style={styles.actions}>
               {paid ? (
-                <CustomerButton
-                  label="Download receipt"
-                  icon="download-outline"
-                  onPress={() => onDownloadReceipt(payment.id)}
-                />
+                <>
+                  <CustomerButton
+                    label="Download receipt"
+                    icon="download-outline"
+                    onPress={() => onDownloadReceipt(payment.id)}
+                  />
+                  <CustomerButton
+                    label="Request GST invoice"
+                    icon="file-document-outline"
+                    variant="outline"
+                    onPress={() => setGstSheetVisible(true)}
+                  />
+                </>
               ) : null}
               {failed && onRetryPayment ? (
                 <CustomerButton
@@ -130,6 +181,13 @@ export function CustomerPaymentDetailSheet({
           </ScrollView>
         )}
       </View>
+
+      <GstInvoiceRequestSheet
+        visible={gstSheetVisible}
+        loading={gstSubmitting}
+        onSubmit={(values) => void onGstSubmit(values)}
+        onClose={() => setGstSheetVisible(false)}
+      />
     </Modal>
   );
 }
@@ -250,9 +308,12 @@ const createStyles = (theme: CustomerTheme) =>
       gap: theme.spacing.sm,
       paddingTop: theme.spacing.sm,
     },
+    errorBlock: {
+      gap: theme.spacing.md,
+      paddingVertical: theme.spacing.lg,
+    },
     error: {
       color: theme.colors.error,
       fontFamily: theme.fonts.body,
-      paddingVertical: theme.spacing.lg,
     },
   });

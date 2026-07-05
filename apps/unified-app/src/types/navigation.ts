@@ -77,6 +77,8 @@ export type CustomerStackParamList = {
     planName: string;
     orderId?: string;
     gatewaySlug?: string;
+    razorpayPaymentId?: string;
+    razorpaySignature?: string;
   };
   CustomerBill: undefined;
   PaymentMethod: { amount: number; planName: string; customerId: string; paymentMethod?: PaymentMethod };
@@ -385,6 +387,7 @@ export type AdminPaymentsStackParamList = {
 export type AdminInvoicesStackParamList = {
   InvoiceList: undefined;
   InvoiceHistory: undefined;
+  GstInvoiceRequests: undefined;
   ManualGstInvoice: undefined;
   CreateInvoice: { invoiceType?: 'non_gst' | 'gst' | 'custom_gst' } | undefined;
   InvoiceSettings: undefined;

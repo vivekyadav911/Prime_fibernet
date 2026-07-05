@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, Share, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
@@ -29,6 +29,7 @@ import {
   useGetCustomerPaymentHistoryV2Query,
   useLazyGetPaymentReceiptQuery,
 } from '@/services/api/paymentCollectionApi';
+import { usePollPaymentVerificationMutation } from '@/services/api';
 import type { PaymentCheckoutSession } from '@/services/payment/PaymentProvider';
 import { getPaymentProvider, resolvePaymentProviderSlug } from '@/services/payment/PaymentProvider';
 import type { PaymentRecord } from '@/types/payments';
@@ -64,6 +65,49 @@ export function PaymentHistoryScreenV2() {
   const { data: activeGateway } = useGetActivePaymentGatewayQuery();
   const [fetchReceipt] = useLazyGetPaymentReceiptQuery();
   const [createOrder, { isLoading: orderLoading }] = useCreatePaymentOrderV2Mutation();
+  const [pollVerification] = usePollPaymentVerificationMutation();
+  const pollStartedAtRef = useRef<number | null>(null);
+
+  const pendingPayments = useMemo(
+    () =>
+      (data ?? []).filter(
+        (row) =>
+          (row.status === 'initiated' || row.status === 'pending_review') &&
+          Boolean(row.gateway_order_id),
+      ),
+    [data],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (pendingPayments.length === 0) return undefined;
+
+      pollStartedAtRef.current = Date.now();
+      const gatewaySlug = activeGateway?.slug ?? 'razorpay';
+
+      const tick = () => {
+        if (!pollStartedAtRef.current) return;
+        if (Date.now() - pollStartedAtRef.current > 5 * 60 * 1000) return;
+
+        for (const payment of pendingPayments) {
+          void pollVerification({
+            paymentId: payment.id,
+            orderId: payment.gateway_order_id ?? undefined,
+            gateway:
+              gatewaySlug === 'easebuzz'
+                ? 'easybuzz'
+                : gatewaySlug === 'razorpay'
+                  ? 'razorpay'
+                  : undefined,
+          });
+        }
+      };
+
+      tick();
+      const intervalId = setInterval(tick, 15_000);
+      return () => clearInterval(intervalId);
+    }, [activeGateway?.slug, pendingPayments, pollVerification]),
+  );
 
   const filtered = useMemo(
     () =>

@@ -25,7 +25,7 @@ export function PlansScreen() {
     currentPlan,
     getPriceForCycle,
     currentPlanId,
-    paymentGateway,
+    gatewaySlug,
     isLoading,
     error,
     refetch,
@@ -86,8 +86,9 @@ export function PlansScreen() {
             <Text style={styles.subheading}>
               Compare speeds and pricing. Tap a plan for full details and to request a change.
             </Text>
-            <Text style={styles.compareNote}>Plan comparison view — coming soon</Text>
-            <Text style={styles.gatewayNote}>Payments via {paymentGateway}</Text>
+            {gatewaySlug === 'razorpay' ? (
+              <Text style={styles.gatewayBadge}>Secured by Razorpay</Text>
+            ) : null}
           </View>
         }
         ListEmptyComponent={
@@ -122,16 +123,10 @@ const createStyles = (theme: CustomerTheme) =>
       color: theme.colors.onSurfaceVariant,
       fontFamily: theme.fonts.body,
     },
-    compareNote: {
-      ...theme.typography.caption,
-      color: theme.colors.textMuted,
-      fontFamily: theme.fonts.body,
-      fontStyle: 'italic',
-    },
-    gatewayNote: {
+    gatewayBadge: {
       color: theme.colors.textMuted,
       fontSize: 12,
-      fontFamily: theme.fonts.body,
+      fontFamily: theme.fonts.bodyMedium,
       marginTop: theme.spacing.xs,
     },
   });

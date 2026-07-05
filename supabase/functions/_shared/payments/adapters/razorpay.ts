@@ -1,5 +1,11 @@
 import type { GatewayAdapter, OrderContext, OrderResult, WebhookParseResult } from '../types.ts';
 
+function razorpayReceipt(paymentId: string, customerId: string): string {
+  const shortId = customerId.replace(/-/g, '').slice(0, 6).toUpperCase();
+  const timePart = Date.now().toString(36).toUpperCase();
+  return `PF${shortId}${timePart}`.slice(0, 40);
+}
+
 async function hmacSha256(secret: string, body: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw',
@@ -34,7 +40,7 @@ export const razorpayAdapter: GatewayAdapter = {
       body: JSON.stringify({
         amount: Math.round(ctx.amount * 100),
         currency: 'INR',
-        receipt: ctx.paymentId,
+        receipt: razorpayReceipt(ctx.paymentId, ctx.customerId),
         notes: { customer_id: ctx.customerId, payment_id: ctx.paymentId },
       }),
     });
@@ -63,6 +69,41 @@ export const razorpayAdapter: GatewayAdapter = {
       method: String(entity?.method ?? 'upi'),
       status,
       raw: payload,
+    };
+  },
+
+  async verifyPaymentSignature(
+    creds: Record<string, string>,
+    orderId: string,
+    paymentId: string,
+    signature: string,
+  ): Promise<boolean> {
+    const keySecret = creds.key_secret;
+    if (!keySecret || !signature) return false;
+    const body = `${orderId}|${paymentId}`;
+    const expected = await hmacSha256(keySecret, body);
+    return expected === signature;
+  },
+
+  async fetchCapturedPayment(
+    creds: Record<string, string>,
+    orderId: string,
+  ): Promise<{ paymentId: string; method: string } | null> {
+    const keyId = creds.key_id;
+    const keySecret = creds.key_secret;
+    if (!keyId || !keySecret || !orderId) return null;
+    const auth = btoa(`${keyId}:${keySecret}`);
+    const res = await fetch(`https://api.razorpay.com/v1/orders/${orderId}/payments`, {
+      headers: { Authorization: `Basic ${auth}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const items = (data?.items ?? []) as Array<Record<string, unknown>>;
+    const captured = items.find((p) => p.status === 'captured');
+    if (!captured) return null;
+    return {
+      paymentId: String(captured.id),
+      method: String(captured.method ?? 'upi'),
     };
   },
 

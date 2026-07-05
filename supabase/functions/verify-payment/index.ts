@@ -1,6 +1,8 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import { corsHeaders } from '../_shared/cors.ts';
+import { razorpayAdapter } from '../_shared/payments/adapters/razorpay.ts';
+import { decryptCredentials } from '../_shared/payments/crypto.ts';
 import {
   getWhatsAppSettings,
   logWhatsApp,
@@ -18,6 +20,14 @@ function cycleDays(cycle: BillingCycle): number {
   if (cycle === 'quarterly') return 90;
   if (cycle === 'annual') return 365;
   return 30;
+}
+
+function mapRazorpayMethod(method: string): string {
+  const m = method.toLowerCase();
+  if (m === 'card') return 'card';
+  if (m === 'netbanking') return 'netbanking';
+  if (m === 'wallet') return 'wallet';
+  return 'upi';
 }
 
 async function sendActivationWhatsApp(params: {
@@ -70,6 +80,95 @@ async function sendActivationWhatsApp(params: {
   });
 }
 
+async function confirmPortalPayment(params: {
+  supabase: ReturnType<typeof createClient>;
+  portalPayment: Record<string, unknown>;
+  paymentId: string;
+  orderId?: string;
+  gateway?: string;
+  gatewayPaymentId?: string;
+  method?: string;
+  billingCycle?: BillingCycle;
+  planId?: string | null;
+}) {
+  const {
+    supabase,
+    portalPayment,
+    paymentId,
+    orderId,
+    gateway,
+    gatewayPaymentId,
+    method,
+    billingCycle = 'monthly',
+    planId,
+  } = params;
+
+  const paidAt = new Date().toISOString();
+  await supabase
+    .from('payments')
+    .update({
+      status: 'confirmed',
+      gateway_order_id: orderId ?? (portalPayment.gateway_order_id as string | null),
+      gateway_payment_id: gatewayPaymentId ?? (portalPayment.gateway_payment_id as string | null),
+      gateway_slug: gateway ?? (portalPayment.gateway_slug as string | null),
+      method: method ? mapRazorpayMethod(method) : (portalPayment.method as string | undefined),
+      paid_at: paidAt,
+      confirmed_at: paidAt,
+      verification_method: 'webhook',
+    })
+    .eq('id', paymentId);
+
+  const resolvedPlanId = planId ?? null;
+  if (resolvedPlanId) {
+    const { data: plan } = await supabase
+      .from('plans')
+      .select('name, speed_mbps, validity_days')
+      .eq('id', resolvedPlanId)
+      .maybeSingle();
+    const days = cycleDays(billingCycle);
+    const start = new Date();
+    const end = new Date(start.getTime() + days * 86400000);
+    await supabase.from('subscriptions').insert({
+      user_id: portalPayment.customer_id,
+      plan_id: resolvedPlanId,
+      plan_name: plan?.name ?? portalPayment.plan_name,
+      speed_mbps: plan?.speed_mbps ?? null,
+      amount_paid: portalPayment.total_amount,
+      billing_cycle: billingCycle,
+      start_at: start.toISOString().slice(0, 10),
+      end_at: end.toISOString().slice(0, 10),
+      status: 'active',
+      auto_renew: true,
+    });
+
+    await sendActivationWhatsApp({
+      supabase,
+      customerName: (portalPayment.customer_name as string | null | undefined) ?? null,
+      customerPhone: (portalPayment.customer_phone as string | null | undefined) ?? null,
+      planName: (plan?.name as string | null | undefined) ?? (portalPayment.plan_name as string | null | undefined) ?? null,
+      referenceId: String(portalPayment.customer_id),
+    });
+  }
+
+  const { data: customerAuth } = await supabase
+    .from('users')
+    .select('auth_user_id')
+    .eq('id', portalPayment.customer_id as string)
+    .maybeSingle();
+
+  if (customerAuth?.auth_user_id) {
+    await supabase.from('portal_notifications').insert({
+      recipient_auth_id: customerAuth.auth_user_id,
+      type: 'payment_success',
+      category: 'payment',
+      title: 'Payment received',
+      body: `Payment of ₹${portalPayment.total_amount} received for ${portalPayment.plan_name ?? 'your plan'}`,
+      action_url: '/customer/payments',
+      data: { payment_id: paymentId },
+    });
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -83,91 +182,116 @@ serve(async (req) => {
       dev,
       billingCycle = 'monthly',
       planId,
+      razorpayPaymentId,
+      razorpaySignature,
+      pollOnly,
     } = body as Record<string, string>;
 
-    if (!paymentId) throw new Error('paymentId required');
+    if (!paymentId && !orderId) throw new Error('paymentId or orderId required');
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { data: portalPayment, error: portalErr } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('id', paymentId)
-      .maybeSingle();
+    let portalPayment: Record<string, unknown> | null = null;
+    if (paymentId) {
+      const { data, error: portalErr } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('id', paymentId)
+        .maybeSingle();
+      if (!portalErr && data) portalPayment = data as Record<string, unknown>;
+    } else if (orderId) {
+      const { data } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('gateway_order_id', orderId)
+        .maybeSingle();
+      if (data) portalPayment = data as Record<string, unknown>;
+    }
 
-    if (!portalErr && portalPayment) {
+    if (portalPayment) {
+      const resolvedPaymentId = String(portalPayment.id);
+      const resolvedOrderId = orderId ?? String(portalPayment.gateway_order_id ?? '');
+      const gatewaySlug = gateway ?? String(portalPayment.gateway_slug ?? 'razorpay');
+
       if (portalPayment.status === 'confirmed') {
-        return new Response(JSON.stringify({ success: true, alreadyVerified: true }), {
+        return new Response(JSON.stringify({ success: true, alreadyVerified: true, status: 'confirmed' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      await supabase
-        .from('payments')
-        .update({
-          status: 'confirmed',
-          gateway_order_id: orderId ?? portalPayment.gateway_order_id,
-          gateway_slug: gateway ?? portalPayment.gateway_slug,
-          paid_at: new Date().toISOString(),
-        })
-        .eq('id', paymentId);
-
-      const cycle = (billingCycle as BillingCycle) ?? 'monthly';
-      const resolvedPlanId = planId ?? null;
-      if (resolvedPlanId) {
-        const { data: plan } = await supabase
-          .from('plans')
-          .select('name, speed_mbps, validity_days')
-          .eq('id', resolvedPlanId)
-          .maybeSingle();
-        const days = cycleDays(cycle);
-        const start = new Date();
-        const end = new Date(start.getTime() + days * 86400000);
-        await supabase.from('subscriptions').insert({
-          user_id: portalPayment.customer_id,
-          plan_id: resolvedPlanId,
-          plan_name: plan?.name ?? portalPayment.plan_name,
-          speed_mbps: plan?.speed_mbps ?? null,
-          amount_paid: portalPayment.total_amount,
-          billing_cycle: cycle,
-          start_at: start.toISOString().slice(0, 10),
-          end_at: end.toISOString().slice(0, 10),
-          status: 'active',
-          auto_renew: true,
-        });
-
-        await sendActivationWhatsApp({
-          supabase,
-          customerName: (portalPayment.customer_name as string | null | undefined) ?? null,
-          customerPhone: (portalPayment.customer_phone as string | null | undefined) ?? null,
-          planName: (plan?.name as string | null | undefined) ?? (portalPayment.plan_name as string | null | undefined) ?? null,
-          referenceId: String(portalPayment.customer_id),
-        });
-      }
-
-      const { data: customerAuth } = await supabase
-        .from('users')
-        .select('auth_user_id')
-        .eq('id', portalPayment.customer_id)
+      const { data: gatewayRow } = await supabase
+        .from('payment_gateways')
+        .select('credentials')
+        .eq('slug', gatewaySlug)
         .maybeSingle();
+      const creds = await decryptCredentials((gatewayRow?.credentials ?? {}) as Record<string, string>);
 
-      if (customerAuth?.auth_user_id) {
-        await supabase.from('portal_notifications').insert({
-          recipient_auth_id: customerAuth.auth_user_id,
-          type: 'payment_success',
-          category: 'payment',
-          title: 'Payment received',
-          body: `Payment of ₹${portalPayment.total_amount} received for ${portalPayment.plan_name ?? 'your plan'}`,
-          action_url: '/customer/payments',
-          data: { payment_id: paymentId },
-        });
+      let gatewayPaymentId = razorpayPaymentId ?? '';
+      let method = 'upi';
+      let verified = false;
+
+      if (gatewaySlug === 'razorpay' && razorpayPaymentId && razorpaySignature && resolvedOrderId) {
+        verified = await razorpayAdapter.verifyPaymentSignature(
+          creds,
+          resolvedOrderId,
+          razorpayPaymentId,
+          razorpaySignature,
+        );
+        if (!verified && dev !== '1') {
+          throw new Error('Payment signature verification failed');
+        }
+        gatewayPaymentId = razorpayPaymentId;
+        verified = true;
+      } else if (gatewaySlug === 'razorpay' && resolvedOrderId && (pollOnly === '1' || pollOnly === 'true' || !razorpayPaymentId)) {
+        let captured: { paymentId: string; method: string } | null = null;
+        for (let i = 0; i < 3; i += 1) {
+          captured = await razorpayAdapter.fetchCapturedPayment(creds, resolvedOrderId);
+          if (captured) break;
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+        if (!captured) {
+          return new Response(
+            JSON.stringify({ success: false, status: 'pending', verified: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          );
+        }
+        gatewayPaymentId = captured.paymentId;
+        method = captured.method;
+        verified = true;
+      } else if (dev === '1') {
+        verified = true;
+      } else if (!pollOnly && gatewaySlug !== 'razorpay') {
+        verified = true;
+      } else if (!pollOnly && gatewaySlug === 'razorpay' && !razorpayPaymentId) {
+        throw new Error('razorpayPaymentId and razorpaySignature required for Razorpay verification');
       }
+
+      if (!verified) {
+        return new Response(
+          JSON.stringify({ success: false, status: 'pending', verified: false }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      await confirmPortalPayment({
+        supabase,
+        portalPayment,
+        paymentId: resolvedPaymentId,
+        orderId: resolvedOrderId,
+        gateway: gatewaySlug,
+        gatewayPaymentId,
+        method,
+        billingCycle: billingCycle as BillingCycle,
+        planId: planId ?? null,
+      });
 
       return new Response(
-        JSON.stringify({ success: true, subscription_id: resolvedPlanId }),
+        JSON.stringify({ success: true, verified: true, status: 'confirmed', subscription_id: planId ?? null }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+
+    if (!paymentId) throw new Error('Payment not found');
 
     const { data: payment, error } = await supabase
       .from('user_payments')

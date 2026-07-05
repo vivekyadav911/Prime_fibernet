@@ -66,6 +66,7 @@ serve(async (req) => {
       .eq('id', user.id)
       .maybeSingle();
     const callerIsAdmin = profile?.role === 'admin';
+    const callerIsCustomer = profile?.role === 'customer';
 
     const { data: payment, error: payErr } = await supabase
       .from('payments')
@@ -73,7 +74,10 @@ serve(async (req) => {
       .eq('id', paymentId)
       .single();
 
-    if (!payErr && payment && !callerIsAdmin) {
+    if (!payErr && payment && callerIsCustomer) {
+      const { data: customerUserId, error: cidErr } = await userClient.rpc('current_customer_user_id');
+      if (cidErr || !customerUserId || payment.customer_id !== customerUserId) return json403();
+    } else if (!payErr && payment && !callerIsAdmin && !callerIsCustomer) {
       // Officer can only generate receipts for payments they collected.
       const { data: officer } = await supabase
         .from('officers')

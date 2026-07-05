@@ -11,6 +11,7 @@ import { enqueueToast } from '@/store/slices/uiSlice';
 import {
   useBulkSendInvoicesMutation,
   useGetAdminInvoicesQuery,
+  useGetGstInvoiceRequestsQuery,
   useGetInvoiceStatsQuery,
   useLazyGetInvoiceByIdQuery,
   useSendInvoiceMutation,
@@ -39,6 +40,8 @@ export function InvoiceListScreen({ navigation }: Props) {
   const [sendChannel, setSendChannel] = useState<'email' | 'whatsapp'>('email');
 
   const { data: stats, isLoading: statsLoading } = useGetInvoiceStatsQuery();
+  const { data: gstRequests } = useGetGstInvoiceRequestsQuery({ status: 'pending' });
+  const pendingGstCount = gstRequests?.length ?? 0;
   const { data, isLoading, isError, error, refetch, isFetching } = useGetAdminInvoicesQuery({
     listFilter,
     search: search.trim() || undefined,
@@ -176,6 +179,14 @@ export function InvoiceListScreen({ navigation }: Props) {
             >
               <Text style={styles.btnSecondaryText}>History</Text>
             </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.btnSecondary, pressed && styles.btnPressed]}
+              onPress={() => navigation.navigate('GstInvoiceRequests')}
+            >
+              <Text style={styles.btnSecondaryText}>
+                GST requests{pendingGstCount > 0 ? ` (${pendingGstCount})` : ''}
+              </Text>
+            </Pressable>
           </View>
           <Pressable
             style={({ pressed }) => [styles.btnPrimary, pressed && styles.btnPressed]}
@@ -211,6 +222,17 @@ export function InvoiceListScreen({ navigation }: Props) {
               surface="teal"
               status="healthy"
             />
+            {pendingGstCount > 0 ? (
+              <Pressable onPress={() => navigation.navigate('GstInvoiceRequests')}>
+                <AdminKPICard
+                  label="GST requests"
+                  value={String(pendingGstCount)}
+                  icon="🧾"
+                  surface="amber"
+                  status="attention"
+                />
+              </Pressable>
+            ) : null}
           </View>
         )}
 
@@ -236,6 +258,7 @@ export function InvoiceListScreen({ navigation }: Props) {
       handleBulkSend,
       listFilter,
       navigation,
+      pendingGstCount,
       search,
       stats,
       statsLoading,
