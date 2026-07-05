@@ -3,19 +3,31 @@ import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CustomerPaymentStatusPill } from '@/components/customer/payments/CustomerPaymentStatusPill';
-import { GstInvoiceRequestSheet, type GstInvoiceFormValues } from '@/components/customer/payments/GstInvoiceRequestSheet';
+import {
+  GstInvoiceRequestSheet,
+  type GstInvoiceFormValues,
+  type GstInvoiceSubmittedState,
+} from '@/components/customer/payments/GstInvoiceRequestSheet';
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerButton, CustomerSkeletonLoader } from '@/components/customer/ui';
+import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import {
   useCreateGstInvoiceRequestMutation,
   useGetCustomerPaymentDetailQuery,
+  useGetGstInvoiceRequestForPaymentQuery,
 } from '@/services/api/paymentCollectionApi';
 import type { CustomerTheme } from '@/theme/customer';
 import { formatINR } from '@/utils/currencyFormat';
 import { formatDateIst } from '@/utils/formatDate';
+import { gstInvoiceStatusMessage } from '@/utils/gstInvoiceMessages';
 import { queryErrorMessage } from '@/utils/queryError';
-import { isFailedPayment, isPaidPayment } from '@/screens/customer/payments/utils/paymentHistoryFilters';
+import {
+  isFailedPayment,
+  isPaidPayment,
+  isPendingPayment,
+  isStalePendingPayment,
+} from '@/screens/customer/payments/utils/paymentHistoryFilters';
 
 type CustomerPaymentDetailSheetProps = {
   paymentId: string | null;
@@ -55,35 +67,73 @@ export function CustomerPaymentDetailSheet({
   const insets = useSafeAreaInsets();
   const styles = useThemedStyles(createStyles);
   const { theme } = useCustomerTheme();
+  const { authUser } = useCustomerIdentity();
   const [gstSheetVisible, setGstSheetVisible] = useState(false);
+  const [gstSubmitted, setGstSubmitted] = useState<GstInvoiceSubmittedState | null>(null);
 
   const { data: payment, isLoading, isError, error, refetch } = useGetCustomerPaymentDetailQuery(
     paymentId ?? '',
     { skip: !visible || !paymentId },
   );
+  const { data: existingGstRequest } = useGetGstInvoiceRequestForPaymentQuery(paymentId ?? '', {
+    skip: !visible || !paymentId,
+  });
   const [createGstRequest, { isLoading: gstSubmitting }] = useCreateGstInvoiceRequestMutation();
 
   const failed = payment ? isFailedPayment(payment.status) : false;
   const paid = payment ? isPaidPayment(payment.status) : false;
+  const pending = payment ? isPendingPayment(payment.status) : false;
+  const stalePending = payment ? isStalePendingPayment(payment.created_at) : false;
+
+  const openGstSheet = useCallback(() => {
+    if (existingGstRequest) {
+      Alert.alert('Request Already Submitted', gstInvoiceStatusMessage(existingGstRequest.status), [
+        { text: 'OK' },
+      ]);
+      return;
+    }
+    setGstSubmitted(null);
+    setGstSheetVisible(true);
+  }, [existingGstRequest]);
 
   const onGstSubmit = useCallback(
     async (values: GstInvoiceFormValues) => {
       if (!paymentId) return;
       try {
-        await createGstRequest({
+        const result = await createGstRequest({
           paymentId,
           gstin: values.gstin,
           businessName: values.businessName,
           billingAddress: values.billingAddress,
         }).unwrap();
-        setGstSheetVisible(false);
-        Alert.alert('Request submitted', 'We will process your GST invoice within 2 business days.');
-      } catch (e) {
-        Alert.alert('Could not submit request', queryErrorMessage(e, 'Please try again.'));
+
+        if (result.alreadyExists) {
+          Alert.alert(
+            'Request Already Submitted',
+            gstInvoiceStatusMessage(result.status ?? 'pending'),
+            [{ text: 'OK' }],
+          );
+          setGstSheetVisible(false);
+          return;
+        }
+
+        setGstSubmitted({
+          requestId: result.id,
+          gstin: values.gstin.toUpperCase(),
+          businessName: values.businessName,
+          customerEmail: authUser?.email,
+        });
+      } catch {
+        Alert.alert('Submission Failed', 'Could not submit request. Please try again.');
       }
     },
-    [createGstRequest, paymentId],
+    [authUser?.email, createGstRequest, paymentId],
   );
+
+  const closeGstSheet = useCallback(() => {
+    setGstSheetVisible(false);
+    setGstSubmitted(null);
+  }, []);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -146,7 +196,18 @@ export function CustomerPaymentDetailSheet({
                 label="Date"
                 value={formatDateIst(payment.confirmed_at ?? payment.paid_at ?? payment.created_at)}
               />
+              {payment.gateway_payment_id ? (
+                <LineItem label="Transaction ID" value={payment.gateway_payment_id} />
+              ) : null}
             </View>
+
+            {pending ? (
+              <View style={styles.pendingNote}>
+                <Text style={styles.pendingNoteText}>
+                  This payment is being processed. If you completed the payment, it will update automatically within a few minutes.
+                </Text>
+              </View>
+            ) : null}
 
             {failed && payment.failure_reason ? (
               <View style={styles.failureBox}>
@@ -165,16 +226,17 @@ export function CustomerPaymentDetailSheet({
                     disabled={downloadingReceiptId === payment.id}
                   />
                   <CustomerButton
-                    label="Request GST invoice"
+                    label={existingGstRequest ? 'GST invoice requested' : 'Request GST invoice'}
                     icon="file-document-outline"
                     variant="outline"
-                    onPress={() => setGstSheetVisible(true)}
+                    onPress={openGstSheet}
+                    disabled={Boolean(existingGstRequest)}
                   />
                 </>
               ) : null}
-              {failed && onRetryPayment ? (
+              {(failed || (pending && stalePending)) && onRetryPayment ? (
                 <CustomerButton
-                  label={retryLoading ? 'Starting checkout…' : 'Retry payment'}
+                  label={retryLoading ? 'Starting checkout…' : pending && stalePending ? 'Pay again' : 'Retry payment'}
                   icon="refresh"
                   onPress={() => onRetryPayment(payment.id)}
                   disabled={retryLoading}
@@ -188,8 +250,9 @@ export function CustomerPaymentDetailSheet({
       <GstInvoiceRequestSheet
         visible={gstSheetVisible}
         loading={gstSubmitting}
+        submitted={gstSubmitted}
         onSubmit={(values) => void onGstSubmit(values)}
-        onClose={() => setGstSheetVisible(false)}
+        onClose={closeGstSheet}
       />
     </Modal>
   );
@@ -214,6 +277,8 @@ const createLineStyles = (theme: CustomerTheme) =>
       ...theme.typography.bodyMedium,
       color: theme.colors.onSurface,
       fontFamily: theme.fonts.mono,
+      flexShrink: 1,
+      textAlign: 'right',
     },
     valueEmphasis: {
       color: theme.colors.primary,
@@ -289,6 +354,18 @@ const createStyles = (theme: CustomerTheme) =>
       textTransform: 'uppercase',
       letterSpacing: 0.6,
       marginBottom: theme.spacing.xs,
+    },
+    pendingNote: {
+      backgroundColor: theme.colors.accentPrimaryMuted,
+      borderRadius: theme.radius.sm,
+      padding: theme.spacing.md,
+    },
+    pendingNoteText: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+      fontSize: 13,
+      lineHeight: 18,
     },
     failureBox: {
       backgroundColor: theme.colors.errorContainer,

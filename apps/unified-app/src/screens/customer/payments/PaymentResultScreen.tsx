@@ -7,11 +7,10 @@ import * as Sharing from 'expo-sharing';
 
 import { PaymentSuccessCheckmark } from '@/components/customer/ui';
 import { CustomerButton } from '@/components/customer/ui';
-import { GstInvoiceRequestSheet, type GstInvoiceFormValues } from '@/components/customer/payments/GstInvoiceRequestSheet';
+import { GstInvoiceRequestSheet, type GstInvoiceFormValues, type GstInvoiceSubmittedState } from '@/components/customer/payments/GstInvoiceRequestSheet';
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import {
-  paymentCollectionApi,
   useCreateGstInvoiceRequestMutation,
   useLazyGetPaymentReceiptQuery,
 } from '@/services/api/paymentCollectionApi';
@@ -21,6 +20,8 @@ import { getPaymentProvider, resolvePaymentProviderSlug } from '@/services/payme
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { CustomerTheme } from '@/theme/customer';
 import { formatINR } from '@/utils/currencyFormat';
+import { gstInvoiceStatusMessage } from '@/utils/gstInvoiceMessages';
+import { invalidatePaymentCaches } from '@/utils/invalidatePaymentCaches';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'PaymentResult'>;
 
@@ -43,6 +44,7 @@ export function PaymentResultScreen({ navigation, route }: Props) {
   const [verifyState, setVerifyState] = useState<VerifyState>('verifying');
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const [gstSheetVisible, setGstSheetVisible] = useState(false);
+  const [gstSubmitted, setGstSubmitted] = useState<GstInvoiceSubmittedState | null>(null);
 
   const [verifyPayment] = useVerifyPaymentMutation();
   const [createGstRequest, { isLoading: gstSubmitting }] = useCreateGstInvoiceRequestMutation();
@@ -73,7 +75,7 @@ export function PaymentResultScreen({ navigation, route }: Props) {
         }).unwrap();
 
         if (result.success) {
-          dispatch(paymentCollectionApi.util.invalidateTags(['Payments']));
+          invalidatePaymentCaches(dispatch);
           setVerifyState('success');
           return;
         }
@@ -121,16 +123,30 @@ export function PaymentResultScreen({ navigation, route }: Props) {
 
   const onGstSubmit = async (values: GstInvoiceFormValues) => {
     try {
-      await createGstRequest({
+      const result = await createGstRequest({
         paymentId,
         gstin: values.gstin,
         businessName: values.businessName,
         billingAddress: values.billingAddress,
       }).unwrap();
-      setGstSheetVisible(false);
-      Alert.alert('Request submitted', 'We will email your GST invoice within 2 business days.');
-    } catch (e) {
-      Alert.alert('Could not submit request', e instanceof Error ? e.message : 'Please try again.');
+
+      if (result.alreadyExists) {
+        Alert.alert(
+          'Request Already Submitted',
+          gstInvoiceStatusMessage(result.status ?? 'pending'),
+          [{ text: 'OK' }],
+        );
+        setGstSheetVisible(false);
+        return;
+      }
+
+      setGstSubmitted({
+        requestId: result.id,
+        gstin: values.gstin.toUpperCase(),
+        businessName: values.businessName,
+      });
+    } catch {
+      Alert.alert('Submission Failed', 'Could not submit request. Please try again.');
     }
   };
 
@@ -192,7 +208,10 @@ export function PaymentResultScreen({ navigation, route }: Props) {
         label="Request GST invoice"
         variant="outline"
         icon="file-document-outline"
-        onPress={() => setGstSheetVisible(true)}
+        onPress={() => {
+          setGstSubmitted(null);
+          setGstSheetVisible(true);
+        }}
         style={styles.btn}
       />
       <CustomerButton label="Back to payments" variant="ghost" onPress={onBackToPayments} />
@@ -200,8 +219,12 @@ export function PaymentResultScreen({ navigation, route }: Props) {
       <GstInvoiceRequestSheet
         visible={gstSheetVisible}
         loading={gstSubmitting}
+        submitted={gstSubmitted}
         onSubmit={(values) => void onGstSubmit(values)}
-        onClose={() => setGstSheetVisible(false)}
+        onClose={() => {
+          setGstSheetVisible(false);
+          setGstSubmitted(null);
+        }}
       />
     </View>
   );

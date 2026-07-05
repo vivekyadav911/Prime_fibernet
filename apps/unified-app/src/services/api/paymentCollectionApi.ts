@@ -193,8 +193,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             .select(
               `*,
               customer:users!payments_customer_id_fkey(id, name, phone, customer_id),
-              officer:officers!payments_collected_by_fkey(id, full_name, email),
-              gateway:payment_gateways(id, name, slug, logo_url)`,
+              officer:officers!payments_collected_by_fkey(id, full_name, email)`,
               { count: 'exact' },
             )
             .order(f.sortBy ?? 'created_at', { ascending: f.sortOrder === 'asc' })
@@ -217,18 +216,32 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
 
           const rows = (data ?? []).map((r) => mapPayment(r as Record<string, unknown>));
 
-          const { data: sums } = await client.from('payments').select('status, total_amount');
-          const all = sums ?? [];
-          const confirmedSum = all
-            .filter((p) => p.status === 'confirmed')
-            .reduce((s, p) => s + Number(p.total_amount ?? 0), 0);
-          const pendingSum = all
-            .filter((p) => p.status === 'pending_review' || p.status === 'cash_collected')
-            .reduce((s, p) => s + Number(p.total_amount ?? 0), 0);
-
-          const reviewCount = all.filter(
-            (p) => p.status === 'pending_review' || p.status === 'cash_collected',
-          ).length;
+          let confirmedSum = 0;
+          let pendingSum = 0;
+          let reviewCount = 0;
+          const [confirmedRes, pendingRes, reviewRes] = await Promise.all([
+            client.from('payments').select('total_amount').eq('status', 'confirmed'),
+            client
+              .from('payments')
+              .select('total_amount')
+              .in('status', ['pending_review', 'cash_collected']),
+            client
+              .from('payments')
+              .select('id', { count: 'exact', head: true })
+              .in('status', ['pending_review', 'cash_collected']),
+          ]);
+          if (!confirmedRes.error && confirmedRes.data) {
+            confirmedSum = confirmedRes.data.reduce(
+              (s, p) => s + Number(p.total_amount ?? 0),
+              0,
+            );
+          }
+          if (!pendingRes.error && pendingRes.data) {
+            pendingSum = pendingRes.data.reduce((s, p) => s + Number(p.total_amount ?? 0), 0);
+          }
+          if (!reviewRes.error) {
+            reviewCount = reviewRes.count ?? 0;
+          }
 
           return { rows, total: count ?? rows.length, confirmedSum, pendingSum, reviewCount };
         },
@@ -563,6 +576,12 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             .eq('customer_id', customerId)
             .in('status', ['initiated', 'pending_review', 'failed', 'cancelled']);
 
+          const { data: confirmedPayments } = await client
+            .from('payments')
+            .select('id, total_amount, status, billing_period_start, created_at')
+            .eq('customer_id', customerId)
+            .eq('status', 'confirmed');
+
           const userOutstanding = Number(user.outstanding_amount ?? 0);
           const resolved = resolveCurrentOutstanding(
             (openPayments ?? []).map((row) => ({
@@ -574,6 +593,13 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             })),
             userOutstanding,
             subscriptionPlanPrice,
+            (confirmedPayments ?? []).map((row) => ({
+              id: String(row.id),
+              total_amount: Number(row.total_amount ?? 0),
+              status: String(row.status) as PaymentStatus,
+              billing_period_start: (row.billing_period_start as string | null) ?? null,
+              created_at: String(row.created_at),
+            })),
           );
 
           const isOverdue = user.payment_status === 'overdue';
@@ -950,6 +976,58 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
       providesTags: (_r, _e, id) => [{ type: 'Payments', id: `timeline-${id}` }],
     }),
 
+    pollPendingPayments: builder.mutation<
+      { polled: number; resolved: number },
+      Array<{ paymentId: string; gatewayOrderId: string; gatewaySlug?: string }>
+    >({
+      query: (items) => ({
+        handler: async (client) => {
+          const maxAgeMs = 24 * 60 * 60 * 1000;
+          let resolved = 0;
+
+          for (const item of items) {
+            const { data: row } = await client
+              .from('payments')
+              .select('created_at, status')
+              .eq('id', item.paymentId)
+              .maybeSingle();
+
+            if (!row) continue;
+            if (row.status === 'confirmed') {
+              resolved += 1;
+              continue;
+            }
+
+            const age = Date.now() - new Date(String(row.created_at)).getTime();
+            if (age > maxAgeMs) continue;
+
+            const gateway =
+              item.gatewaySlug === 'easebuzz'
+                ? 'easybuzz'
+                : item.gatewaySlug === 'razorpay'
+                  ? 'razorpay'
+                  : item.gatewaySlug;
+
+            const { data, error } = await client.functions.invoke('verify-payment', {
+              body: {
+                paymentId: item.paymentId,
+                orderId: item.gatewayOrderId,
+                gateway,
+                pollOnly: '1',
+              },
+            });
+
+            if (!error && (data as { success?: boolean })?.success) {
+              resolved += 1;
+            }
+          }
+
+          return { polled: items.length, resolved };
+        },
+      }),
+      invalidatesTags: ['Payments'],
+    }),
+
     verifyOpenPoolConsistency: builder.query<{ openPoolCount: number }, void>({
       query: () => ({
         handler: async (client) => {
@@ -961,13 +1039,27 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
     }),
 
     createGstInvoiceRequest: builder.mutation<
-      { id: string },
+      { id: string; alreadyExists?: boolean; status?: string },
       { paymentId: string; gstin: string; businessName?: string; billingAddress?: string }
     >({
       query: (body) => ({
         handler: async (client) => {
           const { data: { user } } = await client.auth.getUser();
           const customerId = await resolveCustomerUserId(client, user?.id);
+
+          const { data: existing } = await client
+            .from('gst_invoice_requests')
+            .select('id, status')
+            .eq('payment_id', body.paymentId)
+            .maybeSingle();
+
+          if (existing) {
+            return {
+              id: String(existing.id),
+              alreadyExists: true,
+              status: String(existing.status),
+            };
+          }
 
           const { data, error } = await client
             .from('gst_invoice_requests')
@@ -980,10 +1072,55 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             })
             .select('id')
             .single();
-          if (error) throw error;
+
+          if (error) {
+            if (error.code === '23505') {
+              const { data: dup } = await client
+                .from('gst_invoice_requests')
+                .select('id, status')
+                .eq('payment_id', body.paymentId)
+                .maybeSingle();
+              if (dup) {
+                return {
+                  id: String(dup.id),
+                  alreadyExists: true,
+                  status: String(dup.status),
+                };
+              }
+            }
+            throw error;
+          }
+
           return { id: String(data.id) };
         },
       }),
+      invalidatesTags: (_r, _e, arg) => [
+        { type: 'Payments', id: `gst-${arg.paymentId}` },
+        'Payments',
+      ],
+    }),
+
+    getGstInvoiceRequestForPayment: builder.query<
+      { id: string; status: string; created_at: string } | null,
+      string
+    >({
+      query: (paymentId) => ({
+        handler: async (client) => {
+          const { data, error } = await client
+            .from('gst_invoice_requests')
+            .select('id, status, created_at')
+            .eq('payment_id', paymentId)
+            .maybeSingle();
+          if (error) throw error;
+          if (!data) return null;
+          return {
+            id: String(data.id),
+            status: String(data.status),
+            created_at: String(data.created_at),
+          };
+        },
+      }),
+      providesTags: (_r, _e, paymentId) => [{ type: 'Payments', id: `gst-${paymentId}` }],
     }),
   }),
 });
@@ -1023,4 +1160,6 @@ export const {
   useUpsertBankAccountMutation,
   useVerifyOpenPoolConsistencyQuery,
   useCreateGstInvoiceRequestMutation,
+  useGetGstInvoiceRequestForPaymentQuery,
+  usePollPendingPaymentsMutation,
 } = paymentCollectionApi;

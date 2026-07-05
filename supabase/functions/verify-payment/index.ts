@@ -118,6 +118,21 @@ async function confirmPortalPayment(params: {
     })
     .eq('id', paymentId);
 
+  const billingPeriodStart = portalPayment.billing_period_start as string | null | undefined;
+  if (billingPeriodStart) {
+    await supabase
+      .from('payments')
+      .update({
+        status: 'cancelled',
+        failure_reason: 'Superseded by successful payment',
+        updated_at: paidAt,
+      })
+      .eq('customer_id', portalPayment.customer_id as string)
+      .in('status', ['initiated', 'pending_review'])
+      .eq('billing_period_start', billingPeriodStart)
+      .neq('id', paymentId);
+  }
+
   const resolvedPlanId = planId ?? null;
   if (resolvedPlanId) {
     const { data: plan } = await supabase

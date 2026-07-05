@@ -109,20 +109,37 @@ export function resolveCurrentOutstanding(
   openPayments: OutstandingPaymentRow[],
   fallbackAmount: number,
   planPrice = 0,
+  confirmedPayments: OutstandingPaymentRow[] = [],
 ): ResolvedOutstanding {
+  const settledPeriods = new Set(
+    confirmedPayments.map((p) => billingPeriodKey(p.billing_period_start ?? p.created_at)),
+  );
+
+  const effectiveOpen = openPayments.filter(
+    (p) => !settledPeriods.has(billingPeriodKey(p.billing_period_start ?? p.created_at)),
+  );
+
   const periodKeys = [
-    ...new Set(openPayments.map((p) => billingPeriodKey(p.billing_period_start ?? p.created_at))),
+    ...new Set(effectiveOpen.map((p) => billingPeriodKey(p.billing_period_start ?? p.created_at))),
   ].sort((a, b) => b.localeCompare(a));
 
   const currentPeriod = periodKeys[0] ?? null;
   const canonical = currentPeriod
-    ? pickCanonicalOpenPaymentForPeriod(openPayments, currentPeriod)
+    ? pickCanonicalOpenPaymentForPeriod(effectiveOpen, currentPeriod)
     : null;
 
-  const hasOpenBill = openPayments.length > 0;
+  const hasOpenBill = effectiveOpen.length > 0;
   const owesForCycle = hasOpenBill || fallbackAmount > 0;
 
-  if (planPrice > 0 && owesForCycle) {
+  if (settledPeriods.size > 0 && !hasOpenBill && fallbackAmount <= 0) {
+    return {
+      amount: 0,
+      paymentId: null,
+      billingPeriod: null,
+    };
+  }
+
+  if (planPrice > 0 && owesForCycle && hasOpenBill) {
     return {
       amount: planPrice,
       paymentId: canonical?.id ?? null,
@@ -130,7 +147,7 @@ export function resolveCurrentOutstanding(
     };
   }
 
-  if (!openPayments.length) {
+  if (!effectiveOpen.length) {
     return {
       amount: fallbackAmount > 0 ? fallbackAmount : 0,
       paymentId: null,

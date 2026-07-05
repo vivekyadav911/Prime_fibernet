@@ -21,14 +21,28 @@ const gstSchema = z.object({
 
 export type GstInvoiceFormValues = z.infer<typeof gstSchema>;
 
+export type GstInvoiceSubmittedState = {
+  requestId: string;
+  gstin: string;
+  businessName: string;
+  customerEmail?: string;
+};
+
 type GstInvoiceRequestSheetProps = {
   visible: boolean;
   loading?: boolean;
+  submitted?: GstInvoiceSubmittedState | null;
   onSubmit: (values: GstInvoiceFormValues) => void;
   onClose: () => void;
 };
 
-export function GstInvoiceRequestSheet({ visible, loading, onSubmit, onClose }: GstInvoiceRequestSheetProps) {
+export function GstInvoiceRequestSheet({
+  visible,
+  loading,
+  submitted,
+  onSubmit,
+  onClose,
+}: GstInvoiceRequestSheetProps) {
   const insets = useSafeAreaInsets();
   const { theme } = useCustomerTheme();
   const styles = useThemedStyles(createStyles);
@@ -52,70 +66,97 @@ export function GstInvoiceRequestSheet({ visible, loading, onSubmit, onClose }: 
       <Pressable style={styles.backdrop} onPress={onDismiss} accessibilityLabel="Dismiss" />
       <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <View style={styles.handle} />
-        <Text style={styles.title}>Request GST invoice</Text>
-        <Text style={styles.subtitle}>We will email your GST invoice within 2 business days.</Text>
 
-        <Text style={styles.label}>GSTIN</Text>
-        <Controller
-          control={control}
-          name="gstin"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={[styles.input, errors.gstin && styles.inputError]}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              autoCapitalize="characters"
-              maxLength={15}
-              placeholder="22AAAAA0000A1Z5"
-              placeholderTextColor={theme.colors.textMuted}
+        {submitted ? (
+          <View style={styles.successContainer}>
+            <Text style={styles.successIcon}>✓</Text>
+            <Text style={styles.successTitle}>GST Invoice Requested</Text>
+            <Text style={styles.successBody}>
+              We&apos;ll send your GST invoice to{'\n'}
+              {submitted.customerEmail ? (
+                <Text style={styles.successEmail}>{submitted.customerEmail}</Text>
+              ) : (
+                'your registered email'
+              )}
+              {'\n'}within 2 business days.
+            </Text>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryRow}>GSTIN: {submitted.gstin}</Text>
+              <Text style={styles.summaryRow}>Business: {submitted.businessName}</Text>
+              <Text style={styles.summaryRow}>
+                Request ID: #{submitted.requestId.slice(0, 8).toUpperCase()}
+              </Text>
+            </View>
+            <CustomerButton label="Done" onPress={onDismiss} />
+          </View>
+        ) : (
+          <>
+            <Text style={styles.title}>Request GST invoice</Text>
+            <Text style={styles.subtitle}>We will email your GST invoice within 2 business days.</Text>
+
+            <Text style={styles.label}>GSTIN</Text>
+            <Controller
+              control={control}
+              name="gstin"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={[styles.input, errors.gstin && styles.inputError]}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  autoCapitalize="characters"
+                  maxLength={15}
+                  placeholder="22AAAAA0000A1Z5"
+                  placeholderTextColor={theme.colors.textMuted}
+                />
+              )}
             />
-          )}
-        />
-        {errors.gstin ? <Text style={styles.error}>{errors.gstin.message}</Text> : null}
+            {errors.gstin ? <Text style={styles.error}>{errors.gstin.message}</Text> : null}
 
-        <Text style={styles.label}>Business name</Text>
-        <Controller
-          control={control}
-          name="businessName"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={[styles.input, errors.businessName && styles.inputError]}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              placeholder="Registered business name"
-              placeholderTextColor={theme.colors.textMuted}
+            <Text style={styles.label}>Business name</Text>
+            <Controller
+              control={control}
+              name="businessName"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={[styles.input, errors.businessName && styles.inputError]}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder="Registered business name"
+                  placeholderTextColor={theme.colors.textMuted}
+                />
+              )}
             />
-          )}
-        />
-        {errors.businessName ? <Text style={styles.error}>{errors.businessName.message}</Text> : null}
+            {errors.businessName ? <Text style={styles.error}>{errors.businessName.message}</Text> : null}
 
-        <Text style={styles.label}>Billing address</Text>
-        <Controller
-          control={control}
-          name="billingAddress"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={[styles.input, styles.textArea, errors.billingAddress && styles.inputError]}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              multiline
-              numberOfLines={3}
-              placeholder="Full address for the GST invoice"
-              placeholderTextColor={theme.colors.textMuted}
+            <Text style={styles.label}>Billing address</Text>
+            <Controller
+              control={control}
+              name="billingAddress"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={[styles.input, styles.textArea, errors.billingAddress && styles.inputError]}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  multiline
+                  numberOfLines={3}
+                  placeholder="Full address for the GST invoice"
+                  placeholderTextColor={theme.colors.textMuted}
+                />
+              )}
             />
-          )}
-        />
-        {errors.billingAddress ? <Text style={styles.error}>{errors.billingAddress.message}</Text> : null}
+            {errors.billingAddress ? <Text style={styles.error}>{errors.billingAddress.message}</Text> : null}
 
-        <CustomerButton
-          label={loading ? 'Submitting…' : 'Submit request'}
-          onPress={handleSubmit(onSubmit)}
-          disabled={loading}
-        />
-        <CustomerButton label="Cancel" variant="ghost" onPress={onDismiss} disabled={loading} />
+            <CustomerButton
+              label={loading ? 'Submitting…' : 'Submit request'}
+              onPress={handleSubmit(onSubmit)}
+              disabled={loading}
+            />
+            <CustomerButton label="Cancel" variant="ghost" onPress={onDismiss} disabled={loading} />
+          </>
+        )}
       </View>
     </Modal>
   );
@@ -183,5 +224,47 @@ const createStyles = (theme: CustomerTheme) =>
       ...theme.typography.caption,
       color: theme.colors.error,
       fontFamily: theme.fonts.body,
+    },
+    successContainer: {
+      gap: theme.spacing.sm,
+      paddingVertical: theme.spacing.md,
+      alignItems: 'center',
+    },
+    successIcon: {
+      fontSize: 40,
+      color: theme.colors.accentSuccess,
+      fontWeight: '800',
+    },
+    successTitle: {
+      ...theme.typography.displayMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+      textAlign: 'center',
+    },
+    successBody: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    successEmail: {
+      color: theme.colors.primary,
+      fontFamily: theme.fonts.bodySemiBold,
+    },
+    summaryCard: {
+      width: '100%',
+      backgroundColor: theme.colors.surfaceContainerLow,
+      borderRadius: theme.radius.md,
+      padding: theme.spacing.md,
+      gap: theme.spacing.xs,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+      marginVertical: theme.spacing.sm,
+    },
+    summaryRow: {
+      ...theme.typography.body,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodyMedium,
     },
   });

@@ -6,13 +6,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { PaymentCard, PaymentFilterBar, type PaymentFilterState } from '@/components/payments';
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
+import { scrollLayoutStyles } from '@/components/common/scrollLayoutStyles';
 import { useCollectionAssignmentsSync } from '@/hooks/admin/useCollectionAssignmentsSync';
 import { usePayments } from '@/hooks/usePayments';
 import type { AdminPaymentsStackParamList } from '@/types/navigation';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { adminDesign, adminInputStyle } from '@/theme/adminDesign';
 import { colors } from '@/theme/colors';
-import { pageLayout } from '@/theme/pageLayout';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 
@@ -30,7 +30,7 @@ export function PaymentsListScreen() {
     dateTo: '',
   });
 
-  const { data, isLoading, isError, error, refetch } = usePayments({
+  const { data, isLoading, isError, error, refetch, isFetching } = usePayments({
     status: filters.status,
     method: filters.method,
     channel: filters.channel,
@@ -40,6 +40,7 @@ export function PaymentsListScreen() {
   });
 
   const rows = useMemo(() => data?.rows ?? [], [data?.rows]);
+  const showInitialLoading = isLoading && !data;
 
   const onFilterPendingReview = useCallback(() => {
     setFilters((f) => ({ ...f, status: 'pending_review' }));
@@ -56,77 +57,75 @@ export function PaymentsListScreen() {
     [navigation],
   );
 
-  const transactionsHeader = (
-    <View style={styles.transactionsHeader}>
-      <Text style={styles.sectionTitle}>Transactions</Text>
-      <Text style={styles.subtitle}>Review collections, confirm cash, and track online payments</Text>
-      <TextInput
-        style={styles.search}
-        placeholder="Search payment no., customer, account…"
-        value={filters.search}
-        onChangeText={(search) => setFilters((f) => ({ ...f, search }))}
-        placeholderTextColor={adminDesign.colors.textMuted}
-      />
-      <PaymentFilterBar value={filters} onChange={setFilters} />
-    </View>
-  );
-
-  const listHeader = (
-    <View style={adminScreenStyles.listHeader}>{transactionsHeader}</View>
-  );
-
-  return (
-    <AdminScreenLayout padded={false}>
-      <View style={styles.pageHeader}>
+  const listHeader = useMemo(
+    () => (
+      <View style={adminScreenStyles.listHeader}>
         <PaymentsOverviewSection
           filters={filters}
           pendingSum={data?.pendingSum}
           onFilterPendingReview={onFilterPendingReview}
         />
-      </View>
-
-      {isLoading ? (
-        <View style={adminScreenStyles.listContent}>
-          {transactionsHeader}
-          <SkeletonLoader rows={6} />
+        <View style={styles.transactionsHeader}>
+          <Text style={styles.sectionTitle}>Transactions</Text>
+          <Text style={styles.subtitle}>
+            Review collections, confirm cash, and track online payments
+          </Text>
+          <TextInput
+            style={styles.search}
+            placeholder="Search payment no., customer, account…"
+            value={filters.search}
+            onChangeText={(search) => setFilters((f) => ({ ...f, search }))}
+            placeholderTextColor={adminDesign.colors.textMuted}
+          />
+          <PaymentFilterBar value={filters} onChange={setFilters} />
         </View>
-      ) : null}
-
-      {isError ? (
-        <View style={adminScreenStyles.listContent}>
-          {transactionsHeader}
+        {isError ? (
           <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-        </View>
-      ) : null}
+        ) : null}
+      </View>
+    ),
+    [data?.pendingSum, error, filters, isError, onFilterPendingReview, refetch],
+  );
 
-      {!isLoading && !isError ? (
-        <FlatList
-          data={rows}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={listHeader}
-          ListEmptyComponent={
-            <EmptyState
-              title="No payments yet"
-              subtitle="Payments from customers and officers will appear here once collected."
-            />
-          }
-          renderItem={({ item }) => (
-            <PaymentCard payment={item} onPress={() => onOpen(item.id, item.status)} />
-          )}
-          contentContainerStyle={adminScreenStyles.listContent}
-          style={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
-      ) : null}
+  const listEmpty = useMemo(() => {
+    if (showInitialLoading) {
+      return <SkeletonLoader rows={6} />;
+    }
+    if (isError) {
+      return null;
+    }
+    return (
+      <EmptyState
+        title="No payments yet"
+        subtitle="Payments from customers and officers will appear here once collected."
+      />
+    );
+  }, [isError, showInitialLoading]);
+
+  return (
+    <AdminScreenLayout padded={false}>
+      <FlatList
+        data={rows}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={listEmpty}
+        renderItem={({ item }) => (
+          <PaymentCard payment={item} onPress={() => onOpen(item.id, item.status)} />
+        )}
+        contentContainerStyle={adminScreenStyles.listContent}
+        style={[scrollLayoutStyles.scrollContainer, styles.list]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+        refreshing={isFetching && !isLoading}
+        onRefresh={refetch}
+      />
     </AdminScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  pageHeader: {
-    paddingHorizontal: pageLayout.pagePadding,
-    paddingTop: spacing.md,
-  },
   list: {
     flex: 1,
   },

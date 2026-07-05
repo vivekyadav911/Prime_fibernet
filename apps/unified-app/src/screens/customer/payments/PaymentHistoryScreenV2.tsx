@@ -1,9 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
 
 import { CustomerPaymentDetailSheet } from '@/components/customer/payments/CustomerPaymentDetailSheet';
 import { CustomerPaymentStatusPill } from '@/components/customer/payments/CustomerPaymentStatusPill';
@@ -32,6 +31,7 @@ import {
 import { usePollPaymentVerificationMutation } from '@/services/api';
 import type { PaymentCheckoutSession } from '@/services/payment/PaymentProvider';
 import { getPaymentProvider, resolvePaymentProviderSlug } from '@/services/payment/PaymentProvider';
+import { useRazorpayCheckout } from '@/services/payments/razorpayCheckout';
 import type { PaymentRecord } from '@/types/payments';
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { CustomerTheme } from '@/theme/customer';
@@ -44,6 +44,10 @@ import {
   paymentPeriodLabel,
   type PaymentStatusFilter,
 } from './utils/paymentHistoryFilters';
+
+function isRazorpayGateway(slug: string | undefined | null): boolean {
+  return resolvePaymentProviderSlug(slug) === 'razorpay';
+}
 
 export function PaymentHistoryScreenV2() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
@@ -58,6 +62,10 @@ export function PaymentHistoryScreenV2() {
   const [checkoutSession, setCheckoutSession] = useState<PaymentCheckoutSession | null>(null);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [downloadingReceiptId, setDownloadingReceiptId] = useState<string | null>(null);
+  const [rzpLoading, setRzpLoading] = useState(false);
+  const [retryAmount, setRetryAmount] = useState(0);
+
+  const { openCheckout, RazorpayUI } = useRazorpayCheckout();
 
   const { data, isLoading, isError, error, refetch } = useGetCustomerPaymentHistoryV2Query(userId, {
     skip: !userId,
@@ -127,12 +135,7 @@ export function PaymentHistoryScreenV2() {
       try {
         const result = await fetchReceipt(paymentId).unwrap();
         if (result.url) {
-          const canOpen = await Linking.canOpenURL(result.url);
-          if (canOpen) {
-            await Linking.openURL(result.url);
-          } else {
-            await WebBrowser.openBrowserAsync(result.url);
-          }
+          await Linking.openURL(result.url);
         } else {
           navigation.navigate('Receipt', { paymentId });
         }
@@ -154,13 +157,15 @@ export function PaymentHistoryScreenV2() {
       const payment = (data ?? []).find((row) => row.id === paymentId);
       if (!payment || !user) return;
 
+      const amount = resolvePaymentChargeAmount(payment.total_amount, bill?.planAmount ?? 0);
+
       try {
         const session = await createOrder({
           customerId: payment.customer_id,
           userName: user.name,
           userEmail: user.email,
           userPhone: payment.customer_phone ?? '',
-          amount: resolvePaymentChargeAmount(payment.total_amount, bill?.planAmount ?? 0),
+          amount,
           planName: payment.plan_name ?? 'Broadband',
           billingPeriodStart: payment.billing_period_start ?? undefined,
           billingPeriodEnd: payment.billing_period_end ?? undefined,
@@ -168,7 +173,9 @@ export function PaymentHistoryScreenV2() {
         }).unwrap();
 
         setSelectedPaymentId(null);
-        setCheckoutSession({
+        setRetryAmount(amount);
+
+        const checkoutSession: PaymentCheckoutSession = {
           paymentId: session.paymentId,
           orderId: session.orderId,
           gatewaySlug: resolvePaymentProviderSlug(session.gatewaySlug),
@@ -176,17 +183,78 @@ export function PaymentHistoryScreenV2() {
           amount: session.amount,
           checkoutUrl: session.checkoutUrl,
           checkoutParams: session.checkoutParams,
-        });
+        };
+
+        if (isRazorpayGateway(checkoutSession.gatewaySlug)) {
+          setRzpLoading(true);
+          openCheckout(
+            {
+              key: checkoutSession.keyId,
+              amount: Math.round(amount * 100),
+              currency: 'INR',
+              order_id: checkoutSession.orderId,
+              name: 'Prime Fibernet',
+              description: `Bill Payment - ${paymentPeriodLabel(payment)}`,
+              image: 'https://www.primefiber.net/logo.png',
+              prefill: {
+                name: user.name,
+                email: user.email ?? '',
+                contact: payment.customer_phone ?? '',
+              },
+              theme: { color: '#3D52D5' },
+              modal: {
+                confirm_close: true,
+                animation: true,
+              },
+            },
+            {
+              onSuccess: (rzpData) => {
+                setRzpLoading(false);
+                navigation.navigate('PaymentResult', {
+                  paymentId: checkoutSession.paymentId,
+                  orderId: rzpData.razorpay_order_id,
+                  amount,
+                  planName: payment.plan_name ?? 'Broadband',
+                  gatewaySlug: activeGateway?.slug,
+                  razorpayPaymentId: rzpData.razorpay_payment_id,
+                  razorpaySignature: rzpData.razorpay_signature,
+                });
+                void refetch();
+              },
+              onFailure: (rzpError) => {
+                setRzpLoading(false);
+                Alert.alert(
+                  'Payment Failed',
+                  rzpError.description ?? 'Payment could not be completed. No amount was charged.',
+                );
+              },
+              onClose: () => {
+                setRzpLoading(false);
+              },
+            },
+          );
+          return;
+        }
+
+        setCheckoutSession(checkoutSession);
         setCheckoutVisible(true);
       } catch (e) {
+        setRzpLoading(false);
         Alert.alert('Could not start checkout', queryErrorMessage(e));
       }
     },
-    [bill?.planAmount, createOrder, data, user],
+    [activeGateway?.slug, bill?.planAmount, createOrder, data, navigation, openCheckout, refetch, user],
   );
 
   const onCheckoutComplete = useCallback(
-    (result: { success: boolean; paymentId: string; orderId?: string; reason?: string }) => {
+    (result: {
+      success: boolean;
+      paymentId: string;
+      orderId?: string;
+      reason?: string;
+      razorpayPaymentId?: string;
+      razorpaySignature?: string;
+    }) => {
       setCheckoutVisible(false);
       setCheckoutSession(null);
 
@@ -195,9 +263,11 @@ export function PaymentHistoryScreenV2() {
         navigation.navigate('PaymentResult', {
           paymentId: result.paymentId,
           orderId: result.orderId,
-          amount: payment?.total_amount ?? checkoutSession?.amount ?? 0,
+          amount: payment?.total_amount ?? retryAmount ?? checkoutSession?.amount ?? 0,
           planName: payment?.plan_name ?? 'Broadband',
           gatewaySlug: activeGateway?.slug,
+          razorpayPaymentId: result.razorpayPaymentId,
+          razorpaySignature: result.razorpaySignature,
         });
         void refetch();
         return;
@@ -207,7 +277,7 @@ export function PaymentHistoryScreenV2() {
         Alert.alert('Payment incomplete', result.reason);
       }
     },
-    [activeGateway?.slug, checkoutSession?.amount, data, navigation, refetch],
+    [activeGateway?.slug, checkoutSession?.amount, data, navigation, refetch, retryAmount],
   );
 
   const filterHeader = (
@@ -279,8 +349,17 @@ export function PaymentHistoryScreenV2() {
         onDownloadReceipt={(id) => void onReceipt(id)}
         downloadingReceiptId={downloadingReceiptId}
         onRetryPayment={(id) => void onRetryPayment(id)}
-        retryLoading={orderLoading}
+        retryLoading={orderLoading || rzpLoading}
       />
+
+      {RazorpayUI}
+
+      <Modal visible={rzpLoading} transparent animationType="fade">
+        <View style={styles.rzpOverlay}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.rzpLoadingText}>Opening secure checkout…</Text>
+        </View>
+      </Modal>
 
       {user ? (
         <EasebuzzCheckout
@@ -357,6 +436,18 @@ const createStyles = (theme: CustomerTheme) =>
       paddingBottom: theme.spacing.xxxl,
       flexGrow: 1,
       justifyContent: 'flex-start',
+    },
+    rzpOverlay: {
+      flex: 1,
+      backgroundColor: theme.colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.md,
+    },
+    rzpLoadingText: {
+      ...theme.typography.body,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodyMedium,
     },
   });
 

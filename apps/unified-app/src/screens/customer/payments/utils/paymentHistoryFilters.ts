@@ -64,3 +64,11 @@ export function isFailedPayment(status: PaymentStatus): boolean {
 export function isPaidPayment(status: PaymentStatus): boolean {
   return status === 'confirmed';
 }
+
+export function isPendingPayment(status: PaymentStatus): boolean {
+  return PENDING_STATUSES.includes(status);
+}
+
+export function isStalePendingPayment(createdAt: string, staleMinutes = 60): boolean {
+  return Date.now() - new Date(createdAt).getTime() > staleMinutes * 60 * 1000;
+}

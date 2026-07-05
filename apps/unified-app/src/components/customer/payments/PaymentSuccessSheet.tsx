@@ -1,7 +1,6 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerTheme } from '@/theme/customer';
 import { formatINR } from '@/utils/currencyFormat';

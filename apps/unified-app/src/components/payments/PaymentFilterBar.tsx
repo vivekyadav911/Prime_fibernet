@@ -49,7 +49,13 @@ export function PaymentFilterBar({ value, onChange, statusCounts }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chips}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
+      >
         {chips.map((chip) => (
           <Pressable
             key={chip.id}

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Screen } from '@prime/ui';
 
 import { DismissKeyboardScrollView } from '@/components/common/DismissKeyboardScrollView';
@@ -49,7 +49,13 @@ export function AdminScreenLayout({
 
   return (
     <Screen padded={false} safeAreaTop={false} style={adminScreenStyles.canvas}>
-      <View style={[styles.fill, applyPadding ? pageLayoutStyles.body : null, contentStyle]}>
+      <View
+        style={[
+          styles.fill,
+          applyPadding ? pageLayoutStyles.body : null,
+          contentStyle,
+        ]}
+      >
         {children}
       </View>
     </Screen>
@@ -57,7 +63,10 @@ export function AdminScreenLayout({
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
+  fill: Platform.select({
+    web: { flex: 1, minHeight: 0 },
+    default: { flex: 1 },
+  }),
   scrollBare: {
     paddingBottom: pageLayoutStyles.scrollContent.paddingBottom,
   },

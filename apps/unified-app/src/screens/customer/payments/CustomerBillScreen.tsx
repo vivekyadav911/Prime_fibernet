@@ -1,15 +1,15 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRazorpay } from '@codearcade/expo-razorpay';
-import * as WebBrowser from 'expo-web-browser';
+import { useRazorpayCheckout } from '@/services/payments/razorpayCheckout';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EasebuzzCheckout } from '@/components/customer/payments/EasebuzzCheckout';
 import { CustomerPaymentDetailSheet } from '@/components/customer/payments/CustomerPaymentDetailSheet';
 import { CustomerPaymentStatusPill } from '@/components/customer/payments/CustomerPaymentStatusPill';
-import { GstInvoiceRequestSheet, type GstInvoiceFormValues } from '@/components/customer/payments/GstInvoiceRequestSheet';
+import { GstInvoiceRequestSheet, type GstInvoiceFormValues, type GstInvoiceSubmittedState } from '@/components/customer/payments/GstInvoiceRequestSheet';
 import { PaymentSuccessSheet } from '@/components/customer/payments/PaymentSuccessSheet';
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import {
@@ -21,7 +21,7 @@ import {
   PressableScale,
 } from '@/components/customer/ui';
 import { CustomerTopBar } from '@/components/customer/shell';
-import { DismissKeyboardScrollView } from '@/components/common';
+import { scrollLayoutStyles } from '@/components/common/scrollLayoutStyles';
 import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useVerifyPaymentMutation } from '@/services/api';
@@ -32,6 +32,7 @@ import {
   useGetCustomerBillQuery,
   useGetCustomerPaymentHistoryV2Query,
   useLazyGetPaymentReceiptQuery,
+  usePollPendingPaymentsMutation,
 } from '@/services/api/paymentCollectionApi';
 import type { PaymentCheckoutSession } from '@/services/payment/PaymentProvider';
 import { getPaymentProvider, resolvePaymentProviderSlug } from '@/services/payment/PaymentProvider';
@@ -39,6 +40,7 @@ import { useAppDispatch } from '@/store/hooks';
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { CustomerTheme } from '@/theme/customer';
 import { formatINR } from '@/utils/currencyFormat';
+import { gstInvoiceStatusMessage } from '@/utils/gstInvoiceMessages';
 import { invalidatePaymentCaches } from '@/utils/invalidatePaymentCaches';
 import { queryErrorMessage } from '@/utils/queryError';
 
@@ -63,15 +65,19 @@ function isRazorpayGateway(slug: string | undefined | null): boolean {
   return resolvePaymentProviderSlug(slug) === 'razorpay';
 }
 
+const TAB_BAR_CLEARANCE = 72;
+
 export function CustomerBillScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const dispatch = useAppDispatch();
   const styles = useThemedStyles(createStyles);
   const { theme } = useCustomerTheme();
+  const insets = useSafeAreaInsets();
   const { authUser: user, userId } = useCustomerIdentity();
   const authId = userId;
+  const scrollBottomPadding = theme.spacing.xxxl + Math.max(insets.bottom, theme.spacing.xs) + TAB_BAR_CLEARANCE;
 
-  const { openCheckout, RazorpayUI } = useRazorpay();
+  const { openCheckout, RazorpayUI } = useRazorpayCheckout();
 
   const [checkoutSession, setCheckoutSession] = useState<PaymentCheckoutSession | null>(null);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
@@ -85,6 +91,7 @@ export function CustomerBillScreen() {
   const [successInvoiceNumber, setSuccessInvoiceNumber] = useState<string | undefined>();
   const [gstSheetVisible, setGstSheetVisible] = useState(false);
   const [gstPaymentId, setGstPaymentId] = useState<string | null>(null);
+  const [gstSubmitted, setGstSubmitted] = useState<GstInvoiceSubmittedState | null>(null);
   const [downloadingReceiptId, setDownloadingReceiptId] = useState<string | null>(null);
 
   const { data: bill, isLoading, isError, error, refetch } = useGetCustomerBillQuery(authId, {
@@ -99,6 +106,28 @@ export function CustomerBillScreen() {
   const [verifyPayment] = useVerifyPaymentMutation();
   const [fetchReceipt] = useLazyGetPaymentReceiptQuery();
   const [createGstRequest, { isLoading: gstSubmitting }] = useCreateGstInvoiceRequestMutation();
+  const [pollPendingPayments] = usePollPendingPaymentsMutation();
+
+  const pendingPollTargets = useMemo(
+    () =>
+      history
+        .filter(
+          (row) =>
+            (row.status === 'initiated' || row.status === 'pending_review') &&
+            Boolean(row.gateway_order_id),
+        )
+        .map((row) => ({
+          paymentId: row.id,
+          gatewayOrderId: row.gateway_order_id as string,
+          gatewaySlug: activeGateway?.slug,
+        })),
+    [activeGateway?.slug, history],
+  );
+
+  useEffect(() => {
+    if (!pendingPollTargets.length) return;
+    void pollPendingPayments(pendingPollTargets);
+  }, [pendingPollTargets, pollPendingPayments]);
 
   const provider = getPaymentProvider(resolvePaymentProviderSlug(activeGateway?.slug));
   const payButtonLabel =
@@ -356,12 +385,7 @@ export function CustomerBillScreen() {
       try {
         const result = await fetchReceipt(paymentId).unwrap();
         if (result.url) {
-          const canOpen = await Linking.canOpenURL(result.url);
-          if (canOpen) {
-            await Linking.openURL(result.url);
-          } else {
-            await WebBrowser.openBrowserAsync(result.url);
-          }
+          await Linking.openURL(result.url);
         } else {
           navigation.navigate('Receipt', { paymentId });
         }
@@ -383,19 +407,35 @@ export function CustomerBillScreen() {
       const paymentId = gstPaymentId ?? successPortalPaymentId;
       if (!paymentId) return;
       try {
-        await createGstRequest({
+        const result = await createGstRequest({
           paymentId,
           gstin: values.gstin,
           businessName: values.businessName,
           billingAddress: values.billingAddress,
         }).unwrap();
-        setGstSheetVisible(false);
-        setGstPaymentId(null);
-      } catch (e) {
-        Alert.alert('Could not submit request', queryErrorMessage(e, 'Please try again.'));
+
+        if (result.alreadyExists) {
+          Alert.alert(
+            'Request Already Submitted',
+            gstInvoiceStatusMessage(result.status ?? 'pending'),
+            [{ text: 'OK' }],
+          );
+          setGstSheetVisible(false);
+          setGstPaymentId(null);
+          return;
+        }
+
+        setGstSubmitted({
+          requestId: result.id,
+          gstin: values.gstin.toUpperCase(),
+          businessName: values.businessName,
+          customerEmail: user?.email,
+        });
+      } catch {
+        Alert.alert('Submission Failed', 'Could not submit request. Please try again.');
       }
     },
-    [createGstRequest, gstPaymentId, successPortalPaymentId],
+    [createGstRequest, gstPaymentId, successPortalPaymentId, user?.email],
   );
 
   const renderBody = () => {
@@ -419,7 +459,12 @@ export function CustomerBillScreen() {
     const payLoadingLabel = 'Starting checkout…';
 
     return (
-      <DismissKeyboardScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={scrollLayoutStyles.scrollContainer}
+        contentContainerStyle={[styles.scroll, { paddingBottom: scrollBottomPadding }]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <GlassCard style={styles.balanceCard} glow padded contentStyle={styles.balanceContent}>
           <Text style={styles.balanceTitle}>Outstanding Balance</Text>
           {bill.dueDate && hasOutstanding ? (
@@ -518,14 +563,14 @@ export function CustomerBillScreen() {
             </Text>
           </View>
         )}
-      </DismissKeyboardScrollView>
+      </ScrollView>
     );
   };
 
   return (
     <View style={styles.canvas}>
       <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
-      {renderBody()}
+      <View style={styles.scrollHost}>{renderBody()}</View>
 
       <CustomerPaymentDetailSheet
         paymentId={selectedPaymentId}
@@ -563,6 +608,7 @@ export function CustomerBillScreen() {
         }}
         onRequestGST={() => {
           setGstPaymentId(successPortalPaymentId);
+          setGstSubmitted(null);
           setGstSheetVisible(true);
         }}
         onViewHistory={() => {
@@ -574,10 +620,12 @@ export function CustomerBillScreen() {
       <GstInvoiceRequestSheet
         visible={gstSheetVisible}
         loading={gstSubmitting}
+        submitted={gstSubmitted}
         onSubmit={(values) => void onGstSubmit(values)}
         onClose={() => {
           setGstSheetVisible(false);
           setGstPaymentId(null);
+          setGstSubmitted(null);
         }}
       />
 
@@ -595,12 +643,15 @@ export function CustomerBillScreen() {
 
 const createStyles = (theme: CustomerTheme) =>
   StyleSheet.create({
-    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    canvas: Platform.select({
+      web: { flex: 1, minHeight: 0, backgroundColor: theme.colors.bgDeep },
+      default: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    }),
+    scrollHost: scrollLayoutStyles.scrollContainer,
     body: { flex: 1, padding: theme.spacing.marginMobile },
     scroll: {
       paddingHorizontal: theme.spacing.marginMobile,
       paddingTop: theme.spacing.md,
-      paddingBottom: theme.spacing.xxxl,
       gap: theme.spacing.md,
     },
     balanceCard: {
