@@ -1,5 +1,7 @@
 import type { SubscriptionStatus } from '@prime/types';
 
+import { daysUntilSubscriptionEnd } from '@/services/customer/activeSubscription';
+import { fetchActiveSubscriptionRow } from '@/services/customer/fetchActiveSubscriptionRow';
 import type { CustomerDashboard } from '@/types/customer';
 import { baseApi } from './baseApi';
 import { mapPlan } from './mappers';
@@ -19,27 +21,33 @@ export const customerDashboardApi = baseApi.injectEndpoints({
           if (userErr) throw userErr;
           if (!user) throw new Error('Customer not found');
 
-          const { data: subRow } = await client
-            .from('subscriptions')
-            .select('*, plans(speed_mbps, data_limit_gb, is_unlimited, price, price_quarterly, price_annual)')
-            .eq('user_id', userId)
-            .eq('status', 'active')
-            .order('end_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          const subRow = await fetchActiveSubscriptionRow(client, userId);
+
+          const { data: pendingPayments } = await client
+            .from('payments')
+            .select('total_amount')
+            .eq('customer_id', userId)
+            .in('status', ['initiated', 'pending_review']);
+
+          const pendingOutstanding = (pendingPayments ?? []).reduce(
+            (sum, row) => sum + Number(row.total_amount ?? 0),
+            0,
+          );
 
           let subscription: CustomerDashboard['subscription'] = null;
           if (subRow) {
             const endAt = String(subRow.end_at ?? '');
-            const endMs = new Date(endAt).getTime();
-            const daysUntilExpiry = Math.ceil((endMs - Date.now()) / (1000 * 60 * 60 * 24));
-            const planJoin = subRow.plans as Record<string, unknown> | null;
+            const daysUntilExpiry = daysUntilSubscriptionEnd(endAt);
+            const planJoinRaw = subRow.plans;
+            const planJoin = Array.isArray(planJoinRaw)
+              ? (planJoinRaw[0] as Record<string, unknown> | undefined) ?? null
+              : (planJoinRaw as Record<string, unknown> | null);
             const billingCycle = (subRow.billing_cycle as 'monthly' | 'quarterly' | 'annual') ?? 'monthly';
             const mappedPlan = planJoin ? mapPlan(planJoin) : null;
             const planPrice = mappedPlan ? getPriceForCycle(mappedPlan, billingCycle) : 0;
             subscription = {
               id: String(subRow.id),
-              planName: String(subRow.plan_name ?? ''),
+              planName: String(subRow.plan_name ?? planJoin?.name ?? ''),
               speedMbps: Number(subRow.speed_mbps ?? planJoin?.speed_mbps ?? 0),
               planPrice,
               status: (subRow.status as SubscriptionStatus) ?? 'active',
@@ -49,8 +57,13 @@ export const customerDashboardApi = baseApi.injectEndpoints({
               isOverdue: daysUntilExpiry < 0 || user.payment_status === 'overdue',
               billingCycle,
               dataLimitGb:
-                planJoin?.data_limit_gb != null ? Number(planJoin.data_limit_gb) : null,
-              isUnlimited: Boolean(planJoin?.is_unlimited),
+                planJoin?.data_limit_gb != null
+                  ? Number(planJoin.data_limit_gb)
+                  : mappedPlan?.dataLimitGb ?? null,
+              isUnlimited:
+                planJoin?.is_unlimited != null
+                  ? Boolean(planJoin.is_unlimited)
+                  : mappedPlan?.isUnlimited ?? true,
             };
           }
 
@@ -90,7 +103,8 @@ export const customerDashboardApi = baseApi.injectEndpoints({
               customerId: (user.customer_id as string) ?? null,
             },
             subscription,
-            outstanding: Number(user.outstanding_amount ?? 0),
+            outstanding:
+              pendingOutstanding > 0 ? pendingOutstanding : Number(user.outstanding_amount ?? 0),
             nextDueDate,
             recentPayments: (payments ?? []).map((p) => ({
               id: String(p.id),
@@ -103,7 +117,7 @@ export const customerDashboardApi = baseApi.injectEndpoints({
           };
         },
       }),
-      providesTags: ['CustomerDashboard'],
+      providesTags: ['CustomerDashboard', 'Subscriptions'],
     }),
   }),
 });

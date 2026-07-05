@@ -1,6 +1,12 @@
 export { GlassCard } from './GlassCard';
+export { CustomerCard } from './CustomerCard';
 export { CustomerButton } from './CustomerButton';
 export { CustomerBadge } from './CustomerBadge';
+export { CustomerStatusPill } from './CustomerStatusPill';
+export type { CustomerStatusTone } from './CustomerStatusPill';
+export { CustomerLockedField } from './CustomerLockedField';
+export { CustomerFilterChips } from './CustomerFilterChips';
+export type { CustomerFilterChip } from './CustomerFilterChips';
 export { CustomerInput } from './CustomerInput';
 export { CustomerSkeletonLoader } from './CustomerSkeletonLoader';
 export { CustomerToast } from './CustomerToast';

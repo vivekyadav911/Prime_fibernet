@@ -1,7 +1,10 @@
 import type { CustomerTheme } from './types';
 
+import { customerLayoutTokens } from './customerLayout';
+
 /** Prime Light Broadband — Stitch light theme for customer app */
 export const primeLight: CustomerTheme = {
+  ...customerLayoutTokens,
   colors: {
     background: '#F8F9FF',
     surface: '#F8F9FF',
@@ -38,6 +41,15 @@ export const primeLight: CustomerTheme = {
     outlineVariant: '#C4C5D7',
     borderSubtle: '#E2E8F0',
     borderGlass: '#C4C5D7',
+    cardBorder: '#C4C5D7',
+    inputFieldBg: '#FFFFFF',
+    inputFieldBorder: '#E2E8F0',
+    readOnlyFieldBg: '#F1F5F9',
+    readOnlyFieldBorder: '#CBD5E1',
+    dividerSubtle: '#E2E8F0',
+    chipActiveBg: 'rgba(29,78,216,0.12)',
+    chipActiveBorder: '#1D4ED8',
+    chipInactiveBg: '#FFFFFF',
     overlay: 'rgba(11,28,48,0.4)',
     white: '#FFFFFF',
   },
@@ -51,25 +63,6 @@ export const primeLight: CustomerTheme = {
   blur: {
     cardIntensity: 0,
     barIntensity: 80,
-  },
-  spacing: {
-    base: 4,
-    xs: 8,
-    sm: 16,
-    md: 24,
-    lg: 40,
-    xl: 48,
-    xxl: 32,
-    xxxl: 48,
-    marginMobile: 16,
-    gutter: 24,
-  },
-  radius: {
-    sm: 8,
-    md: 12,
-    lg: 16,
-    xl: 24,
-    pill: 999,
   },
   shadow: {
     cardGlow: {
@@ -86,29 +79,6 @@ export const primeLight: CustomerTheme = {
       shadowRadius: 12,
       elevation: 4,
     },
-  },
-  typography: {
-    displayLg: { fontSize: 36, fontWeight: '700' as const, lineHeight: 44, letterSpacing: -0.72 },
-    displayMd: { fontSize: 30, fontWeight: '600' as const, lineHeight: 38, letterSpacing: -0.3 },
-    bodyLg: { fontSize: 18, fontWeight: '400' as const, lineHeight: 28 },
-    body: { fontSize: 16, fontWeight: '400' as const, lineHeight: 24 },
-    bodyMedium: { fontSize: 16, fontWeight: '500' as const, lineHeight: 24 },
-    caption: { fontSize: 12, fontWeight: '600' as const, lineHeight: 16 },
-    label: { fontSize: 12, fontWeight: '600' as const, lineHeight: 16, letterSpacing: 0.5 },
-    mono: { fontSize: 20, fontWeight: '600' as const, lineHeight: 24, letterSpacing: 0.4 },
-    monoMd: { fontSize: 14, fontWeight: '500' as const, lineHeight: 20 },
-  },
-  motion: {
-    staggerMs: 100,
-    fadeDurationMs: 350,
-  },
-  fonts: {
-    display: 'Inter_700Bold',
-    body: 'Inter_400Regular',
-    bodyMedium: 'Inter_500Medium',
-    bodySemiBold: 'Inter_700Bold',
-    mono: 'JetBrainsMono_400Regular',
-    monoBold: 'JetBrainsMono_700Bold',
   },
   appearance: 'light',
   blurTint: 'light',

@@ -12,8 +12,8 @@ import {
   GlassCard,
   PressableScale,
 } from '@/components/customer/ui';
+import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
-import { useAppSelector } from '@/store/hooks';
 import { useGetCustomerPaymentHistoryV2Query, useLazyGetPaymentReceiptQuery } from '@/services/api/paymentCollectionApi';
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { CustomerTheme } from '@/theme/customer';
@@ -23,9 +23,9 @@ import { DismissKeyboardFlatList } from '@/components/common';
 export function PaymentHistoryScreenV2() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const styles = useThemedStyles(createStyles);
-  const user = useAppSelector((s) => s.auth.user);
-  const { data, isLoading, isError, error, refetch } = useGetCustomerPaymentHistoryV2Query(user?.id ?? '', {
-    skip: !user?.id,
+  const { userId } = useCustomerIdentity();
+  const { data, isLoading, isError, error, refetch } = useGetCustomerPaymentHistoryV2Query(userId, {
+    skip: !userId,
   });
   const [fetchReceipt] = useLazyGetPaymentReceiptQuery();
 
@@ -91,7 +91,13 @@ export function PaymentHistoryScreenV2() {
                 {item.method.toUpperCase()}
                 {item.gateway_slug ? ` · ${item.gateway_slug}` : ''}
               </Text>
-              <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
+              <Text style={styles.date}>
+                {new Date(item.billing_period_start ?? item.created_at).toLocaleDateString('en-IN', {
+                  month: 'short',
+                  year: 'numeric',
+                  day: 'numeric',
+                })}
+              </Text>
             </GlassCard>
           </PressableScale>
         )}

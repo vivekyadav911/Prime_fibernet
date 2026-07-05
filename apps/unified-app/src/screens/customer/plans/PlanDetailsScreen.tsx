@@ -12,6 +12,7 @@ import {
   CustomerSkeletonLoader,
   GlassCard,
 } from '@/components/customer/ui';
+import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { getPriceForCycle } from '@/services/api/customerDashboardApi';
 import {
@@ -20,7 +21,6 @@ import {
   useGetPlanByIdQuery,
 } from '@/services/api';
 import { usePlanChangeRequest } from '@/hooks/usePlanChangeRequest';
-import { useAppSelector } from '@/store/hooks';
 import type { CustomerTheme } from '@/theme/customer';
 import type { CustomerStackParamList } from '@/types/navigation';
 import { formatCurrencyInr } from '@/utils/formatCurrency';
@@ -38,12 +38,12 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
   const { planId } = route.params;
   const styles = useThemedStyles(createStyles);
   const { theme } = useCustomerTheme();
-  const user = useAppSelector((s) => s.auth.user);
+  const { userId } = useCustomerIdentity();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const { data: plan, isLoading, error, refetch } = useGetPlanByIdQuery(planId);
-  const { data: subscription } = useGetActiveSubscriptionQuery(user?.id ?? '', { skip: !user?.id });
+  const { data: subscription } = useGetActiveSubscriptionQuery(userId, { skip: !userId });
   const { data: activeGateway } = useGetActivePaymentGatewayQuery();
   const { submitRequest, isSubmitting } = usePlanChangeRequest();
 

@@ -1,5 +1,8 @@
 import type { Subscription } from '@prime/types';
 
+import { daysUntilSubscriptionEnd } from '@/services/customer/activeSubscription';
+import { fetchActiveSubscriptionRow } from '@/services/customer/fetchActiveSubscriptionRow';
+
 import { baseApi } from './baseApi';
 
 export const subscriptionsApi = baseApi.injectEndpoints({
@@ -7,20 +10,11 @@ export const subscriptionsApi = baseApi.injectEndpoints({
     getActiveSubscription: builder.query<Subscription | null, string>({
       query: (userId) => ({
         handler: async (client) => {
-          const now = new Date().toISOString();
-          const { data, error } = await client
-            .from('subscriptions')
-            .select('*, plans!inner(*)')
-            .eq('user_id', userId)
-            .gte('end_at', now)
-            .order('end_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          if (error) throw error;
+          const data = await fetchActiveSubscriptionRow(client, userId);
           if (!data) return null;
 
           const endAt = data.end_at as string;
-          const daysUntilExpiry = Math.ceil((new Date(endAt).getTime() - Date.now()) / 86400000);
+          const daysUntilExpiry = daysUntilSubscriptionEnd(endAt);
           const plans = data.plans as { name?: string } | { name?: string }[] | null;
           const planName = Array.isArray(plans) ? plans[0]?.name : plans?.name;
 
@@ -28,7 +22,7 @@ export const subscriptionsApi = baseApi.injectEndpoints({
             id: data.id as string,
             userId: data.user_id as string,
             planId: data.plan_id as string,
-            planName,
+            planName: planName ?? (data.plan_name as string | undefined),
             startAt: data.start_at as string,
             endAt,
             status: (data.status as Subscription['status']) ?? 'active',

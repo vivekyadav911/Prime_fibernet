@@ -17,12 +17,9 @@ import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerTopBar } from '@/components/customer/shell';
 import { CustomerEmptyState, CustomerSkeletonLoader, CustomerToast, CustomerErrorState, FadeInSection } from '@/components/customer/ui';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
-import {
-  useGetCustomerDashboardQuery,
-  useGetCustomerProfileQuery,
-} from '@/services/api';
+import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
+import { useGetCustomerDashboardQuery } from '@/services/api';
 import { useCustomerUiStore } from '@/store/customerUiStore';
-import { useAppSelector } from '@/store/hooks';
 import type { CustomerTheme } from '@/theme/customer';
 import type { CustomerStackParamList, CustomerTabParamList } from '@/types/navigation';
 import { formatCustomerAccountId } from '@/utils/customerAccount';
@@ -36,9 +33,7 @@ export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const styles = useThemedStyles(createStyles);
   const { theme } = useCustomerTheme();
-  const authUser = useAppSelector((s) => s.auth.user);
-  const { data: profile } = useGetCustomerProfileQuery(undefined, { skip: !authUser });
-  const userId = profile?.id ?? authUser?.id ?? '';
+  const { authUser, userId } = useCustomerIdentity();
   const { data, isLoading, error, refetch, isFetching } = useGetCustomerDashboardQuery(userId, {
     skip: !userId,
   });
@@ -111,21 +106,19 @@ export function DashboardScreen() {
         </FadeInSection>
 
         <FadeInSection delayMs={100}>
-          <ConnectionStatusCard
-            isActive={isActive}
-            planName={sub?.planName}
-            speedMbps={sub?.speedMbps}
-            planPrice={sub?.planPrice}
-            nextDueDate={data?.nextDueDate}
-            outstandingAmount={data?.outstanding}
-            onPayNow={() => navigation.navigate('Payments')}
-            onViewInvoice={() => navigation.navigate('PaymentHistory')}
-            onContactSupport={() => navigation.navigate('Support')}
-          />
-        </FadeInSection>
-
-        {!sub ? (
-          <FadeInSection delayMs={150}>
+          {sub ? (
+            <ConnectionStatusCard
+              isActive={isActive}
+              planName={sub.planName}
+              speedMbps={sub.speedMbps}
+              planPrice={sub.planPrice}
+              nextDueDate={data?.nextDueDate}
+              outstandingAmount={data?.outstanding}
+              onPayNow={() => navigation.navigate('Payments')}
+              onViewInvoice={() => navigation.navigate('PaymentHistory')}
+              onContactSupport={() => navigation.navigate('Support')}
+            />
+          ) : (
             <CustomerEmptyState
               title="No active plan"
               subtitle="Browse plans to get connected"
@@ -133,8 +126,8 @@ export function DashboardScreen() {
               onAction={() => navigation.navigate('Plans')}
               icon="◎"
             />
-          </FadeInSection>
-        ) : null}
+          )}
+        </FadeInSection>
 
         <FadeInSection delayMs={200}>
           <LiveSpeedBar

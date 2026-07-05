@@ -21,6 +21,7 @@ import type {
 
 import { formatCustomerAccountId } from '@/utils/customerAccount';
 
+import { fetchActiveSubscriptionRow } from '@/services/customer/fetchActiveSubscriptionRow';
 import { baseApi } from './baseApi';
 
 function mapOfficerJoin(raw: unknown): PaymentRecord['officer'] {
@@ -510,15 +511,29 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             .single();
           if (error) throw error;
 
-          const { data: sub } = await client
-            .from('subscriptions')
-            .select('plan_id, start_at, end_at')
-            .eq('user_id', customerId)
-            .eq('status', 'active')
-            .maybeSingle();
+          const subRow = await fetchActiveSubscriptionRow(client, customerId);
+          const sub = subRow
+            ? {
+                plan_id: subRow.plan_id as string,
+                start_at: subRow.start_at as string,
+                end_at: subRow.end_at as string,
+                status: subRow.status as string,
+              }
+            : null;
+
+          const { data: pendingPayments } = await client
+            .from('payments')
+            .select('total_amount')
+            .eq('customer_id', customerId)
+            .in('status', ['initiated', 'pending_review']);
+
+          const pendingSum = (pendingPayments ?? []).reduce(
+            (sum, row) => sum + Number(row.total_amount ?? 0),
+            0,
+          );
 
           let planName: string | null = null;
-          let planAmount = Number(user.outstanding_amount ?? 0);
+          let planAmount = pendingSum > 0 ? pendingSum : Number(user.outstanding_amount ?? 0);
           if (sub?.plan_id) {
             const { data: plan } = await client
               .from('plans')
@@ -547,7 +562,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             billingPeriodEnd: sub?.end_at ?? null,
             dueDate: user.next_due_date ?? user.expiry_date ?? null,
             paymentStatus: user.payment_status ?? 'pending',
-            outstandingAmount: Number(user.outstanding_amount ?? 0),
+            outstandingAmount: pendingSum > 0 ? pendingSum : Number(user.outstanding_amount ?? 0),
             lastPaidAmount: user.last_paid_amount != null ? Number(user.last_paid_amount) : null,
             lastPaidAt: user.last_paid_at ?? null,
           };

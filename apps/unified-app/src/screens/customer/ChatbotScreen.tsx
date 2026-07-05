@@ -13,10 +13,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CustomerButton, CustomerErrorState, CustomerSkeletonLoader } from '@/components/customer/ui';
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { DismissKeyboardFlatList } from '@/components/common';
+import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
-import { useGetCustomerDashboardQuery, useGetCustomerProfileQuery } from '@/services/api';
+import { useGetCustomerDashboardQuery } from '@/services/api';
 import { getSupabase } from '@/services/supabase';
-import { useAppSelector } from '@/store/hooks';
 import type { CustomerTheme } from '@/theme/customer';
 
 import { ChatBubble, type ChatMessage } from './components/ChatBubble';
@@ -39,9 +39,7 @@ export function ChatbotScreen() {
   const insets = useSafeAreaInsets();
   const { theme } = useCustomerTheme();
   const styles = useThemedStyles(createStyles);
-  const authUser = useAppSelector((s) => s.auth.user);
-  const { data: profile } = useGetCustomerProfileQuery(undefined, { skip: !authUser });
-  const userId = profile?.id ?? authUser?.id ?? '';
+  const { userId } = useCustomerIdentity();
   const { data: dashboard } = useGetCustomerDashboardQuery(userId, { skip: !userId });
   const [message, setMessage] = useState('');
   const [history, setHistory] = useState<ChatMessage[]>([

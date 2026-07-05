@@ -201,14 +201,14 @@ export const authApi = baseApi.injectEndpoints({
 
           const { data: customerId, error: cidErr } = await client.rpc('current_customer_user_id');
           if (cidErr) throw cidErr;
-          if (!customerId) throw new Error('Customer profile not found');
 
+          const resolvedId = customerId ?? auth.user.id;
           const { data, error } = await client
             .from('users')
             .select(
               'id, email, name, phone, role, customer_id, address, city, district, pincode, profile_picture_url, notification_prefs, created_at',
             )
-            .eq('id', customerId)
+            .eq('id', resolvedId)
             .single();
           if (error) throw error;
           return data as Record<string, unknown>;

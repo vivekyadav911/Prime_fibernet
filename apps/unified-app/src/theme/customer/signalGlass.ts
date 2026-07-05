@@ -1,7 +1,10 @@
 import type { CustomerTheme } from './types';
 
+import { customerLayoutTokens } from './customerLayout';
+
 /** Signal Glass — Stitch M3 dark glass design tokens (customer app) */
 export const signalGlass: CustomerTheme = {
+  ...customerLayoutTokens,
   colors: {
     background: '#10131A',
     surface: '#10131A',
@@ -38,6 +41,15 @@ export const signalGlass: CustomerTheme = {
     outlineVariant: '#424754',
     borderSubtle: 'rgba(255,255,255,0.12)',
     borderGlass: 'rgba(255,255,255,0.12)',
+    cardBorder: 'rgba(255,255,255,0.12)',
+    inputFieldBg: 'rgba(29,32,39,0.5)',
+    inputFieldBorder: 'rgba(66,71,84,0.3)',
+    readOnlyFieldBg: 'rgba(29,32,39,0.35)',
+    readOnlyFieldBorder: 'rgba(66,71,84,0.25)',
+    dividerSubtle: 'rgba(255,255,255,0.05)',
+    chipActiveBg: 'rgba(173,198,255,0.15)',
+    chipActiveBorder: '#ADC6FF',
+    chipInactiveBg: '#1D2027',
     overlay: 'rgba(0,0,0,0.55)',
     white: '#FFFFFF',
   },
@@ -51,25 +63,6 @@ export const signalGlass: CustomerTheme = {
   blur: {
     cardIntensity: 24,
     barIntensity: 40,
-  },
-  spacing: {
-    base: 4,
-    xs: 8,
-    sm: 16,
-    md: 24,
-    lg: 32,
-    xl: 48,
-    xxl: 32,
-    xxxl: 48,
-    marginMobile: 20,
-    gutter: 16,
-  },
-  radius: {
-    sm: 8,
-    md: 12,
-    lg: 16,
-    xl: 24,
-    pill: 999,
   },
   shadow: {
     cardGlow: {
@@ -86,29 +79,6 @@ export const signalGlass: CustomerTheme = {
       shadowRadius: 15,
       elevation: 6,
     },
-  },
-  typography: {
-    displayLg: { fontSize: 32, fontWeight: '700' as const, lineHeight: 40, letterSpacing: -0.32 },
-    displayMd: { fontSize: 24, fontWeight: '600' as const, lineHeight: 32 },
-    bodyLg: { fontSize: 18, fontWeight: '400' as const, lineHeight: 28 },
-    body: { fontSize: 16, fontWeight: '400' as const, lineHeight: 24 },
-    bodyMedium: { fontSize: 16, fontWeight: '500' as const, lineHeight: 24 },
-    caption: { fontSize: 12, fontWeight: '500' as const, lineHeight: 16 },
-    label: { fontSize: 12, fontWeight: '600' as const, lineHeight: 16, letterSpacing: 0.5 },
-    mono: { fontSize: 20, fontWeight: '600' as const, lineHeight: 24, letterSpacing: 0.4 },
-    monoMd: { fontSize: 14, fontWeight: '500' as const, lineHeight: 20 },
-  },
-  motion: {
-    staggerMs: 100,
-    fadeDurationMs: 350,
-  },
-  fonts: {
-    display: 'HankenGrotesk_700Bold',
-    body: 'HankenGrotesk_400Regular',
-    bodyMedium: 'HankenGrotesk_500Medium',
-    bodySemiBold: 'HankenGrotesk_600SemiBold',
-    mono: 'JetBrainsMono_400Regular',
-    monoBold: 'JetBrainsMono_700Bold',
   },
   appearance: 'dark',
   blurTint: 'dark',

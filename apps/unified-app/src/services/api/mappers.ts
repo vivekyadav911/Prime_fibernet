@@ -20,6 +20,14 @@ export function mapPlan(row: Record<string, unknown>): Plan {
     features = Object.values(row.features as Record<string, unknown>).map(String);
   }
 
+  const dataLimitText =
+    typeof row.data_limit === 'string' ? row.data_limit.trim().toLowerCase() : '';
+  const unlimitedFromText =
+    dataLimitText === '' ||
+    dataLimitText === 'unlimited' ||
+    dataLimitText === 'unlimted' ||
+    dataLimitText === 'none';
+
   return {
     id: row.id as string,
     name: row.name as string,
@@ -31,7 +39,7 @@ export function mapPlan(row: Record<string, unknown>): Plan {
     features,
     isActive: row.is_active as boolean,
     isFeatured: Boolean(row.is_featured),
-    isUnlimited: Boolean(row.is_unlimited),
+    isUnlimited: row.is_unlimited != null ? Boolean(row.is_unlimited) : unlimitedFromText,
     dataLimitGb: row.data_limit_gb != null ? Number(row.data_limit_gb) : null,
   };
 }

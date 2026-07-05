@@ -1,27 +1,24 @@
 import { useMemo } from 'react';
 import type { Plan } from '@prime/types';
 
+import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import { getPriceForCycle } from '@/services/api/customerDashboardApi';
 import {
   useGetActivePaymentGatewayQuery,
   useGetActiveSubscriptionQuery,
   useGetPlansQuery,
 } from '@/services/api';
-import { useAppSelector } from '@/store/hooks';
+import { dedupePlansBySpeed } from '@/utils/dedupePlans';
 
 export type PlanSortKey = 'price' | 'speed' | 'popularity';
 
 export function usePlans() {
-  const user = useAppSelector((s) => s.auth.user);
+  const { authUser: user, userId } = useCustomerIdentity();
   const plansQuery = useGetPlansQuery();
   const gatewayQuery = useGetActivePaymentGatewayQuery();
-  const subscriptionQuery = useGetActiveSubscriptionQuery(user?.id ?? '', { skip: !user?.id });
+  const subscriptionQuery = useGetActiveSubscriptionQuery(userId, { skip: !userId });
 
-  const plans = useMemo(() => {
-    const list = [...(plansQuery.data ?? [])];
-    list.sort((a, b) => a.speedMbps - b.speedMbps);
-    return list;
-  }, [plansQuery.data]);
+  const plans = useMemo(() => dedupePlansBySpeed(plansQuery.data ?? []), [plansQuery.data]);
 
   const currentPlanId = subscriptionQuery.data?.planId ?? null;
 

@@ -3,6 +3,7 @@ import { signalGlass } from './signalGlass';
 import type { CustomerTheme } from './types';
 
 export type { CustomerTheme, CustomerThemeColors } from './types';
+export { APPEARANCE_OPTIONS, type AppearanceOption } from './appearanceOptions';
 export { signalGlass, primeLight };
 
 export type CustomerAppearance = 'dark' | 'light';

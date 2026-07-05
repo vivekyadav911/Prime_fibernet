@@ -5,10 +5,10 @@ import type { BillingCycle } from '@prime/types';
 
 import { CustomerButton, CustomerInput } from '@/components/customer/ui';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
+import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useGetActiveSubscriptionQuery, useGetPlanByIdQuery } from '@/services/api';
 import { usePlanChangeRequest } from '@/hooks/usePlanChangeRequest';
-import { useAppSelector } from '@/store/hooks';
 import { queryErrorMessage } from '@/utils/queryError';
 import type { CustomerTheme } from '@/theme/customer';
 import type { CustomerStackParamList } from '@/types/navigation';
@@ -21,10 +21,10 @@ const CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual'];
 
 function PlanChangeContent({ route, navigation }: Props) {
   const styles = useThemedStyles(createStyles);
-  const user = useAppSelector((s) => s.auth.user);
+  const { userId } = useCustomerIdentity();
   const { planId } = route.params;
   const { data: plan } = useGetPlanByIdQuery(planId);
-  const { data: subscription } = useGetActiveSubscriptionQuery(user?.id ?? '', { skip: !user?.id });
+  const { data: subscription } = useGetActiveSubscriptionQuery(userId, { skip: !userId });
   const [cycle, setCycle] = useState<BillingCycle>('monthly');
   const [reason, setReason] = useState('');
   const [confirmVisible, setConfirmVisible] = useState(false);

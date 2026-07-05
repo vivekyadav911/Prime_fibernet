@@ -126,6 +126,7 @@ export function useProfile() {
 
   const accountId = formatCustomerAccountId(
     typeof dbUser?.customer_id === 'string' ? dbUser.customer_id : null,
+    customerUserId || authUser?.id,
   );
 
   const memberSince = formatMemberSince(
@@ -157,6 +158,6 @@ export function useProfile() {
     isSaving: updateState.isLoading,
     isChangingPassword: changePasswordState.isLoading,
     isDeleting: deletionState.isLoading,
-    isDev: authUser?.email?.endsWith('@prime.local') ?? false,
+    isDev: __DEV__ && (authUser?.email?.endsWith('@prime.local') ?? false),
   };
 }

@@ -8,6 +8,7 @@ import {
   CustomerErrorState,
   CustomerSkeletonLoader,
   CustomerToast,
+  GlassCard,
 } from '@/components/customer/ui';
 import { CustomerTopBar } from '@/components/customer/shell';
 import { DismissKeyboardScrollView } from '@/components/common';
@@ -144,12 +145,18 @@ export function ProfileScreen() {
           defaultValues={defaultValues}
           email={authUser.email}
           accountId={accountId}
-          addressHint={!addressFromServer ? 'No installation address on file. Add yours below or contact support if it looks wrong.' : undefined}
+          addressHint={
+            !addressFromServer
+              ? 'No installation address on file yet. Add yours below or contact support if something looks wrong.'
+              : undefined
+          }
           saving={isSaving}
           onSubmit={onSave}
         />
 
-        <AppearanceToggle />
+        <GlassCard padded contentStyle={styles.appearanceCard}>
+          <AppearanceToggle />
+        </GlassCard>
 
         <NotificationToggles
           pushEnabled={pushEnabled}
@@ -194,4 +201,5 @@ const createStyles = (theme: CustomerTheme) =>
       gap: theme.spacing.lg,
     },
     actions: { gap: theme.spacing.sm },
+    appearanceCard: { gap: theme.spacing.sm },
   });

@@ -137,7 +137,11 @@ function CustomerStackNavigator() {
       <Stack.Screen name="PaymentHistory" component={PaymentHistoryScreenV2} options={{ title: 'Payment history' }} />
       <Stack.Screen name="MyBills" component={MyBillsScreen} options={{ title: 'My bills' }} />
       <Stack.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Invoice' }} />
-      <Stack.Screen name="Notifications" component={CustomerNotificationsScreen} options={{ title: 'Notifications' }} />
+      <Stack.Screen
+        name="Notifications"
+        component={CustomerNotificationsScreen}
+        options={{ title: 'Notifications', headerBackTitle: 'Back' }}
+      />
       <Stack.Screen name="About" component={AboutScreen} options={{ title: 'About' }} />
       <Stack.Screen name="Terms" component={TermsScreen} options={{ title: 'Terms' }} />
       <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ title: 'Privacy' }} />

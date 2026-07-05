@@ -71,7 +71,7 @@ export function ProfileHeader({
         <MaterialCommunityIcons name="check-decagram" size={14} color={theme.colors.secondary} />
         <Text style={styles.memberText}>Member since {memberSince ?? '2021'}</Text>
       </View>
-      {isDev ? <Text style={styles.devBadge}>Dev account · {email}</Text> : null}
+      {isDev ? <Text style={styles.devBadge}>Dev build</Text> : null}
     </View>
   );
 }

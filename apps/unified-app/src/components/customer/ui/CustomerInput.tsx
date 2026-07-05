@@ -38,10 +38,10 @@ const createStyles = (theme: CustomerTheme) =>
     },
     input: {
       borderWidth: 1,
-      borderColor: theme.colors.borderSubtle,
+      borderColor: theme.colors.inputFieldBorder,
       borderRadius: theme.radius.sm,
       padding: theme.spacing.sm,
-      backgroundColor: theme.colors.bgSurface,
+      backgroundColor: theme.colors.inputFieldBg,
       color: theme.colors.textPrimary,
       fontFamily: theme.fonts.body,
       fontSize: 15,

@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import {
   CustomerEmptyState,
   CustomerErrorState,
+  CustomerFilterChips,
   CustomerSkeletonLoader,
   CustomerToast,
   PressableScale,
 } from '@/components/customer/ui';
-import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { DismissKeyboardFlatList } from '@/components/common';
 import { useCustomerNotifications } from '@/hooks/useCustomerNotifications';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
@@ -39,10 +41,29 @@ const FILTER_EMPTY_LABELS: Partial<Record<'all' | NotificationCategory, string>>
   promo: 'No promotions',
 };
 
-function NotificationsContent({ navigation }: Props) {
+const CATEGORY_ICONS: Record<NotificationCategory, keyof typeof MaterialCommunityIcons.glyphMap> = {
+  payment: 'credit-card-outline',
+  plan: 'package-variant-closed',
+  ticket: 'ticket-confirmation-outline',
+  request: 'file-document-outline',
+  outage: 'alert-circle-outline',
+  promo: 'tag-outline',
+  system: 'bell-outline',
+  hr: 'account-outline',
+};
+
+function categoryIcon(category: string | null | undefined): keyof typeof MaterialCommunityIcons.glyphMap {
+  if (category && category in CATEGORY_ICONS) {
+    return CATEGORY_ICONS[category as NotificationCategory];
+  }
+  return 'bell-outline';
+}
+
+export function CustomerNotificationsScreen({ navigation }: Props) {
   const styles = useThemedStyles(createStyles);
+  const { theme } = useCustomerTheme();
   const [filter, setFilter] = useState<'all' | NotificationCategory>('all');
-  const { notifications, isLoading, error, refetch, markAsRead, markAllAsRead } =
+  const { notifications, unreadCount, isLoading, error, refetch, markAsRead, markAllAsRead } =
     useCustomerNotifications();
   const toast = useCustomerUiStore((s) => s.toast);
   const clearToast = useCustomerUiStore((s) => s.clearToast);
@@ -63,9 +84,30 @@ function NotificationsContent({ navigation }: Props) {
     prevCountRef.current = notifications.length;
   }, [notifications]);
 
+  const filterHeader = (
+    <CustomerFilterChips
+      chips={FILTERS}
+      selectedId={filter}
+      onSelect={(id) => setFilter(id as 'all' | NotificationCategory)}
+      style={styles.filterBar}
+      trailingAction={
+        unreadCount > 0 ? (
+          <Pressable
+            onPress={() => void markAllAsRead()}
+            style={styles.markAllBtn}
+            accessibilityLabel="Mark all as read"
+          >
+            <Text style={styles.markAllText}>Mark all read</Text>
+          </Pressable>
+        ) : undefined
+      }
+    />
+  );
+
   if (isLoading) {
     return (
       <View style={styles.canvas}>
+        {filterHeader}
         <CustomerSkeletonLoader rows={5} rowHeight={64} />
       </View>
     );
@@ -74,6 +116,7 @@ function NotificationsContent({ navigation }: Props) {
   if (error) {
     return (
       <View style={styles.canvas}>
+        {filterHeader}
         <CustomerErrorState message="Could not load notifications. Try again." onRetry={refetch} />
       </View>
     );
@@ -87,36 +130,11 @@ function NotificationsContent({ navigation }: Props) {
         visible={Boolean(toast)}
         onDismiss={clearToast}
       />
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-        keyboardShouldPersistTaps="handled"
-      >
-        {FILTERS.map((f) => (
-          <Pressable
-            key={f.id}
-            onPress={() => setFilter(f.id)}
-            style={[styles.chip, filter === f.id && styles.chipActive]}
-            accessibilityLabel={`Filter ${f.label}`}
-          >
-            <Text style={[styles.chipText, filter === f.id && styles.chipTextActive]}>
-              {f.label}
-            </Text>
-          </Pressable>
-        ))}
-        <Pressable
-          onPress={() => void markAllAsRead()}
-          style={styles.markAll}
-          accessibilityLabel="Mark all as read"
-        >
-          <Text style={styles.markAllText}>Mark all read</Text>
-        </Pressable>
-      </ScrollView>
       <DismissKeyboardFlatList
         data={filtered}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        ListHeaderComponent={filterHeader}
+        contentContainerStyle={filtered.length === 0 ? styles.listEmptyContent : styles.listContent}
         ListEmptyComponent={
           <CustomerEmptyState
             title={FILTER_EMPTY_LABELS[filter] ?? 'No notifications'}
@@ -134,16 +152,26 @@ function NotificationsContent({ navigation }: Props) {
             onPress={() => {
               void markAsRead(item.id);
               if (item.action_url?.includes('payment')) navigation.navigate('CustomerTabs', { screen: 'Payments' });
-              else if (item.action_url?.includes('tickets'))
-                navigation.navigate('CustomerTicketList');
+              else if (item.action_url?.includes('tickets')) navigation.navigate('CustomerTicketList');
               else if (item.action_url?.includes('plans'))
                 navigation.navigate('CustomerTabs', { screen: 'Plans' });
             }}
             accessibilityLabel={item.title}
           >
-            {!item.is_read ? <View style={styles.dot} /> : <View style={styles.dotSpacer} />}
+            <View style={[styles.iconWrap, !item.is_read && styles.iconWrapUnread]}>
+              <MaterialCommunityIcons
+                name={categoryIcon(item.category)}
+                size={20}
+                color={theme.colors.primary}
+              />
+            </View>
             <View style={styles.body}>
-              <Text style={styles.title}>{item.title}</Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.title} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                {!item.is_read ? <View style={styles.unreadDot} /> : null}
+              </View>
               {item.body ? (
                 <Text style={styles.bodyText} numberOfLines={2}>
                   {item.body}
@@ -158,42 +186,35 @@ function NotificationsContent({ navigation }: Props) {
   );
 }
 
-export function CustomerNotificationsScreen(props: Props) {
-  return (
-    <CustomerFontProvider>
-      <NotificationsContent {...props} />
-    </CustomerFontProvider>
-  );
-}
-
 const createStyles = (theme: CustomerTheme) =>
   StyleSheet.create({
     canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
-    filterRow: {
-      flexDirection: 'row',
-      gap: theme.spacing.xs,
-      padding: theme.spacing.lg,
-      alignItems: 'center',
-      paddingRight: theme.spacing.xxxl,
+    filterBar: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingTop: theme.spacing.sm,
+      paddingBottom: theme.spacing.md,
     },
-    chip: {
-      borderRadius: theme.radius.pill,
-      borderWidth: 1,
-      borderColor: theme.colors.borderSubtle,
-      paddingHorizontal: theme.spacing.sm,
-      paddingVertical: theme.spacing.sm,
-      minHeight: 44,
+    markAllBtn: {
+      minHeight: 36,
       justifyContent: 'center',
+      paddingHorizontal: theme.spacing.xs,
     },
-    chipActive: {
-      borderColor: theme.colors.accentPrimary,
-      backgroundColor: theme.colors.accentPrimaryMuted,
+    markAllText: {
+      color: theme.colors.primary,
+      fontSize: 12,
+      fontWeight: '600',
+      fontFamily: theme.fonts.bodyMedium,
     },
-    chipText: { color: theme.colors.textSecondary, fontSize: 12 },
-    chipTextActive: { color: theme.colors.accentGlow },
-    markAll: { marginLeft: theme.spacing.sm, minHeight: 44, justifyContent: 'center' },
-    markAllText: { color: theme.colors.accentGlow, fontSize: 12 },
-    list: { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.xxxl },
+    listContent: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingBottom: theme.spacing.xxxl,
+    },
+    listEmptyContent: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingBottom: theme.spacing.xxxl,
+      flexGrow: 1,
+      justifyContent: 'flex-start',
+    },
     row: {
       flexDirection: 'row',
       gap: theme.spacing.sm,
@@ -201,30 +222,56 @@ const createStyles = (theme: CustomerTheme) =>
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.borderSubtle,
     },
-    unread: { backgroundColor: theme.colors.bgGlass },
-    dot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: theme.colors.accentPrimary,
-      marginTop: 6,
+    unread: {
+      backgroundColor: theme.colors.accentPrimaryMuted,
+      marginHorizontal: -theme.spacing.lg,
+      paddingHorizontal: theme.spacing.lg,
+      borderRadius: theme.radius.sm,
+      borderBottomColor: 'transparent',
     },
-    dotSpacer: { width: 8 },
+    iconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.bgSurface,
+      borderWidth: 1,
+      borderColor: theme.colors.borderSubtle,
+    },
+    iconWrapUnread: {
+      borderColor: theme.colors.chipActiveBorder,
+    },
     body: { flex: 1, minWidth: 0 },
+    titleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs,
+    },
     title: {
+      flex: 1,
       color: theme.colors.textPrimary,
       fontFamily: theme.fonts.bodyMedium,
       fontSize: 14,
       fontWeight: '600',
     },
+    unreadDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: theme.colors.primary,
+    },
     bodyText: {
       color: theme.colors.textSecondary,
       fontSize: 13,
+      fontFamily: theme.fonts.body,
       marginTop: 4,
+      lineHeight: 18,
     },
     time: {
       color: theme.colors.textMuted,
       fontSize: 11,
+      fontFamily: theme.fonts.body,
       marginTop: 4,
     },
   });

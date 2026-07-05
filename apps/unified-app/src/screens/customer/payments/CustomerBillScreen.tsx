@@ -17,8 +17,8 @@ import {
 } from '@/components/customer/ui';
 import { CustomerTopBar } from '@/components/customer/shell';
 import { DismissKeyboardScrollView } from '@/components/common';
+import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
-import { useAppSelector } from '@/store/hooks';
 import {
   useCreatePaymentOrderV2Mutation,
   useGetActivePaymentGatewayQuery,
@@ -39,8 +39,13 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function formatMonthYear(iso: string): string {
+function formatMonthYear(iso: string | null | undefined): string {
+  if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+}
+
+function paymentPeriodLabel(item: PaymentRecord): string {
+  return formatMonthYear(item.billing_period_start ?? item.created_at);
 }
 
 function statusTone(status: PaymentRecord['status']): 'paid' | 'failed' | 'pending' {
@@ -58,8 +63,8 @@ export function CustomerBillScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const styles = useThemedStyles(createStyles);
   const { theme } = useCustomerTheme();
-  const user = useAppSelector((s) => s.auth.user);
-  const authId = user?.id ?? '';
+  const { authUser: user, userId } = useCustomerIdentity();
+  const authId = userId;
 
   const [checkoutSession, setCheckoutSession] = useState<PaymentCheckoutSession | null>(null);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
@@ -275,7 +280,7 @@ export function CustomerBillScreen() {
                       />
                     </View>
                     <View>
-                      <Text style={styles.historyMonth}>{formatMonthYear(item.created_at)}</Text>
+                      <Text style={styles.historyMonth}>{paymentPeriodLabel(item)}</Text>
                       <Text style={styles.historyInv}>Inv #{item.payment_number}</Text>
                     </View>
                   </View>

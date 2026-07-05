@@ -11,11 +11,23 @@ import { isBlurUnavailable } from '@/utils/expoRuntime';
 type GlassCardProps = {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
+  /** Applied to the inner content column (supports gap, padding overrides). */
+  contentStyle?: StyleProp<ViewStyle>;
   glow?: boolean;
   padded?: boolean;
 };
 
-function CardInner({ children, padded, theme }: { children: ReactNode; padded: boolean; theme: CustomerTheme }) {
+function CardInner({
+  children,
+  padded,
+  theme,
+  contentStyle,
+}: {
+  children: ReactNode;
+  padded: boolean;
+  theme: CustomerTheme;
+  contentStyle?: StyleProp<ViewStyle>;
+}) {
   return (
     <LinearGradient
       colors={theme.gradients.card}
@@ -23,12 +35,18 @@ function CardInner({ children, padded, theme }: { children: ReactNode; padded: b
       end={{ x: 1, y: 1 }}
       style={[padded && { padding: theme.spacing.lg }]}
     >
-      {children}
+      <View style={contentStyle}>{children}</View>
     </LinearGradient>
   );
 }
 
-export function GlassCard({ children, style, glow = false, padded = true }: GlassCardProps) {
+export function GlassCard({
+  children,
+  style,
+  contentStyle,
+  glow = false,
+  padded = true,
+}: GlassCardProps) {
   const { theme } = useCustomerTheme();
   const styles = useThemedStyles(createStyles);
   const useSolidFallback = isBlurUnavailable() || !theme.useGlassBlur;
@@ -37,13 +55,13 @@ export function GlassCard({ children, style, glow = false, padded = true }: Glas
     <View style={[styles.wrap, glow && theme.shadow.cardGlow, style]}>
       {useSolidFallback ? (
         <View style={styles.solidFallback}>
-          <CardInner padded={padded} theme={theme}>
+          <CardInner padded={padded} theme={theme} contentStyle={contentStyle}>
             {children}
           </CardInner>
         </View>
       ) : (
         <BlurView intensity={theme.blur.cardIntensity} tint={theme.blurTint} style={styles.blur}>
-          <CardInner padded={padded} theme={theme}>
+          <CardInner padded={padded} theme={theme} contentStyle={contentStyle}>
             {children}
           </CardInner>
         </BlurView>
@@ -58,7 +76,7 @@ const createStyles = (theme: CustomerTheme) =>
       borderRadius: theme.radius.lg,
       overflow: 'hidden',
       borderWidth: 1,
-      borderColor: theme.colors.borderGlass,
+      borderColor: theme.colors.cardBorder,
     },
     blur: { overflow: 'hidden' },
     solidFallback: {

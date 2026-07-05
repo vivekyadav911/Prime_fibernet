@@ -36,6 +36,15 @@ export type CustomerThemeColors = {
   outlineVariant: string;
   borderSubtle: string;
   borderGlass: string;
+  cardBorder: string;
+  inputFieldBg: string;
+  inputFieldBorder: string;
+  readOnlyFieldBg: string;
+  readOnlyFieldBorder: string;
+  dividerSubtle: string;
+  chipActiveBg: string;
+  chipActiveBorder: string;
+  chipInactiveBg: string;
   overlay: string;
   white: string;
 };

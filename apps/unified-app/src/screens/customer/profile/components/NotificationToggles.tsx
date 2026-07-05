@@ -1,9 +1,10 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ToggleSwitch } from '@/components/common';
-import { colors } from '@/theme/colors';
-import { radius, spacing } from '@/theme/spacing';
+import { GlassCard } from '@/components/customer/ui';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { switchTheme } from '@/theme/switchTheme';
+import type { CustomerTheme } from '@/theme/customer';
 
 type NotificationTogglesProps = {
   pushEnabled: boolean;
@@ -22,13 +23,15 @@ export function NotificationToggles({
   onEmailChange,
   onSmsChange,
 }: NotificationTogglesProps) {
+  const styles = useThemedStyles(createStyles);
+
   return (
-    <View style={styles.card}>
+    <GlassCard padded contentStyle={styles.cardContent}>
       <Text style={styles.title}>Notifications</Text>
       <ToggleRow label="Push notifications" value={pushEnabled} onChange={onPushChange} />
       <ToggleRow label="Email notifications" value={emailEnabled} onChange={onEmailChange} />
       <ToggleRow label="SMS alerts" value={smsEnabled} onChange={onSmsChange} />
-    </View>
+    </GlassCard>
   );
 }
 
@@ -41,6 +44,8 @@ function ToggleRow({
   value: boolean;
   onChange: (v: boolean) => void;
 }) {
+  const styles = useThemedStyles(createStyles);
+
   return (
     <View style={styles.row}>
       <Text style={styles.label}>{label}</Text>
@@ -49,16 +54,29 @@ function ToggleRow({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    gap: spacing.sm,
-  },
-  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xs },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  label: { color: colors.textPrimary, fontSize: 15 },
-});
+const createStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    cardContent: {
+      gap: theme.spacing.sm,
+    },
+    title: {
+      ...theme.typography.bodyLg,
+      fontWeight: '700',
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.bodySemiBold,
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      minHeight: 44,
+      paddingVertical: theme.spacing.xs,
+    },
+    label: {
+      ...theme.typography.bodyMedium,
+      flex: 1,
+      paddingRight: theme.spacing.sm,
+      color: theme.colors.textPrimary,
+      fontFamily: theme.fonts.body,
+    },
+  });

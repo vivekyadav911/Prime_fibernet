@@ -1,12 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { z } from 'zod';
 
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
-import { CustomerButton, GlassCard } from '@/components/customer/ui';
+import { CustomerButton, CustomerLockedField, GlassCard } from '@/components/customer/ui';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerTheme } from '@/theme/customer';
 
@@ -41,6 +41,7 @@ function FieldIcon({
 export function ProfileForm({ defaultValues, email, accountId, addressHint, saving, onSubmit }: ProfileFormProps) {
   const styles = useThemedStyles(createStyles);
   const { theme } = useCustomerTheme();
+  const addressInputRef = useRef<TextInput>(null);
   const { control, handleSubmit, reset } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues,
@@ -51,7 +52,7 @@ export function ProfileForm({ defaultValues, email, accountId, addressHint, savi
   }, [defaultValues, reset]);
 
   return (
-    <GlassCard style={styles.card} padded>
+    <GlassCard padded contentStyle={styles.card}>
       <Text style={styles.sectionTitle}>PERSONAL INFORMATION</Text>
 
       <Controller
@@ -110,6 +111,7 @@ export function ProfileForm({ defaultValues, email, accountId, addressHint, savi
             <View style={[styles.inputWrap, styles.textareaWrap]}>
               <FieldIcon name="map-marker-outline" fieldIconStyle={styles.fieldIcon} />
               <TextInput
+                ref={addressInputRef}
                 style={[styles.input, styles.textarea]}
                 placeholder="Street, area, city"
                 placeholderTextColor={theme.colors.textMuted}
@@ -121,7 +123,17 @@ export function ProfileForm({ defaultValues, email, accountId, addressHint, savi
               />
             </View>
             {error ? <Text style={styles.error}>{error.message}</Text> : null}
-            {!value && addressHint ? <Text style={styles.hint}>{addressHint}</Text> : null}
+            {!value && addressHint ? (
+              <View style={styles.hintBlock}>
+                <Text style={styles.hint}>{addressHint}</Text>
+                <CustomerButton
+                  label="Add address"
+                  variant="outline"
+                  onPress={() => addressInputRef.current?.focus()}
+                  style={styles.addAddressBtn}
+                />
+              </View>
+            ) : null}
           </View>
         )}
       />
@@ -129,25 +141,14 @@ export function ProfileForm({ defaultValues, email, accountId, addressHint, savi
       <View style={styles.divider} />
       <Text style={styles.sectionTitle}>ACCOUNT DETAILS</Text>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>EMAIL ADDRESS</Text>
-        <View style={[styles.inputWrap, styles.readOnly]}>
-          <FieldIcon name="email-outline" fieldIconStyle={styles.fieldIcon} />
-          <TextInput style={styles.input} value={email} editable={false} />
-          <MaterialCommunityIcons name="lock-outline" size={18} color={theme.colors.outline} />
-        </View>
-      </View>
+      <CustomerLockedField label="EMAIL ADDRESS" value={email} icon="email-outline" />
 
-      {accountId ? (
-        <View style={styles.field}>
-          <Text style={styles.label}>ACCOUNT ID</Text>
-          <View style={[styles.inputWrap, styles.readOnly]}>
-            <FieldIcon name="tag-outline" fieldIconStyle={styles.fieldIcon} />
-            <TextInput style={[styles.input, styles.monoInput]} value={accountId} editable={false} />
-            <MaterialCommunityIcons name="lock-outline" size={18} color={theme.colors.outline} />
-          </View>
-        </View>
-      ) : null}
+      <CustomerLockedField
+        label="ACCOUNT ID"
+        value={accountId ?? '—'}
+        icon="tag-outline"
+        mono
+      />
 
       <CustomerButton
         label={saving ? 'Saving…' : 'Save Changes'}
@@ -162,7 +163,6 @@ export function ProfileForm({ defaultValues, email, accountId, addressHint, savi
 const createStyles = (theme: CustomerTheme) =>
   StyleSheet.create({
     card: {
-      borderRadius: theme.radius.lg,
       gap: theme.spacing.sm,
     },
     sectionTitle: {
@@ -182,9 +182,9 @@ const createStyles = (theme: CustomerTheme) =>
       flexDirection: 'row',
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: 'rgba(66,71,84,0.3)',
+      borderColor: theme.colors.inputFieldBorder,
       borderRadius: theme.radius.sm,
-      backgroundColor: 'rgba(29,32,39,0.5)',
+      backgroundColor: theme.colors.inputFieldBg,
       paddingHorizontal: theme.spacing.sm,
       minHeight: 48,
     },
@@ -199,7 +199,6 @@ const createStyles = (theme: CustomerTheme) =>
     },
     monoInput: { fontFamily: theme.fonts.mono },
     textarea: { minHeight: 64, textAlignVertical: 'top' },
-    readOnly: { opacity: 0.5, borderStyle: 'dashed' },
     error: { color: theme.colors.error, fontSize: 12, fontFamily: theme.fonts.body },
     hint: {
       color: theme.colors.textMuted,
@@ -207,6 +206,8 @@ const createStyles = (theme: CustomerTheme) =>
       fontFamily: theme.fonts.body,
       lineHeight: 18,
     },
-    divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginVertical: theme.spacing.sm },
+    hintBlock: { gap: theme.spacing.sm, marginTop: theme.spacing.xs },
+    addAddressBtn: { alignSelf: 'flex-start' },
+    divider: { height: 1, backgroundColor: theme.colors.dividerSubtle, marginVertical: theme.spacing.sm },
     btn: { marginTop: theme.spacing.md },
   });

@@ -2,30 +2,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
+import { APPEARANCE_OPTIONS } from '@/theme/customer';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerTheme } from '@/theme/customer';
-
-type AppearanceOption = {
-  id: 'dark' | 'light';
-  title: string;
-  subtitle: string;
-  icon: keyof typeof MaterialCommunityIcons.glyphMap;
-};
-
-const OPTIONS: AppearanceOption[] = [
-  {
-    id: 'dark',
-    title: 'Signal Glass',
-    subtitle: 'Dark glass theme with Hanken Grotesk',
-    icon: 'moon-waning-crescent',
-  },
-  {
-    id: 'light',
-    title: 'Prime Light',
-    subtitle: 'Light broadband theme with Inter',
-    icon: 'white-balance-sunny',
-  },
-];
 
 export function AppearanceToggle() {
   const { isDark, setDarkMode } = useCustomerTheme();
@@ -35,7 +14,7 @@ export function AppearanceToggle() {
   return (
     <View style={styles.wrap}>
       <Text style={styles.heading}>APPEARANCE</Text>
-      {OPTIONS.map((option) => {
+      {APPEARANCE_OPTIONS.map((option) => {
         const active = selected === option.id;
         return (
           <Pressable

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import type { Payment, PaymentGateway } from '@prime/types';
 
+import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import {
   useCreatePaymentOrderMutation,
   useGetActiveSubscriptionQuery,
@@ -9,7 +10,6 @@ import {
   useGetPaymentHistoryQuery,
   useVerifyPaymentMutation,
 } from '@/store/api/endpoints';
-import { useAppSelector } from '@/store/hooks';
 
 export type DateRangeKey = '30d' | '3m' | '6m' | 'all';
 
@@ -29,8 +29,7 @@ function rangeStart(key: DateRangeKey): Date | null {
 }
 
 export function usePayments() {
-  const user = useAppSelector((s) => s.auth.user);
-  const userId = user?.id ?? '';
+  const { authUser: user, userId } = useCustomerIdentity();
 
   const historyQuery = useGetPaymentHistoryQuery(userId, { skip: !userId });
   const subscriptionQuery = useGetActiveSubscriptionQuery(userId, { skip: !userId });
@@ -70,7 +69,7 @@ export function usePayments() {
     const sub = subscriptionQuery.data;
     if (!sub) throw new Error('No active subscription');
     const result = await createOrder({
-      userId: user.id,
+      userId,
       userName: user.name,
       userEmail: user.email,
       planId: sub.planId,
@@ -83,7 +82,7 @@ export function usePayments() {
   const retryPayment = async (payment: Payment) => {
     if (!user) throw new Error('Sign in required');
     return createOrder({
-      userId: user.id,
+      userId,
       userName: user.name,
       userEmail: user.email,
       planId: subscriptionQuery.data?.planId ?? payment.id,

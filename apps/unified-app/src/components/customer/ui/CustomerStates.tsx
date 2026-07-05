@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CustomerButton } from './CustomerButton';
@@ -9,7 +10,9 @@ type CustomerEmptyStateProps = {
   subtitle?: string;
   actionLabel?: string;
   onAction?: () => void;
+  actionDisabled?: boolean;
   icon?: string;
+  illustration?: ReactNode;
 };
 
 export function CustomerEmptyState({
@@ -17,17 +20,25 @@ export function CustomerEmptyState({
   subtitle,
   actionLabel,
   onAction,
+  actionDisabled = false,
   icon,
+  illustration,
 }: CustomerEmptyStateProps) {
   const styles = useThemedStyles(createStyles);
 
   return (
     <View style={styles.wrap} accessibilityRole="text">
-      {icon ? <Text style={styles.icon}>{icon}</Text> : null}
+      {illustration ?? (icon ? <Text style={styles.icon}>{icon}</Text> : null)}
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       {actionLabel && onAction ? (
-        <CustomerButton label={actionLabel} onPress={onAction} variant="ghost" style={styles.btn} />
+        <CustomerButton
+          label={actionLabel}
+          onPress={onAction}
+          variant="ghost"
+          disabled={actionDisabled}
+          style={styles.btn}
+        />
       ) : null}
     </View>
   );
@@ -61,7 +72,7 @@ const createStyles = (theme: CustomerTheme) =>
   StyleSheet.create({
     wrap: {
       alignItems: 'center',
-      paddingVertical: theme.spacing.xxl,
+      paddingVertical: theme.spacing.lg,
       paddingHorizontal: theme.spacing.lg,
     },
     icon: { fontSize: 32, marginBottom: theme.spacing.md },
