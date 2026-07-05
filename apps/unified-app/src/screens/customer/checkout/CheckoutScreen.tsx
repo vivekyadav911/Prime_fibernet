@@ -9,22 +9,11 @@ import { spacing } from '@/theme/spacing';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'Checkout'>;
 
-const GST_RATE = 0.18;
-
-function computeBreakdown(amount: number) {
-  const subtotal = amount;
-  const gst = Math.round(subtotal * GST_RATE);
-  const total = subtotal + gst;
-  return { subtotal, gst, total };
-}
-
 export function CheckoutScreen({ navigation, route }: Props) {
   const { planId, amount } = route.params;
   const user = useAppSelector((s) => s.auth.user);
   const { data: plan } = useGetPlanByIdQuery(planId);
   const [createOrder, { isLoading }] = useCreateOrderMutation();
-
-  const { subtotal, gst, total } = computeBreakdown(amount);
 
   const onPayNow = async () => {
     if (!user || !plan) return;
@@ -35,7 +24,7 @@ export function CheckoutScreen({ navigation, route }: Props) {
         userEmail: user.email,
         planId: plan.id,
         planName: plan.name,
-        amount: total,
+        amount,
       }).unwrap();
 
       navigation.navigate('PaymentGateway', {
@@ -65,18 +54,10 @@ export function CheckoutScreen({ navigation, route }: Props) {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Price breakdown</Text>
-        <View style={styles.row}>
-          <Text style={styles.label}>Subtotal</Text>
-          <Text style={styles.value}>₹{subtotal.toLocaleString('en-IN')}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>GST (18%)</Text>
-          <Text style={styles.value}>₹{gst.toLocaleString('en-IN')}</Text>
-        </View>
+        <Text style={styles.sectionTitle}>Price</Text>
         <View style={[styles.row, styles.totalRow]}>
           <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>₹{total.toLocaleString('en-IN')}</Text>
+          <Text style={styles.totalValue}>₹{amount.toLocaleString('en-IN')}</Text>
         </View>
       </View>
 

@@ -15,26 +15,33 @@ export type QuickAction = {
 
 type QuickActionsGridProps = {
   actions: QuickAction[];
+  disabled?: boolean;
 };
 
-export function QuickActionsGrid({ actions }: QuickActionsGridProps) {
+export function QuickActionsGrid({ actions, disabled = false }: QuickActionsGridProps) {
   const styles = useThemedStyles(createStyles);
   const { theme } = useCustomerTheme();
 
   return (
-    <View style={styles.grid}>
+    <View style={[styles.grid, disabled && styles.gridDisabled]} accessibilityState={{ disabled }}>
       {actions.map((action) => (
         <PressableScale
           key={action.id}
           accessibilityLabel={action.label}
+          accessibilityState={{ disabled }}
+          disabled={disabled}
           onPress={action.onPress}
           style={styles.cell}
         >
           <GlassCard style={styles.card} padded>
             <View style={styles.iconWrap}>
-              <MaterialCommunityIcons name={action.icon} size={32} color={theme.colors.onSurfaceVariant} />
+              <MaterialCommunityIcons
+                name={action.icon}
+                size={32}
+                color={disabled ? theme.colors.textMuted : theme.colors.onSurfaceVariant}
+              />
             </View>
-            <Text style={styles.label} numberOfLines={1}>
+            <Text style={[styles.label, disabled && styles.labelDisabled]} numberOfLines={1}>
               {action.label}
             </Text>
           </GlassCard>
@@ -51,6 +58,9 @@ const createStyles = (theme: CustomerTheme) =>
       flexWrap: 'wrap',
       gap: theme.spacing.gutter,
       marginTop: theme.spacing.md,
+    },
+    gridDisabled: {
+      opacity: 0.45,
     },
     cell: {
       width: '47%',
@@ -76,5 +86,8 @@ const createStyles = (theme: CustomerTheme) =>
       ...theme.typography.caption,
       color: theme.colors.onSurface,
       fontFamily: theme.fonts.bodyMedium,
+    },
+    labelDisabled: {
+      color: theme.colors.textMuted,
     },
   });

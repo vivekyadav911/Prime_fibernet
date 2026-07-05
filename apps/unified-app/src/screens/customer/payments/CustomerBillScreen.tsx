@@ -6,6 +6,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 
 import { EasebuzzCheckout } from '@/components/customer/payments/EasebuzzCheckout';
+import { CustomerPaymentDetailSheet } from '@/components/customer/payments/CustomerPaymentDetailSheet';
+import { CustomerPaymentStatusPill } from '@/components/customer/payments/CustomerPaymentStatusPill';
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import {
   CustomerButton,
@@ -28,30 +30,21 @@ import {
 } from '@/services/api/paymentCollectionApi';
 import type { PaymentCheckoutSession } from '@/services/payment/PaymentProvider';
 import { getPaymentProvider, resolvePaymentProviderSlug } from '@/services/payment/PaymentProvider';
-import type { PaymentRecord } from '@/types/payments';
-import { formatINR } from '@/utils/currencyFormat';
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { CustomerTheme } from '@/theme/customer';
+import { formatINR } from '@/utils/currencyFormat';
 import { queryErrorMessage } from '@/utils/queryError';
+
+import { resolvePaymentChargeAmount } from '@/services/customer/customerOutstanding';
+
+import {
+  isFailedPayment,
+  paymentPeriodLabel,
+} from './utils/paymentHistoryFilters';
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function formatMonthYear(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-}
-
-function paymentPeriodLabel(item: PaymentRecord): string {
-  return formatMonthYear(item.billing_period_start ?? item.created_at);
-}
-
-function statusTone(status: PaymentRecord['status']): 'paid' | 'failed' | 'pending' {
-  if (status === 'confirmed') return 'paid';
-  if (status === 'failed' || status === 'cancelled') return 'failed';
-  return 'pending';
 }
 
 function isGatewayNotConfigured(message: string): boolean {
@@ -68,7 +61,8 @@ export function CustomerBillScreen() {
 
   const [checkoutSession, setCheckoutSession] = useState<PaymentCheckoutSession | null>(null);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
-  const [payLabel, setPayLabel] = useState<'Pay Now via Easebuzz' | 'Pay in Advance'>('Pay Now via Easebuzz');
+  const [payMode, setPayMode] = useState<'bill' | 'advance' | 'retry'>('bill');
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
 
   const { data: bill, isLoading, isError, error, refetch } = useGetCustomerBillQuery(authId, {
     skip: !authId,
@@ -86,9 +80,12 @@ export function CustomerBillScreen() {
     activeGateway?.slug === 'easebuzz' ? 'Pay Now via Easebuzz' : `Pay Now via ${provider.displayName}`;
 
   const initiateCheckout = useCallback(
-    async (advance = false) => {
+    async (mode: 'bill' | 'advance' = 'bill') => {
       if (!bill || !user) return;
-      setPayLabel(advance ? 'Pay in Advance' : 'Pay Now via Easebuzz');
+      setPayMode(mode);
+
+      const amount = mode === 'advance' ? bill.planAmount : bill.totalPayable;
+      if (amount <= 0) return;
 
       try {
         const session = await createOrder({
@@ -96,7 +93,7 @@ export function CustomerBillScreen() {
           userName: user.name,
           userEmail: user.email,
           userPhone: '',
-          amount: bill.totalPayable,
+          amount,
           planName: bill.planName ?? 'Broadband',
           billingPeriodStart: bill.billingPeriodStart ?? undefined,
           billingPeriodEnd: bill.billingPeriodEnd ?? undefined,
@@ -126,6 +123,51 @@ export function CustomerBillScreen() {
       }
     },
     [bill, createOrder, user],
+  );
+
+  const onRetryPayment = useCallback(
+    async (paymentId: string) => {
+      const payment = history.find((row) => row.id === paymentId);
+      if (!payment || !user) return;
+      setPayMode('retry');
+
+      try {
+        const session = await createOrder({
+          customerId: payment.customer_id,
+          userName: user.name,
+          userEmail: user.email,
+          userPhone: payment.customer_phone ?? '',
+          amount: resolvePaymentChargeAmount(payment.total_amount, bill?.planAmount ?? 0),
+          planName: payment.plan_name ?? bill?.planName ?? 'Broadband',
+          billingPeriodStart: payment.billing_period_start ?? undefined,
+          billingPeriodEnd: payment.billing_period_end ?? undefined,
+          dueDate: payment.due_date ?? undefined,
+        }).unwrap();
+
+        setSelectedPaymentId(null);
+        setCheckoutSession({
+          paymentId: session.paymentId,
+          orderId: session.orderId,
+          gatewaySlug: resolvePaymentProviderSlug(session.gatewaySlug),
+          keyId: session.keyId,
+          amount: session.amount,
+          checkoutUrl: session.checkoutUrl,
+          checkoutParams: session.checkoutParams,
+        });
+        setCheckoutVisible(true);
+      } catch (e) {
+        const message = queryErrorMessage(e);
+        if (isGatewayNotConfigured(message)) {
+          Alert.alert(
+            'Online payments unavailable',
+            'Your ISP is finishing payment gateway setup. You can pay cash to your field officer or visit our office.',
+          );
+        } else {
+          Alert.alert('Could not start checkout', message);
+        }
+      }
+    },
+    [bill?.planName, createOrder, history, user],
   );
 
   const onCheckoutComplete = useCallback(
@@ -200,23 +242,27 @@ export function CustomerBillScreen() {
     );
   }
 
-  const hasOutstanding = bill.totalPayable > 0;
+  const hasOutstanding = bill.outstandingAmount > 0;
+  const payLoadingLabel = 'Starting checkout…';
 
   return (
     <View style={styles.canvas}>
       <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
       <DismissKeyboardScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <GlassCard style={styles.balanceCard} glow padded>
+        <GlassCard style={styles.balanceCard} glow padded contentStyle={styles.balanceContent}>
           <Text style={styles.balanceTitle}>Outstanding Balance</Text>
           {bill.dueDate && hasOutstanding ? (
             <Text style={styles.balanceDue}>Due by {formatDate(bill.dueDate)}</Text>
           ) : null}
-          <Text style={styles.balanceAmount}>{formatINR(bill.totalPayable)}</Text>
+          <Text style={styles.balanceAmount}>{formatINR(hasOutstanding ? bill.totalPayable : 0)}</Text>
+          {hasOutstanding && bill.lateFee > 0 ? (
+            <Text style={styles.balanceBreakdown}>Includes {formatINR(bill.lateFee)} late fee</Text>
+          ) : null}
           {hasOutstanding && activeGateway ? (
             <CustomerButton
-              label={orderLoading && payLabel === 'Pay Now via Easebuzz' ? 'Starting checkout…' : payButtonLabel}
+              label={orderLoading && payMode === 'bill' ? payLoadingLabel : payButtonLabel}
               icon="credit-card-outline"
-              onPress={() => void initiateCheckout(false)}
+              onPress={() => void initiateCheckout('bill')}
               disabled={orderLoading}
             />
           ) : null}
@@ -235,10 +281,10 @@ export function CustomerBillScreen() {
             {bill.planName ? <Text style={styles.duePlan}>{bill.planName} · {formatINR(bill.planAmount)}/cycle</Text> : null}
             {activeGateway ? (
               <CustomerButton
-                label={orderLoading && payLabel === 'Pay in Advance' ? 'Starting checkout…' : 'Pay in Advance'}
+                label={orderLoading && payMode === 'advance' ? payLoadingLabel : 'Pay in Advance'}
                 variant="outline"
                 icon="wallet-outline"
-                onPress={() => void initiateCheckout(true)}
+                onPress={() => void initiateCheckout('advance')}
                 disabled={orderLoading}
               />
             ) : null}
@@ -263,20 +309,18 @@ export function CustomerBillScreen() {
               icon="💳"
             />
           ) : (
-            history.slice(0, 8).map((item) => {
-              const tone = statusTone(item.status);
-              return (
+            history.slice(0, 8).map((item) => (
                 <PressableScale
                   key={item.id}
                   style={styles.historyItem}
-                  onPress={() => item.status === 'confirmed' && void onReceipt(item.id)}
+                  onPress={() => setSelectedPaymentId(item.id)}
                 >
                   <View style={styles.historyLeft}>
-                    <View style={[styles.historyIcon, tone === 'failed' && styles.historyIconError]}>
+                    <View style={[styles.historyIcon, isFailedPayment(item.status) && styles.historyIconError]}>
                       <MaterialCommunityIcons
-                        name={tone === 'failed' ? 'alert' : 'file-document-outline'}
+                        name={isFailedPayment(item.status) ? 'alert' : 'file-document-outline'}
                         size={20}
-                        color={tone === 'failed' ? theme.colors.error : theme.colors.primary}
+                        color={isFailedPayment(item.status) ? theme.colors.error : theme.colors.primary}
                       />
                     </View>
                     <View>
@@ -286,16 +330,10 @@ export function CustomerBillScreen() {
                   </View>
                   <View style={styles.historyRight}>
                     <Text style={styles.historyAmount}>{formatINR(item.total_amount)}</Text>
-                    <View style={[styles.statusPill, tone === 'paid' && styles.statusPaid, tone === 'failed' && styles.statusFailed]}>
-                      <View style={[styles.statusDot, tone === 'paid' && styles.statusDotPaid, tone === 'failed' && styles.statusDotFailed]} />
-                      <Text style={[styles.statusText, tone === 'paid' && styles.statusTextPaid, tone === 'failed' && styles.statusTextFailed]}>
-                        {tone === 'paid' ? 'Paid' : tone === 'failed' ? 'Failed' : 'Pending'}
-                      </Text>
-                    </View>
+                    <CustomerPaymentStatusPill status={item.status} />
                   </View>
                 </PressableScale>
-              );
-            })
+              ))
           )}
         </GlassCard>
 
@@ -310,6 +348,15 @@ export function CustomerBillScreen() {
           </View>
         )}
       </DismissKeyboardScrollView>
+
+      <CustomerPaymentDetailSheet
+        paymentId={selectedPaymentId}
+        visible={Boolean(selectedPaymentId)}
+        onClose={() => setSelectedPaymentId(null)}
+        onDownloadReceipt={(id) => void onReceipt(id)}
+        onRetryPayment={(id) => void onRetryPayment(id)}
+        retryLoading={orderLoading && payMode === 'retry'}
+      />
 
       {user ? (
         <EasebuzzCheckout
@@ -343,8 +390,10 @@ const createStyles = (theme: CustomerTheme) =>
     },
     balanceCard: {
       borderRadius: theme.radius.lg,
-      gap: theme.spacing.sm,
       overflow: 'hidden',
+    },
+    balanceContent: {
+      gap: theme.spacing.sm,
     },
     balanceTitle: {
       ...theme.typography.displayMd,
@@ -362,6 +411,11 @@ const createStyles = (theme: CustomerTheme) =>
       color: theme.colors.primary,
       fontFamily: theme.fonts.monoBold,
       marginVertical: theme.spacing.sm,
+    },
+    balanceBreakdown: {
+      ...theme.typography.caption,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
     },
     paidUp: {
       ...theme.typography.body,
@@ -452,31 +506,6 @@ const createStyles = (theme: CustomerTheme) =>
       color: theme.colors.onSurface,
       fontFamily: theme.fonts.mono,
     },
-    statusPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: theme.radius.pill,
-      borderWidth: 1,
-      minWidth: 72,
-      justifyContent: 'center',
-    },
-    statusPaid: {
-      backgroundColor: theme.colors.secondaryContainer,
-      borderColor: theme.colors.secondary,
-    },
-    statusFailed: {
-      backgroundColor: theme.colors.errorContainer,
-      borderColor: theme.colors.error,
-    },
-    statusDot: { width: 6, height: 6, borderRadius: 3 },
-    statusDotPaid: { backgroundColor: theme.colors.secondary },
-    statusDotFailed: { backgroundColor: theme.colors.error },
-    statusText: { ...theme.typography.caption, fontSize: 11 },
-    statusTextPaid: { color: theme.colors.secondary },
-    statusTextFailed: { color: theme.colors.error },
     notice: {
       backgroundColor: theme.colors.accentPrimaryMuted,
       borderRadius: theme.radius.md,

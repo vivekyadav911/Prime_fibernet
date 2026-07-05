@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Plan } from '@prime/types';
@@ -11,6 +10,7 @@ import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerTheme } from '@/theme/customer';
 import type { CustomerStackParamList } from '@/types/navigation';
 import { formatCurrencyInr } from '@/utils/formatCurrency';
+import { getPlanChangeDirection } from '@/utils/planChange';
 
 import { PlanCard } from './components/PlanCard';
 import { usePlans } from './hooks/usePlans';
@@ -22,6 +22,7 @@ export function PlansScreen() {
   const styles = useThemedStyles(createStyles);
   const {
     plans,
+    currentPlan,
     getPriceForCycle,
     currentPlanId,
     paymentGateway,
@@ -44,11 +45,12 @@ export function PlansScreen() {
         plan={item}
         priceLabel={formatCurrencyInr(getPriceForCycle(item))}
         isCurrentPlan={item.id === currentPlanId}
+        changeDirection={getPlanChangeDirection(currentPlan, item)}
         daysUntilRenewal={subscription?.daysUntilExpiry}
         onPress={openDetail}
       />
     ),
-    [currentPlanId, getPriceForCycle, openDetail, subscription?.daysUntilExpiry],
+    [currentPlan, currentPlanId, getPriceForCycle, openDetail, subscription?.daysUntilExpiry],
   );
 
   if (error) {
@@ -72,16 +74,19 @@ export function PlansScreen() {
   return (
     <View style={styles.canvas}>
       <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
-      <FlashList
+      <FlatList
         data={plans}
         keyExtractor={(item) => item.id}
+        style={styles.listFlex}
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View style={styles.headerBlock}>
             <Text style={styles.heading}>Your Plans</Text>
             <Text style={styles.subheading}>
-              Compare speeds and pricing. Tap a plan to see full details and request a change.
+              Compare speeds and pricing. Tap a plan for full details and to request a change.
             </Text>
+            <Text style={styles.compareNote}>Plan comparison view — coming soon</Text>
             <Text style={styles.gatewayNote}>Payments via {paymentGateway}</Text>
           </View>
         }
@@ -97,6 +102,7 @@ export function PlansScreen() {
 const createStyles = (theme: CustomerTheme) =>
   StyleSheet.create({
     canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    listFlex: { flex: 1 },
     list: {
       paddingHorizontal: theme.spacing.marginMobile,
       paddingBottom: theme.spacing.xxxl,
@@ -115,6 +121,12 @@ const createStyles = (theme: CustomerTheme) =>
       ...theme.typography.body,
       color: theme.colors.onSurfaceVariant,
       fontFamily: theme.fonts.body,
+    },
+    compareNote: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      fontFamily: theme.fonts.body,
+      fontStyle: 'italic',
     },
     gatewayNote: {
       color: theme.colors.textMuted,

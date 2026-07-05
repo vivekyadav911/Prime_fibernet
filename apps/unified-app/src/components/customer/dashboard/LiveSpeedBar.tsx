@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { GlassCard, PressableScale } from '@/components/customer/ui';
+import { CustomerBadge, GlassCard, PressableScale } from '@/components/customer/ui';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerTheme } from '@/theme/customer';
 
@@ -23,41 +23,62 @@ export function LiveSpeedBar({ isActive, planSpeedMbps, reading, onPress }: Live
   const upload = isActive ? (reading?.uploadMbps ?? Math.round(planSpeedMbps * 0.82)) : 0;
   const progress = isActive && planSpeedMbps > 0 ? Math.min(download / planSpeedMbps, 1) : 0;
 
+  const card = (
+    <GlassCard style={styles.card} padded contentStyle={styles.cardContent}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Live Speed</Text>
+        {isActive ? (
+          <Text style={styles.hint}>Tap to test</Text>
+        ) : (
+          <CustomerBadge label="Coming soon" tone="neutral" style={styles.comingSoonBadge} />
+        )}
+      </View>
+
+      <View style={styles.track}>
+        <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
+      </View>
+
+      <View style={styles.metrics}>
+        {isActive ? (
+          <>
+            <Text style={styles.metric}>
+              <Text style={styles.metricValue}>{download}</Text> Mbps ↓
+            </Text>
+            <Text style={styles.metric}>
+              <Text style={styles.metricValue}>{upload}</Text> Mbps ↑
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.inactive}>Speed test available when your plan is active</Text>
+        )}
+      </View>
+    </GlassCard>
+  );
+
+  if (!isActive) {
+    return (
+      <View accessibilityLabel="Live speed, coming soon" style={styles.disabledWrap}>
+        {card}
+      </View>
+    );
+  }
+
   return (
     <PressableScale onPress={onPress} accessibilityLabel="Live speed, tap to test">
-      <GlassCard style={styles.card} padded>
-        <View style={styles.header}>
-          <Text style={styles.title}>Live Speed</Text>
-          <Text style={styles.hint}>Tap to test</Text>
-        </View>
-
-        <View style={styles.track}>
-          <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
-        </View>
-
-        <View style={styles.metrics}>
-          {isActive ? (
-            <>
-              <Text style={styles.metric}>
-                <Text style={styles.metricValue}>{download}</Text> Mbps ↓
-              </Text>
-              <Text style={styles.metric}>
-                <Text style={styles.metricValue}>{upload}</Text> Mbps ↑
-              </Text>
-            </>
-          ) : (
-            <Text style={styles.inactive}>Service inactive — speed test unavailable</Text>
-          )}
-        </View>
-      </GlassCard>
+      {card}
     </PressableScale>
   );
 }
 
 const createStyles = (theme: CustomerTheme) =>
   StyleSheet.create({
+    disabledWrap: {
+      opacity: 0.72,
+    },
     card: {
       borderRadius: theme.radius.lg,
+    },
+    cardContent: {
       gap: theme.spacing.sm,
     },
     header: {
@@ -74,6 +95,9 @@ const createStyles = (theme: CustomerTheme) =>
       ...theme.typography.caption,
       color: theme.colors.primary,
       fontFamily: theme.fonts.bodyMedium,
+    },
+    comingSoonBadge: {
+      flexShrink: 0,
     },
     track: {
       height: 8,

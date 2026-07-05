@@ -70,6 +70,9 @@ export const PlanSchema = z.object({
   isFeatured: z.boolean().optional(),
   isUnlimited: z.boolean().optional(),
   dataLimitGb: z.number().nullable().optional(),
+  routerType: z.string().nullable().optional(),
+  hasStaticIp: z.boolean().optional(),
+  includesOtt: z.boolean().optional(),
 });
 
 export type Plan = z.infer<typeof PlanSchema>;

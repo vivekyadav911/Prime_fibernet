@@ -1,33 +1,80 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Share, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Sharing from 'expo-sharing';
 
-import { AmountDisplay, PaymentStatusBadge } from '@/components/payments';
+import { CustomerPaymentDetailSheet } from '@/components/customer/payments/CustomerPaymentDetailSheet';
+import { CustomerPaymentStatusPill } from '@/components/customer/payments/CustomerPaymentStatusPill';
+import { EasebuzzCheckout } from '@/components/customer/payments/EasebuzzCheckout';
+import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import {
   CustomerEmptyState,
   CustomerErrorState,
+  CustomerFilterChips,
   CustomerSkeletonLoader,
   GlassCard,
   PressableScale,
 } from '@/components/customer/ui';
+import { DateRangePicker } from '@/components/common/pickers/DateRangePicker';
+import { DismissKeyboardFlatList } from '@/components/common';
 import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
-import { useGetCustomerPaymentHistoryV2Query, useLazyGetPaymentReceiptQuery } from '@/services/api/paymentCollectionApi';
+import { resolvePaymentChargeAmount } from '@/services/customer/customerOutstanding';
+import {
+  useCreatePaymentOrderV2Mutation,
+  useGetActivePaymentGatewayQuery,
+  useGetCustomerBillQuery,
+  useGetCustomerPaymentHistoryV2Query,
+  useLazyGetPaymentReceiptQuery,
+} from '@/services/api/paymentCollectionApi';
+import type { PaymentCheckoutSession } from '@/services/payment/PaymentProvider';
+import { getPaymentProvider, resolvePaymentProviderSlug } from '@/services/payment/PaymentProvider';
+import type { PaymentRecord } from '@/types/payments';
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { CustomerTheme } from '@/theme/customer';
+import { formatINR } from '@/utils/currencyFormat';
 import { queryErrorMessage } from '@/utils/queryError';
-import { DismissKeyboardFlatList } from '@/components/common';
+
+import {
+  PAYMENT_STATUS_FILTERS,
+  filterPaymentHistory,
+  paymentPeriodLabel,
+  type PaymentStatusFilter,
+} from './utils/paymentHistoryFilters';
 
 export function PaymentHistoryScreenV2() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
   const styles = useThemedStyles(createStyles);
-  const { userId } = useCustomerIdentity();
+  const { theme } = useCustomerTheme();
+  const { authUser: user, userId } = useCustomerIdentity();
+
+  const [statusFilter, setStatusFilter] = useState<PaymentStatusFilter>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  const [checkoutSession, setCheckoutSession] = useState<PaymentCheckoutSession | null>(null);
+  const [checkoutVisible, setCheckoutVisible] = useState(false);
+
   const { data, isLoading, isError, error, refetch } = useGetCustomerPaymentHistoryV2Query(userId, {
     skip: !userId,
   });
+  const { data: bill } = useGetCustomerBillQuery(userId, { skip: !userId });
+  const { data: activeGateway } = useGetActivePaymentGatewayQuery();
   const [fetchReceipt] = useLazyGetPaymentReceiptQuery();
+  const [createOrder, { isLoading: orderLoading }] = useCreatePaymentOrderV2Mutation();
+
+  const filtered = useMemo(
+    () =>
+      filterPaymentHistory(
+        data ?? [],
+        statusFilter,
+        dateFrom || null,
+        dateTo || null,
+      ),
+    [data, dateFrom, dateTo, statusFilter],
+  );
 
   const onReceipt = useCallback(
     async (paymentId: string) => {
@@ -45,9 +92,92 @@ export function PaymentHistoryScreenV2() {
     [fetchReceipt, navigation],
   );
 
+  const onRetryPayment = useCallback(
+    async (paymentId: string) => {
+      const payment = (data ?? []).find((row) => row.id === paymentId);
+      if (!payment || !user) return;
+
+      try {
+        const session = await createOrder({
+          customerId: payment.customer_id,
+          userName: user.name,
+          userEmail: user.email,
+          userPhone: payment.customer_phone ?? '',
+          amount: resolvePaymentChargeAmount(payment.total_amount, bill?.planAmount ?? 0),
+          planName: payment.plan_name ?? 'Broadband',
+          billingPeriodStart: payment.billing_period_start ?? undefined,
+          billingPeriodEnd: payment.billing_period_end ?? undefined,
+          dueDate: payment.due_date ?? undefined,
+        }).unwrap();
+
+        setSelectedPaymentId(null);
+        setCheckoutSession({
+          paymentId: session.paymentId,
+          orderId: session.orderId,
+          gatewaySlug: resolvePaymentProviderSlug(session.gatewaySlug),
+          keyId: session.keyId,
+          amount: session.amount,
+          checkoutUrl: session.checkoutUrl,
+          checkoutParams: session.checkoutParams,
+        });
+        setCheckoutVisible(true);
+      } catch (e) {
+        Alert.alert('Could not start checkout', queryErrorMessage(e));
+      }
+    },
+    [bill?.planAmount, createOrder, data, user],
+  );
+
+  const onCheckoutComplete = useCallback(
+    (result: { success: boolean; paymentId: string; orderId?: string; reason?: string }) => {
+      setCheckoutVisible(false);
+      setCheckoutSession(null);
+
+      if (result.success) {
+        const payment = (data ?? []).find((row) => row.id === result.paymentId);
+        navigation.navigate('PaymentResult', {
+          paymentId: result.paymentId,
+          orderId: result.orderId,
+          amount: payment?.total_amount ?? checkoutSession?.amount ?? 0,
+          planName: payment?.plan_name ?? 'Broadband',
+          gatewaySlug: activeGateway?.slug,
+        });
+        void refetch();
+        return;
+      }
+
+      if (result.reason && result.reason !== 'dismissed') {
+        Alert.alert('Payment incomplete', result.reason);
+      }
+    },
+    [activeGateway?.slug, checkoutSession?.amount, data, navigation, refetch],
+  );
+
+  const filterHeader = (
+    <View style={styles.filters}>
+      <CustomerFilterChips
+        chips={PAYMENT_STATUS_FILTERS}
+        selectedId={statusFilter}
+        onSelect={(id) => setStatusFilter(id as PaymentStatusFilter)}
+      />
+      <GlassCard padded contentStyle={styles.dateCard}>
+        <Text style={styles.dateLabel}>Filter by date</Text>
+        <DateRangePicker
+          from={dateFrom}
+          to={dateTo}
+          onFromChange={setDateFrom}
+          onToChange={setDateTo}
+          accentColor={theme.colors.primary}
+          accentTint={theme.colors.accentPrimaryMuted}
+        />
+      </GlassCard>
+    </View>
+  );
+
   if (isLoading) {
     return (
       <View style={styles.canvas}>
+        {filterHeader}
         <CustomerSkeletonLoader rows={5} rowHeight={88} />
       </View>
     );
@@ -56,6 +186,7 @@ export function PaymentHistoryScreenV2() {
   if (isError) {
     return (
       <View style={styles.canvas}>
+        {filterHeader}
         <CustomerErrorState message={queryErrorMessage(error)} onRetry={refetch} />
       </View>
     );
@@ -63,68 +194,165 @@ export function PaymentHistoryScreenV2() {
 
   return (
     <View style={styles.canvas}>
-      <Text style={styles.title}>Payment history</Text>
       <DismissKeyboardFlatList
-        data={data ?? []}
+        data={filtered}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        ListHeaderComponent={filterHeader}
+        contentContainerStyle={filtered.length === 0 ? styles.listEmpty : styles.list}
         ListEmptyComponent={
           <CustomerEmptyState
-            title="No payments yet"
-            subtitle="Your payment history will appear here after you pay a bill"
+            title={statusFilter === 'all' ? 'No payments yet' : `No ${statusFilter} payments`}
+            subtitle={
+              statusFilter === 'all'
+                ? 'Your payment history will appear here after you pay a bill'
+                : 'Try another filter or date range'
+            }
             icon="💳"
           />
         }
         renderItem={({ item }) => (
-          <PressableScale
-            style={styles.rowWrap}
-            onPress={() => item.status === 'confirmed' && void onReceipt(item.id)}
-            accessibilityLabel={`Payment ${item.payment_number}`}
-          >
-            <GlassCard padded style={styles.row}>
-              <View style={styles.rowTop}>
-                <Text style={styles.number}>{item.payment_number}</Text>
-                <PaymentStatusBadge status={item.status} />
-              </View>
-              <AmountDisplay amount={item.total_amount} />
-              <Text style={styles.meta}>
-                {item.method.toUpperCase()}
-                {item.gateway_slug ? ` · ${item.gateway_slug}` : ''}
-              </Text>
-              <Text style={styles.date}>
-                {new Date(item.billing_period_start ?? item.created_at).toLocaleDateString('en-IN', {
-                  month: 'short',
-                  year: 'numeric',
-                  day: 'numeric',
-                })}
-              </Text>
-            </GlassCard>
-          </PressableScale>
+          <PaymentHistoryRow item={item} onPress={() => setSelectedPaymentId(item.id)} />
         )}
       />
+
+      <CustomerPaymentDetailSheet
+        paymentId={selectedPaymentId}
+        visible={Boolean(selectedPaymentId)}
+        onClose={() => setSelectedPaymentId(null)}
+        onDownloadReceipt={(id) => void onReceipt(id)}
+        onRetryPayment={(id) => void onRetryPayment(id)}
+        retryLoading={orderLoading}
+      />
+
+      {user ? (
+        <EasebuzzCheckout
+          visible={checkoutVisible}
+          session={checkoutSession}
+          customer={{ name: user.name, email: user.email, phone: '' }}
+          onClose={() => {
+            setCheckoutVisible(false);
+            setCheckoutSession(null);
+          }}
+          onComplete={onCheckoutComplete}
+        />
+      ) : null}
     </View>
+  );
+}
+
+function PaymentHistoryRow({ item, onPress }: { item: PaymentRecord; onPress: () => void }) {
+  const styles = useThemedStyles(createRowStyles);
+  const { theme } = useCustomerTheme();
+
+  return (
+    <PressableScale style={styles.wrap} onPress={onPress} accessibilityLabel={`Payment ${item.payment_number}`}>
+      <GlassCard padded contentStyle={styles.card}>
+        <View style={styles.top}>
+          <View style={styles.left}>
+            <View style={styles.iconWrap}>
+              <MaterialCommunityIcons name="file-document-outline" size={20} color={theme.colors.primary} />
+            </View>
+            <View style={styles.meta}>
+              <Text style={styles.period}>{paymentPeriodLabel(item)}</Text>
+              <Text style={styles.number}>Inv #{item.payment_number}</Text>
+            </View>
+          </View>
+          <Text style={styles.amount}>{formatINR(item.total_amount)}</Text>
+        </View>
+        <View style={styles.bottom}>
+          <Text style={styles.method}>
+            {item.method.toUpperCase()}
+            {item.gateway_slug ? ` · ${item.gateway_slug}` : ''}
+          </Text>
+          <CustomerPaymentStatusPill status={item.status} />
+        </View>
+      </GlassCard>
+    </PressableScale>
   );
 }
 
 const createStyles = (theme: CustomerTheme) =>
   StyleSheet.create({
-    canvas: { flex: 1, padding: theme.spacing.lg, backgroundColor: theme.colors.bgDeep },
-    title: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: theme.colors.textPrimary,
-      fontFamily: theme.fonts.display,
-      marginBottom: theme.spacing.md,
+    canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
+    filters: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingTop: theme.spacing.sm,
+      paddingBottom: theme.spacing.md,
+      gap: theme.spacing.md,
     },
-    list: { paddingBottom: theme.spacing.xxxl },
-    rowWrap: { marginBottom: theme.spacing.sm },
-    row: { gap: theme.spacing.xs },
+    dateCard: {
+      gap: theme.spacing.sm,
+    },
+    dateLabel: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      fontFamily: theme.fonts.bodyMedium,
+      textTransform: 'uppercase',
+      letterSpacing: 0.6,
+    },
+    list: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingBottom: theme.spacing.xxxl,
+    },
+    listEmpty: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingBottom: theme.spacing.xxxl,
+      flexGrow: 1,
+      justifyContent: 'flex-start',
+    },
+  });
+
+const createRowStyles = (theme: CustomerTheme) =>
+  StyleSheet.create({
+    wrap: { marginBottom: theme.spacing.sm },
+    card: { gap: theme.spacing.sm },
+    top: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: theme.spacing.sm,
+    },
+    left: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+      flex: 1,
+    },
+    iconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.colors.accentPrimaryMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    meta: { flex: 1, minWidth: 0 },
+    period: {
+      ...theme.typography.bodyMedium,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodySemiBold,
+    },
     number: {
+      ...theme.typography.caption,
+      color: theme.colors.onSurfaceVariant,
       fontFamily: theme.fonts.mono,
-      fontWeight: '700',
-      color: theme.colors.textPrimary,
     },
-    rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    meta: { fontSize: 11, color: theme.colors.textSecondary, textTransform: 'capitalize' },
-    date: { fontSize: 12, color: theme.colors.textMuted },
+    amount: {
+      ...theme.typography.monoMd,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.monoBold,
+    },
+    bottom: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    method: {
+      fontSize: 11,
+      color: theme.colors.textSecondary,
+      fontFamily: theme.fonts.body,
+      textTransform: 'uppercase',
+      flex: 1,
+    },
   });

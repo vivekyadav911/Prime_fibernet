@@ -4,15 +4,17 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Plan } from '@prime/types';
 
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
-import { GlassCard, PressableScale } from '@/components/customer/ui';
+import { CustomerStatusPill, GlassCard, PressableScale } from '@/components/customer/ui';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerTheme } from '@/theme/customer';
 import { getPlanDataLabel, getPlanTierLabel } from '@/utils/planDisplay';
+import { planChangeCtaLabel, type PlanChangeDirection } from '@/utils/planChange';
 
 type PlanCardProps = {
   plan: Plan;
   priceLabel: string;
   isCurrentPlan?: boolean;
+  changeDirection?: PlanChangeDirection;
   daysUntilRenewal?: number;
   onPress: (plan: Plan) => void;
 };
@@ -21,6 +23,7 @@ export const PlanCard = React.memo(function PlanCard({
   plan,
   priceLabel,
   isCurrentPlan,
+  changeDirection = 'switch',
   daysUntilRenewal,
   onPress,
 }: PlanCardProps) {
@@ -28,30 +31,33 @@ export const PlanCard = React.memo(function PlanCard({
   const { theme } = useCustomerTheme();
   const tierLabel = getPlanTierLabel(plan.speedMbps, plan.isFeatured);
   const dataLabel = getPlanDataLabel(plan);
+  const ctaLabel = isCurrentPlan ? 'Current plan' : planChangeCtaLabel(changeDirection);
 
   return (
     <PressableScale
       style={styles.wrapper}
       onPress={() => onPress(plan)}
-      accessibilityLabel={`${plan.speedMbps} Mbps ${tierLabel}, ${priceLabel}`}
+      accessibilityLabel={`${plan.speedMbps} Mbps ${tierLabel}, ${priceLabel}, ${ctaLabel}`}
     >
-      <GlassCard style={[styles.card, isCurrentPlan && styles.current]} glow={isCurrentPlan} padded>
+      <GlassCard
+        style={[styles.card, isCurrentPlan && styles.current]}
+        glow={isCurrentPlan}
+        padded
+        contentStyle={styles.cardContent}
+      >
         <View style={styles.topRow}>
           <View style={styles.titleRow}>
             <MaterialCommunityIcons name="rocket-launch" size={20} color={theme.colors.primary} />
-            <Text style={styles.speedTitle}>
+            <Text style={styles.speedTitle} numberOfLines={2}>
               {plan.speedMbps} Mbps {tierLabel}
             </Text>
           </View>
           {isCurrentPlan ? (
-            <View style={styles.currentBadge}>
-              <View style={styles.currentDot} />
-              <Text style={styles.currentBadgeText}>Current Plan</Text>
-            </View>
+            <CustomerStatusPill label="Current plan" tone="current" style={styles.currentPill} />
           ) : null}
         </View>
 
-        <Text style={styles.meta}>
+        <Text style={styles.meta} numberOfLines={1}>
           {priceLabel}/mo · {dataLabel}
         </Text>
 
@@ -59,11 +65,13 @@ export const PlanCard = React.memo(function PlanCard({
           {isCurrentPlan && daysUntilRenewal != null ? (
             <Text style={styles.renewal}>Renews in {daysUntilRenewal}d</Text>
           ) : (
-            <View />
+            <Text style={[styles.ctaHint, changeDirection === 'upgrade' && styles.ctaUpgrade]} numberOfLines={1}>
+              {ctaLabel}
+            </Text>
           )}
           <View style={styles.expandHint}>
-            <Text style={styles.expandText}>Tap to expand</Text>
-            <MaterialCommunityIcons name="chevron-down" size={18} color={theme.colors.primary} />
+            <Text style={styles.expandText}>View details</Text>
+            <MaterialCommunityIcons name="chevron-right" size={18} color={theme.colors.primary} />
           </View>
         </View>
       </GlassCard>
@@ -76,9 +84,8 @@ const createStyles = (theme: CustomerTheme) =>
     wrapper: { marginBottom: theme.spacing.sm },
     card: {
       borderRadius: theme.radius.lg,
-      minHeight: 168,
-      maxHeight: 180,
-      justifyContent: 'space-between',
+    },
+    cardContent: {
       gap: theme.spacing.sm,
     },
     current: {
@@ -93,39 +100,21 @@ const createStyles = (theme: CustomerTheme) =>
     },
     titleRow: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       gap: theme.spacing.xs,
       flex: 1,
       minWidth: 0,
+    },
+    currentPill: {
+      flexShrink: 0,
+      maxWidth: '46%',
     },
     speedTitle: {
       ...theme.typography.bodyLg,
       color: theme.colors.onSurface,
       fontFamily: theme.fonts.bodySemiBold,
-      flexShrink: 1,
-    },
-    currentBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: theme.radius.pill,
-      backgroundColor: theme.colors.accentPrimaryMuted,
-      borderWidth: 1,
-      borderColor: 'rgba(173,198,255,0.3)',
-    },
-    currentDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: theme.colors.secondary,
-    },
-    currentBadgeText: {
-      ...theme.typography.caption,
-      color: theme.colors.primary,
-      fontFamily: theme.fonts.bodyMedium,
-      fontSize: 10,
+      fontWeight: '600',
+      flex: 1,
     },
     meta: {
       ...theme.typography.body,
@@ -141,6 +130,15 @@ const createStyles = (theme: CustomerTheme) =>
       ...theme.typography.caption,
       color: theme.colors.onSurfaceVariant,
       fontFamily: theme.fonts.mono,
+    },
+    ctaHint: {
+      ...theme.typography.caption,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.bodyMedium,
+      fontWeight: '600',
+    },
+    ctaUpgrade: {
+      color: theme.colors.primary,
     },
     expandHint: {
       flexDirection: 'row',

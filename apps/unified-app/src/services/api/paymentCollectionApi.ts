@@ -17,11 +17,18 @@ import type {
   PaymentRecord,
   PaymentActivityEvent,
   ManualPaymentPayload,
+  PaymentStatus,
 } from '@/types/payments';
 
 import { formatCustomerAccountId } from '@/utils/customerAccount';
 
 import { fetchActiveSubscriptionRow } from '@/services/customer/fetchActiveSubscriptionRow';
+import {
+  buildSubscriptionBillAmount,
+  dedupePaymentHistoryForDisplay,
+  resolveCurrentOutstanding,
+  resolvePaymentChargeAmount,
+} from '@/services/customer/customerOutstanding';
 import { baseApi } from './baseApi';
 
 function mapOfficerJoin(raw: unknown): PaymentRecord['officer'] {
@@ -521,19 +528,8 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
               }
             : null;
 
-          const { data: pendingPayments } = await client
-            .from('payments')
-            .select('total_amount')
-            .eq('customer_id', customerId)
-            .in('status', ['initiated', 'pending_review']);
-
-          const pendingSum = (pendingPayments ?? []).reduce(
-            (sum, row) => sum + Number(row.total_amount ?? 0),
-            0,
-          );
-
           let planName: string | null = null;
-          let planAmount = pendingSum > 0 ? pendingSum : Number(user.outstanding_amount ?? 0);
+          let subscriptionPlanPrice = 0;
           if (sub?.plan_id) {
             const { data: plan } = await client
               .from('plans')
@@ -541,13 +537,59 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
               .eq('id', sub.plan_id)
               .maybeSingle();
             planName = plan?.name ?? null;
-            planAmount = Number(plan?.price ?? planAmount);
-          }
-          if (planAmount <= 0 && user.outstanding_amount) {
-            planAmount = Number(user.outstanding_amount);
+            subscriptionPlanPrice = Number(plan?.price ?? 0);
           }
 
-          const taxAmount = Math.round(planAmount * 0.18 * 100) / 100;
+          const { data: openPayments } = await client
+            .from('payments')
+            .select('id, total_amount, status, billing_period_start, created_at')
+            .eq('customer_id', customerId)
+            .in('status', ['initiated', 'pending_review', 'failed', 'cancelled']);
+
+          const userOutstanding = Number(user.outstanding_amount ?? 0);
+          const resolved = resolveCurrentOutstanding(
+            (openPayments ?? []).map((row) => ({
+              id: String(row.id),
+              total_amount: Number(row.total_amount ?? 0),
+              status: String(row.status) as PaymentStatus,
+              billing_period_start: (row.billing_period_start as string | null) ?? null,
+              created_at: String(row.created_at),
+            })),
+            userOutstanding,
+            subscriptionPlanPrice,
+          );
+
+          const isOverdue = user.payment_status === 'overdue';
+          const hasDue = resolved.amount > 0;
+          const billParts = buildSubscriptionBillAmount(subscriptionPlanPrice, {
+            isOverdue: isOverdue && hasDue,
+          });
+
+          let planAmount: number;
+          let taxAmount: number;
+          let lateFee: number;
+          let totalPayable: number;
+          let outstandingAmount: number;
+
+          if (subscriptionPlanPrice > 0 && hasDue) {
+            planAmount = billParts.planAmount;
+            taxAmount = billParts.taxAmount;
+            lateFee = billParts.lateFee;
+            totalPayable = billParts.totalPayable;
+            outstandingAmount = billParts.outstandingAmount;
+          } else if (subscriptionPlanPrice > 0) {
+            planAmount = subscriptionPlanPrice;
+            taxAmount = 0;
+            lateFee = 0;
+            totalPayable = subscriptionPlanPrice;
+            outstandingAmount = 0;
+          } else {
+            planAmount = resolved.amount;
+            taxAmount = 0;
+            lateFee = 0;
+            totalPayable = resolved.amount;
+            outstandingAmount = resolved.amount;
+          }
 
           return {
             customerId: user.id,
@@ -556,13 +598,13 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             planName: planName ?? null,
             planAmount,
             taxAmount,
-            lateFee: user.payment_status === 'overdue' ? Math.round(planAmount * 0.05 * 100) / 100 : 0,
-            totalPayable: planAmount + taxAmount + (user.payment_status === 'overdue' ? Math.round(planAmount * 0.05 * 100) / 100 : 0),
+            lateFee,
+            totalPayable,
             billingPeriodStart: sub?.start_at ?? null,
             billingPeriodEnd: sub?.end_at ?? null,
             dueDate: user.next_due_date ?? user.expiry_date ?? null,
             paymentStatus: user.payment_status ?? 'pending',
-            outstandingAmount: pendingSum > 0 ? pendingSum : Number(user.outstanding_amount ?? 0),
+            outstandingAmount,
             lastPaidAmount: user.last_paid_amount != null ? Number(user.last_paid_amount) : null,
             lastPaidAt: user.last_paid_at ?? null,
           };
@@ -582,7 +624,8 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             .order('created_at', { ascending: false })
             .limit(50);
           if (error) throw error;
-          return (data ?? []).map((r) => mapPayment(r as Record<string, unknown>));
+          const mapped = (data ?? []).map((r) => mapPayment(r as Record<string, unknown>));
+          return dedupePaymentHistoryForDisplay(mapped);
         },
       }),
       providesTags: ['Payments'],

@@ -1,12 +1,20 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
+import { useCallback } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerTheme } from '@/theme/customer';
+import type { CustomerStackParamList, CustomerTabParamList } from '@/types/navigation';
 import { isBlurUnavailable } from '@/utils/expoRuntime';
+
+import {
+  navigateToCustomerNotifications,
+  navigateToCustomerProfile,
+} from './customerShellNavigation';
 
 type CustomerTopBarProps = {
   unreadCount?: number;
@@ -22,16 +30,33 @@ export function CustomerTopBar({
   showProfileAvatar = true,
 }: CustomerTopBarProps) {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NavigationProp<CustomerTabParamList & CustomerStackParamList>>();
   const { theme } = useCustomerTheme();
   const styles = useThemedStyles(createStyles);
   const useSolid = isBlurUnavailable() || !theme.useGlassBlur;
+
+  const handleProfilePress = useCallback(() => {
+    if (onProfilePress) {
+      onProfilePress();
+      return;
+    }
+    navigateToCustomerProfile(navigation);
+  }, [navigation, onProfilePress]);
+
+  const handleNotificationsPress = useCallback(() => {
+    if (onNotificationsPress) {
+      onNotificationsPress();
+      return;
+    }
+    navigateToCustomerNotifications(navigation);
+  }, [navigation, onNotificationsPress]);
 
   const content = (
     <View style={[styles.row, { paddingTop: insets.top + theme.spacing.xs }]}>
       <View style={styles.left}>
         {showProfileAvatar ? (
           <Pressable
-            onPress={onProfilePress}
+            onPress={handleProfilePress}
             style={styles.avatar}
             accessibilityLabel="Profile"
             hitSlop={8}
@@ -42,7 +67,7 @@ export function CustomerTopBar({
         <Text style={styles.brand}>Prime Fibernet</Text>
       </View>
       <Pressable
-        onPress={onNotificationsPress}
+        onPress={handleNotificationsPress}
         style={styles.bell}
         accessibilityLabel="Notifications"
         hitSlop={8}

@@ -18,20 +18,32 @@ export function usePlans() {
   const gatewayQuery = useGetActivePaymentGatewayQuery();
   const subscriptionQuery = useGetActiveSubscriptionQuery(userId, { skip: !userId });
 
-  const plans = useMemo(() => dedupePlansBySpeed(plansQuery.data ?? []), [plansQuery.data]);
-
   const currentPlanId = subscriptionQuery.data?.planId ?? null;
+
+  const plans = useMemo(() => {
+    const deduped = dedupePlansBySpeed(plansQuery.data ?? []);
+    if (!currentPlanId) return deduped;
+    const current = deduped.find((plan) => plan.id === currentPlanId);
+    if (!current) return deduped;
+    return [current, ...deduped.filter((plan) => plan.id !== currentPlanId)];
+  }, [currentPlanId, plansQuery.data]);
+
+  const currentPlan = useMemo(
+    () => plans.find((plan) => plan.id === currentPlanId) ?? null,
+    [currentPlanId, plans],
+  );
 
   const paymentGateway = gatewayQuery.data?.display_name ?? 'Easebuzz';
 
   return {
     user,
     plans,
+    currentPlan,
     getPriceForCycle: (plan: Plan) => getPriceForCycle(plan, 'monthly'),
     currentPlanId,
     subscription: subscriptionQuery.data ?? null,
     paymentGateway,
-    isLoading: plansQuery.isLoading || gatewayQuery.isLoading,
+    isLoading: plansQuery.isLoading,
     error: plansQuery.error ?? gatewayQuery.error,
     refetch: plansQuery.refetch,
   };

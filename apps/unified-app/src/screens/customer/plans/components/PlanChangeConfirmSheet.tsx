@@ -5,19 +5,36 @@ import { CustomerButton } from '@/components/customer/ui';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerTheme } from '@/theme/customer';
 
+import type { PlanChangeDirection } from '@/utils/planChange';
+
 type PlanChangeConfirmSheetProps = {
   visible: boolean;
   currentPlanName: string;
   requestedPlanName: string;
+  changeDirection?: PlanChangeDirection;
   loading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
 
+function confirmCopy(direction: PlanChangeDirection, current: string, requested: string): string {
+  switch (direction) {
+    case 'downgrade':
+      return `Request downgrade from ${current} to ${requested}?`;
+    case 'upgrade':
+      return `Request upgrade from ${current} to ${requested}?`;
+    case 'switch':
+      return `Request plan change from ${current} to ${requested}?`;
+    default:
+      return `Request change from ${current} to ${requested}?`;
+  }
+}
+
 export function PlanChangeConfirmSheet({
   visible,
   currentPlanName,
   requestedPlanName,
+  changeDirection = 'switch',
   loading,
   onConfirm,
   onCancel,
@@ -32,7 +49,7 @@ export function PlanChangeConfirmSheet({
         <View style={styles.handle} />
         <Text style={styles.title}>Confirm plan change</Text>
         <Text style={styles.body}>
-          Request upgrade from {currentPlanName} to {requestedPlanName}?
+          {confirmCopy(changeDirection, currentPlanName, requestedPlanName)}
         </Text>
         <Text style={styles.note}>Our team will process your request within 24 hours.</Text>
         <CustomerButton

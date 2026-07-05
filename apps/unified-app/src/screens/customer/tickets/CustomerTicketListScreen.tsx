@@ -2,21 +2,19 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import {
-  CustomerBadge,
   CustomerButton,
+  CustomerCard,
   CustomerEmptyState,
   CustomerErrorState,
   CustomerSkeletonLoader,
-  PressableScale,
 } from '@/components/customer/ui';
+import { CustomerTicketStatusPill } from '@/components/customer/tickets/CustomerTicketStatusPill';
 import { CustomerTicketTimeline } from '@/components/customer/tickets/CustomerTicketTimeline';
-import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
 import { DismissKeyboardFlatList } from '@/components/common';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useGetMyTicketsQuery } from '@/services/api/customerTicketsApi';
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { CustomerTheme } from '@/theme/customer';
-import { formatRelativeIst } from '@/utils/formatDate';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'CustomerTicketList'>;
 
@@ -24,13 +22,7 @@ function formatSubmittedDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function statusTone(status: string): 'info' | 'success' | 'warning' {
-  if (status === 'Resolved' || status === 'Closed') return 'success';
-  if (status === 'Awaiting Customer' || status === 'Awaiting Parts') return 'warning';
-  return 'info';
-}
-
-function TicketListContent({ navigation }: Props) {
+export function CustomerTicketListScreen({ navigation }: Props) {
   const styles = useThemedStyles(createStyles);
   const { data, isLoading, error, refetch, isFetching } = useGetMyTicketsQuery();
 
@@ -56,6 +48,7 @@ function TicketListContent({ navigation }: Props) {
         label="Raise a Ticket"
         onPress={() => navigation.navigate('CreateCustomerTicket')}
         style={styles.cta}
+        icon="plus-circle-outline"
       />
       <DismissKeyboardFlatList
         data={data ?? []}
@@ -73,35 +66,26 @@ function TicketListContent({ navigation }: Props) {
           />
         }
         renderItem={({ item }) => (
-          <PressableScale
+          <CustomerCard
             style={styles.cardWrap}
+            contentStyle={styles.cardContent}
             onPress={() => navigation.navigate('CustomerTicketDetail', { ticketId: item.id })}
-            accessibilityLabel={`Ticket ${item.ticketNumber}`}
+            accessibilityLabel={`Ticket ${item.ticketNumber}, ${item.title}`}
           >
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.number}>#{item.ticketNumber}</Text>
-                <CustomerBadge label={item.status} tone={statusTone(item.status)} />
-              </View>
-              <Text style={styles.subject} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <Text style={styles.submitted}>Submitted: {formatSubmittedDate(item.createdAt)}</Text>
-              <CustomerTicketTimeline items={item.timeline} compact />
-              <Text style={styles.viewDetails}>View Details →</Text>
+            <View style={styles.cardHeader}>
+              <Text style={styles.number}>#{item.ticketNumber}</Text>
+              <CustomerTicketStatusPill status={item.status} />
             </View>
-          </PressableScale>
+            <Text style={styles.subject} numberOfLines={2}>
+              {item.title}
+            </Text>
+            <Text style={styles.submitted}>Submitted {formatSubmittedDate(item.createdAt)}</Text>
+            <CustomerTicketTimeline items={item.timeline} compact />
+            <Text style={styles.viewDetails}>View details</Text>
+          </CustomerCard>
         )}
       />
     </View>
-  );
-}
-
-export function CustomerTicketListScreen(props: Props) {
-  return (
-    <CustomerFontProvider>
-      <TicketListContent {...props} />
-    </CustomerFontProvider>
   );
 }
 
@@ -109,16 +93,9 @@ const createStyles = (theme: CustomerTheme) =>
   StyleSheet.create({
     canvas: { flex: 1, backgroundColor: theme.colors.bgDeep, padding: theme.spacing.lg },
     cta: { marginBottom: theme.spacing.md },
-    list: { paddingBottom: theme.spacing.xxxl },
-    cardWrap: { marginBottom: theme.spacing.sm },
-    card: {
-      backgroundColor: theme.colors.bgSurface,
-      borderRadius: theme.radius.md,
-      padding: theme.spacing.md,
-      borderWidth: 1,
-      borderColor: theme.colors.borderSubtle,
-      gap: theme.spacing.sm,
-    },
+    list: { paddingBottom: theme.spacing.xxxl, gap: theme.spacing.sm },
+    cardWrap: { borderRadius: theme.radius.lg },
+    cardContent: { gap: theme.spacing.sm },
     cardHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',

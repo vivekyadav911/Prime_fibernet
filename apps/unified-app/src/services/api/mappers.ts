@@ -28,6 +28,10 @@ export function mapPlan(row: Record<string, unknown>): Plan {
     dataLimitText === 'unlimted' ||
     dataLimitText === 'none';
 
+  const routerType =
+    typeof row.router_type === 'string' && row.router_type.trim() ? row.router_type.trim() : null;
+  const featuresLower = features.map((f) => f.toLowerCase());
+
   return {
     id: row.id as string,
     name: row.name as string,
@@ -41,6 +45,9 @@ export function mapPlan(row: Record<string, unknown>): Plan {
     isFeatured: Boolean(row.is_featured),
     isUnlimited: row.is_unlimited != null ? Boolean(row.is_unlimited) : unlimitedFromText,
     dataLimitGb: row.data_limit_gb != null ? Number(row.data_limit_gb) : null,
+    routerType,
+    hasStaticIp: featuresLower.some((f) => f.includes('static ip')),
+    includesOtt: featuresLower.some((f) => f.includes('ott')),
   };
 }
 

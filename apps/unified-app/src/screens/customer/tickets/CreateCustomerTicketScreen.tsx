@@ -3,8 +3,12 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { z } from 'zod';
 
-import { CustomerButton, CustomerInput } from '@/components/customer/ui';
-import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
+import {
+  CustomerButton,
+  CustomerCard,
+  CustomerFilterChips,
+  CustomerInput,
+} from '@/components/customer/ui';
 import { DismissKeyboardScrollView } from '@/components/common';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useCreateCustomerTicketMutation } from '@/services/api/customerTicketsApi';
@@ -34,7 +38,7 @@ function defaultSubject(categoryLabel: string, customerName: string): string {
   return `${categoryLabel} reported by ${customerName}`;
 }
 
-function CreateTicketContent({ navigation }: Props) {
+export function CreateCustomerTicketScreen({ navigation }: Props) {
   const styles = useThemedStyles(createStyles);
   const user = useAppSelector((s) => s.auth.user);
   const customerName = user?.name ?? 'Customer';
@@ -93,53 +97,46 @@ function CreateTicketContent({ navigation }: Props) {
   return (
     <DismissKeyboardScrollView style={styles.canvas} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Raise a ticket</Text>
-      <Text style={styles.label}>Category</Text>
-      <View style={styles.categories}>
-        {CATEGORIES.map((c) => (
-          <CustomerButton
-            key={c.id}
-            label={c.label}
-            variant={category === c.id ? 'primary' : 'ghost'}
-            onPress={() => {
-              setCategory(c.id);
-              setCategoryError(undefined);
-            }}
-            style={styles.catBtn}
-          />
-        ))}
-      </View>
-      {categoryError ? <Text style={styles.error}>{categoryError}</Text> : null}
-      <CustomerInput
-        label="Subject (optional)"
-        value={subject}
-        onChangeText={setSubject}
-        error={errors.subject}
-        placeholder={category ? defaultSubject(categoryLabel, customerName) : 'Auto-generated from category'}
-      />
-      <CustomerInput
-        label="Description"
-        value={description}
-        onChangeText={setDescription}
-        error={errors.description}
-        multiline
-        numberOfLines={5}
-        style={styles.textarea}
-      />
-      <Text style={styles.counter}>{description.length}/20 min characters</Text>
+      <Text style={styles.lead}>Tell us what you need help with and our team will follow up.</Text>
+
+      <CustomerCard contentStyle={styles.formCard}>
+        <Text style={styles.label}>Category</Text>
+        <CustomerFilterChips
+          chips={CATEGORIES.map((c) => ({ id: c.id, label: c.label }))}
+          selectedId={category}
+          onSelect={(id) => {
+            setCategory(id as (typeof CATEGORIES)[number]['id']);
+            setCategoryError(undefined);
+          }}
+        />
+        {categoryError ? <Text style={styles.error}>{categoryError}</Text> : null}
+
+        <CustomerInput
+          label="Subject (optional)"
+          value={subject}
+          onChangeText={setSubject}
+          error={errors.subject}
+          placeholder={category ? defaultSubject(categoryLabel, customerName) : 'Auto-generated from category'}
+        />
+        <CustomerInput
+          label="Description"
+          value={description}
+          onChangeText={setDescription}
+          error={errors.description}
+          multiline
+          numberOfLines={5}
+          style={styles.textarea}
+        />
+        <Text style={styles.counter}>{description.length}/20 min characters</Text>
+      </CustomerCard>
+
       <CustomerButton
         label={isLoading ? 'Submitting…' : 'Raise Ticket'}
         onPress={() => void onSubmit()}
         disabled={isLoading}
+        icon="ticket-confirmation-outline"
       />
     </DismissKeyboardScrollView>
-  );
-}
-
-export function CreateCustomerTicketScreen(props: Props) {
-  return (
-    <CustomerFontProvider>
-      <CreateTicketContent {...props} />
-    </CustomerFontProvider>
   );
 }
 
@@ -148,19 +145,23 @@ const createStyles = (theme: CustomerTheme) =>
     canvas: { flex: 1, backgroundColor: theme.colors.bgDeep },
     content: { padding: theme.spacing.lg, gap: theme.spacing.md, paddingBottom: theme.spacing.xxxl },
     heading: {
+      ...theme.typography.displayMd,
       color: theme.colors.textPrimary,
       fontFamily: theme.fonts.display,
-      fontSize: 22,
-      fontWeight: '700',
     },
+    lead: {
+      ...theme.typography.body,
+      color: theme.colors.onSurfaceVariant,
+      fontFamily: theme.fonts.body,
+    },
+    formCard: { gap: theme.spacing.md },
     label: {
       fontSize: 12,
       fontWeight: '600',
       color: theme.colors.textSecondary,
       textTransform: 'uppercase',
+      fontFamily: theme.fonts.bodyMedium,
     },
-    categories: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.xs },
-    catBtn: { paddingHorizontal: theme.spacing.sm },
     textarea: { minHeight: 120, textAlignVertical: 'top' },
     counter: {
       color: theme.colors.textMuted,

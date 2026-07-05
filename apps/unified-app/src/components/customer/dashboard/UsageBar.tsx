@@ -4,21 +4,39 @@ import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerTheme } from '@/theme/customer';
 
 type UsageBarProps = {
-  usedGb: number;
-  limitGb: number;
+  usedGb?: number | null;
+  limitGb?: number | null;
+  isUnlimited?: boolean;
 };
 
-export function UsageBar({ usedGb, limitGb }: UsageBarProps) {
+export function UsageBar({ usedGb, limitGb, isUnlimited = false }: UsageBarProps) {
   const styles = useThemedStyles(createStyles);
-  const pct = Math.min(100, Math.round((usedGb / limitGb) * 100));
+
+  if (isUnlimited) {
+    return (
+      <View style={styles.wrap}>
+        <Text style={styles.label}>Unlimited data</Text>
+        <View style={styles.track}>
+          <View style={[styles.fill, styles.fillFull]} />
+        </View>
+      </View>
+    );
+  }
+
+  if (limitGb == null || limitGb <= 0) {
+    return null;
+  }
+
+  const hasUsage = usedGb != null && usedGb >= 0;
+  const pct = hasUsage ? Math.min(100, Math.round((usedGb / limitGb) * 100)) : 0;
 
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>
-        {usedGb} GB used of {limitGb} GB
+        {hasUsage ? `${usedGb} GB used of ${limitGb} GB` : `Data cap: ${limitGb} GB`}
       </Text>
       <View style={styles.track}>
-        <View style={[styles.fill, { width: `${pct}%` }]} />
+        <View style={[styles.fill, { width: hasUsage ? `${pct}%` : '0%' }]} />
       </View>
     </View>
   );
@@ -43,5 +61,8 @@ const createStyles = (theme: CustomerTheme) =>
       height: '100%',
       backgroundColor: theme.colors.accentPrimary,
       borderRadius: theme.radius.pill,
+    },
+    fillFull: {
+      width: '100%',
     },
   });

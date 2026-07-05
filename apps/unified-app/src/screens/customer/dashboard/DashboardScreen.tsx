@@ -114,6 +114,10 @@ export function DashboardScreen() {
               planPrice={sub.planPrice}
               nextDueDate={data?.nextDueDate}
               outstandingAmount={data?.outstanding}
+              daysUntilExpiry={sub.daysUntilExpiry}
+              isExpiringSoon={sub.isExpiringSoon}
+              isUnlimited={sub.isUnlimited}
+              dataLimitGb={sub.dataLimitGb}
               onPayNow={() => navigation.navigate('Payments')}
               onViewInvoice={() => navigation.navigate('PaymentHistory')}
               onContactSupport={() => navigation.navigate('Support')}
@@ -134,12 +138,15 @@ export function DashboardScreen() {
             isActive={isActive}
             planSpeedMbps={planSpeedMbps}
             reading={speedReading}
-            onPress={() => setSpeedModalVisible(true)}
+            onPress={() => {
+              if (isActive) setSpeedModalVisible(true);
+            }}
           />
         </FadeInSection>
 
         <FadeInSection delayMs={300}>
           <QuickActionsGrid
+            disabled={!isActive}
             actions={[
               { id: 'pay', label: 'Pay Bill', icon: 'credit-card-outline', onPress: () => navigation.navigate('Payments') },
               { id: 'tickets', label: 'My Tickets', icon: 'ticket-confirmation-outline', onPress: () => navigation.navigate('CustomerTicketList') },

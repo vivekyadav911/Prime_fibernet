@@ -56,7 +56,7 @@ export function SpeedTestModal({
       <View style={[styles.canvas, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, theme.spacing.lg) }]}>
         <View style={styles.header}>
           <CustomerButton label="Close" variant="ghost" onPress={onClose} />
-          <Text style={styles.title}>Speed Test</Text>
+          <Text style={styles.title}>Estimated test</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -77,7 +77,7 @@ export function SpeedTestModal({
 
           {showPlanNote ? (
             <Text style={styles.planNote}>
-              Plan speed: {planSpeedMbps} Mbps — run a test to measure your connection.
+              This is an estimated test based on your plan speed — not a live network measurement.
             </Text>
           ) : null}
 
@@ -97,13 +97,15 @@ export function SpeedTestModal({
           </View>
 
           {phase === 'complete' && result ? (
-            <Text style={styles.completeNote}>Test complete — results based on your plan provisioned speed.</Text>
+            <Text style={styles.completeNote}>
+              Estimated results — provisioned plan speed is {planSpeedMbps} Mbps.
+            </Text>
           ) : null}
         </ScrollView>
 
         <View style={styles.footer}>
           <CustomerButton
-            label={isRunning ? 'Testing…' : phase === 'complete' ? 'Run Again' : 'Run Speed Test'}
+            label={isRunning ? 'Testing…' : phase === 'complete' ? 'Run Again' : 'Run Estimated Test'}
             onPress={runTest}
             disabled={!isActive || isRunning}
             icon="speedometer"

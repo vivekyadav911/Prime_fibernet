@@ -2,14 +2,13 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BillingCycle } from '@prime/types';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerTopBar } from '@/components/customer/shell';
 import {
   CustomerButton,
   CustomerErrorState,
   CustomerSkeletonLoader,
+  CustomerStatusPill,
   GlassCard,
 } from '@/components/customer/ui';
 import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
@@ -25,10 +24,16 @@ import type { CustomerTheme } from '@/theme/customer';
 import type { CustomerStackParamList } from '@/types/navigation';
 import { formatCurrencyInr } from '@/utils/formatCurrency';
 import { formatDateIst } from '@/utils/formatDate';
-import { getPlanDataLabel, getPlanTierLabel } from '@/utils/planDisplay';
+import {
+  getPlanChangeDirection,
+  planChangeActionLabel,
+  type PlanChangeDirection,
+} from '@/utils/planChange';
+import { getPlanTierLabel } from '@/utils/planDisplay';
 import { queryErrorMessage } from '@/utils/queryError';
 
 import { PlanChangeConfirmSheet } from './components/PlanChangeConfirmSheet';
+import { PlanFeatureList } from './components/PlanFeatureList';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'PlanDetails'>;
 
@@ -37,17 +42,22 @@ const CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual'];
 export function PlanDetailsScreen({ navigation, route }: Props) {
   const { planId } = route.params;
   const styles = useThemedStyles(createStyles);
-  const { theme } = useCustomerTheme();
   const { userId } = useCustomerIdentity();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const { data: plan, isLoading, error, refetch } = useGetPlanByIdQuery(planId);
   const { data: subscription } = useGetActiveSubscriptionQuery(userId, { skip: !userId });
+  const { data: currentPlan } = useGetPlanByIdQuery(subscription?.planId ?? '', {
+    skip: !subscription?.planId,
+  });
   const { data: activeGateway } = useGetActivePaymentGatewayQuery();
   const { submitRequest, isSubmitting } = usePlanChangeRequest();
 
   const isCurrentPlan = subscription?.planId === planId;
+  const changeDirection: PlanChangeDirection = plan
+    ? getPlanChangeDirection(currentPlan, plan)
+    : 'switch';
   const price = plan ? getPriceForCycle(plan, billingCycle) : 0;
   const tierLabel = plan ? getPlanTierLabel(plan.speedMbps, plan.isFeatured) : '';
   const gatewayLabel = activeGateway?.display_name ?? 'Easebuzz';
@@ -101,10 +111,7 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
       <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {isCurrentPlan ? (
-          <View style={styles.currentPill}>
-            <View style={styles.currentDot} />
-            <Text style={styles.currentPillText}>Current Plan</Text>
-          </View>
+          <CustomerStatusPill label="Current plan" tone="current" style={styles.currentPill} />
         ) : null}
 
         <GlassCard style={styles.heroCard} glow={isCurrentPlan} padded>
@@ -148,17 +155,8 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
         ) : null}
 
         <GlassCard style={styles.section} padded>
-          <Text style={styles.sectionTitle}>Features</Text>
-          <View style={styles.dataRow}>
-            <MaterialCommunityIcons name="database" size={18} color={theme.colors.primary} />
-            <Text style={styles.feature}>{getPlanDataLabel(plan)}</Text>
-          </View>
-          {plan.features.map((feature) => (
-            <View key={feature} style={styles.dataRow}>
-              <MaterialCommunityIcons name="check-circle-outline" size={18} color={theme.colors.primary} />
-              <Text style={styles.feature}>{feature}</Text>
-            </View>
-          ))}
+          <Text style={styles.sectionTitle}>What's included</Text>
+          <PlanFeatureList plan={plan} />
         </GlassCard>
 
         <Text style={styles.gatewayNote}>Payments via {gatewayLabel}</Text>
@@ -169,13 +167,20 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
           <CustomerButton label="Back to plans" variant="outline" onPress={() => navigation.goBack()} />
         ) : subscription ? (
           <CustomerButton
-            label={`Upgrade to ${plan.speedMbps} Mbps`}
-            icon="arrow-up-bold"
+            label={planChangeActionLabel(changeDirection, plan.speedMbps)}
+            icon={
+              changeDirection === 'downgrade'
+                ? 'arrow-down-bold'
+                : changeDirection === 'switch'
+                  ? 'swap-horizontal'
+                  : 'arrow-up-bold'
+            }
+            variant={changeDirection === 'downgrade' ? 'outline' : 'primary'}
             onPress={() => setConfirmVisible(true)}
           />
         ) : (
           <CustomerButton
-            label="Select This Plan"
+            label="Select this plan"
             onPress={() => navigation.navigate('Checkout', { planId: plan.id, amount: price })}
           />
         )}
@@ -185,6 +190,7 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
         visible={confirmVisible}
         currentPlanName={subscription?.planName ?? 'your current plan'}
         requestedPlanName={plan.name}
+        changeDirection={changeDirection}
         loading={isSubmitting}
         onConfirm={() => void submitPlanChange()}
         onCancel={() => setConfirmVisible(false)}
@@ -204,26 +210,6 @@ const createStyles = (theme: CustomerTheme) =>
     },
     currentPill: {
       alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: theme.radius.pill,
-      backgroundColor: theme.colors.accentPrimaryMuted,
-      borderWidth: 1,
-      borderColor: 'rgba(173,198,255,0.3)',
-    },
-    currentDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: theme.colors.secondary,
-    },
-    currentPillText: {
-      ...theme.typography.caption,
-      color: theme.colors.primary,
-      fontFamily: theme.fonts.bodySemiBold,
     },
     heroCard: {
       borderRadius: theme.radius.lg,

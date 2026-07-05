@@ -129,7 +129,7 @@ async function main() {
       phone: '9876543210',
       role: 'customer',
       customer_id: 'PF100001',
-      outstanding_amount: 588.82,
+      outstanding_amount: 499,
       payment_status: 'pending',
       next_due_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
     },
@@ -141,8 +141,6 @@ async function main() {
   const planId = plans?.[0]?.id;
   const planName = plans?.[0]?.name ?? 'Broadband Plan';
   const planBase = Number(plans?.[0]?.price ?? 499);
-  const taxAmount = Math.round(planBase * 0.18 * 100) / 100;
-  const totalAmount = Math.round((planBase + taxAmount) * 100) / 100;
   const accountNumber = 'PF100001';
 
   if (planId) {
@@ -176,8 +174,8 @@ async function main() {
       account_number: accountNumber,
       plan_name: planName,
       amount: planBase,
-      tax_amount: taxAmount,
-      total_amount: totalAmount,
+      tax_amount: 0,
+      total_amount: planBase,
       method: 'upi',
       channel: 'online_app',
       status: row.status,
@@ -190,13 +188,9 @@ async function main() {
     { onConflict: 'id' },
   );
 
-  const pendingOutstanding = paymentRows
-    .filter((row) => row.status === 'initiated')
-    .reduce((sum) => sum + totalAmount, 0);
-
   await supabase
     .from('users')
-    .update({ outstanding_amount: pendingOutstanding })
+    .update({ outstanding_amount: planBase })
     .eq('id', customerId);
 
   await supabase.from('portal_notifications').upsert(
