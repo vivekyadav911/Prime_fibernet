@@ -63,8 +63,8 @@ function portalItem(
     assignedOfficerId: 'o1',
     assignedOfficerName: 'Officer',
     assignedOfficerRole: 'Field Technician',
-    createdAt: new Date(),
-    assignedAt: new Date(),
+    createdAt: new Date().toISOString(),
+    assignedAt: new Date().toISOString(),
     slaBreached: false,
     ticket: resolvedAt
       ? ({

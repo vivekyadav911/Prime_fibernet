@@ -22,6 +22,7 @@ type CustomerPaymentDetailSheetProps = {
   visible: boolean;
   onClose: () => void;
   onDownloadReceipt: (paymentId: string) => void;
+  downloadingReceiptId?: string | null;
   onRetryPayment?: (paymentId: string) => void;
   retryLoading?: boolean;
 };
@@ -47,6 +48,7 @@ export function CustomerPaymentDetailSheet({
   visible,
   onClose,
   onDownloadReceipt,
+  downloadingReceiptId = null,
   onRetryPayment,
   retryLoading = false,
 }: CustomerPaymentDetailSheetProps) {
@@ -157,9 +159,10 @@ export function CustomerPaymentDetailSheet({
               {paid ? (
                 <>
                   <CustomerButton
-                    label="Download receipt"
+                    label={downloadingReceiptId === payment.id ? 'Preparing receipt…' : 'Download receipt'}
                     icon="download-outline"
                     onPress={() => onDownloadReceipt(payment.id)}
+                    disabled={downloadingReceiptId === payment.id}
                   />
                   <CustomerButton
                     label="Request GST invoice"

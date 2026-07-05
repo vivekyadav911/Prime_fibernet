@@ -108,7 +108,12 @@ export type CustomerStackParamList = {
   CustomerSupportHub: undefined;
   CustomerTicketList: undefined;
   CustomerTicketDetail: { ticketId: string };
-  CreateCustomerTicket: undefined;
+  CreateCustomerTicket:
+    | {
+        prefillCategory?: 'speed_issue' | 'billing' | 'plan_change' | 'outage' | 'technical' | 'installation' | 'other';
+        prefillDescription?: string;
+      }
+    | undefined;
   PlanChangeRequest: { planId: string };
 };
 

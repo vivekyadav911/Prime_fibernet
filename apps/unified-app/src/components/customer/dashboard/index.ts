@@ -1,12 +1,12 @@
 export { ConnectionStatusCard } from './ConnectionStatusCard';
 export { LiveSpeedBar } from './LiveSpeedBar';
-export type { SpeedReading } from './LiveSpeedBar';
 export { SpeedTestModal } from './SpeedTestModal';
+export type { SpeedTestRaiseTicketParams } from './SpeedTestModal';
+export { SpeedTestGauge } from './SpeedTestGauge';
 export { SignalHero } from './SignalHero';
 export { PlanCard } from './PlanCard';
 export { DashboardPlanCard } from './DashboardPlanCard';
 export { CustomerInfoHeader } from './CustomerInfoHeader';
-export { SpeedGauge } from './SpeedGauge';
 export { UsageBar } from './UsageBar';
 export { QuickActions } from './QuickActions';
 export { QuickActionsGrid } from './QuickActionsGrid';

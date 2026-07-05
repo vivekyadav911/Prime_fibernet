@@ -6,27 +6,154 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function receiptStoragePath(paymentNumber: string): string {
+  return `receipt_${paymentNumber}.html`;
+}
+
 function receiptHtml(payment: Record<string, unknown>, company: Record<string, unknown>): string {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>
-    body{font-family:Arial,sans-serif;padding:24px;color:#111}
-    h1{color:#5B4FE9} table{width:100%;border-collapse:collapse;margin-top:16px}
-    td,th{padding:8px;border-bottom:1px solid #eee;text-align:left}
-  </style></head><body>
-    <h1>${company.company_name ?? 'Prime Fibernet'}</h1>
-    <p>${company.company_address ?? ''}</p>
-    <p>GSTIN: ${company.company_gstin ?? '—'}</p>
-    <h2>Payment Receipt</h2>
-    <table>
-      <tr><th>Receipt</th><td>${payment.payment_number}</td></tr>
-      <tr><th>Customer</th><td>${payment.customer_name}</td></tr>
-      <tr><th>Account</th><td>${payment.account_number}</td></tr>
-      <tr><th>Plan</th><td>${payment.plan_name ?? '—'}</td></tr>
-      <tr><th>Amount</th><td>₹${payment.total_amount}</td></tr>
-      <tr><th>Method</th><td>${payment.method}</td></tr>
-      <tr><th>Paid At</th><td>${payment.confirmed_at ?? payment.paid_at}</td></tr>
-      <tr><th>Next Due</th><td>${payment.next_due_date ?? '—'}</td></tr>
-    </table>
-  </body></html>`;
+  const receiptNumber = escapeHtml(payment.payment_number);
+  const paidAt = payment.confirmed_at ?? payment.paid_at ?? payment.created_at;
+  const formattedDate = paidAt
+    ? new Date(String(paidAt)).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    })
+    : '—';
+  const methodLabel = escapeHtml(String(payment.method ?? 'Online')).replace(/_/g, ' ').toUpperCase();
+  const amount = Number(payment.total_amount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+  const companyName = escapeHtml(company.company_name ?? 'Prime Fibernet');
+  const companyAddress = escapeHtml(company.company_address ?? '');
+  const companyGstin = escapeHtml(company.company_gstin ?? '—');
+  const txnId = escapeHtml(payment.gateway_payment_id ?? payment.gateway_txn_id ?? '—');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receipt ${receiptNumber}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8faff;
+      padding: 24px;
+      color: #1a1f36;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 480px;
+      margin: 0 auto;
+      box-shadow: 0 4px 24px rgba(61,82,213,0.08);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f0f2ff;
+    }
+    .brand { font-size: 20px; font-weight: 800; color: #3D52D5; }
+    .brand-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .paid-badge {
+      background: #dcfce7;
+      color: #16a34a;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .receipt-title { font-size: 13px; color: #94a3b8; font-weight: 600; letter-spacing: 1px; margin-bottom: 6px; }
+    .receipt-number { font-size: 22px; font-weight: 800; color: #1a1f36; margin-bottom: 24px; }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f2ff;
+    }
+    .row:last-of-type { border-bottom: none; }
+    .row-label { font-size: 13px; color: #64748b; }
+    .row-value { font-size: 13px; font-weight: 600; color: #1a1f36; text-align: right; max-width: 55%; }
+    .amount-row {
+      background: #f0f2ff;
+      border-radius: 10px;
+      padding: 16px;
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .amount-label { font-size: 14px; font-weight: 700; color: #3D52D5; }
+    .amount-value { font-size: 26px; font-weight: 900; color: #3D52D5; }
+    .footer {
+      text-align: center;
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid #f0f2ff;
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+    .txn-id { font-family: monospace; font-size: 11px; color: #94a3b8; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div>
+        <div class="brand">${companyName}</div>
+        <div class="brand-sub">www.primefiber.net</div>
+      </div>
+      <div class="paid-badge">PAID</div>
+    </div>
+    <div class="receipt-title">PAYMENT RECEIPT</div>
+    <div class="receipt-number">${receiptNumber}</div>
+    <div class="row"><span class="row-label">Date</span><span class="row-value">${formattedDate}</span></div>
+    <div class="row"><span class="row-label">Customer</span><span class="row-value">${escapeHtml(payment.customer_name)}</span></div>
+    <div class="row"><span class="row-label">Account ID</span><span class="row-value">${escapeHtml(payment.account_number)}</span></div>
+    <div class="row"><span class="row-label">Service</span><span class="row-value">${escapeHtml(payment.plan_name ?? 'Broadband Internet')}</span></div>
+    <div class="row"><span class="row-label">Payment Method</span><span class="row-value">${methodLabel}</span></div>
+    <div class="row"><span class="row-label">Transaction ID</span><span class="row-value txn-id">${txnId}</span></div>
+    <div class="amount-row">
+      <span class="amount-label">Total Paid</span>
+      <span class="amount-value">₹${amount}</span>
+    </div>
+    <div class="footer">
+      This is a computer-generated receipt and does not require a signature.<br>
+      ${companyAddress ? `${companyAddress}<br>` : ''}
+      GSTIN: ${companyGstin}
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+async function createFreshSignedUrl(
+  supabase: ReturnType<typeof createClient>,
+  storagePath: string,
+): Promise<string | null> {
+  const { data: signed, error } = await supabase.storage
+    .from('exports')
+    .createSignedUrl(storagePath, 3600);
+  if (error) {
+    console.error('Signed URL error:', storagePath, error.message);
+    return null;
+  }
+  return signed?.signedUrl ?? null;
 }
 
 serve(async (req) => {
@@ -42,9 +169,13 @@ serve(async (req) => {
       status: 403,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+  const jsonError = (msg: string, status = 400) =>
+    new Response(JSON.stringify({ error: msg }), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
 
   try {
-    // Identify the caller — every authenticated role (admin or officer) must supply a JWT.
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return json401('Authorization header required');
 
@@ -54,12 +185,18 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) return json401('Invalid or expired token');
 
-    const { paymentId } = await req.json();
-    if (!paymentId) throw new Error('paymentId required');
+    let body: { paymentId?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return jsonError('Invalid request body');
+    }
+
+    const { paymentId } = body;
+    if (!paymentId) return jsonError('paymentId required');
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Resolve caller role via profiles (uses service role so no RLS interference).
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -78,7 +215,6 @@ serve(async (req) => {
       const { data: customerUserId, error: cidErr } = await userClient.rpc('current_customer_user_id');
       if (cidErr || !customerUserId || payment.customer_id !== customerUserId) return json403();
     } else if (!payErr && payment && !callerIsAdmin && !callerIsCustomer) {
-      // Officer can only generate receipts for payments they collected.
       const { data: officer } = await supabase
         .from('officers')
         .select('id')
@@ -87,8 +223,14 @@ serve(async (req) => {
       if (!officer || payment.collected_by !== officer.id) return json403();
     }
 
-    if (payErr || !payment) throw new Error('Payment not found');
-    if (payment.status !== 'confirmed') throw new Error('Payment must be confirmed to generate receipt');
+    if (payErr || !payment) {
+      console.error('Payment fetch error:', payErr?.message);
+      return jsonError('Payment not found', 404);
+    }
+
+    if (payment.status !== 'confirmed') {
+      return jsonError(`Receipt only available for confirmed payments. Current status: ${payment.status}`);
+    }
 
     const { data: settings } = await supabase.from('general_settings').select('*').limit(1).maybeSingle();
 
@@ -97,27 +239,45 @@ serve(async (req) => {
         ? `${payment.billing_period_start} – ${payment.billing_period_end}`
         : null;
 
+    const storagePath = receiptStoragePath(String(payment.payment_number));
+
     const { data: existing } = await supabase
       .from('payment_receipts')
-      .select('id, pdf_url, receipt_number')
+      .select('id, receipt_number')
       .eq('payment_id', paymentId)
       .maybeSingle();
 
-    if (existing?.pdf_url) {
-      return new Response(JSON.stringify({ url: existing.pdf_url, receiptNumber: existing.receipt_number }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (existing) {
+      const freshUrl = await createFreshSignedUrl(supabase, storagePath);
+      if (freshUrl) {
+        await supabase
+          .from('payment_receipts')
+          .update({ pdf_url: freshUrl })
+          .eq('payment_id', paymentId);
+        return new Response(
+          JSON.stringify({ url: freshUrl, receiptNumber: existing.receipt_number, receiptId: existing.id }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
     }
 
     const html = receiptHtml(payment, settings ?? {});
-    const filename = `receipt_${payment.payment_number}.html`;
-    await supabase.storage.from('exports').upload(filename, new TextEncoder().encode(html), {
-      contentType: 'text/html',
-      upsert: true,
-    });
+    const { error: uploadError } = await supabase.storage.from('exports').upload(
+      storagePath,
+      new TextEncoder().encode(html),
+      {
+        contentType: 'text/html; charset=utf-8',
+        upsert: true,
+      },
+    );
 
-    const { data: signed } = await supabase.storage.from('exports').createSignedUrl(filename, 3600);
-    const pdfUrl = signed?.signedUrl ?? null;
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError.message);
+      return jsonError('Could not store receipt file', 500);
+    }
+
+    const pdfUrl = await createFreshSignedUrl(supabase, storagePath);
+    if (!pdfUrl) return jsonError('Could not generate download link', 500);
 
     const { data: receipt, error: recErr } = await supabase
       .from('payment_receipts')
@@ -141,16 +301,17 @@ serve(async (req) => {
       .select()
       .single();
 
-    if (recErr) throw recErr;
+    if (recErr) {
+      console.error('Receipt upsert error:', recErr.message);
+      throw recErr;
+    }
 
     return new Response(
       JSON.stringify({ url: pdfUrl, receiptNumber: receipt.receipt_number, receiptId: receipt.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
-    return new Response(JSON.stringify({ error: (error as Error).message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    });
+    console.error('generate-payment-receipt unhandled error:', error);
+    return jsonError('Could not generate receipt', 500);
   }
 });

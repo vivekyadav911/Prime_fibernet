@@ -1,13 +1,16 @@
 import { useCallback, useState } from 'react';
-import { Alert, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Sharing from 'expo-sharing';
+import { useRazorpay } from '@codearcade/expo-razorpay';
+import * as WebBrowser from 'expo-web-browser';
 
 import { EasebuzzCheckout } from '@/components/customer/payments/EasebuzzCheckout';
 import { CustomerPaymentDetailSheet } from '@/components/customer/payments/CustomerPaymentDetailSheet';
 import { CustomerPaymentStatusPill } from '@/components/customer/payments/CustomerPaymentStatusPill';
+import { GstInvoiceRequestSheet, type GstInvoiceFormValues } from '@/components/customer/payments/GstInvoiceRequestSheet';
+import { PaymentSuccessSheet } from '@/components/customer/payments/PaymentSuccessSheet';
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import {
   CustomerButton,
@@ -21,7 +24,9 @@ import { CustomerTopBar } from '@/components/customer/shell';
 import { DismissKeyboardScrollView } from '@/components/common';
 import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { useVerifyPaymentMutation } from '@/services/api';
 import {
+  useCreateGstInvoiceRequestMutation,
   useCreatePaymentOrderV2Mutation,
   useGetActivePaymentGatewayQuery,
   useGetCustomerBillQuery,
@@ -30,9 +35,11 @@ import {
 } from '@/services/api/paymentCollectionApi';
 import type { PaymentCheckoutSession } from '@/services/payment/PaymentProvider';
 import { getPaymentProvider, resolvePaymentProviderSlug } from '@/services/payment/PaymentProvider';
+import { useAppDispatch } from '@/store/hooks';
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { CustomerTheme } from '@/theme/customer';
 import { formatINR } from '@/utils/currencyFormat';
+import { invalidatePaymentCaches } from '@/utils/invalidatePaymentCaches';
 import { queryErrorMessage } from '@/utils/queryError';
 
 import { resolvePaymentChargeAmount } from '@/services/customer/customerOutstanding';
@@ -52,17 +59,33 @@ function isGatewayNotConfigured(message: string): boolean {
   return lower.includes('no active payment gateway') || lower.includes('gateway not configured');
 }
 
+function isRazorpayGateway(slug: string | undefined | null): boolean {
+  return resolvePaymentProviderSlug(slug) === 'razorpay';
+}
+
 export function CustomerBillScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
+  const dispatch = useAppDispatch();
   const styles = useThemedStyles(createStyles);
   const { theme } = useCustomerTheme();
   const { authUser: user, userId } = useCustomerIdentity();
   const authId = userId;
 
+  const { openCheckout, RazorpayUI } = useRazorpay();
+
   const [checkoutSession, setCheckoutSession] = useState<PaymentCheckoutSession | null>(null);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [payMode, setPayMode] = useState<'bill' | 'advance' | 'retry'>('bill');
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  const [rzpLoading, setRzpLoading] = useState(false);
+  const [showSuccessSheet, setShowSuccessSheet] = useState(false);
+  const [successPaymentId, setSuccessPaymentId] = useState('');
+  const [successPortalPaymentId, setSuccessPortalPaymentId] = useState('');
+  const [successAmount, setSuccessAmount] = useState(0);
+  const [successInvoiceNumber, setSuccessInvoiceNumber] = useState<string | undefined>();
+  const [gstSheetVisible, setGstSheetVisible] = useState(false);
+  const [gstPaymentId, setGstPaymentId] = useState<string | null>(null);
+  const [downloadingReceiptId, setDownloadingReceiptId] = useState<string | null>(null);
 
   const { data: bill, isLoading, isError, error, refetch } = useGetCustomerBillQuery(authId, {
     skip: !authId,
@@ -73,11 +96,125 @@ export function CustomerBillScreen() {
   );
   const { data: activeGateway } = useGetActivePaymentGatewayQuery();
   const [createOrder, { isLoading: orderLoading }] = useCreatePaymentOrderV2Mutation();
+  const [verifyPayment] = useVerifyPaymentMutation();
   const [fetchReceipt] = useLazyGetPaymentReceiptQuery();
+  const [createGstRequest, { isLoading: gstSubmitting }] = useCreateGstInvoiceRequestMutation();
 
   const provider = getPaymentProvider(resolvePaymentProviderSlug(activeGateway?.slug));
   const payButtonLabel =
     activeGateway?.slug === 'easebuzz' ? 'Pay Now via Easebuzz' : `Pay Now via ${provider.displayName}`;
+
+  const handlePaymentSuccess = useCallback(
+    async (data: {
+      razorpay_payment_id: string;
+      razorpay_order_id: string;
+      razorpay_signature: string;
+      paymentId: string;
+      amount: number;
+    }) => {
+      setRzpLoading(false);
+      try {
+        const result = await verifyPayment({
+          paymentId: data.paymentId,
+          orderId: data.razorpay_order_id,
+          gateway: 'razorpay',
+          razorpayPaymentId: data.razorpay_payment_id,
+          razorpaySignature: data.razorpay_signature,
+        }).unwrap();
+
+        invalidatePaymentCaches(dispatch);
+        void refetch();
+        void refetchHistory();
+
+        if (result.success || result.verified) {
+          const paidRow = history.find((row) => row.id === data.paymentId);
+          setSuccessPaymentId(data.razorpay_payment_id);
+          setSuccessPortalPaymentId(data.paymentId);
+          setSuccessAmount(data.amount);
+          setSuccessInvoiceNumber(paidRow?.payment_number);
+          setShowSuccessSheet(true);
+        } else {
+          Alert.alert(
+            'Verification Pending',
+            'Your payment was received but is being verified. This usually takes under a minute. Check Payment History for the final status.',
+            [{ text: 'OK' }],
+          );
+        }
+      } catch {
+        Alert.alert(
+          'Verification Failed',
+          'Payment was received but could not be verified immediately. Please check Payment History — your balance will update within 5 minutes.',
+          [{ text: 'OK' }],
+        );
+        invalidatePaymentCaches(dispatch);
+      }
+    },
+    [dispatch, history, refetch, refetchHistory, verifyPayment],
+  );
+
+  const openRazorpayCheckout = useCallback(
+    (session: PaymentCheckoutSession, amount: number, customerName: string, customerEmail: string, customerPhone: string) => {
+      setRzpLoading(true);
+      openCheckout(
+        {
+          key: session.keyId,
+          amount: Math.round(amount * 100),
+          currency: 'INR',
+          order_id: session.orderId,
+          name: 'Prime Fibernet',
+          description: `Bill Payment - ${new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}`,
+          image: 'https://www.primefiber.net/logo.png',
+          prefill: {
+            name: customerName,
+            email: customerEmail ?? '',
+            contact: customerPhone ?? '',
+          },
+          theme: { color: '#3D52D5' },
+          modal: {
+            confirm_close: true,
+            animation: true,
+          },
+        },
+        {
+          onSuccess: (rzpData) => {
+            void handlePaymentSuccess({
+              razorpay_payment_id: rzpData.razorpay_payment_id,
+              razorpay_order_id: rzpData.razorpay_order_id,
+              razorpay_signature: rzpData.razorpay_signature,
+              paymentId: session.paymentId,
+              amount,
+            });
+          },
+          onFailure: (rzpError) => {
+            setRzpLoading(false);
+            Alert.alert(
+              'Payment Failed',
+              rzpError.description ?? 'Payment could not be completed. No amount was charged.',
+            );
+          },
+          onClose: () => {
+            setRzpLoading(false);
+          },
+        },
+      );
+    },
+    [handlePaymentSuccess, openCheckout],
+  );
+
+  const startCheckoutWithSession = useCallback(
+    (session: PaymentCheckoutSession, amount: number) => {
+      if (!user) return;
+
+      if (isRazorpayGateway(session.gatewaySlug)) {
+        openRazorpayCheckout(session, amount, user.name, user.email, '');
+        return;
+      }
+
+      setCheckoutSession(session);
+      setCheckoutVisible(true);
+    },
+    [openRazorpayCheckout, user],
+  );
 
   const initiateCheckout = useCallback(
     async (mode: 'bill' | 'advance' = 'bill') => {
@@ -100,17 +237,20 @@ export function CustomerBillScreen() {
           dueDate: bill.dueDate ?? undefined,
         }).unwrap();
 
-        setCheckoutSession({
-          paymentId: session.paymentId,
-          orderId: session.orderId,
-          gatewaySlug: resolvePaymentProviderSlug(session.gatewaySlug),
-          keyId: session.keyId,
-          amount: session.amount,
-          checkoutUrl: session.checkoutUrl,
-          checkoutParams: session.checkoutParams,
-        });
-        setCheckoutVisible(true);
+        startCheckoutWithSession(
+          {
+            paymentId: session.paymentId,
+            orderId: session.orderId,
+            gatewaySlug: resolvePaymentProviderSlug(session.gatewaySlug),
+            keyId: session.keyId,
+            amount: session.amount,
+            checkoutUrl: session.checkoutUrl,
+            checkoutParams: session.checkoutParams,
+          },
+          amount,
+        );
       } catch (e) {
+        setRzpLoading(false);
         const message = queryErrorMessage(e);
         if (isGatewayNotConfigured(message)) {
           Alert.alert(
@@ -118,11 +258,11 @@ export function CustomerBillScreen() {
             'Your ISP is finishing payment gateway setup. You can pay cash to your field officer or visit our office.',
           );
         } else {
-          Alert.alert('Could not start checkout', message);
+          Alert.alert('Could not start checkout', 'Could not connect to payment gateway. Please try again.');
         }
       }
     },
-    [bill, createOrder, user],
+    [bill, createOrder, startCheckoutWithSession, user],
   );
 
   const onRetryPayment = useCallback(
@@ -145,17 +285,20 @@ export function CustomerBillScreen() {
         }).unwrap();
 
         setSelectedPaymentId(null);
-        setCheckoutSession({
-          paymentId: session.paymentId,
-          orderId: session.orderId,
-          gatewaySlug: resolvePaymentProviderSlug(session.gatewaySlug),
-          keyId: session.keyId,
-          amount: session.amount,
-          checkoutUrl: session.checkoutUrl,
-          checkoutParams: session.checkoutParams,
-        });
-        setCheckoutVisible(true);
+        startCheckoutWithSession(
+          {
+            paymentId: session.paymentId,
+            orderId: session.orderId,
+            gatewaySlug: resolvePaymentProviderSlug(session.gatewaySlug),
+            keyId: session.keyId,
+            amount: session.amount,
+            checkoutUrl: session.checkoutUrl,
+            checkoutParams: session.checkoutParams,
+          },
+          resolvePaymentChargeAmount(payment.total_amount, bill?.planAmount ?? 0),
+        );
       } catch (e) {
+        setRzpLoading(false);
         const message = queryErrorMessage(e);
         if (isGatewayNotConfigured(message)) {
           Alert.alert(
@@ -163,11 +306,11 @@ export function CustomerBillScreen() {
             'Your ISP is finishing payment gateway setup. You can pay cash to your field officer or visit our office.',
           );
         } else {
-          Alert.alert('Could not start checkout', message);
+          Alert.alert('Could not start checkout', 'Could not connect to payment gateway. Please try again.');
         }
       }
     },
-    [bill?.planName, createOrder, history, user],
+    [bill?.planAmount, bill?.planName, createOrder, history, startCheckoutWithSession, user],
   );
 
   const onCheckoutComplete = useCallback(
@@ -194,6 +337,7 @@ export function CustomerBillScreen() {
           razorpayPaymentId: result.razorpayPaymentId,
           razorpaySignature: result.razorpaySignature,
         });
+        invalidatePaymentCaches(dispatch);
         void refetch();
         void refetchHistory();
         return;
@@ -203,60 +347,78 @@ export function CustomerBillScreen() {
         Alert.alert('Payment incomplete', result.reason);
       }
     },
-    [activeGateway?.slug, bill, navigation, refetch, refetchHistory],
+    [activeGateway?.slug, bill, dispatch, navigation, refetch, refetchHistory],
   );
 
   const onReceipt = useCallback(
     async (paymentId: string) => {
+      setDownloadingReceiptId(paymentId);
       try {
         const result = await fetchReceipt(paymentId).unwrap();
-        if (result.url && (await Sharing.isAvailableAsync())) {
-          await Share.share({ url: result.url, message: `Receipt ${result.receiptNumber}` });
+        if (result.url) {
+          const canOpen = await Linking.canOpenURL(result.url);
+          if (canOpen) {
+            await Linking.openURL(result.url);
+          } else {
+            await WebBrowser.openBrowserAsync(result.url);
+          }
         } else {
           navigation.navigate('Receipt', { paymentId });
         }
-      } catch (e) {
-        Alert.alert('Receipt unavailable', e instanceof Error ? e.message : 'Try again in a moment.');
+      } catch {
+        Alert.alert(
+          'Download Failed',
+          'Could not generate your receipt. Please try again or contact support.',
+          [{ text: 'OK' }],
+        );
+      } finally {
+        setDownloadingReceiptId(null);
       }
     },
     [fetchReceipt, navigation],
   );
 
-  if (!authId) {
-    return (
-      <View style={styles.canvas}>
-        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
-        <CustomerErrorState message="Sign in to view payments." />
-      </View>
-    );
-  }
+  const onGstSubmit = useCallback(
+    async (values: GstInvoiceFormValues) => {
+      const paymentId = gstPaymentId ?? successPortalPaymentId;
+      if (!paymentId) return;
+      try {
+        await createGstRequest({
+          paymentId,
+          gstin: values.gstin,
+          businessName: values.businessName,
+          billingAddress: values.billingAddress,
+        }).unwrap();
+        setGstSheetVisible(false);
+        setGstPaymentId(null);
+      } catch (e) {
+        Alert.alert('Could not submit request', queryErrorMessage(e, 'Please try again.'));
+      }
+    },
+    [createGstRequest, gstPaymentId, successPortalPaymentId],
+  );
 
-  if (isLoading || historyLoading) {
-    return (
-      <View style={styles.canvas}>
-        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
+  const renderBody = () => {
+    if (!authId) {
+      return <CustomerErrorState message="Sign in to view payments." />;
+    }
+
+    if (isLoading || historyLoading) {
+      return (
         <View style={styles.body}>
           <CustomerSkeletonLoader rows={6} rowHeight={72} />
         </View>
-      </View>
-    );
-  }
+      );
+    }
 
-  if (isError || !bill) {
+    if (isError || !bill) {
+      return <CustomerErrorState message={queryErrorMessage(error)} onRetry={refetch} />;
+    }
+
+    const hasOutstanding = bill.outstandingAmount > 0;
+    const payLoadingLabel = 'Starting checkout…';
+
     return (
-      <View style={styles.canvas}>
-        <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
-        <CustomerErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </View>
-    );
-  }
-
-  const hasOutstanding = bill.outstandingAmount > 0;
-  const payLoadingLabel = 'Starting checkout…';
-
-  return (
-    <View style={styles.canvas}>
-      <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
       <DismissKeyboardScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <GlassCard style={styles.balanceCard} glow padded contentStyle={styles.balanceContent}>
           <Text style={styles.balanceTitle}>Outstanding Balance</Text>
@@ -272,7 +434,7 @@ export function CustomerBillScreen() {
               label={orderLoading && payMode === 'bill' ? payLoadingLabel : payButtonLabel}
               icon="credit-card-outline"
               onPress={() => void initiateCheckout('bill')}
-              disabled={orderLoading}
+              disabled={orderLoading || rzpLoading}
             />
           ) : null}
           {!hasOutstanding ? (
@@ -294,7 +456,7 @@ export function CustomerBillScreen() {
                 variant="outline"
                 icon="wallet-outline"
                 onPress={() => void initiateCheckout('advance')}
-                disabled={orderLoading}
+                disabled={orderLoading || rzpLoading}
               />
             ) : null}
           </GlassCard>
@@ -319,30 +481,30 @@ export function CustomerBillScreen() {
             />
           ) : (
             history.slice(0, 8).map((item) => (
-                <PressableScale
-                  key={item.id}
-                  style={styles.historyItem}
-                  onPress={() => setSelectedPaymentId(item.id)}
-                >
-                  <View style={styles.historyLeft}>
-                    <View style={[styles.historyIcon, isFailedPayment(item.status) && styles.historyIconError]}>
-                      <MaterialCommunityIcons
-                        name={isFailedPayment(item.status) ? 'alert' : 'file-document-outline'}
-                        size={20}
-                        color={isFailedPayment(item.status) ? theme.colors.error : theme.colors.primary}
-                      />
-                    </View>
-                    <View>
-                      <Text style={styles.historyMonth}>{paymentPeriodLabel(item)}</Text>
-                      <Text style={styles.historyInv}>Inv #{item.payment_number}</Text>
-                    </View>
+              <PressableScale
+                key={item.id}
+                style={styles.historyItem}
+                onPress={() => setSelectedPaymentId(item.id)}
+              >
+                <View style={styles.historyLeft}>
+                  <View style={[styles.historyIcon, isFailedPayment(item.status) && styles.historyIconError]}>
+                    <MaterialCommunityIcons
+                      name={isFailedPayment(item.status) ? 'alert' : 'file-document-outline'}
+                      size={20}
+                      color={isFailedPayment(item.status) ? theme.colors.error : theme.colors.primary}
+                    />
                   </View>
-                  <View style={styles.historyRight}>
-                    <Text style={styles.historyAmount}>{formatINR(item.total_amount)}</Text>
-                    <CustomerPaymentStatusPill status={item.status} />
+                  <View>
+                    <Text style={styles.historyMonth}>{paymentPeriodLabel(item)}</Text>
+                    <Text style={styles.historyInv}>Inv #{item.payment_number}</Text>
                   </View>
-                </PressableScale>
-              ))
+                </View>
+                <View style={styles.historyRight}>
+                  <Text style={styles.historyAmount}>{formatINR(item.total_amount)}</Text>
+                  <CustomerPaymentStatusPill status={item.status} />
+                </View>
+              </PressableScale>
+            ))
           )}
         </GlassCard>
 
@@ -357,32 +519,76 @@ export function CustomerBillScreen() {
           </View>
         )}
       </DismissKeyboardScrollView>
+    );
+  };
+
+  return (
+    <View style={styles.canvas}>
+      <CustomerTopBar onNotificationsPress={() => navigation.navigate('Notifications')} />
+      {renderBody()}
 
       <CustomerPaymentDetailSheet
         paymentId={selectedPaymentId}
         visible={Boolean(selectedPaymentId)}
         onClose={() => setSelectedPaymentId(null)}
         onDownloadReceipt={(id) => void onReceipt(id)}
+        downloadingReceiptId={downloadingReceiptId}
         onRetryPayment={(id) => void onRetryPayment(id)}
         retryLoading={orderLoading && payMode === 'retry'}
       />
 
-      {user ? (
-        <EasebuzzCheckout
-          visible={checkoutVisible}
-          session={checkoutSession}
-          customer={{
-            name: user.name,
-            email: user.email,
-            phone: '',
-          }}
-          onClose={() => {
-            setCheckoutVisible(false);
-            setCheckoutSession(null);
-          }}
-          onComplete={onCheckoutComplete}
-        />
-      ) : null}
+      <EasebuzzCheckout
+        visible={checkoutVisible}
+        session={checkoutSession}
+        customer={{
+          name: user?.name ?? '',
+          email: user?.email ?? '',
+          phone: '',
+        }}
+        onClose={() => {
+          setCheckoutVisible(false);
+          setCheckoutSession(null);
+        }}
+        onComplete={onCheckoutComplete}
+      />
+
+      <PaymentSuccessSheet
+        visible={showSuccessSheet}
+        paymentId={successPaymentId}
+        amount={successAmount}
+        invoiceNumber={successInvoiceNumber}
+        onClose={() => setShowSuccessSheet(false)}
+        onDownloadReceipt={() => {
+          void onReceipt(successPortalPaymentId);
+        }}
+        onRequestGST={() => {
+          setGstPaymentId(successPortalPaymentId);
+          setGstSheetVisible(true);
+        }}
+        onViewHistory={() => {
+          setShowSuccessSheet(false);
+          navigation.navigate('PaymentHistory');
+        }}
+      />
+
+      <GstInvoiceRequestSheet
+        visible={gstSheetVisible}
+        loading={gstSubmitting}
+        onSubmit={(values) => void onGstSubmit(values)}
+        onClose={() => {
+          setGstSheetVisible(false);
+          setGstPaymentId(null);
+        }}
+      />
+
+      {RazorpayUI}
+
+      <Modal visible={rzpLoading} transparent animationType="fade">
+        <View style={styles.rzpOverlay}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.rzpLoadingText}>Opening secure checkout…</Text>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -533,5 +739,17 @@ const createStyles = (theme: CustomerTheme) =>
       textAlign: 'center',
       fontSize: 11,
       color: theme.colors.textMuted,
+    },
+    rzpOverlay: {
+      flex: 1,
+      backgroundColor: theme.colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.md,
+    },
+    rzpLoadingText: {
+      ...theme.typography.body,
+      color: theme.colors.onSurface,
+      fontFamily: theme.fonts.bodyMedium,
     },
   });

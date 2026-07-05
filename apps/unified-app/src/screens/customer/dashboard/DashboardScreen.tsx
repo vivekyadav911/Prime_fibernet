@@ -12,7 +12,6 @@ import {
   QuickActionsGrid,
   SpeedTestModal,
 } from '@/components/customer/dashboard';
-import type { SpeedReading } from '@/components/customer/dashboard';
 import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerTopBar } from '@/components/customer/shell';
 import { CustomerEmptyState, CustomerSkeletonLoader, CustomerToast, CustomerErrorState, FadeInSection } from '@/components/customer/ui';
@@ -41,7 +40,6 @@ export function DashboardScreen() {
   const clearToast = useCustomerUiStore((s) => s.clearToast);
 
   const [speedModalVisible, setSpeedModalVisible] = useState(false);
-  const [speedReading, setSpeedReading] = useState<SpeedReading | null>(null);
 
   const connectionStatus = useMemo(() => {
     if (!data?.subscription) return 'expired' as const;
@@ -137,7 +135,6 @@ export function DashboardScreen() {
           <LiveSpeedBar
             isActive={isActive}
             planSpeedMbps={planSpeedMbps}
-            reading={speedReading}
             onPress={() => {
               if (isActive) setSpeedModalVisible(true);
             }}
@@ -162,9 +159,10 @@ export function DashboardScreen() {
         isActive={isActive}
         planSpeedMbps={planSpeedMbps}
         onClose={() => setSpeedModalVisible(false)}
-        onComplete={(result) =>
-          setSpeedReading({ downloadMbps: result.downloadMbps, uploadMbps: result.uploadMbps })
-        }
+        onRaiseTicket={(params) => {
+          setSpeedModalVisible(false);
+          navigation.navigate('CreateCustomerTicket', params);
+        }}
       />
     </View>
   );

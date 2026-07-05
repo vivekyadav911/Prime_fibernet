@@ -1,27 +1,24 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CustomerBadge, GlassCard, PressableScale } from '@/components/customer/ui';
+import { useLastSpeedTestResult } from '@/hooks/useLastSpeedTestResult';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerTheme } from '@/theme/customer';
-
-export type SpeedReading = {
-  downloadMbps: number;
-  uploadMbps: number;
-};
 
 type LiveSpeedBarProps = {
   isActive: boolean;
   planSpeedMbps: number;
-  reading: SpeedReading | null;
   onPress: () => void;
 };
 
-export function LiveSpeedBar({ isActive, planSpeedMbps, reading, onPress }: LiveSpeedBarProps) {
+export function LiveSpeedBar({ isActive, planSpeedMbps, onPress }: LiveSpeedBarProps) {
   const styles = useThemedStyles(createStyles);
+  const { result: lastResult } = useLastSpeedTestResult();
 
-  const download = isActive ? (reading?.downloadMbps ?? Math.round(planSpeedMbps * 0.75)) : 0;
-  const upload = isActive ? (reading?.uploadMbps ?? Math.round(planSpeedMbps * 0.82)) : 0;
-  const progress = isActive && planSpeedMbps > 0 ? Math.min(download / planSpeedMbps, 1) : 0;
+  const progress =
+    lastResult && isActive && planSpeedMbps > 0
+      ? Math.min(lastResult.download / planSpeedMbps, 1)
+      : 0;
 
   const card = (
     <GlassCard style={styles.card} padded contentStyle={styles.cardContent}>
@@ -34,24 +31,31 @@ export function LiveSpeedBar({ isActive, planSpeedMbps, reading, onPress }: Live
         )}
       </View>
 
-      <View style={styles.track}>
-        <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
-      </View>
-
-      <View style={styles.metrics}>
-        {isActive ? (
-          <>
+      {lastResult && isActive ? (
+        <>
+          <View style={styles.track}>
+            <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
+          </View>
+          <View style={styles.metrics}>
             <Text style={styles.metric}>
-              <Text style={styles.metricValue}>{download}</Text> Mbps ↓
+              <Text style={styles.metricValue}>{lastResult.download}</Text> Mbps ↓
             </Text>
             <Text style={styles.metric}>
-              <Text style={styles.metricValue}>{upload}</Text> Mbps ↑
+              <Text style={styles.metricValue}>{lastResult.upload}</Text> Mbps ↑
             </Text>
-          </>
-        ) : (
-          <Text style={styles.inactive}>Speed test available when your plan is active</Text>
-        )}
-      </View>
+            <Text style={styles.metric}>
+              <Text style={styles.metricValue}>{lastResult.ping}</Text> ms
+            </Text>
+          </View>
+          <Text style={styles.timestamp}>
+            Last tested {lastResult.timestamp.toLocaleTimeString('en-IN')}
+          </Text>
+        </>
+      ) : (
+        <Text style={styles.prompt}>
+          {isActive ? 'Tap to run a real speed test' : 'Speed test available when your plan is active'}
+        </Text>
+      )}
     </GlassCard>
   );
 
@@ -112,9 +116,9 @@ const createStyles = (theme: CustomerTheme) =>
     },
     metrics: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      gap: theme.spacing.md,
       alignItems: 'center',
-      gap: theme.spacing.sm,
     },
     metric: {
       ...theme.typography.body,
@@ -126,10 +130,16 @@ const createStyles = (theme: CustomerTheme) =>
       fontFamily: theme.fonts.monoBold,
       fontWeight: '700',
     },
-    inactive: {
+    timestamp: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      fontFamily: theme.fonts.body,
+      marginTop: theme.spacing.xs,
+    },
+    prompt: {
       ...theme.typography.caption,
       color: theme.colors.onSurfaceVariant,
       fontFamily: theme.fonts.body,
-      flex: 1,
+      marginTop: theme.spacing.xs,
     },
   });

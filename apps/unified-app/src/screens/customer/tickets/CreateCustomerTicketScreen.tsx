@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { z } from 'zod';
@@ -38,10 +38,11 @@ function defaultSubject(categoryLabel: string, customerName: string): string {
   return `${categoryLabel} reported by ${customerName}`;
 }
 
-export function CreateCustomerTicketScreen({ navigation }: Props) {
+export function CreateCustomerTicketScreen({ navigation, route }: Props) {
   const styles = useThemedStyles(createStyles);
   const user = useAppSelector((s) => s.auth.user);
   const customerName = user?.name ?? 'Customer';
+  const { prefillCategory, prefillDescription } = route.params ?? {};
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]['id'] | ''>('');
   const [categoryError, setCategoryError] = useState<string | undefined>();
   const [subject, setSubject] = useState('');
@@ -60,6 +61,15 @@ export function CreateCustomerTicketScreen({ navigation }: Props) {
       : category === 'billing'
         ? 'Medium'
         : 'Medium';
+
+  useEffect(() => {
+    if (prefillCategory) {
+      setCategory(prefillCategory);
+    }
+    if (prefillDescription) {
+      setDescription(prefillDescription);
+    }
+  }, [prefillCategory, prefillDescription]);
 
   const onSubmit = async () => {
     if (!category) {

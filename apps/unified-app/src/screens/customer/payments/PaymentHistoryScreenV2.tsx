@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Sharing from 'expo-sharing';
+import * as WebBrowser from 'expo-web-browser';
 
 import { CustomerPaymentDetailSheet } from '@/components/customer/payments/CustomerPaymentDetailSheet';
 import { CustomerPaymentStatusPill } from '@/components/customer/payments/CustomerPaymentStatusPill';
@@ -57,6 +57,7 @@ export function PaymentHistoryScreenV2() {
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
   const [checkoutSession, setCheckoutSession] = useState<PaymentCheckoutSession | null>(null);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
+  const [downloadingReceiptId, setDownloadingReceiptId] = useState<string | null>(null);
 
   const { data, isLoading, isError, error, refetch } = useGetCustomerPaymentHistoryV2Query(userId, {
     skip: !userId,
@@ -122,15 +123,27 @@ export function PaymentHistoryScreenV2() {
 
   const onReceipt = useCallback(
     async (paymentId: string) => {
+      setDownloadingReceiptId(paymentId);
       try {
         const result = await fetchReceipt(paymentId).unwrap();
-        if (result.url && (await Sharing.isAvailableAsync())) {
-          await Share.share({ url: result.url, message: `Receipt ${result.receiptNumber}` });
+        if (result.url) {
+          const canOpen = await Linking.canOpenURL(result.url);
+          if (canOpen) {
+            await Linking.openURL(result.url);
+          } else {
+            await WebBrowser.openBrowserAsync(result.url);
+          }
         } else {
           navigation.navigate('Receipt', { paymentId });
         }
-      } catch (e) {
-        Alert.alert('Receipt unavailable', e instanceof Error ? e.message : 'Try again in a moment.');
+      } catch {
+        Alert.alert(
+          'Download Failed',
+          'Could not generate your receipt. Please try again or contact support.',
+          [{ text: 'OK' }],
+        );
+      } finally {
+        setDownloadingReceiptId(null);
       }
     },
     [fetchReceipt, navigation],
@@ -264,6 +277,7 @@ export function PaymentHistoryScreenV2() {
         visible={Boolean(selectedPaymentId)}
         onClose={() => setSelectedPaymentId(null)}
         onDownloadReceipt={(id) => void onReceipt(id)}
+        downloadingReceiptId={downloadingReceiptId}
         onRetryPayment={(id) => void onRetryPayment(id)}
         retryLoading={orderLoading}
       />
