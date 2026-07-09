@@ -16,7 +16,7 @@ type OfficerPortalNavigateButtonProps = {
   label?: string;
   variant?: 'primary' | 'ghost';
   showFixPinLink?: boolean;
-  onLocationUpdated?: () => void;
+  onLocationUpdated?: (location: { latitude: number; longitude: number; address: string }) => void;
 };
 
 export function OfficerPortalNavigateButton({
@@ -53,7 +53,7 @@ export function OfficerPortalNavigateButton({
 
   const handleSaved = useCallback(
     async (location: { latitude: number; longitude: number; address: string }) => {
-      onLocationUpdated?.();
+      onLocationUpdated?.(location);
       const result = await navigateToAddress(
         location.address,
         location.latitude,

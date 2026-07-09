@@ -148,6 +148,9 @@ export type ManualPaymentPayload = {
   ticketId?: string;
   bankAccountId?: string;
   verificationMethod?: 'manual' | 'webhook' | 'qr';
+  latitude?: number;
+  longitude?: number;
+  photoUri?: string;
 };
 
 export type BankAccountRecord = {
@@ -188,6 +191,7 @@ export type OfficerAssignedCustomer = {
   payment_status: string | null;
   assignmentType: 'assigned' | 'open_pool' | 'claimed';
   collectionStatus: CollectionStatus | null;
+  collectionUpdatedAt: string | null;
 };
 
 export interface PaymentGatewayRecord {
@@ -219,6 +223,10 @@ export interface PaymentFilters {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;
+  /** Skip global confirmed/pending aggregate queries (officer history). */
+  skipAggregates?: boolean;
+  /** Select payments row only — no customer/officer joins. */
+  lite?: boolean;
 }
 
 export interface CashDenomination {

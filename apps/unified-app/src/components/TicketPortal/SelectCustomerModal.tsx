@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -12,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pagination, SearchBar } from '@/components/admin';
 import { DismissKeyboardFlatList, ErrorState } from '@/components/common';
+import { useKeyboardBottomInset } from '@/hooks/useKeyboardBottomInset';
 import { useGetAdminUsersQuery } from '@/store/api/endpoints';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
@@ -35,6 +38,7 @@ export function SelectCustomerModal({
   onSelect,
 }: SelectCustomerModalProps) {
   const insets = useSafeAreaInsets();
+  const keyboardInset = useKeyboardBottomInset(spacing.md);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
@@ -123,17 +127,27 @@ export function SelectCustomerModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable
-        style={[styles.backdrop, { paddingTop: insets.top }]}
-        onPress={() => {
-          Keyboard.dismiss();
-          handleClose();
-        }}
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <Pressable
-          style={[styles.card, { paddingBottom: insets.bottom + spacing.md, maxHeight: '85%' }]}
-          onPress={(e) => e.stopPropagation()}
+          style={styles.backdrop}
+          onPress={() => {
+            Keyboard.dismiss();
+            handleClose();
+          }}
         >
+          <Pressable
+            style={[
+              styles.card,
+              {
+                paddingBottom: Math.max(insets.bottom + spacing.md, keyboardInset),
+                maxHeight: keyboardInset > 0 ? '78%' : '88%',
+              },
+            ]}
+            onPress={(event) => event.stopPropagation()}
+          >
           <View style={styles.header}>
             <Text style={styles.title}>Select Customer</Text>
             <Pressable
@@ -195,13 +209,17 @@ export function SelectCustomerModal({
               />
             </View>
           )}
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: colors.overlay,
@@ -211,9 +229,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWhite,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
-    maxHeight: '85%',
-    minHeight: 360,
+    minHeight: 380,
+    width: '100%',
     padding: spacing.md,
+    flexShrink: 1,
   },
   header: {
     flexDirection: 'row',
@@ -271,8 +290,7 @@ const styles = StyleSheet.create({
   },
   listWrap: {
     flex: 1,
-    minHeight: 220,
-    maxHeight: 420,
+    minHeight: 200,
   },
   list: {
     flex: 1,

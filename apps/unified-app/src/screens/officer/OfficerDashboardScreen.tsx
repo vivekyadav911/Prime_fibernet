@@ -18,6 +18,7 @@ import { queryErrorMessage } from '@/utils/queryError';
 
 import { AssignmentPreviewList } from './components/AssignmentPreviewList';
 import { AttendanceWidget } from './components/AttendanceWidget';
+import { CollectionAssignmentPreviewList } from './components/CollectionAssignmentPreviewList';
 import { ShiftClockWidget } from './components/ShiftClockWidget';
 import { StatsRow } from './components/StatsRow';
 
@@ -139,6 +140,8 @@ export function OfficerDashboardScreen() {
       <StatsRow />
 
       <AssignmentPreviewList items={items} />
+
+      <CollectionAssignmentPreviewList />
 
       <Text style={styles.sectionTitle}>This Month</Text>
       <AttendanceWidget />

@@ -18,7 +18,7 @@ import type { OfficerDrawerParamList } from '@/types/navigation';
 
 type DrawerItem = {
   route: keyof OfficerDrawerParamList;
-  screen?: 'AssignedCustomers' | 'CollectionsList';
+  screen?: 'CollectionsList' | 'CollectionHistory';
   screenParams?: { initialTab?: 'assigned' | 'open_pool' };
   label: string;
   iconRoute: string;
@@ -46,13 +46,19 @@ const SECTIONS: DrawerSection[] = [
     id: 'finance',
     label: 'Finance',
     items: [
-      { route: 'CollectionsStack', label: 'Collections', iconRoute: 'CollectionsStack', showBadge: true },
       {
         route: 'CollectionsStack',
         screen: 'CollectionsList',
-        screenParams: { initialTab: 'open_pool' },
+        screenParams: { initialTab: 'assigned' },
         label: 'Collect Payment',
         iconRoute: 'AssignedCustomers',
+        showBadge: true,
+      },
+      {
+        route: 'CollectionsStack',
+        screen: 'CollectionHistory',
+        label: 'Collection History',
+        iconRoute: 'CollectionHistory',
       },
       { route: 'Invoice', label: 'Invoice', iconRoute: 'Invoice' },
     ],
@@ -142,9 +148,8 @@ export function OfficerDrawerContent(props: DrawerContentComponentProps) {
                 ? collectionsState.routes[collectionsState.index]?.name
                 : undefined;
             const isActiveItem =
-              item.screen != null
-                ? activeRoute === item.route && nestedRoute === item.screen
-                : activeRoute === item.route && item.screen == null && nestedRoute !== 'AssignedCustomers';
+              activeRoute === item.route &&
+              (item.screen != null ? nestedRoute === item.screen : nestedRoute === 'CollectionsList');
             const itemKey = item.screen ? `${item.route}-${item.screen}` : item.route;
             const badgeCount = getBadgeCount(item.route, item.showBadge);
 

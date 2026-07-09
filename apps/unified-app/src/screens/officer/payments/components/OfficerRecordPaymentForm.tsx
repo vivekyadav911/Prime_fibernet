@@ -141,10 +141,6 @@ export function OfficerRecordPaymentForm({ onSuccess, onCancel }: Props) {
       const verificationMethod = digitalSubMode === 'qr' ? 'qr' : 'manual';
       const bankId = digitalSubMode === 'qr' ? selectedBank?.id : undefined;
 
-      // #region agent log
-      fetch('http://127.0.0.1:7333/ingest/e1cbfe88-dbfa-476e-aa64-46550e18bd51',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bad3ec'},body:JSON.stringify({sessionId:'bad3ec',location:'OfficerRecordPaymentForm.tsx:onConfirmDigital',message:'confirm digital collection',data:{method:'upi',verificationMethod,hasReference:reference.length>=4,hasBankAccount:Boolean(bankId),amount},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-      // #endregion
-
       try {
         const result = await recordPayment({
           customerId: customer.id,
@@ -157,19 +153,12 @@ export function OfficerRecordPaymentForm({ onSuccess, onCancel }: Props) {
           verificationMethod,
         }).unwrap();
 
-        // #region agent log
-        fetch('http://127.0.0.1:7333/ingest/e1cbfe88-dbfa-476e-aa64-46550e18bd51',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bad3ec'},body:JSON.stringify({sessionId:'bad3ec',location:'OfficerRecordPaymentForm.tsx:onConfirmDigital:success',message:'payment recorded',data:{paymentId:result.paymentId,status:result.status},timestamp:Date.now(),hypothesisId:'H5',runId:'post-fix'})}).catch(()=>{});
-        // #endregion
-
         Alert.alert(
           'Submitted',
           'UPI collection sent for admin verification. You can track status in collection history.',
         );
         onSuccess?.(result.paymentId);
       } catch (e) {
-        // #region agent log
-        fetch('http://127.0.0.1:7333/ingest/e1cbfe88-dbfa-476e-aa64-46550e18bd51',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bad3ec'},body:JSON.stringify({sessionId:'bad3ec',location:'OfficerRecordPaymentForm.tsx:onConfirmDigital:error',message:'payment failed',data:{errorMessage:paymentErrorMessage(e)},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-        // #endregion
         console.error('[OfficerRecordPayment] digital collection failed', e);
         Alert.alert('Could not record payment', paymentErrorMessage(e));
       }

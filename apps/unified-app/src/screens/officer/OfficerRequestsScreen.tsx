@@ -163,9 +163,10 @@ export function OfficerRequestsScreen() {
         advanceLabel={getOfficerTicketAdvanceLabel(item.statusBucket)}
         onPress={handlePress}
         onAdvance={handleAdvance}
+        onLocationSaved={() => void refetch()}
       />
     ),
-    [handleAdvance, handlePress],
+    [handleAdvance, handlePress, refetch],
   );
 
   const listHeader = (

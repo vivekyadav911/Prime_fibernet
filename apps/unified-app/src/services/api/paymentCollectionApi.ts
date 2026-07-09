@@ -24,6 +24,7 @@ import { formatCustomerAccountId } from '@/utils/customerAccount';
 import { parseSupabaseFunctionError } from '@/utils/supabaseFunctionError';
 import { formatSupabaseRpcError } from '@/utils/supabaseRpcError';
 import { paymentText } from '@/utils/paymentText';
+import { attachPaymentCollectionMeta } from '@/utils/uploadPaymentEvidence';
 
 import { fetchActiveSubscriptionRow } from '@/services/customer/fetchActiveSubscriptionRow';
 import {
@@ -166,6 +167,8 @@ function mapAssignedCustomerRow(row: Record<string, unknown>): OfficerAssignedCu
     assignmentType,
     collectionStatus:
       row.collection_status != null ? (String(row.collection_status) as CollectionStatus) : null,
+    collectionUpdatedAt:
+      row.collection_updated_at != null ? String(row.collection_updated_at) : null,
   };
 }
 
@@ -190,15 +193,20 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
           const pageSize = f.pageSize ?? 20;
           const from = (page - 1) * pageSize;
           const to = from + pageSize - 1;
+          const lite = Boolean(f.lite);
 
-          let query = client
-            .from('payments')
-            .select(
-              `*,
+          let query = lite
+            ? client.from('payments').select('*')
+            : client
+                .from('payments')
+                .select(
+                  `*,
               customer:users!payments_customer_id_fkey(id, name, phone, customer_id),
               officer:officers!payments_collected_by_fkey(id, full_name, email)`,
-              { count: 'exact' },
-            )
+                  { count: 'exact' },
+                );
+
+          query = query
             .order(f.sortBy ?? 'created_at', { ascending: f.sortOrder === 'asc' })
             .range(from, to);
 
@@ -222,31 +230,39 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
           let confirmedSum = 0;
           let pendingSum = 0;
           let reviewCount = 0;
-          const [confirmedRes, pendingRes, reviewRes] = await Promise.all([
-            client.from('payments').select('total_amount').eq('status', 'confirmed'),
-            client
-              .from('payments')
-              .select('total_amount')
-              .in('status', ['pending_review', 'cash_collected']),
-            client
-              .from('payments')
-              .select('id', { count: 'exact', head: true })
-              .in('status', ['pending_review', 'cash_collected']),
-          ]);
-          if (!confirmedRes.error && confirmedRes.data) {
-            confirmedSum = confirmedRes.data.reduce(
-              (s, p) => s + Number(p.total_amount ?? 0),
-              0,
-            );
-          }
-          if (!pendingRes.error && pendingRes.data) {
-            pendingSum = pendingRes.data.reduce((s, p) => s + Number(p.total_amount ?? 0), 0);
-          }
-          if (!reviewRes.error) {
-            reviewCount = reviewRes.count ?? 0;
+          if (!f.skipAggregates) {
+            const [confirmedRes, pendingRes, reviewRes] = await Promise.all([
+              client.from('payments').select('total_amount').eq('status', 'confirmed'),
+              client
+                .from('payments')
+                .select('total_amount')
+                .in('status', ['pending_review', 'cash_collected']),
+              client
+                .from('payments')
+                .select('id', { count: 'exact', head: true })
+                .in('status', ['pending_review', 'cash_collected']),
+            ]);
+            if (!confirmedRes.error && confirmedRes.data) {
+              confirmedSum = confirmedRes.data.reduce(
+                (s, p) => s + Number(p.total_amount ?? 0),
+                0,
+              );
+            }
+            if (!pendingRes.error && pendingRes.data) {
+              pendingSum = pendingRes.data.reduce((s, p) => s + Number(p.total_amount ?? 0), 0);
+            }
+            if (!reviewRes.error) {
+              reviewCount = reviewRes.count ?? 0;
+            }
           }
 
-          return { rows, total: count ?? rows.length, confirmedSum, pendingSum, reviewCount };
+          return {
+            rows,
+            total: lite ? rows.length : (count ?? rows.length),
+            confirmedSum,
+            pendingSum,
+            reviewCount,
+          };
         },
       }),
       providesTags: ['Payments'],
@@ -472,7 +488,10 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
     recordCashCollection: builder.mutation<PaymentRecord, CashCollectionPayload>({
       query: (body) => ({
         handler: async (client) => {
-          const officerId = await client.rpc('current_officer_id');
+          const { data: officerId, error: officerErr } = await client.rpc('current_officer_id');
+          if (officerErr || !officerId) {
+            throw new Error(formatSupabaseRpcError(officerErr, 'Officer session required'));
+          }
           const method = body.method ?? 'cash';
           const { data, error } = await client
             .from('payments')
@@ -486,7 +505,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
               method,
               channel: 'officer_cash',
               collection_source: 'field_collection',
-              collected_by: officerId.data as string,
+              collected_by: officerId as string,
               cash_collection_notes: body.notes,
               cash_denominations: body.denominations,
               receipt_number:
@@ -514,13 +533,11 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             throw error;
           }
 
-          if (body.photoUri) {
-            const blob = await fetch(body.photoUri).then((r) => r.blob());
-            const path = `${data.id}/evidence.jpg`;
-            await client.storage.from('payment-evidence').upload(path, blob, { upsert: true });
-            const { data: urlData } = client.storage.from('payment-evidence').getPublicUrl(path);
-            await client.from('payments').update({ evidence_photo_url: urlData.publicUrl }).eq('id', data.id);
-          }
+          await attachPaymentCollectionMeta(client, String(data.id), {
+            latitude: body.latitude,
+            longitude: body.longitude,
+            photoUri: body.photoUri,
+          });
 
           await client.from('customer_interactions').insert({
             customer_id: body.customerId,
@@ -528,7 +545,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             direction: 'inbound',
             subject: `Cash collected ₹${body.amount}`,
             notes: body.notes,
-            agent_id: officerId.data,
+            agent_id: officerId,
           });
 
           await client.from('audit_logs').insert({
@@ -541,12 +558,22 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
               method,
               customer_id: body.customerId,
               customer_name: body.customerName,
-              collected_by: officerId.data,
+              collected_by: officerId,
+              has_evidence: Boolean(body.photoUri),
+              has_geo: body.latitude != null && body.longitude != null,
             },
             status: 'SUCCESS',
           });
 
-          return mapPayment(data as Record<string, unknown>);
+          const { data: refreshed, error: refreshError } = await client
+            .from('payments')
+            .select('*')
+            .eq('id', data.id)
+            .single();
+          if (refreshError || !refreshed) {
+            return mapPayment(data as Record<string, unknown>);
+          }
+          return mapPayment(refreshed as Record<string, unknown>);
         },
       }),
       invalidatesTags: ['Payments'],
@@ -729,9 +756,9 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
         handler: async (client) => {
           const today = new Date().toISOString().slice(0, 10);
           const all = await fetchOfficerCollectibleCustomers(client);
-          const myWork = all
-            .filter((c) => c.assignmentType === 'assigned' || c.assignmentType === 'claimed')
-            .filter((c) => c.outstanding_amount > 0);
+          const myWork = all.filter(
+            (c) => c.assignmentType === 'assigned' || c.assignmentType === 'claimed',
+          );
           const openPool = all.filter((c) => c.assignmentType === 'open_pool');
 
           const { data: officerId } = await client.rpc('current_officer_id');
@@ -909,8 +936,16 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             throw new Error(formatSupabaseRpcError(error, 'Could not record payment. Try again.'));
           }
           const result = data as { payment_id?: string; status?: string };
+          const paymentId = String(result.payment_id);
+
+          await attachPaymentCollectionMeta(client, paymentId, {
+            latitude: body.latitude,
+            longitude: body.longitude,
+            photoUri: body.photoUri,
+          });
+
           return {
-            paymentId: String(result.payment_id),
+            paymentId,
             status: String(result.status ?? 'pending_review'),
           };
         },

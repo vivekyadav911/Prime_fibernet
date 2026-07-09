@@ -206,10 +206,6 @@ serve(async (req) => {
     const callerIsAdmin = Boolean(isAdmin);
     const callerIsCustomer = Boolean(customerUserId);
 
-    // #region agent log
-    console.log('[generate-payment-receipt] auth:', { callerIsAdmin, callerIsCustomer, userId: user.id });
-    // #endregion
-
     let body: { paymentId?: string };
     try {
       body = await req.json();
@@ -219,10 +215,6 @@ serve(async (req) => {
 
     const { paymentId } = body;
     if (!paymentId) return jsonError('paymentId required');
-
-    // #region agent log
-    console.log('[generate-payment-receipt] paymentId:', paymentId);
-    // #endregion
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -249,10 +241,6 @@ serve(async (req) => {
       console.error('Payment fetch error:', payErr?.message);
       return jsonError('Payment not found', 404);
     }
-
-    // #region agent log
-    console.log('[generate-payment-receipt] status:', payment.status, 'payment_number:', payment.payment_number);
-    // #endregion
 
     if (payment.status !== 'confirmed') {
       return jsonError(`Receipt only available for confirmed payments. Current status: ${payment.status}`);
@@ -349,10 +337,6 @@ serve(async (req) => {
       console.error('Storage upload error:', uploadError.message);
       return jsonError('Could not store receipt file', 500);
     }
-
-    // #region agent log
-    console.log('[generate-payment-receipt] uploaded:', storagePath);
-    // #endregion
 
     const pdfUrl = await createFreshSignedUrl(supabase, storagePath);
     if (!pdfUrl) return jsonError('Could not generate download link', 500);

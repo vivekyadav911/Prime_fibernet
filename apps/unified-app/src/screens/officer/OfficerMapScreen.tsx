@@ -39,7 +39,7 @@ export function OfficerMapScreen() {
   const withCoords = useMemo<MappedTicketItem[]>(() => {
     return items
       .map((item) => {
-        const coords = getPortalItemCoordinates(item);
+        const coords = item.coordinates ?? getPortalItemCoordinates(item);
         if (!coords) return null;
         return { ...item, latitude: coords.latitude, longitude: coords.longitude, mapAddress: coords.address };
       })

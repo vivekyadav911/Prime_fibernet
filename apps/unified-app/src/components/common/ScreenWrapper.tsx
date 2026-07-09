@@ -1,6 +1,7 @@
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { Screen } from '@prime/ui';
 
+import { useKeyboardVerticalOffset } from '@/hooks/useKeyboardVerticalOffset';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 
@@ -14,6 +15,8 @@ type ScreenWrapperProps = {
   padded?: boolean;
   background?: string;
   safeAreaTop?: boolean;
+  /** Set false when the screen manages its own KeyboardAvoidingView (e.g. chat). */
+  keyboardAvoiding?: boolean;
 };
 
 export function ScreenWrapper({
@@ -22,28 +25,36 @@ export function ScreenWrapper({
   padded = true,
   background = colors.background,
   safeAreaTop = false,
+  keyboardAvoiding = true,
 }: ScreenWrapperProps) {
   const inner = padded ? <View style={styles.inner}>{children}</View> : children;
+  const keyboardOffset = useKeyboardVerticalOffset(Platform.OS === 'android' ? 8 : 0);
+
+  const body = scrollable ? (
+    <DismissKeyboardScrollView
+      style={scrollLayoutStyles.scrollContainer}
+      contentContainerStyle={[styles.scrollContent, padded && styles.scrollPadded]}
+      showsVerticalScrollIndicator={false}
+    >
+      {inner}
+    </DismissKeyboardScrollView>
+  ) : (
+    <KeyboardDismissView style={[scrollLayoutStyles.flex, padded && styles.inner]}>{children}</KeyboardDismissView>
+  );
 
   return (
     <Screen keyboardDismiss={false} padded={false} safeAreaTop={safeAreaTop} style={{ backgroundColor: background }}>
-      <KeyboardAvoidingView
-        style={scrollLayoutStyles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        {scrollable ? (
-          <DismissKeyboardScrollView
-            style={scrollLayoutStyles.scrollContainer}
-            contentContainerStyle={[styles.scrollContent, padded && styles.scrollPadded]}
-            showsVerticalScrollIndicator={false}
-          >
-            {inner}
-          </DismissKeyboardScrollView>
-        ) : (
-          <KeyboardDismissView style={[scrollLayoutStyles.flex, padded && styles.inner]}>{children}</KeyboardDismissView>
-        )}
-      </KeyboardAvoidingView>
+      {keyboardAvoiding ? (
+        <KeyboardAvoidingView
+          style={scrollLayoutStyles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={keyboardOffset}
+        >
+          {body}
+        </KeyboardAvoidingView>
+      ) : (
+        body
+      )}
     </Screen>
   );
 }

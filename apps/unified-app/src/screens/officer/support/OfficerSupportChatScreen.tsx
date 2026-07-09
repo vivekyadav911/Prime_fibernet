@@ -11,6 +11,7 @@ import {
 import { Button } from '@prime/ui';
 
 import { KeyboardDismissView, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import { useKeyboardVerticalOffset } from '@/hooks/useKeyboardVerticalOffset';
 import { useOfficerProfile } from '@/hooks/officer';
 import { useAppSelector } from '@/store/hooks';
 import {
@@ -112,6 +113,8 @@ export function OfficerSupportChatScreen() {
     }
   }, [draft, profile?.name, sessionId, user]);
 
+  const keyboardOffset = useKeyboardVerticalOffset();
+
   if (loading) {
     return (
       <ScreenWrapper scrollable={false}>
@@ -135,7 +138,7 @@ export function OfficerSupportChatScreen() {
   }
 
   return (
-    <ScreenWrapper scrollable={false} padded={false}>
+    <ScreenWrapper scrollable={false} padded={false} keyboardAvoiding={false}>
       <KeyboardDismissView style={styles.flex}>
         <View style={styles.banner}>
           <Text style={styles.bannerText}>
@@ -144,7 +147,8 @@ export function OfficerSupportChatScreen() {
         </View>
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={keyboardOffset}
         >
           <FlatList
             ref={listRef}

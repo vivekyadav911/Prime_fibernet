@@ -10,7 +10,7 @@ type Props = DrawerScreenProps<OfficerDrawerParamList, 'CollectPayment'>;
 /** Legacy route — redirects to the assigned customers collect flow. */
 export function CollectPaymentScreen({ navigation }: Props) {
   useEffect(() => {
-    navigation.navigate('CollectionsStack', { screen: 'AssignedCustomers' });
+    navigation.navigate('CollectionsStack', { screen: 'CollectionsList' });
   }, [navigation]);
 
   return (

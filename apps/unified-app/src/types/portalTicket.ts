@@ -1,6 +1,12 @@
 import type { ServiceRequest } from '@/types/requests';
 import type { Ticket, TicketPriority, TicketStatus } from '@/types/tickets';
 
+export type PortalItemCoordinates = {
+  latitude: number;
+  longitude: number;
+  address: string;
+};
+
 export type PortalItemSource = 'customer' | 'officer' | 'admin';
 
 export type PortalItemKind = 'ticket' | 'request';
@@ -26,6 +32,7 @@ export interface PortalTicketItem {
   source: PortalItemSource;
   customerName: string;
   customerAddress: string;
+  coordinates?: PortalItemCoordinates | null;
   planName: string;
   priority: TicketPriority | null;
   assignedOfficerId: string | null;

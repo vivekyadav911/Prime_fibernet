@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AdminButton, AdminScreenLayout, DateField } from '@/components/admin';
@@ -39,20 +39,23 @@ function PaymentReviewBody({ payment, paymentId, onDone }: ReviewBodyProps) {
 
   const isCash = payment.method === 'cash';
   const isOfficerPending = payment.status === 'pending_review' || payment.status === 'cash_collected';
-  const upiRef = paymentText(payment.gateway_payment_id);
+  const collectionRef =
+    paymentText(payment.gateway_payment_id) ?? paymentText(payment.receipt_number);
   const officerNotes = paymentText(payment.cash_collection_notes);
   const evidenceUrl = paymentText(payment.evidence_photo_url);
+  const hasGeo =
+    payment.collection_latitude != null &&
+    payment.collection_longitude != null &&
+    Number.isFinite(payment.collection_latitude) &&
+    Number.isFinite(payment.collection_longitude);
   const hasOfficerMeta =
-    hasPaymentText(upiRef) || hasPaymentText(officerNotes) || hasPaymentText(evidenceUrl);
+    hasPaymentText(collectionRef) ||
+    hasPaymentText(officerNotes) ||
+    hasPaymentText(evidenceUrl) ||
+    hasGeo;
   const gatewayOrderId = paymentText(payment.gateway_order_id);
 
   const defaultDue = useMemo(() => computeNextDueDate(1), []);
-
-  // #region agent log
-  useEffect(() => {
-    fetch('http://127.0.0.1:7333/ingest/e1cbfe88-dbfa-476e-aa64-46550e18bd51',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bad3ec'},body:JSON.stringify({sessionId:'bad3ec',location:'PaymentReviewScreen.tsx:body',message:'review body mounted',data:{paymentId,status:payment.status,method:payment.method,isOfficerPending,hasOfficerMeta},timestamp:Date.now(),hypothesisId:'H3',runId:'pending-open-fix'})}).catch(()=>{});
-  }, [hasOfficerMeta, isOfficerPending, payment.method, payment.status, paymentId]);
-  // #endregion
 
   const onConfirm = useCallback(async () => {
     const due = nextDueDate || defaultDue;
@@ -106,33 +109,22 @@ function PaymentReviewBody({ payment, paymentId, onDone }: ReviewBodyProps) {
         <MethodIcon method={payment.method} />
       </View>
 
-      {isCash ? (
-        <View style={styles.card}>
-          <Text style={styles.section}>Denomination count</Text>
-          <DenominationInput
-            denominations={denominations}
-            expectedAmount={payment.total_amount}
-            onChange={setDenominations}
-          />
-          <Text style={styles.label}>PHYSICAL RECEIPT NUMBER (OPTIONAL)</Text>
-          <TextInput
-            style={styles.input}
-            value={receiptNumber}
-            onChangeText={setReceiptNumber}
-            placeholder="RCT-2026-0421"
-            placeholderTextColor={colors.textSecondary}
-          />
-        </View>
-      ) : isOfficerPending ? (
+      {isOfficerPending ? (
         <View style={styles.card}>
           <Text style={styles.section}>Officer collection details</Text>
           {hasOfficerMeta ? (
             <>
-              {hasPaymentText(upiRef) ? (
-                <Text style={styles.mono}>UPI / reference: {upiRef}</Text>
+              {hasPaymentText(collectionRef) ? (
+                <Text style={styles.mono}>Payment reference: {collectionRef}</Text>
               ) : null}
               {hasPaymentText(officerNotes) ? (
                 <Text style={styles.mono}>Notes: {officerNotes}</Text>
+              ) : null}
+              {hasGeo ? (
+                <Text style={styles.mono}>
+                  Location: {payment.collection_latitude!.toFixed(5)},{' '}
+                  {payment.collection_longitude!.toFixed(5)}
+                </Text>
               ) : null}
               {hasPaymentText(evidenceUrl) ? (
                 <Pressable onPress={() => void Linking.openURL(evidenceUrl!)}>
@@ -151,6 +143,25 @@ function PaymentReviewBody({ payment, paymentId, onDone }: ReviewBodyProps) {
           {hasPaymentText(upiRef) ? (
             <Text style={styles.mono}>Payment ID: {upiRef}</Text>
           ) : null}
+        </View>
+      ) : null}
+
+      {isCash ? (
+        <View style={styles.card}>
+          <Text style={styles.section}>Denomination count</Text>
+          <DenominationInput
+            denominations={denominations}
+            expectedAmount={payment.total_amount}
+            onChange={setDenominations}
+          />
+          <Text style={styles.label}>PHYSICAL RECEIPT NUMBER (OPTIONAL)</Text>
+          <TextInput
+            style={styles.input}
+            value={receiptNumber}
+            onChangeText={setReceiptNumber}
+            placeholder="RCT-2026-0421"
+            placeholderTextColor={colors.textSecondary}
+          />
         </View>
       ) : null}
 
@@ -183,12 +194,6 @@ function PaymentReviewBody({ payment, paymentId, onDone }: ReviewBodyProps) {
 export function PaymentReviewScreen({ route, navigation }: Props) {
   const { paymentId } = route.params;
   const { data: payment, isLoading, isError, error, refetch } = usePaymentDetail(paymentId);
-
-  // #region agent log
-  useEffect(() => {
-    fetch('http://127.0.0.1:7333/ingest/e1cbfe88-dbfa-476e-aa64-46550e18bd51',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bad3ec'},body:JSON.stringify({sessionId:'bad3ec',location:'PaymentReviewScreen.tsx:shell',message:'review screen state',data:{paymentId,isLoading,isError,hasPayment:Boolean(payment)},timestamp:Date.now(),hypothesisId:'H3',runId:'pending-open-fix'})}).catch(()=>{});
-  }, [isError, isLoading, payment, paymentId]);
-  // #endregion
 
   if (isLoading) {
     return (

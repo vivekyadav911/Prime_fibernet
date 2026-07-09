@@ -1,12 +1,9 @@
 import { z } from 'zod';
 
 import type { PortalTicketItem } from '@/types/portalTicket';
+import type { PortalItemCoordinates } from '@/types/portalTicket';
 
-export type PortalItemCoordinates = {
-  latitude: number;
-  longitude: number;
-  address: string;
-};
+export type { PortalItemCoordinates };
 
 const coordinatePairSchema = z.object({
   latitude: z.number().min(-90).max(90),
@@ -47,11 +44,11 @@ export function getPortalItemCoordinates(
   linkedRequestRow?: Record<string, unknown> | null,
   ticketRow?: Record<string, unknown> | null,
 ): PortalItemCoordinates | null {
-  const fromLinked = coordsFromRow(linkedRequestRow);
-  if (fromLinked) return fromLinked;
-
   const fromTicketRow = coordsFromRow(ticketRow);
   if (fromTicketRow) return fromTicketRow;
+
+  const fromLinked = coordsFromRow(linkedRequestRow);
+  if (fromLinked) return fromLinked;
 
   if (item.request) {
     const raw = item.request as typeof item.request & {

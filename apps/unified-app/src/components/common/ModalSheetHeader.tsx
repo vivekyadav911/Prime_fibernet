@@ -12,6 +12,8 @@ type ModalSheetHeaderProps = {
   doneLabel?: string;
   cancelLabel?: string;
   doneDisabled?: boolean;
+  /** Bottom sheets should not add status-bar inset above the title row. */
+  variant?: 'fullscreen' | 'sheet';
 };
 
 export function ModalSheetHeader({
@@ -21,11 +23,18 @@ export function ModalSheetHeader({
   doneLabel = 'Done',
   cancelLabel = 'Cancel',
   doneDisabled = false,
+  variant = 'fullscreen',
 }: ModalSheetHeaderProps) {
   const insets = useSafeAreaInsets();
+  const isSheet = variant === 'sheet';
 
   return (
-    <View style={[styles.wrapper, { paddingTop: insets.top + spacing.xs }]}>
+    <View
+      style={[
+        styles.wrapper,
+        isSheet ? styles.wrapperSheet : { paddingTop: insets.top + spacing.xs },
+      ]}
+    >
       <View style={styles.row}>
         <Pressable
           onPress={onCancel}
@@ -67,6 +76,9 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderDefault,
     zIndex: 10,
     elevation: 4,
+  },
+  wrapperSheet: {
+    paddingTop: spacing.sm,
   },
   row: {
     flexDirection: 'row',

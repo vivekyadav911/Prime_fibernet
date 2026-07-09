@@ -1,4 +1,5 @@
-import type { PortalItemKind, PortalTicketItem } from '@/types/portalTicket';
+import type { PortalItemCoordinates, PortalItemKind, PortalTicketItem } from '@/types/portalTicket';
+import type { RootState } from '@/store/store';
 import type { ServiceRequest } from '@/types/requests';
 import type { Ticket, TicketActivityEvent, TicketStatus } from '@/types/tickets';
 
@@ -79,8 +80,11 @@ async function fetchOfficerPortalItems(client: TypedSupabaseClient, officerId: s
   const requestRows = (requestResult.data ?? []) as Record<string, unknown>[];
   const requestRowById = new Map(requestRows.map((row) => [String(row.id), row]));
 
+  const ticketRows = (ticketResult.data ?? []) as Record<string, unknown>[];
+  const ticketRowById = new Map(ticketRows.map((row) => [String(row.id), row]));
+
   const tickets: Ticket[] = await Promise.all(
-    ((ticketResult.data ?? []) as Record<string, unknown>[]).map(async (row) => {
+    ticketRows.map(async (row) => {
       const enriched = {
         ...row,
         assigned_officer_name:
@@ -101,13 +105,44 @@ async function fetchOfficerPortalItems(client: TypedSupabaseClient, officerId: s
 
   return serializePortalItemsForCache(
     items.map((item) => {
-      if (item.kind !== 'ticket' || !item.ticket?.linkedRequestId) return item;
-      const linkedRow = requestRowById.get(item.ticket.linkedRequestId);
-      if (!linkedRow) return item;
-      const linkedRequest = mapDbRowToServiceRequest(linkedRow, [], planMap);
-      return { ...item, request: linkedRequest };
+      const linkedRow =
+        item.kind === 'ticket' && item.ticket?.linkedRequestId
+          ? requestRowById.get(item.ticket.linkedRequestId) ?? null
+          : item.kind === 'request'
+            ? requestRowById.get(item.id) ?? null
+            : null;
+
+      let enriched = item;
+      if (linkedRow && item.kind === 'ticket') {
+        const linkedRequest = mapDbRowToServiceRequest(linkedRow, [], planMap);
+        enriched = { ...item, request: linkedRequest };
+      }
+
+      const ticketRow = item.kind === 'ticket' ? ticketRowById.get(item.id) ?? null : null;
+      const coordinates = getPortalItemCoordinates(enriched, linkedRow, ticketRow);
+      const customerAddress = coordinates?.address?.trim() || enriched.customerAddress;
+
+      return { ...enriched, customerAddress, coordinates };
     }),
   );
+}
+
+function applyLocationToPortalItem(
+  item: PortalTicketItem,
+  itemId: string,
+  kind: PortalItemKind,
+  coordinates: PortalItemCoordinates,
+  address: string,
+): void {
+  if (item.id !== itemId || item.kind !== kind) return;
+  item.coordinates = coordinates;
+  item.customerAddress = address;
+  if (item.ticket) {
+    item.ticket = { ...item.ticket, address };
+  }
+  if (item.request) {
+    item.request = { ...item.request, customerAddress: address };
+  }
 }
 
 function mapDetailFromItem(
@@ -116,11 +151,14 @@ function mapDetailFromItem(
   ticketRow?: Record<string, unknown> | null,
 ): OfficerPortalItemDetail {
   const coordinates = getPortalItemCoordinates(item, linkedRequestRow, ticketRow);
+  const resolvedAddress =
+    coordinates?.address?.trim() || item.customerAddress?.trim() || '';
 
   if (item.kind === 'ticket' && item.ticket) {
     const ticket = item.ticket;
     return {
       ...item,
+      customerAddress: resolvedAddress || item.customerAddress,
       coordinates,
       description: ticket.description,
       contactPhone: ticket.contactPhone,
@@ -140,6 +178,7 @@ function mapDetailFromItem(
   const request = item.request;
   return {
     ...item,
+    customerAddress: resolvedAddress || item.customerAddress,
     coordinates,
     description: request?.notes?.join('\n') ?? '',
     contactPhone: request?.customerPhone ?? null,
@@ -333,6 +372,7 @@ export const officerPortalApi = baseApi.injectEndpoints({
           if (ticketUpdateError) throw ticketUpdateError;
 
           if (ticket?.linked_request_id) {
+            // ponytail: ticket pin is canonical; linked request sync is best-effort (RLS may block)
             await client
               .from('service_requests')
               .update(requestPatch)
@@ -356,6 +396,52 @@ export const officerPortalApi = baseApi.injectEndpoints({
         { type: 'OfficerPortal', id: arg.itemId },
         'OfficerPortal',
       ],
+      async onQueryStarted(
+        { itemId, kind, latitude, longitude, address },
+        { dispatch, queryFulfilled, getState },
+      ) {
+        const coordinates: PortalItemCoordinates = { latitude, longitude, address };
+        const patches: Array<{ undo: () => void }> = [];
+
+        const detailArgs = { itemId, kind };
+        const detailEntry = officerPortalApi.endpoints.getOfficerPortalItemDetail.select(detailArgs)(
+          getState(),
+        );
+        if (detailEntry.data) {
+          patches.push(
+            dispatch(
+              officerPortalApi.util.updateQueryData('getOfficerPortalItemDetail', detailArgs, (draft) => {
+                applyLocationToPortalItem(draft, itemId, kind, coordinates, address);
+                draft.coordinates = coordinates;
+                draft.customerAddress = address;
+              }),
+            ),
+          );
+        }
+
+        const apiQueries = (getState() as RootState).api.queries;
+        for (const cacheKey of Object.keys(apiQueries)) {
+          if (!cacheKey.startsWith('getOfficerAssignedPortalItems(')) continue;
+          const entry = apiQueries[cacheKey];
+          if (!entry?.data) continue;
+          const userId = entry.originalArgs as string | undefined;
+          patches.push(
+            dispatch(
+              officerPortalApi.util.updateQueryData('getOfficerAssignedPortalItems', userId, (draft) => {
+                for (const item of draft) {
+                  applyLocationToPortalItem(item, itemId, kind, coordinates, address);
+                }
+              }),
+            ),
+          );
+        }
+
+        try {
+          await queryFulfilled;
+        } catch {
+          patches.forEach((patch) => patch.undo());
+        }
+      },
     }),
 
     createOfficerFieldTicket: builder.mutation<

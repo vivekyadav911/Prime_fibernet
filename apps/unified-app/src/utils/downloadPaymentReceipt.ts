@@ -59,9 +59,6 @@ export async function downloadPaymentReceipt(
 
   try {
     const result = await fetchReceipt(paymentId);
-    // #region agent log
-    fetch('http://127.0.0.1:7333/ingest/e1cbfe88-dbfa-476e-aa64-46550e18bd51',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'eab8c6'},body:JSON.stringify({sessionId:'eab8c6',location:'downloadPaymentReceipt.ts:fetch',message:'receipt API result',data:{paymentId,hasUrl:Boolean(result.url),htmlLen:result.html?.length??0,receiptNumber:result.receiptNumber},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
     if (!result.url) {
       if (options?.onFallback) {
         options.onFallback(paymentId);
@@ -71,9 +68,6 @@ export async function downloadPaymentReceipt(
     }
 
     const { ext, mimeType, isPdf } = receiptExtension(result.url);
-    // #region agent log
-    fetch('http://127.0.0.1:7333/ingest/e1cbfe88-dbfa-476e-aa64-46550e18bd51',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'eab8c6'},body:JSON.stringify({sessionId:'eab8c6',location:'downloadPaymentReceipt.ts:branch',message:'receipt render branch',data:{paymentId,isPdf,ext,platform:Platform.OS},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
     const safeName = (result.receiptNumber || paymentId).replace(/[^\w.-]+/g, '_');
     const filename = `receipt-${safeName}.${ext}`;
 
@@ -101,10 +95,6 @@ export async function downloadPaymentReceipt(
     const html =
       result.html?.trim() ||
       (await fetchReceiptHtml(result.url));
-
-    // #region agent log
-    fetch('http://127.0.0.1:7333/ingest/e1cbfe88-dbfa-476e-aa64-46550e18bd51',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'eab8c6'},body:JSON.stringify({sessionId:'eab8c6',location:'downloadPaymentReceipt.ts:html',message:'receipt html ready',data:{paymentId,htmlLen:html.length,fromInline:Boolean(result.html?.trim())},timestamp:Date.now(),hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
 
     if (Platform.OS === 'web') {
       openRenderedHtmlOnWeb(html);

@@ -61,7 +61,7 @@ export function OfficerCollectionsStackNav() {
       <CollectionsStack.Screen
         name="CollectionsList"
         component={OfficerCollectionScreen}
-        options={{ title: 'Collections' }}
+        options={{ title: 'Collect Payment' }}
       />
       <CollectionsStack.Screen
         name="AssignedCustomers"
@@ -81,7 +81,7 @@ export function OfficerCollectionsStackNav() {
       <CollectionsStack.Screen
         name="CollectionHistory"
         component={OfficerCollectionHistoryScreen}
-        options={{ title: 'Collection history' }}
+        options={{ title: 'Collection History' }}
       />
       <CollectionsStack.Screen
         name="RecordPayment"

@@ -35,15 +35,19 @@ async function persistCollectionAssignments(
   }
 
   if (updatedCount === 0) {
+    const updatePayload: Record<string, unknown> = {
+      assigned_officer_id: officerId,
+      claimed_by_officer_id: null,
+      claimed_at: null,
+      collection_status: officerId ? 'assigned' : 'open',
+      collection_updated_at: new Date().toISOString(),
+    };
+    if (collectionAmount != null && collectionAmount > 0) {
+      updatePayload.collection_target_amount = collectionAmount;
+    }
     const { data: rows, error: updateError } = await client
       .from('users')
-      .update({
-        assigned_officer_id: officerId,
-        claimed_by_officer_id: null,
-        claimed_at: null,
-        collection_status: officerId ? 'assigned' : 'open',
-        collection_updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('role', 'customer')
       .in('id', customerIds)
       .select('id');

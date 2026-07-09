@@ -22,27 +22,47 @@ type Props = NativeStackScreenProps<AdminPaymentsStackParamList, 'PaymentDetail'
 
 function CollectionMetadata({
   gatewayPaymentId,
+  receiptNumber,
   notes,
   evidencePhotoUrl,
+  latitude,
+  longitude,
 }: {
   gatewayPaymentId: string | null;
+  receiptNumber: string | null;
   notes: string | null;
   evidencePhotoUrl: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }) {
-  const upiRef = paymentText(gatewayPaymentId);
+  const collectionRef = paymentText(gatewayPaymentId) ?? paymentText(receiptNumber);
   const noteText = paymentText(notes);
   const evidenceUrl = paymentText(evidencePhotoUrl);
-  const hasMeta = hasPaymentText(upiRef) || hasPaymentText(noteText) || hasPaymentText(evidenceUrl);
+  const hasGeo =
+    typeof latitude === 'number' &&
+    Number.isFinite(latitude) &&
+    typeof longitude === 'number' &&
+    Number.isFinite(longitude);
+  const hasMeta =
+    hasPaymentText(collectionRef) ||
+    hasPaymentText(noteText) ||
+    hasPaymentText(evidenceUrl) ||
+    hasGeo;
 
   if (!hasMeta) return null;
 
   return (
     <View style={styles.card}>
       <Text style={styles.section}>Collection details</Text>
-      {hasPaymentText(upiRef) ? (
-        <Text style={styles.line}>UPI / reference: {upiRef}</Text>
+      {hasPaymentText(collectionRef) ? (
+        <Text style={styles.line}>Payment reference: {collectionRef}</Text>
       ) : null}
       {hasPaymentText(noteText) ? <Text style={styles.muted}>Notes: {noteText}</Text> : null}
+      {hasGeo ? (
+        <Text style={styles.muted}>
+          Location: {latitude!.toFixed(5)}, {longitude!.toFixed(5)}
+        </Text>
+      ) : null}
       {hasPaymentText(evidenceUrl) ? (
         <Pressable onPress={() => void Linking.openURL(evidenceUrl!)}>
           <Text style={styles.link}>View evidence photo</Text>
@@ -173,8 +193,11 @@ export function PaymentDetailScreen({ route, navigation }: Props) {
       </View>
       <CollectionMetadata
         gatewayPaymentId={payment.gateway_payment_id}
+        receiptNumber={payment.receipt_number}
         notes={payment.cash_collection_notes}
         evidencePhotoUrl={payment.evidence_photo_url}
+        latitude={payment.collection_latitude}
+        longitude={payment.collection_longitude}
       />
       {payment.gateway_raw_response ? (
         <View style={styles.card}>

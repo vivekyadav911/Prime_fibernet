@@ -96,7 +96,7 @@ function OfficerDrawerNav() {
         <Drawer.Screen
           name="CollectionsStack"
           component={OfficerCollectionsStackNav}
-          options={{ title: 'Collections', headerShown: false }}
+          options={{ title: 'Collect Payment', headerShown: false }}
         />
         <Drawer.Screen
           name="NotificationsStack"

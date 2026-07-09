@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  FlatList,
   Pressable,
   StyleSheet,
   Text,
@@ -14,7 +13,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '@prime/ui';
 
 import { AmountDisplay, CollectionStatusBadge } from '@/components/payments';
-import { EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import { EmptyState, ErrorState, DismissKeyboardFlatList, ScreenWrapper, SkeletonLoader } from '@/components/common';
 import { useClaimCollection } from '@/hooks/officer/useClaimCollection';
 import { useOfficerCollections } from '@/hooks/usePayments';
 import { formatINR } from '@/utils/currencyFormat';
@@ -102,12 +101,13 @@ export function OfficerCollectionScreen({ route }: Props) {
   const onClaim = useCallback(
     async (customer: OfficerAssignedCustomer) => {
       try {
-        await claim(customer.id).unwrap();
-        Alert.alert('Claimed', `${customer.name} is now under Assigned to me.`);
-        refetch();
+        const result = await claim(customer.id).unwrap();
+        Alert.alert('Assigned', `${customer.name} is now under Assigned to me.`);
+        await refetch();
         setTab('assigned');
       } catch (e) {
-        Alert.alert('Cannot claim', e instanceof Error ? e.message : 'Try again.');
+        const msg = e instanceof Error ? e.message : 'Try again.';
+        Alert.alert('Cannot claim', msg);
       }
     },
     [claim, refetch],
@@ -128,7 +128,7 @@ export function OfficerCollectionScreen({ route }: Props) {
         <View style={styles.row}>
           <Button label="History" variant="secondary" onPress={() => onViewHistory(item)} />
           {tab === 'open_pool' ? (
-            <Button label="Claim" onPress={() => void onClaim(item)} disabled={claiming} />
+            <Button label="Assign to me" onPress={() => void onClaim(item)} disabled={claiming} />
           ) : (
             <Button label="Collect →" onPress={() => onCollect(item)} />
           )}
@@ -209,7 +209,7 @@ export function OfficerCollectionScreen({ route }: Props) {
         </Text>
       </View>
 
-      <FlatList
+      <DismissKeyboardFlatList
         data={filteredList}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}

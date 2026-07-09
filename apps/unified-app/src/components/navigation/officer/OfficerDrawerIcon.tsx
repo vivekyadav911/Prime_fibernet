@@ -13,6 +13,7 @@ export const OFFICER_DRAWER_ICON_NAMES: Record<string, IconName> = {
   Attendance: 'calendar-outline',
   CollectionsStack: 'wallet-outline',
   AssignedCustomers: 'cash-outline',
+  CollectionHistory: 'time-outline',
   Invoice: 'receipt-outline',
   Inventory: 'cube-outline',
   Payslip: 'card-outline',

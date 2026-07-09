@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -7,7 +7,11 @@ import { Button } from '@prime/ui';
 import { AmountDisplay, DenominationInput } from '@/components/payments';
 import { DismissKeyboardScrollView, ScreenWrapper } from '@/components/common';
 import { useLocation } from '@/hooks/useLocation';
-import { useRecordCashCollectionMutation } from '@/services/api/paymentCollectionApi';
+import {
+  useGetBankAccountsQuery,
+  useRecordCashCollectionMutation,
+  useRecordManualPaymentMutation,
+} from '@/services/api/paymentCollectionApi';
 import { SyncManager } from '@/services/offline/syncManager';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
@@ -17,6 +21,10 @@ import type { OfficerCollectionsStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
+import {
+  OfficerDigitalUpiFields,
+  type DigitalSubMode,
+} from './components/OfficerDigitalUpiFields';
 import {
   PaymentMethodSelector,
   type PaymentMethodOption,
@@ -31,9 +39,14 @@ export function CashCollectionScreen({ navigation, route }: Props) {
     route.params;
   const dispatch = useAppDispatch();
   const { coords, error: locationError, startTracking, stopTracking } = useLocation();
-  const [recordCollection, { isLoading }] = useRecordCashCollectionMutation();
+  const [recordCollection, { isLoading: cashSaving }] = useRecordCashCollectionMutation();
+  const [recordManualPayment, { isLoading: upiSaving }] = useRecordManualPaymentMutation();
+  const { data: bankAccounts = [] } = useGetBankAccountsQuery();
 
   const [method, setMethod] = useState<PaymentMethodOption>('cash');
+  const [digitalSubMode, setDigitalSubMode] = useState<DigitalSubMode>('qr');
+  const [bankAccountId, setBankAccountId] = useState<string | null>(null);
+  const [showQr, setShowQr] = useState(false);
   const [amount, setAmount] = useState(String(defaultAmount));
   const [paymentReference, setPaymentReference] = useState('');
   const [notes, setNotes] = useState('');
@@ -57,6 +70,93 @@ export function CashCollectionScreen({ navigation, route }: Props) {
     };
   }, [startTracking, stopTracking]);
 
+  useEffect(() => {
+    if (method !== 'upi') {
+      setShowQr(false);
+    }
+  }, [method]);
+
+  const parsedAmount = parseAmountInput(amount) ?? 0;
+  const isLoading = cashSaving || upiSaving;
+
+  const defaultBank = useMemo(
+    () => bankAccounts.find((b) => b.is_default) ?? bankAccounts[0] ?? null,
+    [bankAccounts],
+  );
+
+  const selectedBank = useMemo(() => {
+    if (bankAccountId) {
+      return bankAccounts.find((b) => b.id === bankAccountId) ?? defaultBank;
+    }
+    return defaultBank;
+  }, [bankAccountId, bankAccounts, defaultBank]);
+
+  const onShowQr = useCallback(() => {
+    if (!parsedAmount || parsedAmount <= 0) {
+      Alert.alert('Invalid amount', 'Enter a valid amount before showing the QR.');
+      return;
+    }
+    if (!selectedBank) {
+      Alert.alert('No bank account', 'Admin must configure an active bank account with UPI VPA.');
+      return;
+    }
+    setShowQr(true);
+  }, [parsedAmount, selectedBank]);
+
+  const onSubmitUpi = useCallback(
+    async (verificationMethod: 'manual' | 'qr') => {
+      if (!parsedAmount || parsedAmount <= 0) {
+        Alert.alert('Invalid amount', 'Enter a valid collection amount.');
+        return;
+      }
+      if (paymentReference.trim().length < 4) {
+        Alert.alert(
+          'UPI reference required',
+          'Enter the UPI transaction reference / UTR from the customer’s payment confirmation.',
+        );
+        return;
+      }
+
+      try {
+        await recordManualPayment({
+          customerId,
+          amount: parsedAmount,
+          method: 'upi',
+          reference: paymentReference.trim(),
+          notes: notes.trim() || undefined,
+          confirmed: false,
+          bankAccountId: verificationMethod === 'qr' ? selectedBank?.id : undefined,
+          verificationMethod,
+          latitude: coords?.latitude,
+          longitude: coords?.longitude,
+          photoUri,
+        }).unwrap();
+        Alert.alert('Submitted', 'UPI collection sent for admin verification.');
+        navigation.goBack();
+      } catch (err) {
+        Alert.alert(
+          'Could not record payment',
+          formatSupabaseRpcError(
+            err,
+            err instanceof Error ? err.message : 'Could not record this collection. Try again.',
+          ),
+        );
+      }
+    },
+    [
+      customerId,
+      navigation,
+      notes,
+      parsedAmount,
+      paymentReference,
+      recordManualPayment,
+      selectedBank?.id,
+      photoUri,
+      coords?.latitude,
+      coords?.longitude,
+    ],
+  );
+
   const pickPhoto = useCallback(async () => {
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
     if (!result.canceled && result.assets[0]) {
@@ -72,10 +172,6 @@ export function CashCollectionScreen({ navigation, route }: Props) {
     }
     if (method === 'netbanking' && paymentReference.trim().length < 4) {
       Alert.alert('Invalid reference', 'Enter the bank reference / UTR number.');
-      return;
-    }
-    if (method === 'upi' && paymentReference.trim().length < 4) {
-      Alert.alert('Invalid UPI reference', 'Enter the UPI transaction ID.');
       return;
     }
     const payload = {
@@ -166,7 +262,13 @@ export function CashCollectionScreen({ navigation, route }: Props) {
         <AmountDisplay amount={defaultAmount} />
 
         <Text style={styles.label}>PAYMENT METHOD</Text>
-        <PaymentMethodSelector value={method} onChange={setMethod} />
+        <PaymentMethodSelector
+          value={method}
+          onChange={(next) => {
+            setMethod(next);
+            if (next !== 'upi') setShowQr(false);
+          }}
+        />
 
         {method === 'cash' ? (
           <>
@@ -185,6 +287,35 @@ export function CashCollectionScreen({ navigation, route }: Props) {
               onChange={setDenominations}
             />
           </>
+        ) : method === 'upi' ? (
+          <>
+            <Text style={styles.label}>AMOUNT COLLECTED</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="decimal-pad"
+              value={amount}
+              onChangeText={setAmount}
+              placeholderTextColor={colors.textSecondary}
+            />
+            <OfficerDigitalUpiFields
+              amount={parsedAmount}
+              upiReference={paymentReference}
+              onUpiReferenceChange={setPaymentReference}
+              digitalSubMode={digitalSubMode}
+              onDigitalSubModeChange={(next) => {
+                setDigitalSubMode(next);
+                if (next === 'manual') setShowQr(false);
+              }}
+              showQr={showQr}
+              onShowQr={onShowQr}
+              bankAccounts={bankAccounts}
+              selectedBank={selectedBank}
+              onBankAccountSelect={setBankAccountId}
+              onConfirmManual={() => void onSubmitUpi('manual')}
+              onConfirmDigital={() => void onSubmitUpi('qr')}
+              isLoading={isLoading}
+            />
+          </>
         ) : (
           <>
             <Text style={styles.label}>AMOUNT COLLECTED</Text>
@@ -195,16 +326,14 @@ export function CashCollectionScreen({ navigation, route }: Props) {
               onChangeText={setAmount}
               placeholderTextColor={colors.textSecondary}
             />
-            <Text style={styles.label}>
-              {method === 'netbanking' ? 'BANK REFERENCE / UTR NUMBER' : 'UPI TRANSACTION ID'}
-            </Text>
+            <Text style={styles.label}>BANK REFERENCE / UTR NUMBER</Text>
             <TextInput
               style={styles.input}
               keyboardType="default"
               value={paymentReference}
               onChangeText={setPaymentReference}
               maxLength={64}
-              placeholder={method === 'netbanking' ? 'UTR or bank reference' : 'UPI reference'}
+              placeholder="UTR or bank reference"
               placeholderTextColor={colors.textSecondary}
             />
           </>
@@ -227,7 +356,9 @@ export function CashCollectionScreen({ navigation, route }: Props) {
           variant="secondary"
           onPress={pickPhoto}
         />
-        <Button label="Confirm Collection" onPress={() => void onSubmit()} disabled={isLoading} />
+        {method !== 'upi' ? (
+          <Button label="Confirm Collection" onPress={() => void onSubmit()} disabled={isLoading} />
+        ) : null}
         <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
       </DismissKeyboardScrollView>
     </ScreenWrapper>

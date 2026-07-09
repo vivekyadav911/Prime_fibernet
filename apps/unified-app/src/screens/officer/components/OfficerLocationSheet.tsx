@@ -2,7 +2,10 @@ import * as Location from 'expo-location';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -11,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
 
-import { ModalSheetHeader } from '@/components/common';
+import { DismissKeyboardScrollView, ModalSheetHeader } from '@/components/common';
 import { geocodeAddress } from '@/services/GeocodingService';
 import { useAppSelector } from '@/store/hooks';
 import { useUpdateOfficerPortalItemLocationMutation } from '@/services/api/officerPortalApi';
@@ -158,80 +161,101 @@ export function OfficerLocationSheet({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-          <ModalSheetHeader title="Correct location" onCancel={onClose} onDone={() => void handleSave()} />
-          <View style={styles.body}>
-            <Text style={styles.helper}>
-              Update the pin if the saved address is wrong. This saves to the ticket or request.
-            </Text>
-
-            <Text style={styles.label}>ADDRESS</Text>
-            <TextInput
-              style={styles.input}
-              value={address}
-              onChangeText={setAddress}
-              placeholder="Street, area, city"
-              multiline
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <Pressable style={styles.backdrop} onPress={onClose}>
+          <Pressable
+            style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}
+            onPress={(event) => event.stopPropagation()}
+          >
+            <ModalSheetHeader
+              variant="sheet"
+              title="Correct location"
+              onCancel={onClose}
+              onDone={() => void handleSave()}
             />
+            <DismissKeyboardScrollView
+              style={styles.bodyScroll}
+              contentContainerStyle={styles.body}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.helper}>
+                Update the pin if the saved address is wrong. This saves to the ticket or request.
+              </Text>
 
-            <View style={styles.actionRow}>
-              <Button
-                label={isSearching ? 'Searching…' : 'Look up address'}
-                variant="secondary"
-                onPress={() => void handleSearchAddress()}
-                disabled={isSearching || isLocating || saving}
+              <Text style={styles.label}>ADDRESS</Text>
+              <TextInput
+                style={styles.input}
+                value={address}
+                onChangeText={setAddress}
+                placeholder="Street, area, city"
+                multiline
               />
-              <Button
-                label={isLocating ? 'Locating…' : 'Use GPS'}
-                variant="ghost"
-                onPress={() => void handleUseCurrentLocation()}
-                disabled={isSearching || isLocating || saving}
-              />
-            </View>
 
-            {(isSearching || isLocating) && (
-              <View style={styles.loadingRow}>
-                <ActivityIndicator size="small" color={colors.primaryNavy} />
-                <Text style={styles.loadingText}>
-                  {isSearching ? 'Looking up address…' : 'Reading GPS…'}
-                </Text>
+              <View style={styles.actionRow}>
+                <Button
+                  label={isSearching ? 'Searching…' : 'Look up address'}
+                  variant="secondary"
+                  onPress={() => void handleSearchAddress()}
+                  disabled={isSearching || isLocating || saving}
+                />
+                <Button
+                  label={isLocating ? 'Locating…' : 'Use GPS'}
+                  variant="ghost"
+                  onPress={() => void handleUseCurrentLocation()}
+                  disabled={isSearching || isLocating || saving}
+                />
               </View>
-            )}
 
-            <Text style={styles.label}>LATITUDE</Text>
-            <TextInput
-              style={styles.input}
-              value={latitudeText}
-              onChangeText={setLatitudeText}
-              placeholder="28.613900"
-              keyboardType="numbers-and-punctuation"
-            />
+              {(isSearching || isLocating) && (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color={colors.primaryNavy} />
+                  <Text style={styles.loadingText}>
+                    {isSearching ? 'Looking up address…' : 'Reading GPS…'}
+                  </Text>
+                </View>
+              )}
 
-            <Text style={styles.label}>LONGITUDE</Text>
-            <TextInput
-              style={styles.input}
-              value={longitudeText}
-              onChangeText={setLongitudeText}
-              placeholder="77.209000"
-              keyboardType="numbers-and-punctuation"
-            />
+              <Text style={styles.label}>LATITUDE</Text>
+              <TextInput
+                style={styles.input}
+                value={latitudeText}
+                onChangeText={setLatitudeText}
+                placeholder="28.613900"
+                keyboardType="numbers-and-punctuation"
+              />
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+              <Text style={styles.label}>LONGITUDE</Text>
+              <TextInput
+                style={styles.input}
+                value={longitudeText}
+                onChangeText={setLongitudeText}
+                placeholder="77.209000"
+                keyboardType="numbers-and-punctuation"
+              />
 
-            <Button
-              label={saving ? 'Saving…' : 'Save location'}
-              onPress={() => void handleSave()}
-              disabled={saving || isSearching || isLocating}
-            />
-          </View>
-        </View>
-      </View>
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+
+              <Button
+                label={saving ? 'Saving…' : 'Save location'}
+                onPress={() => void handleSave()}
+                disabled={saving || isSearching || isLocating}
+              />
+            </DismissKeyboardScrollView>
+          </Pressable>
+        </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: colors.overlay,
@@ -242,10 +266,17 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     maxHeight: '92%',
+    minHeight: '58%',
+    width: '100%',
+  },
+  bodyScroll: {
+    flexGrow: 1,
+    flexShrink: 1,
   },
   body: {
     padding: spacing.md,
     gap: spacing.sm,
+    paddingBottom: spacing.xl,
   },
   helper: {
     fontSize: 14,

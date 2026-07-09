@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import BottomSheet, { BottomSheetBackdrop, type BottomSheetBackdropProps, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import {
@@ -35,6 +35,7 @@ import { enqueueToast } from '@/store/slices/uiSlice';
 import type { OfficerStackParamList } from '@/types/navigation';
 import type { TicketActivityEvent } from '@/types/tickets';
 import { OfficerLocationSheet } from '../components/OfficerLocationSheet';
+import { OfficerLocationSummary } from '../components/OfficerLocationSummary';
 import { OfficerPortalNavigateButton } from '../components/OfficerPortalNavigateButton';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -44,7 +45,7 @@ import {
   nextRequestStatusForOfficer,
   nextTicketStatusForOfficer,
 } from '@/utils/officerTicketActions';
-import { isUsableMapCoordinate } from '@/utils/officerPortalCoordinates';
+import { isUsableMapCoordinate, type PortalItemCoordinates } from '@/utils/officerPortalCoordinates';
 
 type Props = NativeStackScreenProps<OfficerStackParamList, 'RequestDetail'>;
 
@@ -71,6 +72,11 @@ export function OfficerRequestDetailScreen({ route }: Props) {
   const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [pendingResolve, setPendingResolve] = useState(false);
   const [fixLocationVisible, setFixLocationVisible] = useState(false);
+  const [savedLocation, setSavedLocation] = useState<PortalItemCoordinates | null>(null);
+
+  useEffect(() => {
+    setSavedLocation(null);
+  }, [requestId, kind]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -210,9 +216,14 @@ export function OfficerRequestDetailScreen({ route }: Props) {
     );
   }
 
+  const displayCoordinates = savedLocation ?? detail?.coordinates ?? null;
+  const displayAddress =
+    displayCoordinates?.address?.trim() ||
+    detail?.customerAddress?.trim() ||
+    '';
   const hasLocation =
-    detail?.coordinates != null &&
-    isUsableMapCoordinate(detail.coordinates.latitude, detail.coordinates.longitude);
+    displayCoordinates != null &&
+    isUsableMapCoordinate(displayCoordinates.latitude, displayCoordinates.longitude);
   const ticketEvents =
     detail.kind === 'ticket'
       ? detail.activityTimeline.map((event) => ({
@@ -259,8 +270,8 @@ export function OfficerRequestDetailScreen({ route }: Props) {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Issue</Text>
-          <Text style={styles.body}>{detail.description || detail.customerAddress}</Text>
-          <Text style={styles.address}>{detail.customerAddress}</Text>
+          <Text style={styles.body}>{detail.description || displayAddress}</Text>
+          <Text style={styles.address}>{displayAddress}</Text>
         </View>
 
         {detail.photoUrls.length ? (
@@ -276,42 +287,45 @@ export function OfficerRequestDetailScreen({ route }: Props) {
         ) : null}
 
         <View style={styles.card}>
-          <View style={styles.mapHeader}>
-            <Text style={styles.sectionTitle}>Customer location</Text>
-            <View style={styles.mapActions}>
-              <OfficerPortalNavigateButton
-                item={detail}
-                latitude={detail.coordinates?.latitude}
-                longitude={detail.coordinates?.longitude}
-                variant="primary"
-                onLocationUpdated={() => void refetch()}
-              />
-              <Pressable
-                style={styles.fixPin}
-                onPress={() => setFixLocationVisible(true)}
-                hitSlop={8}
-              >
-                <Text style={styles.fixPinText}>Fix pin</Text>
-              </Pressable>
-            </View>
+          <Text style={styles.sectionTitle}>Customer location</Text>
+          <View style={styles.mapActions}>
+            <OfficerPortalNavigateButton
+              item={{ ...detail, customerAddress: displayAddress }}
+              latitude={displayCoordinates?.latitude}
+              longitude={displayCoordinates?.longitude}
+              variant="primary"
+              onLocationUpdated={(location) => {
+                setSavedLocation(location);
+                void refetch();
+              }}
+            />
+            <Pressable
+              style={styles.fixPin}
+              onPress={() => setFixLocationVisible(true)}
+              hitSlop={8}
+            >
+              <Text style={styles.fixPinText}>Fix pin</Text>
+            </Pressable>
           </View>
-          {hasLocation && detail.coordinates ? (
+          <OfficerLocationSummary address={displayAddress} coordinates={displayCoordinates} />
+          {hasLocation && displayCoordinates ? (
             <FreeMapView
+              key={`${displayCoordinates.latitude}-${displayCoordinates.longitude}`}
               style={styles.map}
               initialRegion={{
-                latitude: detail.coordinates.latitude,
-                longitude: detail.coordinates.longitude,
+                latitude: displayCoordinates.latitude,
+                longitude: displayCoordinates.longitude,
                 latitudeDelta: 0.01,
                 longitudeDelta: 0.01,
               }}
             >
               <Marker
                 coordinate={{
-                  latitude: detail.coordinates.latitude,
-                  longitude: detail.coordinates.longitude,
+                  latitude: displayCoordinates.latitude,
+                  longitude: displayCoordinates.longitude,
                 }}
                 title={detail.customerName}
-                description={detail.customerAddress}
+                description={displayAddress}
               />
             </FreeMapView>
           ) : (
@@ -362,6 +376,8 @@ export function OfficerRequestDetailScreen({ route }: Props) {
         index={-1}
         snapPoints={snapPoints}
         enablePanDownToClose
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
         backdropComponent={renderBackdrop}
       >
         <View style={styles.sheet}>
@@ -397,10 +413,13 @@ export function OfficerRequestDetailScreen({ route }: Props) {
         onClose={() => setFixLocationVisible(false)}
         itemId={detail.id}
         kind={detail.kind}
-        initialAddress={detail.customerAddress}
-        initialLatitude={detail.coordinates?.latitude}
-        initialLongitude={detail.coordinates?.longitude}
-        onSaved={() => void refetch()}
+        initialAddress={displayAddress}
+        initialLatitude={displayCoordinates?.latitude}
+        initialLongitude={displayCoordinates?.longitude}
+        onSaved={(location) => {
+          setSavedLocation(location);
+          void refetch();
+        }}
       />
     </ScreenWrapper>
   );
@@ -425,8 +444,7 @@ const styles = StyleSheet.create({
   body: { color: colors.textPrimary, lineHeight: 22 },
   address: { color: colors.textSecondary },
   photo: { width: 120, height: 120, borderRadius: radius.sm, marginRight: spacing.sm },
-  mapHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  mapActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  mapActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' },
   fixPin: { minHeight: 48, justifyContent: 'center', paddingHorizontal: spacing.xs },
   fixPinText: { color: colors.textSecondary, fontWeight: '600', fontSize: 13 },
   missingLocation: { gap: spacing.sm, marginTop: spacing.sm },

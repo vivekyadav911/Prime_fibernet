@@ -5,23 +5,7 @@ type PostgrestError = {
   hint?: string;
 };
 
-/** Log full Supabase/PostgREST error and return an officer-facing message. */
-export function formatSupabaseRpcError(error: unknown, fallback: string): string {
-  if (!error || typeof error !== 'object') {
-    return fallback;
-  }
-
-  const err = error as PostgrestError;
-  console.error('[Supabase RPC error]', {
-    code: err.code,
-    message: err.message,
-    details: err.details,
-    hint: err.hint,
-  });
-
-  const message = err.message?.trim();
-  if (!message) return fallback;
-
+function mapKnownRpcMessage(message: string): string {
   if (message.includes('Reference is required')) {
     return 'Transaction reference is required for this payment method.';
   }
@@ -40,6 +24,37 @@ export function formatSupabaseRpcError(error: unknown, fallback: string): string
   if (message.includes('verification_method_check') || message.includes('verification_method')) {
     return 'Payment verification method is not supported. Update the app or contact support.';
   }
-
   return message;
+}
+
+/** Log full Supabase/PostgREST error and return an officer-facing message. */
+export function formatSupabaseRpcError(error: unknown, fallback: string): string {
+  if (!error) return fallback;
+  if (typeof error === 'string' && error.trim()) return error.trim();
+
+  if (error instanceof Error && error.message.trim()) {
+    console.error('[Supabase RPC error]', { name: error.name, message: error.message });
+    return mapKnownRpcMessage(error.message.trim());
+  }
+
+  if (typeof error === 'object') {
+    const err = error as PostgrestError & { error?: string; status?: string | number };
+    const message =
+      err.message?.trim() ||
+      (typeof err.error === 'string' ? err.error.trim() : '') ||
+      (typeof err.details === 'string' ? err.details.trim() : '');
+
+    console.error('[Supabase RPC error]', {
+      code: err.code,
+      message: err.message,
+      details: err.details,
+      hint: err.hint,
+      status: err.status,
+      error: err.error,
+    });
+
+    if (message) return mapKnownRpcMessage(message);
+  }
+
+  return fallback;
 }
