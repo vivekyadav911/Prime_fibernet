@@ -1,4 +1,6 @@
-import { NativeModules } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
+
+import { isExpoGo } from '@/utils/expoRuntime';
 
 import type { RazorpayCheckoutCallbacks, RazorpayCheckoutOptions, RazorpayFailurePayload } from './types';
 
@@ -102,6 +104,12 @@ function isUserDismissed(error: RazorpayFailurePayload): boolean {
 
 export function isNativeRazorpayAvailable(): boolean {
   return getRazorpayModule() != null;
+}
+
+export function shouldUseNativeRazorpay(): boolean {
+  if (Platform.OS === 'web') return false;
+  if (isExpoGo()) return false;
+  return isNativeRazorpayAvailable();
 }
 
 export async function openNativeCheckout(

@@ -25,6 +25,8 @@ const STATUS_COLORS: Record<string, string> = {
   absent: adminColors.badgeBlocked,
   late: adminColors.badgeWarning,
   half_day: adminColors.badgeWarning,
+  on_leave: adminColors.badgePending,
+  holiday: '#6B7280',
   assigned: '#0D7377',
   in_progress: '#0D7377',
   completed: adminColors.badgeActive,

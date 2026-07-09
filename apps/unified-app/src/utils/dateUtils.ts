@@ -7,7 +7,8 @@ export function getLocalDateString(date: Date = new Date()): string {
 }
 
 export function parseLocalDateString(isoDate: string): Date {
-  const [yRaw, mRaw, dRaw] = isoDate.split('-');
+  const normalized = isoDate.slice(0, 10);
+  const [yRaw, mRaw, dRaw] = normalized.split('-');
   const y = Number(yRaw);
   const m = Number(mRaw);
   const d = Number(dRaw);

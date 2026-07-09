@@ -1,9 +1,10 @@
 import * as Location from 'expo-location';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Platform, type AppStateStatus } from 'react-native';
 
 import { locationService } from '@/services/LocationService';
-import { useAppDispatch } from '@/store/hooks';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { store } from '@/store/store';
 import {
   setBackgroundPermissionStatus,
   setLocationPermissionStatus,
@@ -13,24 +14,37 @@ export type LocationPermissionMode = 'full' | 'limited' | 'blocked';
 
 export function useLocationPermissionState() {
   const dispatch = useAppDispatch();
-  const [mode, setMode] = useState<LocationPermissionMode>('blocked');
+  const fgStatus = useAppSelector((s) => s.attendance.locationPermissionStatus);
+  const bgStatus = useAppSelector((s) => s.attendance.backgroundPermissionStatus);
+  const initialCheckDone = useRef(false);
   const [checking, setChecking] = useState(true);
 
+  const mode: LocationPermissionMode =
+    fgStatus === 'undetermined'
+      ? 'blocked'
+      : fgStatus !== 'granted'
+        ? 'blocked'
+        : bgStatus === 'granted'
+          ? 'full'
+          : 'limited';
+
   const evaluate = useCallback(async () => {
-    setChecking(true);
+    const showCheckingUi = !initialCheckDone.current;
+    if (showCheckingUi) setChecking(true);
     try {
       const perms = await locationService.checkPermissions();
-      dispatch(setLocationPermissionStatus(perms.foreground ? 'granted' : 'denied'));
-      dispatch(setBackgroundPermissionStatus(perms.background ? 'granted' : 'denied'));
+      const nextFg = perms.foreground ? 'granted' : 'denied';
+      const nextBg = perms.background ? 'granted' : 'denied';
+      const current = store.getState().attendance;
 
-      if (!perms.foreground) {
-        setMode('blocked');
-      } else if (perms.background) {
-        setMode('full');
-      } else {
-        setMode('limited');
+      if (current.locationPermissionStatus !== nextFg) {
+        dispatch(setLocationPermissionStatus(nextFg));
+      }
+      if (current.backgroundPermissionStatus !== nextBg) {
+        dispatch(setBackgroundPermissionStatus(nextBg));
       }
     } finally {
+      initialCheckDone.current = true;
       setChecking(false);
     }
   }, [dispatch]);

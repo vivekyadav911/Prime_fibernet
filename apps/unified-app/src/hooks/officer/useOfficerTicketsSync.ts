@@ -19,7 +19,11 @@ function invalidate(dispatch: ReturnType<typeof useAppDispatch>) {
   dispatch(requestsApi.util.invalidateTags(['Requests']));
 }
 
-function ensureChannel(officerId: string, dispatch: ReturnType<typeof useAppDispatch>): RealtimeChannel {
+function ensureChannel(
+  officerId: string,
+  authUserId: string,
+  dispatch: ReturnType<typeof useAppDispatch>,
+): RealtimeChannel {
   const existing = channelsByOfficerId.get(officerId);
   if (existing) return existing;
 
@@ -64,6 +68,16 @@ function ensureChannel(officerId: string, dispatch: ReturnType<typeof useAppDisp
       },
       () => invalidate(dispatch),
     )
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'portal_notifications',
+        filter: `recipient_auth_id=eq.${authUserId}`,
+      },
+      () => invalidate(dispatch),
+    )
     .subscribe();
 
   channelsByOfficerId.set(officerId, channel);
@@ -86,19 +100,20 @@ export function useOfficerTicketsSync() {
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector((s) => s.auth.isAuthenticated);
   const role = useAppSelector((s) => s.auth.user?.role);
+  const authUserId = useAppSelector((s) => s.auth.user?.id);
   const officerId = useOfficerId();
 
   useEffect(() => {
-    if (!isAuthenticated || role !== 'officer' || !officerId) return;
+    if (!isAuthenticated || role !== 'officer' || !officerId || !authUserId) return;
 
     const prev = subscriberCounts.get(officerId) ?? 0;
     subscriberCounts.set(officerId, prev + 1);
-    ensureChannel(officerId, dispatch);
+    ensureChannel(officerId, authUserId, dispatch);
 
     return () => {
       const next = Math.max(0, (subscriberCounts.get(officerId) ?? 1) - 1);
       subscriberCounts.set(officerId, next);
       releaseChannel(officerId);
     };
-  }, [dispatch, isAuthenticated, officerId, role]);
+  }, [authUserId, dispatch, isAuthenticated, officerId, role]);
 }

@@ -2835,6 +2835,7 @@ export type Database = {
           payment_id: string | null
           pdf_storage_path: string | null
           pdf_url: string | null
+          portal_payment_id: string | null
           recipient_email: string | null
           recipient_phone: string | null
           sent_at: string | null
@@ -2873,6 +2874,7 @@ export type Database = {
           payment_id?: string | null
           pdf_storage_path?: string | null
           pdf_url?: string | null
+          portal_payment_id?: string | null
           recipient_email?: string | null
           recipient_phone?: string | null
           sent_at?: string | null
@@ -2911,6 +2913,7 @@ export type Database = {
           payment_id?: string | null
           pdf_storage_path?: string | null
           pdf_url?: string | null
+          portal_payment_id?: string | null
           recipient_email?: string | null
           recipient_phone?: string | null
           sent_at?: string | null
@@ -2936,6 +2939,13 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "user_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_portal_payment_id_fkey"
+            columns: ["portal_payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
             referencedColumns: ["id"]
           },
           {

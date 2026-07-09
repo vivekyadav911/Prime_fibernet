@@ -33,6 +33,7 @@ import {
 import type { AttendanceReportData } from './attendanceMappers';
 import { getOfficerIdForUser } from './mappers';
 import { getLocalDateString } from '@/utils/dateUtils';
+import { getMonthIsoRange } from '@/utils/attendanceCalendarGrid';
 import { mapAttendanceStatusDayRow, type AttendanceStatusDayRow } from '@/utils/attendanceStatus';
 
 const GEOFENCE_SELECT = '*, geofence_officer_assignments(officer_id)';
@@ -260,9 +261,7 @@ export const attendanceApi = baseApi.injectEndpoints({
     >({
       query: ({ officerId, month, year }) => ({
         handler: async (client) => {
-          const monthStr = String(month).padStart(2, '0');
-          const from = `${year}-${monthStr}-01`;
-          const to = `${year}-${monthStr}-31`;
+          const { from, to } = getMonthIsoRange(year, month);
           const { data, error } = await client
             .from('shifts')
             .select(ATTENDANCE_SELECT)
@@ -689,9 +688,7 @@ export const attendanceApi = baseApi.injectEndpoints({
       query: ({ month, year }) => ({
         handler: async (client) => {
           const officerId = await getCurrentOfficerId(client);
-          const monthStr = String(month).padStart(2, '0');
-          const from = `${year}-${monthStr}-01`;
-          const to = `${year}-${monthStr}-31`;
+          const { from, to } = getMonthIsoRange(year, month);
           const { data, error } = await client
             .from('shifts')
             .select(ATTENDANCE_SELECT)

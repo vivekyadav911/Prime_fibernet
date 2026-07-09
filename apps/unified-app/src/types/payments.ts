@@ -279,6 +279,8 @@ export interface CreateOrderPayload {
   planId?: string;
   paymentMethod?: PaymentMethod;
   channel?: PaymentChannel;
+  /** bill = current cycle due; advance = next cycle; retry = failed payment retry; custom = user-entered amount */
+  intent?: 'bill' | 'advance' | 'retry' | 'custom';
   billingPeriodStart?: string;
   billingPeriodEnd?: string;
   dueDate?: string;

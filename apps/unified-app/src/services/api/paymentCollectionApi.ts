@@ -21,6 +21,7 @@ import type {
 } from '@/types/payments';
 
 import { formatCustomerAccountId } from '@/utils/customerAccount';
+import { parseSupabaseFunctionError } from '@/utils/supabaseFunctionError';
 
 import { fetchActiveSubscriptionRow } from '@/services/customer/fetchActiveSubscriptionRow';
 import {
@@ -431,13 +432,18 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
               planId: body.planId,
               paymentMethod: body.paymentMethod,
               channel: body.channel ?? 'online_app',
+              intent: body.intent ?? 'bill',
               billingPeriodStart: body.billingPeriodStart,
               billingPeriodEnd: body.billingPeriodEnd,
               dueDate: body.dueDate,
             },
           });
-          if (error) throw error;
+          if (error) {
+            const msg = await parseSupabaseFunctionError(error, 'Could not start checkout.');
+            throw new Error(msg);
+          }
           const res = data as Record<string, unknown>;
+          if (res.error) throw new Error(String(res.error));
           return {
             paymentId: String(res.paymentId),
             orderId: String(res.orderId),
@@ -600,6 +606,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
               billing_period_start: (row.billing_period_start as string | null) ?? null,
               created_at: String(row.created_at),
             })),
+            sub?.start_at ?? null,
           );
 
           const isOverdue = user.payment_status === 'overdue';
@@ -624,7 +631,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             planAmount = subscriptionPlanPrice;
             taxAmount = 0;
             lateFee = 0;
-            totalPayable = subscriptionPlanPrice;
+            totalPayable = 0;
             outstandingAmount = 0;
           } else {
             planAmount = resolved.amount;
@@ -843,8 +850,12 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
           const { data, error } = await client.functions.invoke('generate-payment-receipt', {
             body: { paymentId },
           });
-          if (error) throw error;
-          const res = data as { url?: string; receiptNumber?: string };
+          if (error) {
+            const msg = await parseSupabaseFunctionError(error, 'Could not generate receipt.');
+            throw new Error(msg);
+          }
+          const res = data as { url?: string; receiptNumber?: string; error?: string };
+          if (res.error) throw new Error(res.error);
           return { url: res.url ?? null, receiptNumber: res.receiptNumber ?? '' };
         },
       }),

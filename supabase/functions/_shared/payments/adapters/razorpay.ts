@@ -20,10 +20,30 @@ async function hmacSha256(secret: string, body: string): Promise<string> {
     .join('');
 }
 
+/** Gateway-row credentials win; Supabase secrets fill the gaps. */
+export function withEnvFallback(creds: Record<string, string>): Record<string, string> {
+  return {
+    ...creds,
+    key_id: creds.key_id || Deno.env.get('RAZORPAY_KEY_ID') || '',
+    key_secret:
+      creds.key_secret ||
+      Deno.env.get('RAZORPAY_KEY_SECRET') ||
+      Deno.env.get('RAZORPAY_SECRET_KEY') ||
+      '',
+    webhook_secret: creds.webhook_secret || Deno.env.get('RAZORPAY_WEBHOOK_SECRET') || '',
+  };
+}
+
+export function resolveRazorpayPublicKey(creds: Record<string, string>): string {
+  const resolved = withEnvFallback(creds);
+  return resolved.key_id ?? '';
+}
+
 export const razorpayAdapter: GatewayAdapter = {
   slug: 'razorpay',
 
-  async createOrder(creds, ctx: OrderContext): Promise<OrderResult> {
+  async createOrder(rawCreds, ctx: OrderContext): Promise<OrderResult> {
+    const creds = withEnvFallback(rawCreds);
     const keyId = creds.key_id;
     const keySecret = creds.key_secret;
     if (!keyId || !keySecret) {
@@ -49,7 +69,8 @@ export const razorpayAdapter: GatewayAdapter = {
     return { orderId: order.id, publicKey: keyId, raw: order };
   },
 
-  async verifyWebhook(creds, body, headers, payload): Promise<WebhookParseResult> {
+  async verifyWebhook(rawCreds, body, headers, payload): Promise<WebhookParseResult> {
+    const creds = withEnvFallback(rawCreds);
     const webhookSecret = creds.webhook_secret ?? '';
     const signature = headers.get('x-razorpay-signature') ?? '';
     let verified = false;
@@ -73,12 +94,12 @@ export const razorpayAdapter: GatewayAdapter = {
   },
 
   async verifyPaymentSignature(
-    creds: Record<string, string>,
+    rawCreds: Record<string, string>,
     orderId: string,
     paymentId: string,
     signature: string,
   ): Promise<boolean> {
-    const keySecret = creds.key_secret;
+    const keySecret = withEnvFallback(rawCreds).key_secret;
     if (!keySecret || !signature) return false;
     const body = `${orderId}|${paymentId}`;
     const expected = await hmacSha256(keySecret, body);
@@ -86,9 +107,10 @@ export const razorpayAdapter: GatewayAdapter = {
   },
 
   async fetchCapturedPayment(
-    creds: Record<string, string>,
+    rawCreds: Record<string, string>,
     orderId: string,
   ): Promise<{ paymentId: string; method: string } | null> {
+    const creds = withEnvFallback(rawCreds);
     const keyId = creds.key_id;
     const keySecret = creds.key_secret;
     if (!keyId || !keySecret || !orderId) return null;
@@ -107,7 +129,8 @@ export const razorpayAdapter: GatewayAdapter = {
     };
   },
 
-  async testConnection(creds) {
+  async testConnection(rawCreds) {
+    const creds = withEnvFallback(rawCreds);
     if (!creds.key_id || !creds.key_secret) {
       return { ok: false, message: 'Missing key_id or key_secret' };
     }

@@ -13,3 +13,10 @@ export function getPlanDataLabel(plan: {
   if (plan.dataLimitGb) return `${plan.dataLimitGb} GB`;
   return 'Unlimited Data';
 }
+
+/** Price period suffix for customer plan cards (e.g. "mo", "90 days"). */
+export function getPlanPricePeriodLabel(validityDays: number): string {
+  if (validityDays === 30) return 'mo';
+  if (validityDays > 0) return `${validityDays} days`;
+  return 'mo';
+}

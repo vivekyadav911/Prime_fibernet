@@ -96,8 +96,14 @@ export function InvoiceListScreen({ navigation }: Props) {
     async (payload: SendInvoiceRecipientPayload) => {
       if (!sendTarget) return;
       try {
+        let invoice = sendTarget;
+        if (!sendTarget.pdfStoragePath) {
+          const fullInvoice = await fetchInvoice(sendTarget.id).unwrap();
+          const path = await generateAndUploadPDF(fullInvoice);
+          invoice = { ...sendTarget, pdfStoragePath: path };
+        }
         await send({
-          invoiceId: sendTarget.id,
+          invoiceId: invoice.id,
           channel: payload.channel,
           recipientEmail: payload.recipientEmail,
           recipientPhone: payload.recipientPhone,
@@ -109,7 +115,7 @@ export function InvoiceListScreen({ navigation }: Props) {
         Alert.alert('Send failed', queryErrorMessage(e));
       }
     },
-    [dispatch, refetch, send, sendTarget],
+    [dispatch, fetchInvoice, generateAndUploadPDF, refetch, send, sendTarget],
   );
 
   const openSendModal = useCallback((item: AdminInvoice, channel: 'email' | 'whatsapp') => {

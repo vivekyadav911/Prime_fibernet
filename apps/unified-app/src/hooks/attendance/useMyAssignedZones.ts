@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { useGetMyGeofencesQuery } from '@/services/api/attendanceApi';
@@ -23,8 +23,11 @@ export function useMyAssignedZones() {
   const zones = query.data ?? [];
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [coords, setCoords] = useState<Coordinates | null>(null);
+  const [isLocationLoading, setIsLocationLoading] = useState(true);
+  const lastRefreshAtRef = useRef(0);
 
   const refreshLocation = useCallback(async () => {
+    setIsLocationLoading(true);
     try {
       const next = await locationService.getCurrentLocation();
       setCoords(next);
@@ -32,6 +35,8 @@ export function useMyAssignedZones() {
     } catch {
       setCoords(null);
       return null;
+    } finally {
+      setIsLocationLoading(false);
     }
   }, []);
 
@@ -46,10 +51,12 @@ export function useMyAssignedZones() {
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
-      if (state === 'active') {
-        void refreshZones();
-        void refreshLocation();
-      }
+      if (state !== 'active') return;
+      const now = Date.now();
+      if (now - lastRefreshAtRef.current < 30_000) return;
+      lastRefreshAtRef.current = now;
+      void refreshZones();
+      void refreshLocation();
     });
     return () => sub.remove();
   }, [refreshLocation, refreshZones]);
@@ -111,6 +118,7 @@ export function useMyAssignedZones() {
     selectedZone,
     setSelectedZoneId,
     coords,
+    isLocationLoading,
     geofenceStatus,
     hasZone: zones.length > 0,
     isLoading: query.isLoading,

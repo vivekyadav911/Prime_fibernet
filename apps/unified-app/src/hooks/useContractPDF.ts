@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import * as Clipboard from 'expo-clipboard';
+import { Share } from 'react-native';
 
 import {
   buildContractStoragePath,
@@ -175,7 +175,7 @@ export function useContractPDF() {
   const copySignedLink = useCallback(
     async (storagePath: string) => {
       const signedUrl = await getSignedUrl(storagePath);
-      await Clipboard.setStringAsync(signedUrl);
+      await Share.share({ message: signedUrl });
       return signedUrl;
     },
     [getSignedUrl],

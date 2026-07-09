@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { fetchTickets, subscribeToTickets } from '@/services/ticketsService';
-import { useTicketPortalNavBadge } from '@/hooks/useTicketPortalStats';
 import { useAppSelector } from '@/store/hooks';
 import type { Ticket, TicketFilters, TicketStats } from '@/types/tickets';
 import { applyTicketFilters } from '@/utils/ticketViewMappers';
@@ -143,6 +142,8 @@ export function useTicketStats() {
 
 /** @deprecated Use useTicketPortalNavBadge from useTicketPortalStats */
 export function useTicketPortalBadge() {
+  // ponytail: lazy require avoids useTickets ↔ useTicketPortalStats circular import at module load
+  const { useTicketPortalNavBadge } = require('@/hooks/useTicketPortalStats') as typeof import('@/hooks/useTicketPortalStats');
   const { attentionCount, isBreached, openCount, breachedCount, unassignedCount } =
     useTicketPortalNavBadge();
   return {

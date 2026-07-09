@@ -51,7 +51,7 @@ export function mapAttendanceStatusDayRow(row: Record<string, unknown>): Attenda
   return {
     officerId: row.officer_id as string,
     officerName: (row.officer_name as string) ?? 'Unknown officer',
-    shiftDate: row.shift_date as string,
+    shiftDate: String(row.shift_date).slice(0, 10),
     status: row.status as CanonicalAttendanceStatus,
     isScheduledWorkingDay: Boolean(row.is_scheduled_working_day),
     shiftId: (row.shift_id as string) ?? undefined,
@@ -197,6 +197,11 @@ export function mapRecordsToProvisionalStatusRows(records: import('@/types/atten
       record.checkInMethod === 'approved_outside',
     activeHeadcount: 1,
   }));
+}
+
+export function formatAttendanceStatusLabel(status: CanonicalAttendanceStatus): string {
+  if (status === 'not_yet_recorded') return 'Pending';
+  return status.replace(/_/g, ' ');
 }
 
 export function warnUnresolvedCalendarCells(

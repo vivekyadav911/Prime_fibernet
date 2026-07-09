@@ -3,9 +3,9 @@ import { Platform } from 'react-native';
 import { useRazorpay } from '@codearcade/expo-razorpay';
 
 import {
-  isNativeRazorpayAvailable,
   NativeRazorpayUnavailableError,
   openNativeCheckout,
+  shouldUseNativeRazorpay,
 } from './nativeCheckout';
 import type { RazorpayCheckoutCallbacks, RazorpayCheckoutMode, RazorpayCheckoutOptions } from './types';
 import { openWebCheckout } from './webCheckout';
@@ -56,6 +56,18 @@ export function useRazorpayCheckout() {
 
   const openCheckout = useCallback(
     (options: RazorpayCheckoutOptions, callbacks: RazorpayCheckoutCallbacks) => {
+      // Server returns an empty key and a fake `dev_razorpay_*` order when the
+      // gateway row has no credentials — Razorpay checkout would hang forever.
+      if (!options.key || options.order_id.startsWith('dev_')) {
+        callbacks.onFailure({
+          code: 'GATEWAY_NOT_CONFIGURED',
+          description:
+            'Razorpay is not fully configured (missing API keys). Add the Razorpay Key ID and Key Secret in Admin → Payment Gateway settings, then try again.',
+        });
+        return;
+      }
+
+      const useNative = shouldUseNativeRazorpay();
       if (Platform.OS === 'web') {
         setActiveMode('web_js');
         void openWebCheckout(options, {
@@ -81,7 +93,7 @@ export function useRazorpayCheckout() {
         return;
       }
 
-      if (isNativeRazorpayAvailable()) {
+      if (useNative) {
         setActiveMode('native');
         void openNativeCheckout(options, {
           onSuccess: (data) => {

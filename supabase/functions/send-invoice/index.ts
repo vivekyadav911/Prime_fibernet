@@ -1,10 +1,14 @@
-import { serve } from 'https://deno.land/std@0.178.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.42.0';
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import { corsHeaders } from '../_shared/cors.ts';
+import {
+  buildInvoiceEmailHtml,
+  mapDbLineItems,
+  resolveEmailFromAddress,
+} from '../_shared/invoiceHtml.ts';
 import {
   getWhatsAppSettings,
   logWhatsApp,
-  resolveRequestUserId,
   sendWhatsAppDocument,
   sendWhatsAppText,
 } from '../_shared/whatsapp.ts';
@@ -77,6 +81,15 @@ serve(async (req) => {
         .from('invoices')
         .createSignedUrl(invoice.pdf_storage_path, 604800);
       pdfUrl = signed?.signedUrl ?? null;
+    }
+
+    if (!pdfUrl) {
+      const { data: genData, error: genErr } = await supabase.functions.invoke('invoice-generator', {
+        body: { invoiceId },
+      });
+      if (!genErr) {
+        pdfUrl = (genData as { url?: string })?.url ?? null;
+      }
     }
 
     if (channel === 'whatsapp') {
@@ -181,14 +194,20 @@ serve(async (req) => {
     }
 
     const { data: company } = await supabase.from('general_settings').select('*').limit(1).maybeSingle();
-    const fromAddress = company?.smtp_user ?? company?.company_email ?? 'billing@primefiber.net';
+    const fromAddress = resolveEmailFromAddress(company ?? {});
     const subject = `Invoice ${invoice.invoice_number} — ${company?.company_name ?? 'Prime Fibernet'}`;
-    const html = `
-      <p>Dear ${invoice.customer_name},</p>
-      <p>Please find your invoice <strong>${invoice.invoice_number}</strong> for
-      <strong>₹${Number(invoice.total_amount ?? invoice.amount).toFixed(2)}</strong>.</p>
-      ${pdfUrl ? `<p><a href="${pdfUrl}">Download invoice PDF</a></p>` : '<p>PDF is being generated — contact support if the link is missing.</p>'}
-      <p>Regards,<br/>${company?.company_name ?? 'Prime Fibernet'}</p>`;
+    const lineItems = mapDbLineItems(invoice.line_items as Record<string, unknown>[] | undefined);
+    const html = buildInvoiceEmailHtml({
+      customerName: String(invoice.customer_name ?? 'Customer'),
+      invoiceNumber: String(invoice.invoice_number ?? invoice.id),
+      totalAmount: Number(invoice.total_amount ?? invoice.amount ?? 0),
+      status: String(invoice.status ?? 'unpaid'),
+      dueDate: invoice.due_date as string | null | undefined,
+      pdfUrl,
+      lineItems,
+      companyName: String(company?.company_name ?? 'Prime Fibernet'),
+      companyEmail: 'support@primefiber.net',
+    });
 
     await sendEmailViaResend(recipient, subject, html, fromAddress);
 

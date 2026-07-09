@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Sharing from 'expo-sharing';
 
 import { PaymentSuccessCheckmark } from '@/components/customer/ui';
 import { CustomerButton } from '@/components/customer/ui';
@@ -20,6 +19,7 @@ import { getPaymentProvider, resolvePaymentProviderSlug } from '@/services/payme
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { CustomerTheme } from '@/theme/customer';
 import { formatINR } from '@/utils/currencyFormat';
+import { downloadPaymentReceipt } from '@/utils/downloadPaymentReceipt';
 import { gstInvoiceStatusMessage } from '@/utils/gstInvoiceMessages';
 import { invalidatePaymentCaches } from '@/utils/invalidatePaymentCaches';
 
@@ -107,18 +107,14 @@ export function PaymentResultScreen({ navigation, route }: Props) {
   }, [runVerification]);
 
   const onDownloadReceipt = async () => {
-    try {
-      const result = await fetchReceipt(paymentId).unwrap();
-      if (result.url && (await Sharing.isAvailableAsync())) {
-        await Share.share({ url: result.url, message: `Receipt ${result.receiptNumber}` });
-      } else if (result.url) {
-        await Linking.openURL(result.url);
-      } else {
-        navigation.navigate('Receipt', { paymentId });
-      }
-    } catch {
-      navigation.navigate('Receipt', { paymentId });
-    }
+    await downloadPaymentReceipt(
+      paymentId,
+      (id) => fetchReceipt(id).unwrap(),
+      {
+        status: 'confirmed',
+        onFallback: (id) => navigation.navigate('Receipt', { paymentId: id }),
+      },
+    );
   };
 
   const onGstSubmit = async (values: GstInvoiceFormValues) => {

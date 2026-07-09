@@ -6,4 +6,4 @@ export type {
   RazorpayFailurePayload,
   RazorpaySuccessPayload,
 } from './types';
-export { isNativeRazorpayAvailable } from './nativeCheckout';
+export { isNativeRazorpayAvailable, shouldUseNativeRazorpay } from './nativeCheckout';

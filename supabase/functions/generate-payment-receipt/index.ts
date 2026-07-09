@@ -232,6 +232,45 @@ serve(async (req) => {
       return jsonError(`Receipt only available for confirmed payments. Current status: ${payment.status}`);
     }
 
+    const { data: linkedInvoice } = await supabase
+      .from('invoices')
+      .select('id, pdf_storage_path, invoice_number')
+      .eq('portal_payment_id', paymentId)
+      .maybeSingle();
+
+    if (linkedInvoice?.pdf_storage_path) {
+      const { data: signed } = await supabase.storage
+        .from('invoices')
+        .createSignedUrl(linkedInvoice.pdf_storage_path, 3600);
+      if (signed?.signedUrl) {
+        return new Response(
+          JSON.stringify({
+            url: signed.signedUrl,
+            receiptNumber: linkedInvoice.invoice_number ?? payment.payment_number,
+            source: 'invoice_pdf',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+    }
+
+    if (linkedInvoice?.id) {
+      const { data: genData, error: genErr } = await supabase.functions.invoke('invoice-generator', {
+        body: { invoiceId: linkedInvoice.id },
+      });
+      const genUrl = (genData as { url?: string })?.url;
+      if (!genErr && genUrl) {
+        return new Response(
+          JSON.stringify({
+            url: genUrl,
+            receiptNumber: linkedInvoice.invoice_number ?? payment.payment_number,
+            source: 'generated_invoice',
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+    }
+
     const { data: settings } = await supabase.from('general_settings').select('*').limit(1).maybeSingle();
 
     const billingPeriod =

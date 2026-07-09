@@ -10,28 +10,58 @@ type NavigationButtonProps = {
   longitude?: number | null;
   label?: string;
   variant?: 'primary' | 'ghost';
+  onPress?: () => void;
+  onLongPress?: () => void;
 };
+
+import { isUsableMapCoordinate } from '@/utils/officerPortalCoordinates';
+
+export type NavigateToAddressResult =
+  | { ok: true }
+  | { ok: false; reason: 'invalid_destination' | 'open_failed'; message: string };
 
 export async function navigateToAddress(
   address: string,
   lat?: number | null,
   lng?: number | null,
-): Promise<void> {
-  const destination =
-    lat != null && lng != null ? `${lat},${lng}` : encodeURIComponent(address);
+): Promise<NavigateToAddressResult> {
+  const trimmedAddress = address.trim();
+  const hasCoords =
+    lat != null && lng != null && isUsableMapCoordinate(Number(lat), Number(lng));
+
+  if (!hasCoords && !trimmedAddress) {
+    return {
+      ok: false,
+      reason: 'invalid_destination',
+      message: 'No valid address or coordinates for navigation.',
+    };
+  }
+
+  const destination = hasCoords
+    ? `${lat},${lng}`
+    : encodeURIComponent(trimmedAddress);
 
   const appleUrl = `maps://app?daddr=${destination}`;
   const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
 
-  if (Platform.OS === 'ios') {
-    const supported = await Linking.canOpenURL(appleUrl);
-    await Linking.openURL(supported ? appleUrl : googleUrl);
-    return;
-  }
+  try {
+    if (Platform.OS === 'ios') {
+      const supported = await Linking.canOpenURL(appleUrl);
+      await Linking.openURL(supported ? appleUrl : googleUrl);
+      return { ok: true };
+    }
 
-  const googleNav = `google.navigation:q=${destination}`;
-  const supported = await Linking.canOpenURL(googleNav);
-  await Linking.openURL(supported ? googleNav : googleUrl);
+    const googleNav = `google.navigation:q=${destination}`;
+    const supported = await Linking.canOpenURL(googleNav);
+    await Linking.openURL(supported ? googleNav : googleUrl);
+    return { ok: true };
+  } catch {
+    return {
+      ok: false,
+      reason: 'open_failed',
+      message: 'Could not open maps. Check the address or update the location.',
+    };
+  }
 }
 
 export function NavigationButton({
@@ -40,17 +70,24 @@ export function NavigationButton({
   longitude,
   label = 'Navigate',
   variant = 'ghost',
+  onPress,
+  onLongPress,
 }: NavigationButtonProps) {
-  const onPress = () => {
+  const defaultPress = () => {
     void navigateToAddress(address, latitude, longitude);
   };
 
   if (variant === 'primary') {
-    return <Button label={label} onPress={onPress} />;
+    return <Button label={label} onPress={onPress ?? defaultPress} />;
   }
 
   return (
-    <Pressable style={styles.ghost} onPress={onPress} accessibilityRole="button">
+    <Pressable
+      style={styles.ghost}
+      onPress={onPress ?? defaultPress}
+      onLongPress={onLongPress}
+      accessibilityRole="button"
+    >
       <Text style={styles.ghostText}>{label}</Text>
     </Pressable>
   );

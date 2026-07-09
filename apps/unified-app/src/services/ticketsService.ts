@@ -13,6 +13,8 @@ import type {
   TicketStatus,
 } from '@/types/tickets';
 import { getSupabase } from '@/services/supabase';
+import { officerPortalApi } from '@/services/api/officerPortalApi';
+import { store } from '@/store/store';
 import { triggerAutoNotification } from '@/services/broadcastNotificationService';
 import { fetchOfficerNameMap } from '@/services/api/mappers';
 import { fetchOfficers } from '@/services/requestsService';
@@ -376,6 +378,8 @@ export async function assignOfficer(
     data: { ticketId },
     category: 'ticket',
   });
+
+  store.dispatch(officerPortalApi.util.invalidateTags(['OfficerPortal']));
 }
 
 export async function reassignOfficer(
@@ -412,6 +416,8 @@ export async function reassignOfficer(
     data: { ticketId },
     category: 'ticket',
   });
+
+  store.dispatch(officerPortalApi.util.invalidateTags(['OfficerPortal']));
 }
 
 export async function addInternalNote(

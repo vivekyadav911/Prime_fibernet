@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { BillingCycle } from '@prime/types';
 
 import { CustomerTopBar } from '@/components/customer/shell';
 import {
@@ -13,7 +12,6 @@ import {
 } from '@/components/customer/ui';
 import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
-import { getPriceForCycle } from '@/services/api/customerDashboardApi';
 import {
   useGetActivePaymentGatewayQuery,
   useGetActiveSubscriptionQuery,
@@ -29,7 +27,7 @@ import {
   planChangeActionLabel,
   type PlanChangeDirection,
 } from '@/utils/planChange';
-import { getPlanTierLabel } from '@/utils/planDisplay';
+import { getPlanPricePeriodLabel, getPlanTierLabel } from '@/utils/planDisplay';
 import { queryErrorMessage } from '@/utils/queryError';
 
 import { PlanChangeConfirmSheet } from './components/PlanChangeConfirmSheet';
@@ -37,13 +35,10 @@ import { PlanFeatureList } from './components/PlanFeatureList';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'PlanDetails'>;
 
-const CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual'];
-
 export function PlanDetailsScreen({ navigation, route }: Props) {
   const { planId } = route.params;
   const styles = useThemedStyles(createStyles);
   const { userId } = useCustomerIdentity();
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [confirmVisible, setConfirmVisible] = useState(false);
 
   const { data: plan, isLoading, error, refetch } = useGetPlanByIdQuery(planId);
@@ -58,7 +53,7 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
   const changeDirection: PlanChangeDirection = plan
     ? getPlanChangeDirection(currentPlan, plan)
     : 'switch';
-  const price = plan ? getPriceForCycle(plan, billingCycle) : 0;
+  const price = plan?.price ?? 0;
   const tierLabel = plan ? getPlanTierLabel(plan.speedMbps, plan.isFeatured) : '';
   const gatewayLabel = activeGateway?.display_name ?? 'Easebuzz';
 
@@ -75,7 +70,7 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
       await submitRequest({
         currentPlanId: subscription?.planId ?? null,
         requestedPlanId: plan.id,
-        requestedCycle: billingCycle,
+        requestedCycle: 'monthly',
       }).unwrap();
       setConfirmVisible(false);
       Alert.alert(
@@ -120,26 +115,10 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
             {plan.speedMbps} Mbps · {tierLabel}
           </Text>
           <Text style={styles.price}>{formatCurrencyInr(price)}</Text>
-          <Text style={styles.cycleLabel}>{billingCycle} billing</Text>
+          <Text style={styles.validityLabel}>
+            per {getPlanPricePeriodLabel(plan.validityDays)}
+          </Text>
         </GlassCard>
-
-        <View style={styles.cycleToggle}>
-          {CYCLES.map((cycle) => {
-            const active = billingCycle === cycle;
-            return (
-              <Pressable
-                key={cycle}
-                onPress={() => setBillingCycle(cycle)}
-                style={[styles.cycleBtn, active && styles.cycleBtnActive]}
-                accessibilityLabel={`${cycle} billing`}
-              >
-                <Text style={[styles.cycleText, active && styles.cycleTextActive]}>
-                  {cycle.charAt(0).toUpperCase() + cycle.slice(1)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
 
         {!isCurrentPlan && currentPlan && plan ? (
           <GlassCard style={styles.section} padded>
@@ -161,11 +140,12 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
             </View>
             <View style={styles.compareRow}>
               <Text style={styles.compareMuted}>
-                {formatCurrencyInr(getPriceForCycle(currentPlan, billingCycle))}/mo
+                {formatCurrencyInr(currentPlan.price)}/
+                {getPlanPricePeriodLabel(currentPlan.validityDays)}
               </Text>
               <Text style={styles.compareSpacer} />
               <Text style={styles.compareValue}>
-                {formatCurrencyInr(getPriceForCycle(plan, billingCycle))}/mo
+                {formatCurrencyInr(plan.price)}/{getPlanPricePeriodLabel(plan.validityDays)}
               </Text>
             </View>
             <View style={styles.compareRow}>
@@ -273,40 +253,10 @@ const createStyles = (theme: CustomerTheme) =>
       fontFamily: theme.fonts.monoBold,
       marginTop: theme.spacing.sm,
     },
-    cycleLabel: {
+    validityLabel: {
       ...theme.typography.caption,
       color: theme.colors.textMuted,
       fontFamily: theme.fonts.body,
-      textTransform: 'capitalize',
-    },
-    cycleToggle: {
-      flexDirection: 'row',
-      backgroundColor: theme.colors.bgGlass,
-      borderRadius: theme.radius.pill,
-      borderWidth: 1,
-      borderColor: theme.colors.borderGlass,
-      padding: 4,
-    },
-    cycleBtn: {
-      flex: 1,
-      paddingVertical: theme.spacing.xs,
-      borderRadius: theme.radius.pill,
-      alignItems: 'center',
-      minHeight: 36,
-      justifyContent: 'center',
-    },
-    cycleBtnActive: {
-      backgroundColor: theme.colors.accentPrimaryMuted,
-      borderWidth: 1,
-      borderColor: 'rgba(173,198,255,0.3)',
-    },
-    cycleText: {
-      ...theme.typography.caption,
-      color: theme.colors.onSurfaceVariant,
-      fontFamily: theme.fonts.bodyMedium,
-    },
-    cycleTextActive: {
-      color: theme.colors.primary,
     },
     section: {
       borderRadius: theme.radius.lg,

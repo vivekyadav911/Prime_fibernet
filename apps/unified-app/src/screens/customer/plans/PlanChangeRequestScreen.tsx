@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { BillingCycle } from '@prime/types';
-
 import { CustomerButton, CustomerInput } from '@/components/customer/ui';
 import { CustomerFontProvider } from '@/components/customer/CustomerFontProvider';
 import { useCustomerIdentity } from '@/hooks/useCustomerIdentity';
@@ -17,15 +15,12 @@ import { PlanChangeConfirmSheet } from './components/PlanChangeConfirmSheet';
 
 type Props = NativeStackScreenProps<CustomerStackParamList, 'PlanChangeRequest'>;
 
-const CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'annual'];
-
 function PlanChangeContent({ route, navigation }: Props) {
   const styles = useThemedStyles(createStyles);
   const { userId } = useCustomerIdentity();
   const { planId } = route.params;
   const { data: plan } = useGetPlanByIdQuery(planId);
   const { data: subscription } = useGetActiveSubscriptionQuery(userId, { skip: !userId });
-  const [cycle, setCycle] = useState<BillingCycle>('monthly');
   const [reason, setReason] = useState('');
   const [confirmVisible, setConfirmVisible] = useState(false);
   const { submitRequest, isSubmitting } = usePlanChangeRequest();
@@ -38,7 +33,7 @@ function PlanChangeContent({ route, navigation }: Props) {
       await submitRequest({
         currentPlanId: subscription?.planId ?? null,
         requestedPlanId: planId,
-        requestedCycle: cycle,
+        requestedCycle: 'monthly',
         reason: reason.trim() || undefined,
       }).unwrap();
       setConfirmVisible(false);
@@ -59,15 +54,6 @@ function PlanChangeContent({ route, navigation }: Props) {
         <Text style={styles.sub}>
           Current: {currentName} → Requested: {requestedName}
         </Text>
-        <Text style={styles.label}>Billing cycle</Text>
-        {CYCLES.map((c) => (
-          <CustomerButton
-            key={c}
-            label={c.charAt(0).toUpperCase() + c.slice(1)}
-            variant={cycle === c ? 'primary' : 'ghost'}
-            onPress={() => setCycle(c)}
-          />
-        ))}
         <CustomerInput
           label="Reason (optional)"
           value={reason}
@@ -114,12 +100,5 @@ const createStyles = (theme: CustomerTheme) =>
       fontWeight: '700',
     },
     sub: { color: theme.colors.textSecondary, fontSize: 14 },
-    label: {
-      color: theme.colors.textSecondary,
-      fontSize: 12,
-      fontWeight: '600',
-      textTransform: 'uppercase',
-      marginTop: theme.spacing.sm,
-    },
     textarea: { minHeight: 100, textAlignVertical: 'top' },
   });

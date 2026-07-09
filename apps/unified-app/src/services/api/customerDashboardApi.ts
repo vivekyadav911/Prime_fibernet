@@ -66,6 +66,12 @@ export const customerDashboardApi = baseApi.injectEndpoints({
             .eq('customer_id', userId)
             .in('status', ['initiated', 'pending_review', 'failed', 'cancelled']);
 
+          const { data: confirmedPayments } = await client
+            .from('payments')
+            .select('id, total_amount, status, billing_period_start, created_at')
+            .eq('customer_id', userId)
+            .eq('status', 'confirmed');
+
           const userOutstanding = Number(user.outstanding_amount ?? 0);
           const isOverdue = user.payment_status === 'overdue';
           const resolved = resolveCurrentOutstanding(
@@ -78,6 +84,14 @@ export const customerDashboardApi = baseApi.injectEndpoints({
             })),
             userOutstanding,
             subscriptionPlanPrice,
+            (confirmedPayments ?? []).map((row) => ({
+              id: String(row.id),
+              total_amount: Number(row.total_amount ?? 0),
+              status: String(row.status) as PaymentStatus,
+              billing_period_start: (row.billing_period_start as string | null) ?? null,
+              created_at: String(row.created_at),
+            })),
+            subRow ? String(subRow.start_at ?? '') : null,
           );
           const hasDue = resolved.amount > 0;
           const billParts = buildSubscriptionBillAmount(subscriptionPlanPrice, {

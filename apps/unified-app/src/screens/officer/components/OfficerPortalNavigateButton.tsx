@@ -1,0 +1,110 @@
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import type { PortalTicketItem } from '@/types/portalTicket';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
+import { isUsableMapCoordinate } from '@/utils/officerPortalCoordinates';
+
+import { NavigationButton, navigateToAddress } from './NavigationButton';
+import { OfficerLocationSheet } from './OfficerLocationSheet';
+
+type OfficerPortalNavigateButtonProps = {
+  item: Pick<PortalTicketItem, 'id' | 'kind' | 'customerAddress'>;
+  latitude?: number | null;
+  longitude?: number | null;
+  label?: string;
+  variant?: 'primary' | 'ghost';
+  showFixPinLink?: boolean;
+  onLocationUpdated?: () => void;
+};
+
+export function OfficerPortalNavigateButton({
+  item,
+  latitude,
+  longitude,
+  label,
+  variant,
+  showFixPinLink = false,
+  onLocationUpdated,
+}: OfficerPortalNavigateButtonProps) {
+  const [sheetVisible, setSheetVisible] = useState(false);
+
+  const usableCoords = useMemo(() => {
+    if (latitude == null || longitude == null) return null;
+    if (!isUsableMapCoordinate(latitude, longitude)) return null;
+    return { latitude, longitude };
+  }, [latitude, longitude]);
+
+  const openCorrectionSheet = useCallback(() => {
+    setSheetVisible(true);
+  }, []);
+
+  const handleNavigate = useCallback(async () => {
+    const result = await navigateToAddress(
+      item.customerAddress,
+      usableCoords?.latitude,
+      usableCoords?.longitude,
+    );
+    if (!result.ok) {
+      openCorrectionSheet();
+    }
+  }, [item.customerAddress, openCorrectionSheet, usableCoords]);
+
+  const handleSaved = useCallback(
+    async (location: { latitude: number; longitude: number; address: string }) => {
+      onLocationUpdated?.();
+      const result = await navigateToAddress(
+        location.address,
+        location.latitude,
+        location.longitude,
+      );
+      if (!result.ok) {
+        openCorrectionSheet();
+      }
+    },
+    [onLocationUpdated, openCorrectionSheet],
+  );
+
+  return (
+    <>
+      <View style={showFixPinLink ? styles.row : undefined}>
+        <NavigationButton
+          address={item.customerAddress}
+          latitude={usableCoords?.latitude}
+          longitude={usableCoords?.longitude}
+          label={label}
+          variant={variant}
+          onPress={() => void handleNavigate()}
+          onLongPress={openCorrectionSheet}
+        />
+        {showFixPinLink ? (
+          <Pressable style={styles.fixPin} onPress={openCorrectionSheet} hitSlop={8}>
+            <Text style={styles.fixPinText}>Fix pin</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      <OfficerLocationSheet
+        visible={sheetVisible}
+        onClose={() => setSheetVisible(false)}
+        itemId={item.id}
+        kind={item.kind}
+        initialAddress={item.customerAddress}
+        initialLatitude={usableCoords?.latitude ?? latitude}
+        initialLongitude={usableCoords?.longitude ?? longitude}
+        onSaved={(location) => void handleSaved(location)}
+      />
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
+  },
+  fixPin: { minHeight: 48, justifyContent: 'center', paddingHorizontal: spacing.sm },
+  fixPinText: { color: colors.textSecondary, fontWeight: '600', fontSize: 13 },
+});

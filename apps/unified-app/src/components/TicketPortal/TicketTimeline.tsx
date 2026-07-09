@@ -10,6 +10,17 @@ type TicketTimelineProps = {
   events: TicketActivityEvent[];
 };
 
+function eventTimestampMs(value: TicketActivityEvent['timestamp'] | string | undefined): number {
+  if (value == null) return 0;
+  const ms = value instanceof Date ? value.getTime() : Date.parse(String(value));
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+function toEventDate(value: TicketActivityEvent['timestamp'] | string | undefined): Date {
+  const ms = eventTimestampMs(value);
+  return ms ? new Date(ms) : new Date(0);
+}
+
 function eventLabel(event: TicketActivityEvent): string {
   switch (event.type) {
     case 'created':
@@ -43,7 +54,7 @@ function eventLabel(event: TicketActivityEvent): string {
 
 export function TicketTimeline({ events }: TicketTimelineProps) {
   const sorted = [...events].sort(
-    (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
+    (a, b) => eventTimestampMs(b.timestamp) - eventTimestampMs(a.timestamp),
   );
 
   return (
@@ -57,7 +68,7 @@ export function TicketTimeline({ events }: TicketTimelineProps) {
           <View style={styles.content}>
             <View style={styles.header}>
               <Text style={styles.label}>{eventLabel(event)}</Text>
-              <Text style={styles.time}>{format(event.timestamp, 'MMM dd, HH:mm')}</Text>
+              <Text style={styles.time}>{format(toEventDate(event.timestamp), 'MMM dd, HH:mm')}</Text>
             </View>
             <Text style={styles.by}>by {event.performedBy}</Text>
             <Text style={styles.description}>{event.description}</Text>

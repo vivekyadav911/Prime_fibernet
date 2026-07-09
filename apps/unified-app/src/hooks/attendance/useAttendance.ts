@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { attendanceService } from '@/services/AttendanceService';
 import { locationService } from '@/services/LocationService';
@@ -8,6 +8,7 @@ import {
   useCheckInMutation,
   useCheckOutMutation,
   useGetAttendanceHistoryQuery,
+  useGetAttendanceStatusByDayQuery,
   useGetLeaveBalancesQuery,
   useGetMyApprovalRequestsQuery,
   useGetMyGeofencesQuery,
@@ -15,9 +16,15 @@ import {
   useGetTodayAttendanceQuery,
   useRequestApprovalMutation,
 } from '@/services/api/attendanceApi';
+import { useOfficerId } from '@/hooks/useOfficerId';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { updateGeofenceStatus } from '@/store/slices/attendanceSlice';
-import type { ApprovalType, Coordinates } from '@/types/attendance';
+import type { ApprovalType, AttendanceRecord, Coordinates } from '@/types/attendance';
+import { getMonthIsoRange } from '@/utils/attendanceCalendarGrid';
+import {
+  countAttendanceStatuses,
+  type AttendanceStatusDayRow,
+} from '@/utils/attendanceStatus';
 
 export function useTodayAttendance() {
   return useGetTodayAttendanceQuery(undefined, {
@@ -30,6 +37,53 @@ export function useAttendanceHistory(filters: { month: number; year: number; pag
     { month: filters.month, year: filters.year },
     { skip: !filters.month || !filters.year },
   );
+}
+
+/** Canonical day status + shift records for officer month views (calendar + list). */
+export function useOfficerMonthAttendance(month: number, year: number) {
+  const officerId = useOfficerId();
+  const { from, to } = useMemo(() => getMonthIsoRange(year, month), [month, year]);
+
+  const statusQuery = useGetAttendanceStatusByDayQuery(
+    { from, to, officerId: officerId ?? undefined },
+    { skip: !officerId },
+  );
+  const recordsQuery = useGetAttendanceHistoryQuery({ month, year }, { skip: !officerId });
+
+  const statusRows = statusQuery.data ?? [];
+  const records = recordsQuery.data ?? [];
+
+  const recordsByDate = useMemo(() => {
+    const map = new Map<string, AttendanceRecord>();
+    records.forEach((record) => map.set(record.date, record));
+    return map;
+  }, [records]);
+
+  const counts = useMemo(() => countAttendanceStatuses(statusRows), [statusRows]);
+
+  const recentStatusRows = useMemo(
+    () =>
+      [...statusRows]
+        .filter((row) => row.status !== 'not_yet_recorded' || row.checkInTime)
+        .sort((a, b) => b.shiftDate.localeCompare(a.shiftDate)),
+    [statusRows],
+  );
+
+  return {
+    officerId,
+    statusRows,
+    records,
+    recordsByDate,
+    counts,
+    recentStatusRows,
+    isLoading: statusQuery.isLoading || recordsQuery.isLoading,
+    isError: statusQuery.isError || recordsQuery.isError,
+    error: statusQuery.error ?? recordsQuery.error,
+    refetch: () => {
+      void statusQuery.refetch();
+      void recordsQuery.refetch();
+    },
+  };
 }
 
 export function useCheckIn() {

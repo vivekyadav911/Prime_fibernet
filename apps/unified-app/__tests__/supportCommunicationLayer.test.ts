@@ -1,6 +1,10 @@
 import { formatRequestTypeLabel, normalizeRequestType, REQUEST_TYPE_LABELS } from '@/constants/requestTypes';
 import { computeOfficerPortalDashboardStats } from '@/utils/officerDashboardStats';
-import { matchesOfficerTicketFilter } from '@/utils/officerTicketFilters';
+import {
+  applyOfficerTicketListFilters,
+  matchesOfficerTicketFilter,
+  selectTodayAssignmentPreview,
+} from '@/utils/officerTicketFilters';
 import { officerDisplayInitials, resolveOfficerName } from '@/utils/resolveOfficerName';
 import type { PortalTicketItem } from '@/types/portalTicket';
 
@@ -78,6 +82,95 @@ function portalItem(
   };
 }
 
+describe('selectTodayAssignmentPreview', () => {
+  const todayIso = new Date().toISOString();
+  const yesterdayIso = new Date(Date.now() - 86_400_000).toISOString();
+
+  function item(
+    id: string,
+    statusBucket: PortalTicketItem['statusBucket'],
+    opts?: { assignedAt?: string; createdAt?: string; priority?: PortalTicketItem['priority'] },
+  ): PortalTicketItem {
+    return {
+      ...portalItem(id, statusBucket),
+      assignedAt: opts?.assignedAt ?? todayIso,
+      createdAt: opts?.createdAt ?? todayIso,
+      priority: opts?.priority ?? 'Medium',
+    };
+  }
+
+  it('returns only open/active items assigned or created today', () => {
+    const items: PortalTicketItem[] = [
+      item('1', 'Open'),
+      item('2', 'Resolved', { assignedAt: todayIso }),
+      item('3', 'In Progress', { assignedAt: yesterdayIso, createdAt: yesterdayIso }),
+      item('4', 'Closed', { assignedAt: todayIso }),
+    ];
+
+    const preview = selectTodayAssignmentPreview(items, 3);
+    expect(preview.map((i) => i.id)).toEqual(['1']);
+  });
+
+  it('caps at limit without padding resolved tickets', () => {
+    const items: PortalTicketItem[] = [
+      item('1', 'Open'),
+      item('2', 'In Progress'),
+      item('3', 'Resolved', { assignedAt: todayIso }),
+    ];
+
+    expect(selectTodayAssignmentPreview(items, 3)).toHaveLength(2);
+  });
+
+  it('sorts unopened before in-progress, then most recent', () => {
+    const earlier = new Date(Date.now() - 3_600_000).toISOString();
+    const later = new Date(Date.now() - 1_800_000).toISOString();
+    const items: PortalTicketItem[] = [
+      item('active-old', 'In Progress', { assignedAt: earlier }),
+      item('open-new', 'Open', { assignedAt: later }),
+      item('open-old', 'Open', { assignedAt: earlier }),
+    ];
+
+    const preview = selectTodayAssignmentPreview(items, 3);
+    expect(preview.map((i) => i.id)).toEqual(['open-new', 'open-old', 'active-old']);
+  });
+});
+describe('applyOfficerTicketListFilters', () => {
+  const todayIso = new Date().toISOString();
+  const yesterdayIso = new Date(Date.now() - 86_400_000).toISOString();
+
+  function item(id: string, statusBucket: PortalTicketItem['statusBucket'], at: string): PortalTicketItem {
+    return {
+      ...portalItem(id, statusBucket),
+      assignedAt: at,
+      createdAt: at,
+      customerName: id === 'alpha' ? 'Alpha Customer' : 'Beta Customer',
+    };
+  }
+
+  it('filters by search query and date', () => {
+    const items = [item('alpha', 'Open', todayIso), item('beta', 'Open', yesterdayIso)];
+    const result = applyOfficerTicketListFilters(items, {
+      statusFilter: 'all',
+      dateFilter: 'today',
+      sortBy: 'newest',
+      searchQuery: 'alpha',
+    });
+    expect(result.map((i) => i.id)).toEqual(['alpha']);
+  });
+
+  it('sorts oldest first when requested', () => {
+    const earlier = new Date(Date.now() - 3_600_000).toISOString();
+    const later = new Date(Date.now() - 1_800_000).toISOString();
+    const items = [item('newer', 'Open', later), item('older', 'Open', earlier)];
+    const result = applyOfficerTicketListFilters(items, {
+      statusFilter: 'all',
+      dateFilter: 'all',
+      sortBy: 'oldest',
+      searchQuery: '',
+    });
+    expect(result.map((i) => i.id)).toEqual(['older', 'newer']);
+  });
+});
 describe('computeOfficerPortalDashboardStats', () => {
   it('counts new, active, and resolved-today from portal status buckets', () => {
     const today = new Date();

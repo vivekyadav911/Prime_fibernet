@@ -8,13 +8,14 @@ import { Button } from '@prime/ui';
 import { CheckInSheet } from '@/components/attendance/CheckInSheet';
 import { InfoRow } from '@/components/attendance/InfoRow';
 import { LocationPermissionGate } from '@/components/attendance/LocationPermissionGate';
+import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
 import { ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
 import {
   useCheckIn,
   useCheckOut,
   useRequestApproval,
   useTodayAttendance,
-  useAttendanceHistory,
+  useOfficerMonthAttendance,
 } from '@/hooks/attendance/useAttendance';
 import { useMyAssignedZones } from '@/hooks/attendance/useMyAssignedZones';
 import { locationService } from '@/services/LocationService';
@@ -30,7 +31,7 @@ import { formatOutsideZoneDistance } from '@/utils/formatDistance';
 import { queryErrorMessage } from '@/utils/queryError';
 
 import { GeofenceStatusBanner } from './components/GeofenceStatusBanner';
-import { MonthCalendar } from './components/MonthCalendar';
+import { AttendanceHistoryListItem } from './components/AttendanceHistoryListItem';
 
 export function OfficerAttendanceDashboard() {
   const navigation = useNavigation<DrawerNavigationProp<OfficerDrawerParamList>>();
@@ -41,11 +42,17 @@ export function OfficerAttendanceDashboard() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
   const { data: today, isLoading, isError, error, refetch } = useTodayAttendance();
-  const { data: history } = useAttendanceHistory({
-    month: now.getMonth() + 1,
-    year: now.getFullYear(),
-  });
+  const {
+    statusRows,
+    recordsByDate,
+    counts,
+    recentStatusRows,
+    officerId,
+    isLoading: monthLoading,
+  } = useOfficerMonthAttendance(month, year);
   const zones = useMyAssignedZones();
   const [checkIn] = useCheckIn();
   const [checkOut] = useCheckOut();
@@ -69,9 +76,9 @@ export function OfficerAttendanceDashboard() {
     year: 'numeric',
   });
 
-  const presentCount = (history ?? []).filter((r) => r.status === 'present' || r.checkInTime).length;
-  const absentCount = (history ?? []).filter((r) => r.status === 'absent').length;
-  const leaveCount = (history ?? []).filter((r) => r.status === 'on_leave').length;
+  const presentCount = counts.present + counts.late;
+  const absentCount = counts.absent;
+  const leaveCount = counts.onLeave + counts.halfDay;
 
   const openCheckInSheet = useCallback(() => {
     setSheetMode('check_in');
@@ -238,7 +245,7 @@ export function OfficerAttendanceDashboard() {
           zones.selectedZone?.geometry.shape === 'circle' ? zones.selectedZone.geometry.radius : null,
         ) ?? 'Outside assigned zone';
 
-  if (isLoading) {
+  if (isLoading || monthLoading) {
     return (
       <ScreenWrapper scrollable={false}>
         <SkeletonLoader rows={8} />
@@ -344,18 +351,32 @@ export function OfficerAttendanceDashboard() {
           Present: {presentCount} · Absent: {absentCount} · Leave: {leaveCount}
         </Text>
 
-        <MonthCalendar month={now.getMonth() + 1} year={now.getFullYear()} />
+        <AttendanceCalendar
+          year={year}
+          month={month}
+          statusRows={statusRows}
+          selectedOfficerId={officerId}
+        />
 
-        <Text style={styles.sectionTitle}>Recent records</Text>
-        {(history ?? []).slice(0, 5).map((r) => (
-          <View key={r.id} style={styles.recordRow}>
-            <Text style={styles.recordDate}>{r.date}</Text>
-            <Text style={styles.recordStatus}>{r.status}</Text>
-            {r.workingHours != null ? (
-              <Text style={styles.recordHours}>{r.workingHours}h</Text>
-            ) : null}
-          </View>
+        <View style={styles.recentHeader}>
+          <Text style={styles.sectionTitle}>Recent records</Text>
+          <Pressable
+            style={styles.viewAll}
+            onPress={() => navigation.navigate('AttendanceHistory')}
+          >
+            <Text style={styles.viewAllText}>View all →</Text>
+          </Pressable>
+        </View>
+        {recentStatusRows.slice(0, 5).map((row) => (
+          <AttendanceHistoryListItem
+            key={row.shiftDate}
+            row={row}
+            record={recordsByDate.get(row.shiftDate)}
+          />
         ))}
+        {recentStatusRows.length === 0 ? (
+          <Text style={styles.emptyRecent}>No attendance records this month yet.</Text>
+        ) : null}
 
         <Pressable style={styles.leaveLink} onPress={() => navigation.navigate('LeaveStack')}>
           <Text style={styles.leaveLinkText}>Apply Leave Request →</Text>
@@ -397,18 +418,17 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm, marginTop: spacing.sm },
   cta: { minHeight: 48 },
   summary: { fontSize: 14, color: colors.textSecondary, marginBottom: spacing.sm },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: adminColors.primary, marginBottom: spacing.sm },
-  recordRow: {
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: adminColors.primary },
+  recentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderDefault,
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+    marginTop: spacing.xs,
   },
-  recordDate: { flex: 1, color: colors.textPrimary },
-  recordStatus: { color: colors.textSecondary, textTransform: 'capitalize' },
-  recordHours: { color: colors.textSecondary, fontSize: 12 },
+  viewAll: { minHeight: 48, justifyContent: 'center' },
+  viewAllText: { color: colors.accentTeal, fontWeight: '600', fontSize: 14 },
+  emptyRecent: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm },
   leaveLink: { minHeight: 48, justifyContent: 'center', marginTop: spacing.md },
   leaveLinkText: { color: colors.accentTeal, fontWeight: '600', fontSize: 15 },
   zonePicker: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },

@@ -110,6 +110,7 @@ export function resolveCurrentOutstanding(
   fallbackAmount: number,
   planPrice = 0,
   confirmedPayments: OutstandingPaymentRow[] = [],
+  activeBillingPeriodStart?: string | null,
 ): ResolvedOutstanding {
   const settledPeriods = new Set(
     confirmedPayments.map((p) => billingPeriodKey(p.billing_period_start ?? p.created_at)),
@@ -118,6 +119,19 @@ export function resolveCurrentOutstanding(
   const effectiveOpen = openPayments.filter(
     (p) => !settledPeriods.has(billingPeriodKey(p.billing_period_start ?? p.created_at)),
   );
+
+  // ponytail: settled subscription cycle → no current bill even if orphan failed rows exist
+  if (activeBillingPeriodStart) {
+    const activeKey = billingPeriodKey(activeBillingPeriodStart);
+    if (settledPeriods.has(activeKey)) {
+      const openInActive = effectiveOpen.filter(
+        (p) => billingPeriodKey(p.billing_period_start ?? p.created_at) === activeKey,
+      );
+      if (openInActive.length === 0) {
+        return { amount: 0, paymentId: null, billingPeriod: null };
+      }
+    }
+  }
 
   const periodKeys = [
     ...new Set(effectiveOpen.map((p) => billingPeriodKey(p.billing_period_start ?? p.created_at))),

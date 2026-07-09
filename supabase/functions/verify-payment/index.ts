@@ -133,6 +133,17 @@ async function confirmPortalPayment(params: {
       .neq('id', paymentId);
   }
 
+  await supabase
+    .from('payments')
+    .update({
+      status: 'failed',
+      failure_reason: 'Superseded by successful payment',
+      updated_at: paidAt,
+    })
+    .eq('customer_id', portalPayment.customer_id as string)
+    .eq('status', 'initiated')
+    .neq('id', paymentId);
+
   const resolvedPlanId = planId ?? null;
   if (resolvedPlanId) {
     const { data: plan } = await supabase
@@ -182,6 +193,98 @@ async function confirmPortalPayment(params: {
       data: { payment_id: paymentId },
     });
   }
+
+  await syncPortalInvoice({ supabase, portalPayment, paymentId, paidAt });
+}
+
+async function syncPortalInvoice(params: {
+  supabase: ReturnType<typeof createClient>;
+  portalPayment: Record<string, unknown>;
+  paymentId: string;
+  paidAt: string;
+}): Promise<void> {
+  const { supabase, portalPayment, paymentId, paidAt } = params;
+  const { data: gs } = await supabase.from('general_settings').select('feature_auto_invoice').limit(1).maybeSingle();
+  if (gs?.feature_auto_invoice === false) return;
+
+  const customerId = String(portalPayment.customer_id);
+  const amount = Number(portalPayment.total_amount ?? 0);
+
+  const { data: linked } = await supabase
+    .from('invoices')
+    .select('id')
+    .eq('portal_payment_id', paymentId)
+    .maybeSingle();
+
+  let invoiceId = linked?.id as string | undefined;
+
+  if (!invoiceId) {
+    const { data: matched } = await supabase
+      .from('invoices')
+      .select('id')
+      .eq('user_id', customerId)
+      .in('status', ['unpaid', 'pending', 'overdue', 'draft'])
+      .or(`subtotal.eq.${amount},total_amount.eq.${amount},amount.eq.${amount}`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    invoiceId = matched?.id as string | undefined;
+  }
+
+  if (invoiceId) {
+    await supabase
+      .from('invoices')
+      .update({
+        status: 'paid',
+        paid_at: paidAt,
+        portal_payment_id: paymentId,
+        updated_at: paidAt,
+      })
+      .eq('id', invoiceId);
+  } else {
+    const gst = Math.round(amount * 0.18 * 100) / 100;
+    const { data: numRow } = await supabase.rpc('generate_invoice_number');
+    const { data: inserted } = await supabase
+      .from('invoices')
+      .insert({
+        user_id: customerId,
+        portal_payment_id: paymentId,
+        invoice_number: numRow ?? `INV-${Date.now()}`,
+        invoice_type: 'gst',
+        delivery_status: 'pending',
+        customer_name: (portalPayment.customer_name as string | null) ?? 'Customer',
+        customer_email: (portalPayment.customer_email_snapshot as string | null) ?? null,
+        customer_phone: (portalPayment.customer_phone as string | null) ?? null,
+        amount: amount + gst,
+        subtotal: amount,
+        gst_amount: gst,
+        cgst_amount: gst / 2,
+        sgst_amount: gst / 2,
+        total_amount: amount + gst,
+        line_items: [{
+          description: portalPayment.plan_name
+            ? `Internet service — ${portalPayment.plan_name}`
+            : 'Internet service',
+          hsn_sac: '998422',
+          quantity: 1,
+          unit: 'Nos',
+          unit_price: amount,
+          gst_rate: 18,
+        }],
+        status: 'paid',
+        paid_at: paidAt,
+        issue_date: paidAt.slice(0, 10),
+      })
+      .select('id')
+      .single();
+    invoiceId = inserted?.id as string | undefined;
+  }
+
+  if (invoiceId) {
+    await supabase.functions.invoke('invoice-generator', { body: { invoiceId } });
+  }
+
+  await supabase.functions.invoke('generate-payment-receipt', { body: { paymentId } });
 }
 
 serve(async (req) => {

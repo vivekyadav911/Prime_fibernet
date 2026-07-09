@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { ContractSignaturePromptCard } from '@/components/officer/ContractSignaturePromptCard';
 import { ContractSignaturePromptModal } from '@/components/officer/ContractSignaturePromptModal';
-import { EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import { ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
 import {
   contractSignaturePromptKey,
   useOfficerProfile,
@@ -13,7 +12,6 @@ import {
 } from '@/hooks/officer';
 import { useAppSelector } from '@/store/hooks';
 import { useOfficerDashboardStats } from '@/hooks/officer';
-import type { OfficerStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -36,7 +34,6 @@ function greeting(): string {
 export function OfficerDashboardScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const { profile } = useOfficerProfile();
-  const navigation = useNavigation<NativeStackNavigationProp<OfficerStackParamList>>();
   const {
     contract,
     needsSignature,
@@ -52,7 +49,12 @@ export function OfficerDashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       void refetchContract();
-    }, [refetchContract]),
+      void refetch();
+      const timer = setInterval(() => {
+        void refetch();
+      }, 20_000);
+      return () => clearInterval(timer);
+    }, [refetch, refetchContract]),
   );
 
   useEffect(() => {
@@ -100,11 +102,7 @@ export function OfficerDashboardScreen() {
     day: 'numeric',
   });
 
-  const onViewAllRequests = useCallback(() => {
-    navigation.getParent()?.navigate('RequestsStack' as never);
-  }, [navigation]);
-
-  if (isLoading) {
+  if (isLoading && items == null) {
     return (
       <ScreenWrapper>
         <SkeletonLoader rows={4} tall />
@@ -119,8 +117,6 @@ export function OfficerDashboardScreen() {
       </ScreenWrapper>
     );
   }
-
-  const hasAssignments = (items?.length ?? 0) > 0;
 
   return (
     <ScreenWrapper>
@@ -143,16 +139,7 @@ export function OfficerDashboardScreen() {
       <ShiftClockWidget />
       <StatsRow />
 
-      {hasAssignments ? (
-        <AssignmentPreviewList items={items} />
-      ) : (
-        <EmptyState
-          title="No assignments"
-          subtitle="New tickets will appear here"
-          actionLabel="View tickets"
-          onAction={onViewAllRequests}
-        />
-      )}
+      <AssignmentPreviewList items={items} />
 
       <Text style={styles.sectionTitle}>This Month</Text>
       <View style={styles.monthRow}>

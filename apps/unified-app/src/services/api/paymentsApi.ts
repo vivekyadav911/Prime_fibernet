@@ -253,7 +253,7 @@ export const paymentsApi = baseApi.injectEndpoints({
           };
         },
       }),
-      invalidatesTags: ['Payments', 'Subscriptions'],
+      invalidatesTags: ['Payments', 'Subscriptions', 'CustomerDashboard', 'Invoices'],
     }),
 
     pollPaymentVerification: builder.mutation<
@@ -278,7 +278,7 @@ export const paymentsApi = baseApi.injectEndpoints({
           };
         },
       }),
-      invalidatesTags: ['Payments'],
+      invalidatesTags: ['Payments', 'Subscriptions', 'CustomerDashboard', 'Invoices'],
     }),
 
     confirmPayment: builder.mutation<

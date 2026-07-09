@@ -3,8 +3,16 @@ import { paymentCollectionApi } from '@/services/api/paymentCollectionApi';
 
 /** Invalidate payment-related RTK Query caches immediately and again after a short delay. */
 export function invalidatePaymentCaches(dispatch: AppDispatch): void {
-  dispatch(paymentCollectionApi.util.invalidateTags(['Payments']));
+  const tags = ['Payments', 'CustomerDashboard', 'Invoices'] as const;
+  for (const tag of tags) {
+    dispatch(paymentCollectionApi.util.invalidateTags([tag]));
+  }
   setTimeout(() => {
-    dispatch(paymentCollectionApi.util.invalidateTags(['Payments']));
+    for (const tag of tags) {
+      dispatch(paymentCollectionApi.util.invalidateTags([tag]));
+    }
   }, 3000);
+  setTimeout(() => {
+    dispatch(paymentCollectionApi.util.invalidateTags(['Payments', 'CustomerDashboard']));
+  }, 5000);
 }

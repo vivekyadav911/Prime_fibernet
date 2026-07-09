@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { DrawerActions, useNavigation } from '@react-navigation/native';
 import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Screen } from '@prime/ui';
 
@@ -83,7 +83,7 @@ export function OfficerPortalNotificationsScreen() {
       }
 
       if (item.category === 'ticket' || item.category === 'request') {
-        navigation.getParent()?.navigate('RequestsStack');
+        navigation.dispatch(DrawerActions.jumpTo('RequestsStack'));
         return;
       }
     },

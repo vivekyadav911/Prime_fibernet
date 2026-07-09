@@ -207,7 +207,7 @@ export const requestsApi = baseApi.injectEndpoints({
           if (error) throw error;
         },
       }),
-      invalidatesTags: ['Requests'],
+      invalidatesTags: ['Requests', 'OfficerPortal'],
     }),
 
     selfAssignRequest: builder.mutation<void, { requestId: string; officerId: string; officerName: string }>({
@@ -237,7 +237,7 @@ export const requestsApi = baseApi.injectEndpoints({
           if (error) throw error;
         },
       }),
-      invalidatesTags: ['Requests'],
+      invalidatesTags: ['Requests', 'OfficerPortal'],
     }),
 
     addRequestActivity: builder.mutation<

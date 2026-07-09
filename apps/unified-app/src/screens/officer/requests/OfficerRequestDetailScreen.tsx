@@ -15,7 +15,8 @@ import { Marker } from 'react-native-maps';
 import { Button, Screen } from '@prime/ui';
 import { colors } from '@/theme/colors';
 
-import { TicketStatusBadge, TicketTimeline } from '@/components/TicketPortal';
+import { TicketStatusBadge } from '@/components/TicketPortal/TicketStatusBadge';
+import { TicketTimeline } from '@/components/TicketPortal/TicketTimeline';
 import { ErrorState, LoadingOverlay, SkeletonLoader, ScreenWrapper } from '@/components/common';
 import { FreeMapView } from '@/components/map';
 import { useCamera } from '@/hooks/useCamera';
@@ -32,7 +33,9 @@ import { SyncManager } from '@/services/offline/syncManager';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import type { OfficerStackParamList } from '@/types/navigation';
-import { NavigationButton } from '../components/NavigationButton';
+import type { TicketActivityEvent } from '@/types/tickets';
+import { OfficerLocationSheet } from '../components/OfficerLocationSheet';
+import { OfficerPortalNavigateButton } from '../components/OfficerPortalNavigateButton';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 import { warnInvalidRequestId } from '@/utils/requestId';
@@ -41,7 +44,7 @@ import {
   nextRequestStatusForOfficer,
   nextTicketStatusForOfficer,
 } from '@/utils/officerTicketActions';
-import { truncateTicketNumber } from '@/utils/ticketViewMappers';
+import { isUsableMapCoordinate } from '@/utils/officerPortalCoordinates';
 
 type Props = NativeStackScreenProps<OfficerStackParamList, 'RequestDetail'>;
 
@@ -67,6 +70,7 @@ export function OfficerRequestDetailScreen({ route }: Props) {
   const [noteText, setNoteText] = useState('');
   const [pendingPhotoUri, setPendingPhotoUri] = useState<string | null>(null);
   const [pendingResolve, setPendingResolve] = useState(false);
+  const [fixLocationVisible, setFixLocationVisible] = useState(false);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -206,19 +210,27 @@ export function OfficerRequestDetailScreen({ route }: Props) {
     );
   }
 
-  const hasLocation = detail.coordinates != null;
+  const hasLocation =
+    detail?.coordinates != null &&
+    isUsableMapCoordinate(detail.coordinates.latitude, detail.coordinates.longitude);
   const ticketEvents =
-    detail.ticket?.activityTimeline.map((event) => ({
-      ...event,
-      timestamp: event.timestamp,
-    })) ?? [];
+    detail.kind === 'ticket'
+      ? detail.activityTimeline.map((event) => ({
+          id: event.id,
+          type: event.type as TicketActivityEvent['type'],
+          description: event.description,
+          performedBy: event.performedBy,
+          performedByRole: event.performedByRole,
+          timestamp: new Date(event.timestamp),
+        }))
+      : [];
 
   return (
     <ScreenWrapper scrollable={false} padded={false}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <View style={styles.headerRow}>
-            <Text style={styles.ticketNumber}>{truncateTicketNumber(detail.displayNumber)}</Text>
+            <Text style={styles.ticketNumber}>{detail.displayNumber}</Text>
           </View>
           <Text style={styles.category}>{detail.categoryLabel}</Text>
           <View style={styles.headerRow}>
@@ -266,36 +278,47 @@ export function OfficerRequestDetailScreen({ route }: Props) {
         <View style={styles.card}>
           <View style={styles.mapHeader}>
             <Text style={styles.sectionTitle}>Customer location</Text>
-            {hasLocation ? (
-              <NavigationButton
-                address={detail.customerAddress}
-                latitude={detail.coordinates!.latitude}
-                longitude={detail.coordinates!.longitude}
+            <View style={styles.mapActions}>
+              <OfficerPortalNavigateButton
+                item={detail}
+                latitude={detail.coordinates?.latitude}
+                longitude={detail.coordinates?.longitude}
                 variant="primary"
+                onLocationUpdated={() => void refetch()}
               />
-            ) : null}
+              <Pressable
+                style={styles.fixPin}
+                onPress={() => setFixLocationVisible(true)}
+                hitSlop={8}
+              >
+                <Text style={styles.fixPinText}>Fix pin</Text>
+              </Pressable>
+            </View>
           </View>
-          {hasLocation ? (
+          {hasLocation && detail.coordinates ? (
             <FreeMapView
               style={styles.map}
               initialRegion={{
-                latitude: detail.coordinates!.latitude,
-                longitude: detail.coordinates!.longitude,
+                latitude: detail.coordinates.latitude,
+                longitude: detail.coordinates.longitude,
                 latitudeDelta: 0.01,
                 longitudeDelta: 0.01,
               }}
             >
               <Marker
                 coordinate={{
-                  latitude: detail.coordinates!.latitude,
-                  longitude: detail.coordinates!.longitude,
+                  latitude: detail.coordinates.latitude,
+                  longitude: detail.coordinates.longitude,
                 }}
                 title={detail.customerName}
                 description={detail.customerAddress}
               />
             </FreeMapView>
           ) : (
-            <Text style={styles.meta}>Location not available</Text>
+            <View style={styles.missingLocation}>
+              <Text style={styles.meta}>Location missing or incorrect.</Text>
+              <Button label="Add location" onPress={() => setFixLocationVisible(true)} />
+            </View>
           )}
         </View>
 
@@ -368,6 +391,17 @@ export function OfficerRequestDetailScreen({ route }: Props) {
       </BottomSheet>
 
       <LoadingOverlay visible={updatingStatus || addingNote || isUploading} />
+
+      <OfficerLocationSheet
+        visible={fixLocationVisible}
+        onClose={() => setFixLocationVisible(false)}
+        itemId={detail.id}
+        kind={detail.kind}
+        initialAddress={detail.customerAddress}
+        initialLatitude={detail.coordinates?.latitude}
+        initialLongitude={detail.coordinates?.longitude}
+        onSaved={() => void refetch()}
+      />
     </ScreenWrapper>
   );
 }
@@ -392,6 +426,10 @@ const styles = StyleSheet.create({
   address: { color: colors.textSecondary },
   photo: { width: 120, height: 120, borderRadius: radius.sm, marginRight: spacing.sm },
   mapHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  mapActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  fixPin: { minHeight: 48, justifyContent: 'center', paddingHorizontal: spacing.xs },
+  fixPinText: { color: colors.textSecondary, fontWeight: '600', fontSize: 13 },
+  missingLocation: { gap: spacing.sm, marginTop: spacing.sm },
   map: { height: 180, borderRadius: radius.md, marginTop: spacing.sm },
   actions: { gap: spacing.sm },
   statusCta: { marginTop: spacing.sm, minHeight: 48 },

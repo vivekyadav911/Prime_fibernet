@@ -289,7 +289,10 @@ class LocationService {
     let lastError: Error | null = null;
     for (let attempt = 0; attempt <= retries; attempt += 1) {
       try {
-        await Location.requestForegroundPermissionsAsync();
+        const fg = await Location.getForegroundPermissionsAsync();
+        if (fg.status !== 'granted') {
+          throw new Error('Location permission denied');
+        }
         const enabled = await Location.hasServicesEnabledAsync();
         if (!enabled) throw new Error('Location services are disabled');
 

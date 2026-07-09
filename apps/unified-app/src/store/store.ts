@@ -52,8 +52,15 @@ export const store = configureStore({
   reducer: rootReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
+      // ponytail: RTK Query cache is large; skip dev invariant scans on api slice + relax warnAfter
       serializableCheck: {
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+        ignoredPaths: [baseApi.reducerPath],
+        warnAfter: 128,
+      },
+      immutableCheck: {
+        ignoredPaths: [baseApi.reducerPath],
+        warnAfter: 128,
       },
     }).concat(baseApi.middleware),
 });

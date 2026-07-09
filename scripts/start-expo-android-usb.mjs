@@ -64,7 +64,7 @@ function main() {
   }
 
   printUsbHelp(defaultPort);
-  startExpo({ mode: 'localhost', port: defaultPort, hostname: '127.0.0.1' });
+  startExpo({ mode: 'localhost', port: defaultPort, hostname: '127.0.0.1', go: false });
 }
 
 main();

@@ -7,7 +7,7 @@ import { useCustomerTheme } from '@/components/customer/CustomerThemeProvider';
 import { CustomerStatusPill, GlassCard, PressableScale } from '@/components/customer/ui';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import type { CustomerTheme } from '@/theme/customer';
-import { getPlanDataLabel, getPlanTierLabel } from '@/utils/planDisplay';
+import { getPlanDataLabel, getPlanPricePeriodLabel, getPlanTierLabel } from '@/utils/planDisplay';
 import { planChangeCtaLabel, type PlanChangeDirection } from '@/utils/planChange';
 
 type PlanCardProps = {
@@ -31,6 +31,7 @@ export const PlanCard = React.memo(function PlanCard({
   const { theme } = useCustomerTheme();
   const tierLabel = getPlanTierLabel(plan.speedMbps, plan.isFeatured);
   const dataLabel = getPlanDataLabel(plan);
+  const periodLabel = getPlanPricePeriodLabel(plan.validityDays);
   const ctaLabel = isCurrentPlan ? 'Current plan' : planChangeCtaLabel(changeDirection);
 
   return (
@@ -58,7 +59,7 @@ export const PlanCard = React.memo(function PlanCard({
         </View>
 
         <Text style={styles.meta} numberOfLines={1}>
-          {priceLabel}/mo · {dataLabel}
+          {priceLabel}/{periodLabel} · {dataLabel}
         </Text>
 
         <View style={styles.footer}>

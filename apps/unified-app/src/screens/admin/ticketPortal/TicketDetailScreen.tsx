@@ -152,6 +152,7 @@ export function TicketDetailScreen({ route }: Props) {
             message: e instanceof Error ? e.message : 'Assignment failed',
           }),
         );
+        throw e;
       } finally {
         setAssigning(false);
       }
@@ -558,6 +559,8 @@ export function TicketDetailScreen({ route }: Props) {
           />
         </View>
 
+        </View>
+
         <AssignOfficerModal
           visible={assignVisible}
           onClose={() => setAssignVisible(false)}
@@ -581,7 +584,6 @@ export function TicketDetailScreen({ route }: Props) {
             onAddNote={async () => {}}
           />
         ) : null}
-        </View>
       </AdminScreenLayout>
     </RoleGuard>
   );

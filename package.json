@@ -9,6 +9,9 @@
     "start:android-usb": "node scripts/start-expo-android-usb.mjs",
     "start:tunnel": "node scripts/start-expo-tunnel.mjs",
     "start:dev-client": "node scripts/start-expo-dev-client.mjs",
+    "android:usb": "node scripts/start-expo-android-usb.mjs",
+    "android:open": "node scripts/launch-android-dev-client.mjs",
+    "android:dev": "node scripts/android-dev-usb.mjs",
     "setup:adb": "powershell -ExecutionPolicy Bypass -File scripts/setup-android-adb.ps1",
     "web": "pnpm --filter @prime/unified-app web",
     "lint": "turbo run lint",
@@ -19,7 +22,6 @@
   },
   "dependencies": {
     "expo-background-task": "~1.0.10",
-    "expo-clipboard": "^56.0.4",
     "expo-document-picker": "~14.0.7",
     "expo-print": "~15.0.8",
     "expo-secure-store": "~15.0.8",

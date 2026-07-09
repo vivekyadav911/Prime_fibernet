@@ -24,11 +24,13 @@ const PRIORITY_COLORS: Record<TicketPriority, { bg: string; text: string }> = {
 type TicketStatusBadgeProps = { status: TicketStatus; compact?: boolean };
 type TicketPriorityBadgeProps = { priority: TicketPriority; compact?: boolean };
 
+const FALLBACK_STATUS_STYLE = { bg: '#F3F4F6', text: '#374151' };
+
 export function TicketStatusBadge({ status, compact }: TicketStatusBadgeProps) {
-  const colors = STATUS_COLORS[status];
+  const palette = STATUS_COLORS[status] ?? FALLBACK_STATUS_STYLE;
   return (
-    <View style={[styles.badge, { backgroundColor: colors.bg }, compact ? styles.compact : null]}>
-      <Text style={[styles.text, { color: colors.text }, compact ? styles.compactText : null]}>
+    <View style={[styles.badge, { backgroundColor: palette.bg }, compact ? styles.compact : null]}>
+      <Text style={[styles.text, { color: palette.text }, compact ? styles.compactText : null]}>
         {status}
       </Text>
     </View>

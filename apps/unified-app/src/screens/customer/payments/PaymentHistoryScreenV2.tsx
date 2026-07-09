@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -32,10 +32,13 @@ import { usePollPaymentVerificationMutation } from '@/services/api';
 import type { PaymentCheckoutSession } from '@/services/payment/PaymentProvider';
 import { getPaymentProvider, resolvePaymentProviderSlug } from '@/services/payment/PaymentProvider';
 import { useRazorpayCheckout } from '@/services/payments/razorpayCheckout';
-import type { PaymentRecord } from '@/types/payments';
+import { useAppDispatch } from '@/store/hooks';
+import type { PaymentRecord, PaymentStatus } from '@/types/payments';
 import type { CustomerStackParamList } from '@/types/navigation';
 import type { CustomerTheme } from '@/theme/customer';
 import { formatINR } from '@/utils/currencyFormat';
+import { downloadPaymentReceipt } from '@/utils/downloadPaymentReceipt';
+import { invalidatePaymentCaches } from '@/utils/invalidatePaymentCaches';
 import { queryErrorMessage } from '@/utils/queryError';
 
 import {
@@ -51,6 +54,7 @@ function isRazorpayGateway(slug: string | undefined | null): boolean {
 
 export function PaymentHistoryScreenV2() {
   const navigation = useNavigation<NativeStackNavigationProp<CustomerStackParamList>>();
+  const dispatch = useAppDispatch();
   const styles = useThemedStyles(createStyles);
   const { theme } = useCustomerTheme();
   const { authUser: user, userId } = useCustomerIdentity();
@@ -62,7 +66,6 @@ export function PaymentHistoryScreenV2() {
   const [checkoutSession, setCheckoutSession] = useState<PaymentCheckoutSession | null>(null);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
   const [downloadingReceiptId, setDownloadingReceiptId] = useState<string | null>(null);
-  const [rzpLoading, setRzpLoading] = useState(false);
   const [retryAmount, setRetryAmount] = useState(0);
 
   const { openCheckout, RazorpayUI } = useRazorpayCheckout();
@@ -108,14 +111,22 @@ export function PaymentHistoryScreenV2() {
                 : gatewaySlug === 'razorpay'
                   ? 'razorpay'
                   : undefined,
-          });
+          })
+            .unwrap()
+            .then((result) => {
+              if (result.success || result.verified) {
+                invalidatePaymentCaches(dispatch);
+                void refetch();
+              }
+            })
+            .catch(() => undefined);
         }
       };
 
       tick();
       const intervalId = setInterval(tick, 15_000);
       return () => clearInterval(intervalId);
-    }, [activeGateway?.slug, pendingPayments, pollVerification]),
+    }, [activeGateway?.slug, dispatch, pendingPayments, pollVerification, refetch]),
   );
 
   const filtered = useMemo(
@@ -130,26 +141,23 @@ export function PaymentHistoryScreenV2() {
   );
 
   const onReceipt = useCallback(
-    async (paymentId: string) => {
+    async (paymentId: string, status?: PaymentStatus) => {
       setDownloadingReceiptId(paymentId);
       try {
-        const result = await fetchReceipt(paymentId).unwrap();
-        if (result.url) {
-          await Linking.openURL(result.url);
-        } else {
-          navigation.navigate('Receipt', { paymentId });
-        }
-      } catch {
-        Alert.alert(
-          'Download Failed',
-          'Could not generate your receipt. Please try again or contact support.',
-          [{ text: 'OK' }],
+        const resolvedStatus = status ?? (data ?? []).find((row) => row.id === paymentId)?.status;
+        await downloadPaymentReceipt(
+          paymentId,
+          (id) => fetchReceipt(id).unwrap(),
+          {
+            status: resolvedStatus,
+            onFallback: (id) => navigation.navigate('Receipt', { paymentId: id }),
+          },
         );
       } finally {
         setDownloadingReceiptId(null);
       }
     },
-    [fetchReceipt, navigation],
+    [data, fetchReceipt, navigation],
   );
 
   const onRetryPayment = useCallback(
@@ -166,6 +174,7 @@ export function PaymentHistoryScreenV2() {
           userEmail: user.email,
           userPhone: payment.customer_phone ?? '',
           amount,
+          intent: 'retry',
           planName: payment.plan_name ?? 'Broadband',
           billingPeriodStart: payment.billing_period_start ?? undefined,
           billingPeriodEnd: payment.billing_period_end ?? undefined,
@@ -186,7 +195,6 @@ export function PaymentHistoryScreenV2() {
         };
 
         if (isRazorpayGateway(checkoutSession.gatewaySlug)) {
-          setRzpLoading(true);
           openCheckout(
             {
               key: checkoutSession.keyId,
@@ -209,7 +217,7 @@ export function PaymentHistoryScreenV2() {
             },
             {
               onSuccess: (rzpData) => {
-                setRzpLoading(false);
+                invalidatePaymentCaches(dispatch);
                 navigation.navigate('PaymentResult', {
                   paymentId: checkoutSession.paymentId,
                   orderId: rzpData.razorpay_order_id,
@@ -222,15 +230,12 @@ export function PaymentHistoryScreenV2() {
                 void refetch();
               },
               onFailure: (rzpError) => {
-                setRzpLoading(false);
                 Alert.alert(
                   'Payment Failed',
                   rzpError.description ?? 'Payment could not be completed. No amount was charged.',
                 );
               },
-              onClose: () => {
-                setRzpLoading(false);
-              },
+              onClose: () => {},
             },
           );
           return;
@@ -239,7 +244,6 @@ export function PaymentHistoryScreenV2() {
         setCheckoutSession(checkoutSession);
         setCheckoutVisible(true);
       } catch (e) {
-        setRzpLoading(false);
         Alert.alert('Could not start checkout', queryErrorMessage(e));
       }
     },
@@ -338,7 +342,16 @@ export function PaymentHistoryScreenV2() {
           />
         }
         renderItem={({ item }) => (
-          <PaymentHistoryRow item={item} onPress={() => setSelectedPaymentId(item.id)} />
+          <PaymentHistoryRow
+            item={item}
+            onPress={() => setSelectedPaymentId(item.id)}
+            onDownloadReceipt={
+              item.status === 'confirmed'
+                ? (id) => void onReceipt(id, 'confirmed')
+                : undefined
+            }
+            downloadingReceiptId={downloadingReceiptId}
+          />
         )}
       />
 
@@ -349,17 +362,10 @@ export function PaymentHistoryScreenV2() {
         onDownloadReceipt={(id) => void onReceipt(id)}
         downloadingReceiptId={downloadingReceiptId}
         onRetryPayment={(id) => void onRetryPayment(id)}
-        retryLoading={orderLoading || rzpLoading}
+        retryLoading={orderLoading}
       />
 
       {RazorpayUI}
-
-      <Modal visible={rzpLoading} transparent animationType="fade">
-        <View style={styles.rzpOverlay}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.rzpLoadingText}>Opening secure checkout…</Text>
-        </View>
-      </Modal>
 
       {user ? (
         <EasebuzzCheckout
@@ -377,9 +383,20 @@ export function PaymentHistoryScreenV2() {
   );
 }
 
-function PaymentHistoryRow({ item, onPress }: { item: PaymentRecord; onPress: () => void }) {
+function PaymentHistoryRow({
+  item,
+  onPress,
+  onDownloadReceipt,
+  downloadingReceiptId,
+}: {
+  item: PaymentRecord;
+  onPress: () => void;
+  onDownloadReceipt?: (paymentId: string) => void;
+  downloadingReceiptId?: string | null;
+}) {
   const styles = useThemedStyles(createRowStyles);
   const { theme } = useCustomerTheme();
+  const isDownloading = downloadingReceiptId === item.id;
 
   return (
     <PressableScale style={styles.wrap} onPress={onPress} accessibilityLabel={`Payment ${item.payment_number}`}>
@@ -394,7 +411,23 @@ function PaymentHistoryRow({ item, onPress }: { item: PaymentRecord; onPress: ()
               <Text style={styles.number}>Inv #{item.payment_number}</Text>
             </View>
           </View>
-          <Text style={styles.amount}>{formatINR(item.total_amount)}</Text>
+          <View style={styles.topRight}>
+            <Text style={styles.amount}>{formatINR(item.total_amount)}</Text>
+            {onDownloadReceipt ? (
+              <PressableScale
+                style={styles.downloadBtn}
+                onPress={() => onDownloadReceipt(item.id)}
+                disabled={isDownloading}
+                accessibilityLabel="Download receipt"
+              >
+                <MaterialCommunityIcons
+                  name={isDownloading ? 'progress-download' : 'download-outline'}
+                  size={20}
+                  color={theme.colors.primary}
+                />
+              </PressableScale>
+            ) : null}
+          </View>
         </View>
         <View style={styles.bottom}>
           <Text style={styles.method}>
@@ -437,18 +470,6 @@ const createStyles = (theme: CustomerTheme) =>
       flexGrow: 1,
       justifyContent: 'flex-start',
     },
-    rzpOverlay: {
-      flex: 1,
-      backgroundColor: theme.colors.overlay,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: theme.spacing.md,
-    },
-    rzpLoadingText: {
-      ...theme.typography.body,
-      color: theme.colors.onSurface,
-      fontFamily: theme.fonts.bodyMedium,
-    },
   });
 
 const createRowStyles = (theme: CustomerTheme) =>
@@ -490,6 +511,15 @@ const createRowStyles = (theme: CustomerTheme) =>
       ...theme.typography.monoMd,
       color: theme.colors.onSurface,
       fontFamily: theme.fonts.monoBold,
+    },
+    topRight: {
+      alignItems: 'flex-end',
+      gap: theme.spacing.xs,
+    },
+    downloadBtn: {
+      padding: theme.spacing.xs,
+      borderRadius: theme.radius.sm,
+      backgroundColor: theme.colors.accentPrimaryMuted,
     },
     bottom: {
       flexDirection: 'row',

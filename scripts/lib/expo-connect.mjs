@@ -168,7 +168,8 @@ export function printUsbHelp(port) {
   console.log('1. Phone: Settings → Developer options → USB debugging ON');
   console.log('2. USB mode: File transfer / MTP (not charging-only)');
   console.log('3. Accept the "Allow USB debugging?" prompt on the phone');
-  console.log(`4. In Expo Go → Enter URL: exp://127.0.0.1:${port}`);
+  console.log(`4. Open the Prime Fibernet dev client app (not Expo Go)`);
+  console.log(`   It should connect to http://127.0.0.1:${port}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('');
 }

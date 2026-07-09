@@ -11,6 +11,10 @@ export function isNativeRazorpayAvailable(): boolean {
   return false;
 }
 
+export function shouldUseNativeRazorpay(): boolean {
+  return false;
+}
+
 export async function openNativeCheckout(
   _options: RazorpayCheckoutOptions,
   _callbacks: RazorpayCheckoutCallbacks,

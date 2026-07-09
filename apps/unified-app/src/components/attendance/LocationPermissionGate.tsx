@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { Button, Screen } from '@prime/ui';
 
@@ -53,11 +52,6 @@ export function LocationPermissionGate({ children }: Props) {
           </View>
         </View>
       ) : null}
-      {mode === 'full' ? (
-        <View style={styles.fullBanner}>
-          <Text style={styles.fullText}>Live geofence monitoring active</Text>
-        </View>
-      ) : null}
       {children}
     </>
   );
@@ -79,11 +73,4 @@ const styles = StyleSheet.create({
   limitedTitle: { fontWeight: '700', color: colors.amber, marginBottom: spacing.xxs },
   limitedBody: { fontSize: 13, color: colors.textSecondary, marginBottom: spacing.sm },
   limitedActions: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
-  fullBanner: {
-    backgroundColor: colors.emeraldLight,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  fullText: { color: colors.emerald, fontWeight: '600', fontSize: 13, textAlign: 'center' },
 });

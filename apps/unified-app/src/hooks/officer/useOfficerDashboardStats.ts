@@ -11,14 +11,21 @@ export function useOfficerDashboardStats(userId: string | undefined) {
   const {
     data: items,
     isLoading: itemsLoading,
+    isFetching: itemsFetching,
     isError: itemsError,
     error: itemsQueryError,
     refetch: refetchItems,
-  } = useGetOfficerAssignedPortalItemsQuery(userId, { skip: !userId });
+  } = useGetOfficerAssignedPortalItemsQuery(userId, {
+    skip: !userId,
+    refetchOnMountOrArgChange: 30,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
 
   const {
     data: paymentStats,
     isLoading: paymentsLoading,
+    isFetching: paymentsFetching,
     isError: paymentsError,
     error: paymentsQueryError,
     refetch: refetchPayments,
@@ -34,6 +41,7 @@ export function useOfficerDashboardStats(userId: string | undefined) {
     resolvedToday: derived.resolvedToday,
     collectionsToday: paymentStats?.collectionsToday ?? 0,
     isLoading: itemsLoading || paymentsLoading,
+    isFetching: itemsFetching || paymentsFetching,
     isError: itemsError || paymentsError,
     error: itemsQueryError ?? paymentsQueryError,
     refetch: () => {

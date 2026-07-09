@@ -113,8 +113,9 @@ async function fetchOfficerPortalItems(client: TypedSupabaseClient, officerId: s
 function mapDetailFromItem(
   item: PortalTicketItem,
   linkedRequestRow?: Record<string, unknown> | null,
+  ticketRow?: Record<string, unknown> | null,
 ): OfficerPortalItemDetail {
-  const coordinates = getPortalItemCoordinates(item, linkedRequestRow);
+  const coordinates = getPortalItemCoordinates(item, linkedRequestRow, ticketRow);
 
   if (item.kind === 'ticket' && item.ticket) {
     const ticket = item.ticket;
@@ -198,10 +199,13 @@ export const officerPortalApi = baseApi.injectEndpoints({
               const item = buildPortalItems([ticket], [])[0];
               if (!item) throw new Error('Ticket not found');
               return serializePortalItemForCache(
-                mapDetailFromItem(item, linkedRequestRow),
+                mapDetailFromItem(
+                  item,
+                  linkedRequestRow,
+                  ticketRow as Record<string, unknown>,
+                ),
               ) as OfficerPortalItemDetail;
             }
-            if (kind === 'ticket') throw new Error('Ticket not found');
           }
 
           const { data: requestRow, error: requestError } = await client
@@ -277,6 +281,83 @@ export const officerPortalApi = baseApi.injectEndpoints({
       ],
     }),
 
+    updateOfficerPortalItemLocation: builder.mutation<
+      void,
+      {
+        itemId: string;
+        kind: PortalItemKind;
+        latitude: number;
+        longitude: number;
+        address: string;
+        officerName?: string;
+      }
+    >({
+      query: ({ itemId, kind, latitude, longitude, address, officerName }) => ({
+        handler: async (client) => {
+          const now = new Date().toISOString();
+          const requestPatch = {
+            location_lat: latitude,
+            location_lng: longitude,
+            latitude,
+            longitude,
+            location_address: address,
+            address,
+            updated_at: now,
+          };
+
+          if (kind === 'request') {
+            const { error } = await client
+              .from('service_requests')
+              .update(requestPatch)
+              .eq('id', itemId);
+            if (error) throw error;
+            return;
+          }
+
+          const { data: ticket, error: ticketFetchError } = await client
+            .from('tickets')
+            .select('linked_request_id')
+            .eq('id', itemId)
+            .maybeSingle();
+          if (ticketFetchError) throw ticketFetchError;
+
+          const { error: ticketUpdateError } = await client
+            .from('tickets')
+            .update({
+              lat: latitude,
+              lng: longitude,
+              address,
+              updated_at: now,
+            })
+            .eq('id', itemId);
+          if (ticketUpdateError) throw ticketUpdateError;
+
+          if (ticket?.linked_request_id) {
+            await client
+              .from('service_requests')
+              .update(requestPatch)
+              .eq('id', ticket.linked_request_id);
+          }
+
+          if (officerName) {
+            await client.from('ticket_activity_events').insert({
+              ticket_id: itemId,
+              type: 'note_added',
+              description: `Location updated to ${address}`,
+              performed_by: officerName,
+              performed_by_role: 'Officer',
+              metadata: { latitude, longitude },
+              timestamp: now,
+            });
+          }
+        },
+      }),
+      invalidatesTags: (_result, _error, arg) => [
+        { type: 'OfficerPortal', id: arg.itemId },
+        'OfficerPortal',
+      ],
+    }),
+
     createOfficerFieldTicket: builder.mutation<
       string,
       {
@@ -345,5 +426,6 @@ export const {
   useGetOfficerPortalItemDetailQuery,
   useUpdateOfficerTicketStatusMutation,
   useAddOfficerTicketNoteMutation,
+  useUpdateOfficerPortalItemLocationMutation,
   useCreateOfficerFieldTicketMutation,
 } = officerPortalApi;

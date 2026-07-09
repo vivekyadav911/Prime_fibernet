@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRazorpayCheckout } from '@/services/payments/razorpayCheckout';
@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EasebuzzCheckout } from '@/components/customer/payments/EasebuzzCheckout';
 import { CustomerPaymentDetailSheet } from '@/components/customer/payments/CustomerPaymentDetailSheet';
+import { CustomerPaySheet } from '@/components/customer/payments/CustomerPaySheet';
 import { CustomerPaymentStatusPill } from '@/components/customer/payments/CustomerPaymentStatusPill';
 import { GstInvoiceRequestSheet, type GstInvoiceFormValues, type GstInvoiceSubmittedState } from '@/components/customer/payments/GstInvoiceRequestSheet';
 import { PaymentSuccessSheet } from '@/components/customer/payments/PaymentSuccessSheet';
@@ -38,8 +39,10 @@ import type { PaymentCheckoutSession } from '@/services/payment/PaymentProvider'
 import { getPaymentProvider, resolvePaymentProviderSlug } from '@/services/payment/PaymentProvider';
 import { useAppDispatch } from '@/store/hooks';
 import type { CustomerStackParamList } from '@/types/navigation';
+import type { CreateOrderPayload, PaymentStatus } from '@/types/payments';
 import type { CustomerTheme } from '@/theme/customer';
 import { formatINR } from '@/utils/currencyFormat';
+import { downloadPaymentReceipt } from '@/utils/downloadPaymentReceipt';
 import { gstInvoiceStatusMessage } from '@/utils/gstInvoiceMessages';
 import { invalidatePaymentCaches } from '@/utils/invalidatePaymentCaches';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -61,8 +64,33 @@ function isGatewayNotConfigured(message: string): boolean {
   return lower.includes('no active payment gateway') || lower.includes('gateway not configured');
 }
 
+function isAlreadyPaidMessage(message: string): boolean {
+  return message.toLowerCase().includes('already paid');
+}
+
+function checkoutStartErrorMessage(error: unknown): string {
+  const message = queryErrorMessage(error);
+  if (isGatewayNotConfigured(message)) {
+    return 'Your ISP is finishing payment gateway setup. You can pay cash to your field officer or visit our office.';
+  }
+  if (isAlreadyPaidMessage(message)) {
+    return message;
+  }
+  if (message.toLowerCase().includes('amount mismatch')) {
+    return 'Your bill amount changed. Pull down to refresh, then try again.';
+  }
+  return message || 'Could not connect to payment gateway. Please try again.';
+}
+
 function isRazorpayGateway(slug: string | undefined | null): boolean {
   return resolvePaymentProviderSlug(slug) === 'razorpay';
+}
+
+function waitForModalDismiss(): Promise<void> {
+  const delayMs = Platform.OS === 'web' ? 250 : 400;
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs);
+  });
 }
 
 const TAB_BAR_CLEARANCE = 72;
@@ -81,9 +109,9 @@ export function CustomerBillScreen() {
 
   const [checkoutSession, setCheckoutSession] = useState<PaymentCheckoutSession | null>(null);
   const [checkoutVisible, setCheckoutVisible] = useState(false);
-  const [payMode, setPayMode] = useState<'bill' | 'advance' | 'retry'>('bill');
+  const [payMode, setPayMode] = useState<NonNullable<CreateOrderPayload['intent']>>('bill');
+  const [paySheetVisible, setPaySheetVisible] = useState(false);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
-  const [rzpLoading, setRzpLoading] = useState(false);
   const [showSuccessSheet, setShowSuccessSheet] = useState(false);
   const [successPaymentId, setSuccessPaymentId] = useState('');
   const [successPortalPaymentId, setSuccessPortalPaymentId] = useState('');
@@ -108,6 +136,15 @@ export function CustomerBillScreen() {
   const [createGstRequest, { isLoading: gstSubmitting }] = useCreateGstInvoiceRequestMutation();
   const [pollPendingPayments] = usePollPendingPaymentsMutation();
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!authId) return undefined;
+      void refetch();
+      void refetchHistory();
+      return undefined;
+    }, [authId, refetch, refetchHistory]),
+  );
+
   const pendingPollTargets = useMemo(
     () =>
       history
@@ -130,8 +167,10 @@ export function CustomerBillScreen() {
   }, [pendingPollTargets, pollPendingPayments]);
 
   const provider = getPaymentProvider(resolvePaymentProviderSlug(activeGateway?.slug));
-  const payButtonLabel =
+  const payNowLabel =
     activeGateway?.slug === 'easebuzz' ? 'Pay Now via Easebuzz' : `Pay Now via ${provider.displayName}`;
+  const payViaLabel =
+    activeGateway?.slug === 'easebuzz' ? 'Pay via Easebuzz' : `Pay via ${provider.displayName}`;
 
   const handlePaymentSuccess = useCallback(
     async (data: {
@@ -141,7 +180,6 @@ export function CustomerBillScreen() {
       paymentId: string;
       amount: number;
     }) => {
-      setRzpLoading(false);
       try {
         const result = await verifyPayment({
           paymentId: data.paymentId,
@@ -183,7 +221,6 @@ export function CustomerBillScreen() {
 
   const openRazorpayCheckout = useCallback(
     (session: PaymentCheckoutSession, amount: number, customerName: string, customerEmail: string, customerPhone: string) => {
-      setRzpLoading(true);
       openCheckout(
         {
           key: session.keyId,
@@ -215,14 +252,10 @@ export function CustomerBillScreen() {
             });
           },
           onFailure: (rzpError) => {
-            setRzpLoading(false);
             Alert.alert(
               'Payment Failed',
               rzpError.description ?? 'Payment could not be completed. No amount was charged.',
             );
-          },
-          onClose: () => {
-            setRzpLoading(false);
           },
         },
       );
@@ -246,25 +279,56 @@ export function CustomerBillScreen() {
   );
 
   const initiateCheckout = useCallback(
-    async (mode: 'bill' | 'advance' = 'bill') => {
+    async (params: {
+      intent: NonNullable<CreateOrderPayload['intent']>;
+      amount?: number;
+      dismissPaySheet?: () => void;
+    }) => {
       if (!bill || !user) return;
-      setPayMode(mode);
-
-      const amount = mode === 'advance' ? bill.planAmount : bill.totalPayable;
-      if (amount <= 0) return;
+      const { intent, amount: overrideAmount, dismissPaySheet } = params;
+      setPayMode(intent);
 
       try {
+        const billResult = await refetch();
+        const currentBill = billResult.data ?? bill;
+
+        let amount = overrideAmount ?? 0;
+        if (overrideAmount == null) {
+          if (intent === 'advance') amount = currentBill.planAmount;
+          else if (intent === 'bill') amount = currentBill.totalPayable;
+          else return;
+        }
+
+        if (amount <= 0) {
+          Alert.alert('Invalid amount', 'Enter a valid payment amount and try again.');
+          return;
+        }
+
+        if (intent === 'bill' && currentBill.outstandingAmount <= 0) {
+          Alert.alert(
+            'Already paid',
+            'Your current bill is already paid. Use Pay via Razorpay for the next cycle or a custom amount.',
+          );
+          return;
+        }
+
         const session = await createOrder({
-          customerId: bill.customerId,
+          customerId: currentBill.customerId,
           userName: user.name,
           userEmail: user.email,
           userPhone: '',
           amount,
-          planName: bill.planName ?? 'Broadband',
-          billingPeriodStart: bill.billingPeriodStart ?? undefined,
-          billingPeriodEnd: bill.billingPeriodEnd ?? undefined,
-          dueDate: bill.dueDate ?? undefined,
+          intent,
+          planName: currentBill.planName ?? 'Broadband',
+          billingPeriodStart:
+            intent === 'custom' ? undefined : currentBill.billingPeriodStart ?? undefined,
+          billingPeriodEnd:
+            intent === 'custom' ? undefined : currentBill.billingPeriodEnd ?? undefined,
+          dueDate: currentBill.dueDate ?? undefined,
         }).unwrap();
+
+        dismissPaySheet?.();
+        await waitForModalDismiss();
 
         startCheckoutWithSession(
           {
@@ -279,19 +343,16 @@ export function CustomerBillScreen() {
           amount,
         );
       } catch (e) {
-        setRzpLoading(false);
-        const message = queryErrorMessage(e);
-        if (isGatewayNotConfigured(message)) {
-          Alert.alert(
-            'Online payments unavailable',
-            'Your ISP is finishing payment gateway setup. You can pay cash to your field officer or visit our office.',
-          );
-        } else {
-          Alert.alert('Could not start checkout', 'Could not connect to payment gateway. Please try again.');
-        }
+        const message = checkoutStartErrorMessage(e);
+        Alert.alert(
+          isGatewayNotConfigured(queryErrorMessage(e)) ? 'Online payments unavailable' : 'Could not start checkout',
+          message,
+        );
+        void refetch();
+        void refetchHistory();
       }
     },
-    [bill, createOrder, startCheckoutWithSession, user],
+    [bill, createOrder, refetch, refetchHistory, startCheckoutWithSession, user],
   );
 
   const onRetryPayment = useCallback(
@@ -300,14 +361,18 @@ export function CustomerBillScreen() {
       if (!payment || !user) return;
       setPayMode('retry');
 
+      const billResult = await refetch();
+      const currentBill = billResult.data ?? bill;
+
       try {
         const session = await createOrder({
           customerId: payment.customer_id,
           userName: user.name,
           userEmail: user.email,
           userPhone: payment.customer_phone ?? '',
-          amount: resolvePaymentChargeAmount(payment.total_amount, bill?.planAmount ?? 0),
-          planName: payment.plan_name ?? bill?.planName ?? 'Broadband',
+          amount: resolvePaymentChargeAmount(payment.total_amount, currentBill?.planAmount ?? 0),
+          intent: 'retry',
+          planName: payment.plan_name ?? currentBill?.planName ?? 'Broadband',
           billingPeriodStart: payment.billing_period_start ?? undefined,
           billingPeriodEnd: payment.billing_period_end ?? undefined,
           dueDate: payment.due_date ?? undefined,
@@ -324,22 +389,19 @@ export function CustomerBillScreen() {
             checkoutUrl: session.checkoutUrl,
             checkoutParams: session.checkoutParams,
           },
-          resolvePaymentChargeAmount(payment.total_amount, bill?.planAmount ?? 0),
+          resolvePaymentChargeAmount(payment.total_amount, currentBill?.planAmount ?? 0),
         );
       } catch (e) {
-        setRzpLoading(false);
-        const message = queryErrorMessage(e);
-        if (isGatewayNotConfigured(message)) {
-          Alert.alert(
-            'Online payments unavailable',
-            'Your ISP is finishing payment gateway setup. You can pay cash to your field officer or visit our office.',
-          );
-        } else {
-          Alert.alert('Could not start checkout', 'Could not connect to payment gateway. Please try again.');
-        }
+        const message = checkoutStartErrorMessage(e);
+        Alert.alert(
+          isGatewayNotConfigured(queryErrorMessage(e)) ? 'Online payments unavailable' : 'Could not start checkout',
+          message,
+        );
+        void refetch();
+        void refetchHistory();
       }
     },
-    [bill?.planAmount, bill?.planName, createOrder, history, startCheckoutWithSession, user],
+    [bill, createOrder, history, refetch, refetchHistory, startCheckoutWithSession, user],
   );
 
   const onCheckoutComplete = useCallback(
@@ -380,26 +442,24 @@ export function CustomerBillScreen() {
   );
 
   const onReceipt = useCallback(
-    async (paymentId: string) => {
+    async (paymentId: string, status?: PaymentStatus) => {
       setDownloadingReceiptId(paymentId);
       try {
-        const result = await fetchReceipt(paymentId).unwrap();
-        if (result.url) {
-          await Linking.openURL(result.url);
-        } else {
-          navigation.navigate('Receipt', { paymentId });
-        }
-      } catch {
-        Alert.alert(
-          'Download Failed',
-          'Could not generate your receipt. Please try again or contact support.',
-          [{ text: 'OK' }],
+        const resolvedStatus =
+          status ?? history.find((row) => row.id === paymentId)?.status;
+        await downloadPaymentReceipt(
+          paymentId,
+          (id) => fetchReceipt(id).unwrap(),
+          {
+            status: resolvedStatus,
+            onFallback: (id) => navigation.navigate('Receipt', { paymentId: id }),
+          },
         );
       } finally {
         setDownloadingReceiptId(null);
       }
     },
-    [fetchReceipt, navigation],
+    [fetchReceipt, history, navigation],
   );
 
   const onGstSubmit = useCallback(
@@ -476,10 +536,18 @@ export function CustomerBillScreen() {
           ) : null}
           {hasOutstanding && activeGateway ? (
             <CustomerButton
-              label={orderLoading && payMode === 'bill' ? payLoadingLabel : payButtonLabel}
+              label={orderLoading && payMode === 'bill' ? payLoadingLabel : payNowLabel}
               icon="credit-card-outline"
-              onPress={() => void initiateCheckout('bill')}
-              disabled={orderLoading || rzpLoading}
+              onPress={() => void initiateCheckout({ intent: 'bill' })}
+              disabled={orderLoading}
+            />
+          ) : null}
+          {!hasOutstanding && activeGateway ? (
+            <CustomerButton
+              label={orderLoading && (payMode === 'advance' || payMode === 'custom') ? payLoadingLabel : payViaLabel}
+              icon="credit-card-outline"
+              onPress={() => setPaySheetVisible(true)}
+              disabled={orderLoading}
             />
           ) : null}
           {!hasOutstanding ? (
@@ -495,15 +563,6 @@ export function CustomerBillScreen() {
             </View>
             <Text style={styles.dueDate}>{formatDate(bill.dueDate)}</Text>
             {bill.planName ? <Text style={styles.duePlan}>{bill.planName} · {formatINR(bill.planAmount)}/cycle</Text> : null}
-            {activeGateway ? (
-              <CustomerButton
-                label={orderLoading && payMode === 'advance' ? payLoadingLabel : 'Pay in Advance'}
-                variant="outline"
-                icon="wallet-outline"
-                onPress={() => void initiateCheckout('advance')}
-                disabled={orderLoading || rzpLoading}
-              />
-            ) : null}
           </GlassCard>
         ) : null}
 
@@ -604,7 +663,7 @@ export function CustomerBillScreen() {
         invoiceNumber={successInvoiceNumber}
         onClose={() => setShowSuccessSheet(false)}
         onDownloadReceipt={() => {
-          void onReceipt(successPortalPaymentId);
+          void onReceipt(successPortalPaymentId, 'confirmed');
         }}
         onRequestGST={() => {
           setGstPaymentId(successPortalPaymentId);
@@ -629,14 +688,22 @@ export function CustomerBillScreen() {
         }}
       />
 
-      {RazorpayUI}
+      <CustomerPaySheet
+        visible={paySheetVisible}
+        planAmount={bill?.planAmount ?? 0}
+        planName={bill?.planName}
+        loading={paySheetVisible && orderLoading && (payMode === 'advance' || payMode === 'custom')}
+        onClose={() => setPaySheetVisible(false)}
+        onPay={({ amount, intent }) => {
+          void initiateCheckout({
+            intent,
+            amount,
+            dismissPaySheet: () => setPaySheetVisible(false),
+          });
+        }}
+      />
 
-      <Modal visible={rzpLoading} transparent animationType="fade">
-        <View style={styles.rzpOverlay}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.rzpLoadingText}>Opening secure checkout…</Text>
-        </View>
-      </Modal>
+      {RazorpayUI}
     </View>
   );
 }
@@ -790,17 +857,5 @@ const createStyles = (theme: CustomerTheme) =>
       textAlign: 'center',
       fontSize: 11,
       color: theme.colors.textMuted,
-    },
-    rzpOverlay: {
-      flex: 1,
-      backgroundColor: theme.colors.overlay,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: theme.spacing.md,
-    },
-    rzpLoadingText: {
-      ...theme.typography.body,
-      color: theme.colors.onSurface,
-      fontFamily: theme.fonts.bodyMedium,
     },
   });

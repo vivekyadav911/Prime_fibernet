@@ -11,9 +11,7 @@ import { radius, spacing } from '@/theme/spacing';
 type Props = NativeStackScreenProps<OfficerStackParamList, 'LocationGate'>;
 
 export function LocationGateScreen({ navigation }: Props) {
-  const { permissionGranted, checkPermission, requestPermission, isLoading } = useLocation({
-    enableBackground: true,
-  });
+  const { permissionGranted, checkPermission, requestPermission, isLoading } = useLocation();
 
   const proceedIfGranted = useCallback(async () => {
     const granted = permissionGranted ?? (await checkPermission());
