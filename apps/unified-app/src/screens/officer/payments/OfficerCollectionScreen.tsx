@@ -72,8 +72,8 @@ export function OfficerCollectionScreen({ route }: Props) {
   );
 
   const outstandingTotal = useMemo(
-    () => activeList.reduce((sum, c) => sum + c.outstanding_amount, 0),
-    [activeList],
+    () => filteredList.reduce((sum, c) => sum + c.outstanding_amount, 0),
+    [filteredList],
   );
 
   const onCollect = useCallback(

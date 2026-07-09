@@ -284,6 +284,7 @@ export const adminFinanceApi = baseApi.injectEndpoints({
               line_items: mapLineItemsToDb(body.lineItems),
               notes: body.notes ?? null,
               status: 'unpaid',
+              portal_payment_id: body.paymentId ?? null,
               issue_date: new Date().toISOString().slice(0, 10),
               created_by: auth.user?.id ?? null,
               created_at: new Date().toISOString(),
@@ -518,6 +519,24 @@ export const adminFinanceApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ['GstInvoiceRequests'],
     }),
+
+    getInvoiceForPayment: builder.query<InvoiceRecord | null, string>({
+      query: (paymentId) => ({
+        handler: async (client) => {
+          const { data, error } = await client
+            .from('invoices')
+            .select('*')
+            .eq('portal_payment_id', paymentId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (error) throw error;
+          if (!data) return null;
+          return mapDbRowToInvoiceRecord(data as Record<string, unknown>);
+        },
+      }),
+      providesTags: (_r, _e, paymentId) => [{ type: 'Invoices', id: `payment-${paymentId}` }],
+    }),
   }),
 });
 
@@ -539,4 +558,5 @@ export const {
   useCreateManualGstInvoiceMutation,
   useGetGstInvoiceRequestsQuery,
   useUpdateGstInvoiceRequestMutation,
+  useGetInvoiceForPaymentQuery,
 } = adminFinanceApi;

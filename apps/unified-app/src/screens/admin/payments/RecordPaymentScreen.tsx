@@ -17,7 +17,7 @@ import { parseAmountInput } from '@/utils/currencyFormat';
 
 const METHOD_OPTIONS = [
   { value: 'cash', label: 'Cash' },
-  { value: 'card', label: 'Card' },
+  { value: 'netbanking', label: 'Netbanking' },
   { value: 'upi', label: 'UPI' },
   { value: 'bank_transfer', label: 'Bank transfer' },
   { value: 'other', label: 'Other' },
@@ -26,7 +26,7 @@ const METHOD_OPTIONS = [
 const recordPaymentSchema = z
   .object({
     amount: z.string().min(1, 'Amount is required'),
-    method: z.enum(['cash', 'card', 'upi', 'bank_transfer', 'other']),
+    method: z.enum(['cash', 'netbanking', 'upi', 'bank_transfer', 'other']),
     reference: z.string().optional(),
     notes: z.string().optional(),
     confirmed: z.boolean(),

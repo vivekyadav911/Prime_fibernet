@@ -1,27 +1,38 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { useGetAttendanceHistoryQuery } from '@/services/api/attendanceApi';
+import { useOfficerMonthAttendance } from '@/hooks/attendance/useAttendance';
 import { colors } from '@/theme/colors';
 import { radius, shadow, spacing } from '@/theme/spacing';
+import { getLocalDateString } from '@/utils/dateUtils';
 
 export function AttendanceWidget() {
   const now = new Date();
-  const { data: records } = useGetAttendanceHistoryQuery({
-    month: now.getMonth() + 1,
-    year: now.getFullYear(),
-  });
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  const todayIso = getLocalDateString();
+  const daysElapsed = now.getDate();
 
-  const list = records ?? [];
-  const present = list.filter((r) => r.status === 'present' || r.checkInTime).length;
-  const total = list.length || 1;
-  const pct = Math.round((present / total) * 100);
+  const { statusRows } = useOfficerMonthAttendance(month, year);
+
+  const presentDays = useMemo(
+    () =>
+      statusRows.filter(
+        (row) =>
+          row.shiftDate <= todayIso &&
+          (row.status === 'present' || row.status === 'late'),
+      ).length,
+    [statusRows, todayIso],
+  );
+
+  const pct = daysElapsed > 0 ? Math.round((presentDays / daysElapsed) * 100) : 0;
 
   return (
     <View style={styles.card}>
       <Text style={styles.icon}>📅</Text>
       <Text style={styles.title}>Attendance</Text>
       <Text style={styles.value}>
-        {present} / {list.length || '—'} days
+        {presentDays} / {daysElapsed} days
       </Text>
       <View style={styles.barTrack}>
         <View style={[styles.barFill, { width: `${pct}%` }]} />
@@ -32,10 +43,10 @@ export function AttendanceWidget() {
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
     backgroundColor: colors.surfaceWhite,
     borderRadius: radius.lg,
     padding: spacing.md,
+    marginBottom: spacing.lg,
     ...shadow.card,
   },
   icon: { fontSize: 20, marginBottom: spacing.xxs },

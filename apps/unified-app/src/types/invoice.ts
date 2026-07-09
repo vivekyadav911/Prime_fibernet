@@ -78,6 +78,7 @@ export type CreateInvoiceInput = {
   notes?: string | null;
   deliveryChannel?: InvoiceDeliveryChannel | null;
   saveAsDraft?: boolean;
+  paymentId?: string | null;
 };
 
 export type SendInvoiceInput = {

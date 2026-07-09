@@ -13,7 +13,7 @@ type Props = {
 };
 
 export function DenominationInput({ denominations, expectedAmount, onChange }: Props) {
-  const { total, difference, valid } = validateDenominationTotal(denominations, expectedAmount);
+  const { total, difference } = validateDenominationTotal(denominations, expectedAmount);
 
   const setCount = (note: number, count: string) => {
     const parsed = Math.max(0, parseInt(count || '0', 10) || 0);
@@ -38,9 +38,10 @@ export function DenominationInput({ denominations, expectedAmount, onChange }: P
       <Text style={styles.summary}>
         Total: {formatINR(total)} · Expected: {formatINR(expectedAmount)}
       </Text>
-      {difference !== 0 ? (
-        <Text style={[styles.diff, valid ? styles.diffOk : styles.diffBad]}>
-          Difference: {formatINR(Math.abs(difference))} {difference > 0 ? '(overpay)' : '(short)'}
+      {difference !== 0 && total > 0 ? (
+        <Text style={styles.diffWarning}>
+          Reconciliation mismatch (optional): {formatINR(Math.abs(difference))}{' '}
+          {difference > 0 ? 'over' : 'short'} — submission is still allowed
         </Text>
       ) : null}
     </View>
@@ -61,7 +62,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   summary: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
-  diff: { fontSize: 12 },
-  diffOk: { color: colors.accentTeal },
-  diffBad: { color: colors.errorRed },
+  diffWarning: { fontSize: 12, color: colors.amber },
 });

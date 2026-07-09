@@ -7,6 +7,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AdminButton, AdminEmptyState, AdminScreenLayout, Pagination, RoleGuard, SearchBar, SelectField } from '@/components/admin';
 import {
   CollectionAssignmentsFilterSheet,
-  CollectionStatusBadge,
+  CollectionCustomerStatusBadge,
   countActiveCollectionFilters,
 } from '@/components/payments';
 import { ErrorState, SkeletonLoader } from '@/components/common';
@@ -75,6 +76,7 @@ export function CollectionAssignmentsScreen() {
   const [assignModal, setAssignModal] = useState(false);
   const [singleTarget, setSingleTarget] = useState<CollectionAssignmentRow | null>(null);
   const [pickedOfficerId, setPickedOfficerId] = useState<string | null>(null);
+  const [collectionAmountInput, setCollectionAmountInput] = useState('');
 
   const { sortBy, sortDir } = useMemo(() => parseCollectionSortKey(sortKey), [sortKey]);
   const activeFilterCount = useMemo(() => countActiveCollectionFilters(filters), [filters]);
@@ -96,7 +98,7 @@ export function CollectionAssignmentsScreen() {
     collectionStatus: filters.collectionStatus,
     claimFilter: filters.claimFilter,
     outstandingOnly: filters.outstandingOnly,
-    dueForCollectionOnly: filters.dueForCollectionOnly,
+    queueView: filters.queueView,
     sortBy,
     sortDir,
     page,
@@ -137,12 +139,16 @@ export function CollectionAssignmentsScreen() {
   const openBulkAssign = useCallback(() => {
     setSingleTarget(null);
     setPickedOfficerId(null);
+    setCollectionAmountInput('');
     setAssignModal(true);
   }, []);
 
   const openSingleAssign = useCallback((row: CollectionAssignmentRow) => {
     setSingleTarget(row);
     setPickedOfficerId(row.assignedOfficerId ?? 'unassigned');
+    setCollectionAmountInput(
+      row.outstandingAmount > 0 ? String(row.outstandingAmount) : '',
+    );
     setAssignModal(true);
   }, []);
 
@@ -150,20 +156,36 @@ export function CollectionAssignmentsScreen() {
     setAssignModal(false);
     setSingleTarget(null);
     setPickedOfficerId(null);
+    setCollectionAmountInput('');
   }, []);
 
   const confirmAssign = useCallback(async () => {
     const officerId = pickedOfficerId === 'unassigned' ? null : pickedOfficerId;
+    const parsedAmount = collectionAmountInput.trim()
+      ? Number(collectionAmountInput.replace(/,/g, ''))
+      : null;
+    if (parsedAmount != null && (!Number.isFinite(parsedAmount) || parsedAmount <= 0)) {
+      Alert.alert('Invalid amount', 'Enter a collection amount greater than zero, or leave blank.');
+      return;
+    }
     try {
       if (singleTarget) {
-        const result = await assignOne({ customerId: singleTarget.id, officerId }).unwrap();
+        const result = await assignOne({
+          customerId: singleTarget.id,
+          officerId,
+          collectionAmount: parsedAmount,
+        }).unwrap();
         if (result.updatedCount < 1) {
           Alert.alert('No change', 'This customer could not be updated. Check your admin permissions.');
           return;
         }
         Alert.alert('Updated', 'Collection assignment saved.');
       } else if (selected.length) {
-        const result = await bulkAssign({ customerIds: selected, officerId }).unwrap();
+        const result = await bulkAssign({
+          customerIds: selected,
+          officerId,
+          collectionAmount: parsedAmount,
+        }).unwrap();
         if (result.updatedCount < 1) {
           Alert.alert('No change', 'No customers were updated. Check your admin permissions.');
           return;
@@ -182,6 +204,7 @@ export function CollectionAssignmentsScreen() {
     assignOne,
     bulkAssign,
     closeAssignModal,
+    collectionAmountInput,
     pickedOfficerId,
     refetch,
     selected,
@@ -225,7 +248,11 @@ export function CollectionAssignmentsScreen() {
         >
           <View style={styles.cardHeader}>
             <Text style={styles.name}>{item.name}</Text>
-            <CollectionStatusBadge status={item.collectionStatus} />
+            <CollectionCustomerStatusBadge
+              isBlocked={item.isBlocked}
+              paymentStatus={item.paymentStatus}
+              collectionStatus={item.collectionStatus}
+            />
           </View>
           <Text style={styles.meta}>
             {item.customerId}
@@ -238,9 +265,6 @@ export function CollectionAssignmentsScreen() {
           <Text style={styles.assignmentLine}>Officer: {assignmentLabel}</Text>
           {item.claimedByOfficerName ? (
             <Text style={styles.assignmentLine}>Claimed by: {item.claimedByOfficerName}</Text>
-          ) : null}
-          {item.paymentStatus ? (
-            <Text style={styles.status}>{item.paymentStatus}</Text>
           ) : null}
           <View style={styles.actions}>
             {bulkMode ? (
@@ -325,7 +349,13 @@ export function CollectionAssignmentsScreen() {
 
         <Text style={styles.summaryLine}>
           Page {page} of {totalPages} · {rows.length} shown · {total.toLocaleString()} total
-          {filters.dueForCollectionOnly ? ' · Due for collection' : ' · All customers'}
+          {debouncedSearch
+            ? ' · Search results'
+            : filters.queueView === 'upcoming'
+              ? ' · Upcoming payments'
+              : filters.queueView === 'due_for_collection'
+                ? ' · Due for collection'
+                : ' · All customers'}
           {isFetching && !isLoading ? ' · Updating…' : ''}
         </Text>
       </View>
@@ -344,7 +374,8 @@ export function CollectionAssignmentsScreen() {
       sortKey,
       total,
       totalPages,
-      filters.dueForCollectionOnly,
+      filters.queueView,
+      debouncedSearch,
     ],
   );
 
@@ -373,7 +404,21 @@ export function CollectionAssignmentsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           ListHeaderComponent={listHeader}
-          ListEmptyComponent={<AdminEmptyState title="No customers match" iconName="people-outline" />}
+          ListEmptyComponent={
+            <AdminEmptyState
+              title="No customers match"
+              subtitle={
+                filters.queueView === 'due_for_collection' && debouncedSearch
+                  ? 'Try Filters → set queue view to “Upcoming payments” or “All customers”.'
+                  : filters.queueView === 'due_for_collection'
+                    ? 'No accounts are in the collection pool with an outstanding balance. Try “Upcoming payments” to see renewals and overdue accounts.'
+                    : filters.queueView === 'upcoming'
+                      ? 'No active customers have overdue payments or renewals due in the next 30 days.'
+                      : undefined
+              }
+              iconName="people-outline"
+            />
+          }
           ListFooterComponent={
             isFetching && page > 1 ? (
               <View style={styles.footerLoader}>
@@ -413,6 +458,31 @@ export function CollectionAssignmentsScreen() {
             >
               <Text style={styles.modalTitle}>
                 {singleTarget ? `Assign ${singleTarget.name}` : `Assign ${selected.length} customers`}
+              </Text>
+              {singleTarget ? (
+                <Text style={styles.modalHint}>
+                  Effective due: {formatINR(singleTarget.outstandingAmount)}
+                  {singleTarget.outstandingAmount <= 0
+                    ? ' — stored balance is ₹0; amount below can override or use plan-based due.'
+                    : ''}
+                </Text>
+              ) : null}
+              <Text style={styles.modalLabel}>COLLECTION AMOUNT (OPTIONAL OVERRIDE)</Text>
+              <TextInput
+                style={styles.amountInput}
+                value={collectionAmountInput}
+                onChangeText={setCollectionAmountInput}
+                keyboardType="decimal-pad"
+                placeholder={
+                  singleTarget && singleTarget.outstandingAmount > 0
+                    ? String(singleTarget.outstandingAmount)
+                    : 'Plan-based or manual amount'
+                }
+                placeholderTextColor={colors.textSecondary}
+              />
+              <Text style={styles.modalHint}>
+                Leave blank to use plan price or stored outstanding. Set a value to override what
+                the officer should collect.
               </Text>
               <Pressable
                 style={[styles.officerOption, pickedOfficerId === 'unassigned' && styles.officerOptionActive]}
@@ -498,6 +568,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flexShrink: 0,
+  },
   name: { fontWeight: '700', color: colors.textPrimary, flex: 1 },
   meta: { fontSize: 13, color: colors.textSecondary },
   amount: { fontSize: 13, color: colors.textPrimary, fontWeight: '600' },
@@ -518,6 +594,25 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   modalTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  modalHint: { fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+  modalLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    marginTop: spacing.xs,
+  },
+  amountInput: {
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surfaceWhite,
+    fontSize: 15,
+    color: colors.textPrimary,
+    minHeight: 48,
+  },
   officerOption: {
     minHeight: 44,
     justifyContent: 'center',

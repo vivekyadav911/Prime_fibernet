@@ -7,6 +7,7 @@ import type { PaymentRecord, PaymentStatus } from '@/types/payments';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { hasPaymentText, paymentText } from '@/utils/paymentText';
 
 type Props = {
   payment: PaymentRecord;
@@ -25,6 +26,9 @@ function actionForStatus(status: PaymentStatus): string {
 export function PaymentCard({ payment, onPress, actionLabel }: Props) {
   const cta = actionLabel ?? actionForStatus(payment.status);
   const isReview = payment.status === 'pending_review' || payment.status === 'cash_collected';
+  const upiRef = paymentText(payment.gateway_payment_id);
+  const notes = paymentText(payment.cash_collection_notes);
+  const evidenceUrl = paymentText(payment.evidence_photo_url);
 
   return (
     <Pressable style={styles.card} onPress={onPress}>
@@ -48,6 +52,19 @@ export function PaymentCard({ payment, onPress, actionLabel }: Props) {
         </View>
       </View>
       <Text style={styles.date}>{new Date(payment.created_at).toLocaleString()}</Text>
+      {hasPaymentText(upiRef) ? (
+        <Text style={styles.meta} numberOfLines={1}>
+          Ref: {upiRef}
+        </Text>
+      ) : null}
+      {hasPaymentText(notes) ? (
+        <Text style={styles.meta} numberOfLines={2}>
+          Notes: {notes}
+        </Text>
+      ) : null}
+      {hasPaymentText(evidenceUrl) ? (
+        <Text style={styles.metaEvidence}>Evidence photo attached</Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -71,4 +88,6 @@ const styles = StyleSheet.create({
   ctaText: { fontWeight: '600', color: colors.textSecondary, fontSize: 13 },
   ctaTextReview: { color: adminColors.navPillWarningText },
   date: { marginTop: spacing.xs, fontSize: 11, color: colors.textSecondary },
+  meta: { marginTop: spacing.xxs, fontSize: 11, color: colors.textSecondary },
+  metaEvidence: { marginTop: spacing.xxs, fontSize: 11, fontWeight: '600', color: adminColors.primary },
 });

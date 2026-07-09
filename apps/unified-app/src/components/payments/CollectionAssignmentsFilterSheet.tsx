@@ -44,7 +44,8 @@ const CLAIM_OPTIONS = [
 ];
 
 const VIEW_MODE_OPTIONS = [
-  { value: 'due' as const, label: 'Due for collection' },
+  { value: 'upcoming' as const, label: 'Upcoming payments' },
+  { value: 'due_for_collection' as const, label: 'Due for collection' },
   { value: 'all' as const, label: 'Show all customers' },
 ];
 
@@ -58,8 +59,8 @@ export function countActiveCollectionFilters(filters: CollectionAssignmentsFilte
   if (filters.officerFilter !== 'all') count += 1;
   if (filters.paymentStatus !== 'all') count += 1;
   if (filters.collectionStatus !== 'all') count += 1;
-  if (!filters.dueForCollectionOnly) count += 1;
-  if (filters.outstandingOnly && !filters.dueForCollectionOnly) count += 1;
+  if (filters.queueView !== 'upcoming') count += 1;
+  if (filters.queueView === 'all' && filters.outstandingOnly) count += 1;
   if (filters.claimFilter !== 'all') count += 1;
   return count;
 }
@@ -134,18 +135,18 @@ export function CollectionAssignmentsFilterSheet({
 
         <SelectField
           label="Queue view"
-          value={localFilters.dueForCollectionOnly ? 'due' : 'all'}
+          value={localFilters.queueView}
           options={VIEW_MODE_OPTIONS}
           onSelect={(value) =>
             setLocalFilters((prev) => ({
               ...prev,
-              dueForCollectionOnly: value === 'due',
-              outstandingOnly: value === 'due' ? true : prev.outstandingOnly,
+              queueView: value,
+              outstandingOnly: value === 'due_for_collection' ? true : prev.outstandingOnly,
             }))
           }
         />
 
-        {!localFilters.dueForCollectionOnly ? (
+        {localFilters.queueView === 'all' ? (
           <SelectField
             label="Balance"
             value={localFilters.outstandingOnly ? 'outstanding' : 'all'}

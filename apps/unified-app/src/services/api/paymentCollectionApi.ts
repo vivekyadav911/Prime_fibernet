@@ -22,6 +22,8 @@ import type {
 
 import { formatCustomerAccountId } from '@/utils/customerAccount';
 import { parseSupabaseFunctionError } from '@/utils/supabaseFunctionError';
+import { formatSupabaseRpcError } from '@/utils/supabaseRpcError';
+import { paymentText } from '@/utils/paymentText';
 
 import { fetchActiveSubscriptionRow } from '@/services/customer/fetchActiveSubscriptionRow';
 import {
@@ -59,19 +61,19 @@ function mapPayment(row: Record<string, unknown>): PaymentRecord {
     method: row.method as PaymentRecord['method'],
     channel: row.channel as PaymentRecord['channel'],
     gateway_id: (row.gateway_id as string) ?? null,
-    gateway_slug: (row.gateway_slug as string) ?? null,
-    gateway_order_id: (row.gateway_order_id as string) ?? null,
-    gateway_payment_id: (row.gateway_payment_id as string) ?? null,
-    gateway_signature: (row.gateway_signature as string) ?? null,
+    gateway_slug: paymentText(row.gateway_slug),
+    gateway_order_id: paymentText(row.gateway_order_id),
+    gateway_payment_id: paymentText(row.gateway_payment_id),
+    gateway_signature: paymentText(row.gateway_signature),
     gateway_raw_response: (row.gateway_raw_response as Record<string, unknown>) ?? null,
     gateway_fee: row.gateway_fee != null ? Number(row.gateway_fee) : null,
     collected_by: (row.collected_by as string) ?? null,
-    cash_collection_notes: (row.cash_collection_notes as string) ?? null,
+    cash_collection_notes: paymentText(row.cash_collection_notes),
     cash_denominations: (row.cash_denominations as Record<string, number>) ?? null,
-    receipt_number: (row.receipt_number as string) ?? null,
+    receipt_number: paymentText(row.receipt_number),
     collection_latitude: row.collection_latitude != null ? Number(row.collection_latitude) : null,
     collection_longitude: row.collection_longitude != null ? Number(row.collection_longitude) : null,
-    evidence_photo_url: (row.evidence_photo_url as string) ?? null,
+    evidence_photo_url: paymentText(row.evidence_photo_url),
     status: row.status as PaymentRecord['status'],
     reviewed_by: (row.reviewed_by as string) ?? null,
     reviewed_at: (row.reviewed_at as string) ?? null,
@@ -301,16 +303,25 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
               next_due_date: nextDueDate,
               cash_denominations: cashDenominations ?? null,
               receipt_number: receiptNumber ?? null,
+              confirmed_at: new Date().toISOString(),
             })
             .eq('id', paymentId);
           if (error) throw error;
-          await client.functions.invoke('generate-payment-receipt', { body: { paymentId } });
-          void client.functions
-            .invoke('send-payment-whatsapp', { body: { payment_id: paymentId } })
-            .catch(() => undefined);
+
+          const { data: paymentRow } = await client
+            .from('payments')
+            .select('channel')
+            .eq('id', paymentId)
+            .maybeSingle();
+          if (
+            paymentRow?.channel === 'officer_cash' ||
+            paymentRow?.channel === 'office_cash'
+          ) {
+            await client.rpc('finalize_officer_collection', { p_payment_id: paymentId });
+          }
         },
       }),
-      invalidatesTags: ['Payments', 'Analytics'],
+      invalidatesTags: ['Payments', 'Analytics', 'CollectionAssignments'],
     }),
 
     rejectPaymentV2: builder.mutation<void, { paymentId: string; reason: string }>({
@@ -479,11 +490,12 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
               cash_collection_notes: body.notes,
               cash_denominations: body.denominations,
               receipt_number:
-                method === 'card' && body.paymentReference
-                  ? `CARD-${body.paymentReference}`
+                method === 'netbanking' && body.paymentReference
+                  ? `NB-${body.paymentReference}`
                   : null,
               gateway_payment_id: method === 'upi' ? body.paymentReference : null,
-              status: 'cash_collected',
+              status: 'pending_review',
+              verification_method: 'manual',
               paid_at: new Date().toISOString(),
               due_date: body.dueDate,
               billing_period_start: body.billingStart,
@@ -717,9 +729,9 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
         handler: async (client) => {
           const today = new Date().toISOString().slice(0, 10);
           const all = await fetchOfficerCollectibleCustomers(client);
-          const myWork = all.filter(
-            (c) => c.assignmentType === 'assigned' || c.assignmentType === 'claimed',
-          );
+          const myWork = all
+            .filter((c) => c.assignmentType === 'assigned' || c.assignmentType === 'claimed')
+            .filter((c) => c.outstanding_amount > 0);
           const openPool = all.filter((c) => c.assignmentType === 'open_pool');
 
           const { data: officerId } = await client.rpc('current_officer_id');
@@ -733,7 +745,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
           const rows = collections ?? [];
           const todayTotal = rows.reduce((s, p) => s + Number(p.total_amount ?? 0), 0);
           const confirmedToday = rows.filter((p) => p.status === 'confirmed').length;
-          const pending = myWork.filter((c) => c.outstanding_amount > 0);
+          const pending = myWork;
 
           return { myWork, openPool, assigned: myWork, pending, todayTotal, confirmedToday };
         },
@@ -844,7 +856,7 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
       }),
     }),
 
-    getPaymentReceipt: builder.query<{ url: string | null; receiptNumber: string }, string>({
+    getPaymentReceipt: builder.query<{ url: string | null; receiptNumber: string; html?: string | null }, string>({
       query: (paymentId) => ({
         handler: async (client) => {
           const { data, error } = await client.functions.invoke('generate-payment-receipt', {
@@ -854,9 +866,13 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             const msg = await parseSupabaseFunctionError(error, 'Could not generate receipt.');
             throw new Error(msg);
           }
-          const res = data as { url?: string; receiptNumber?: string; error?: string };
+          const res = data as { url?: string; receiptNumber?: string; html?: string; error?: string };
           if (res.error) throw new Error(res.error);
-          return { url: res.url ?? null, receiptNumber: res.receiptNumber ?? '' };
+          return {
+            url: res.url ?? null,
+            receiptNumber: res.receiptNumber ?? '',
+            html: res.html ?? null,
+          };
         },
       }),
     }),
@@ -889,7 +905,9 @@ export const paymentCollectionApi = baseApi.injectEndpoints({
             p_bank_account_id: body.bankAccountId ?? null,
             p_verification_method: body.verificationMethod ?? 'manual',
           });
-          if (error) throw error;
+          if (error) {
+            throw new Error(formatSupabaseRpcError(error, 'Could not record payment. Try again.'));
+          }
           const result = data as { payment_id?: string; status?: string };
           return {
             paymentId: String(result.payment_id),

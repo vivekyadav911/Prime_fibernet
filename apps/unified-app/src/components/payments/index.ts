@@ -1,5 +1,6 @@
 export { AmountDisplay } from './AmountDisplay';
 export { CollectionStatusBadge } from './CollectionStatusBadge';
+export { CollectionCustomerStatusBadge } from './CollectionCustomerStatusBadge';
 export { BillingStatusBadge } from './BillingStatusBadge';
 export type { BillingStatus } from './BillingStatusBadge';
 export { DenominationInput } from './DenominationInput';

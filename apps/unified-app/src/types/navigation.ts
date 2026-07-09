@@ -394,7 +394,21 @@ export type AdminInvoicesStackParamList = {
   InvoiceHistory: undefined;
   GstInvoiceRequests: undefined;
   ManualGstInvoice: undefined;
-  CreateInvoice: { invoiceType?: 'non_gst' | 'gst' | 'custom_gst' } | undefined;
+  CreateInvoice:
+    | {
+        invoiceType?: 'non_gst' | 'gst' | 'custom_gst';
+        prefillFromPayment?: {
+          paymentId: string;
+          customerId: string;
+          customerName: string;
+          customerEmail?: string | null;
+          customerPhone?: string | null;
+          amount: number;
+          planName?: string | null;
+          notes?: string | null;
+        };
+      }
+    | undefined;
   InvoiceSettings: undefined;
   InvoicePdfViewer: { storagePath: string; title?: string; fileName?: string };
 };

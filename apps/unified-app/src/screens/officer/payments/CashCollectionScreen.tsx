@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
@@ -12,6 +12,7 @@ import { SyncManager } from '@/services/offline/syncManager';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
 import { parseAmountInput } from '@/utils/currencyFormat';
+import { formatSupabaseRpcError } from '@/utils/supabaseRpcError';
 import type { OfficerCollectionsStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
@@ -23,11 +24,13 @@ import {
 
 type Props = NativeStackScreenProps<OfficerCollectionsStackParamList, 'CashCollection'>;
 
+const GPS_TIMEOUT_MS = 8000;
+
 export function CashCollectionScreen({ navigation, route }: Props) {
   const { customerId, customerName, accountNumber, amount: defaultAmount, dueDate, planName } =
     route.params;
   const dispatch = useAppDispatch();
-  const { coords } = useLocation();
+  const { coords, error: locationError, startTracking, stopTracking } = useLocation();
   const [recordCollection, { isLoading }] = useRecordCashCollectionMutation();
 
   const [method, setMethod] = useState<PaymentMethodOption>('cash');
@@ -35,6 +38,7 @@ export function CashCollectionScreen({ navigation, route }: Props) {
   const [paymentReference, setPaymentReference] = useState('');
   const [notes, setNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | undefined>();
+  const [gpsTimedOut, setGpsTimedOut] = useState(false);
   const [denominations, setDenominations] = useState<Record<string, number>>({
     '500': 0,
     '200': 0,
@@ -43,6 +47,15 @@ export function CashCollectionScreen({ navigation, route }: Props) {
     '20': 0,
     '10': 0,
   });
+
+  useEffect(() => {
+    const timer = setTimeout(() => setGpsTimedOut(true), GPS_TIMEOUT_MS);
+    void startTracking();
+    return () => {
+      clearTimeout(timer);
+      stopTracking();
+    };
+  }, [startTracking, stopTracking]);
 
   const pickPhoto = useCallback(async () => {
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
@@ -57,8 +70,8 @@ export function CashCollectionScreen({ navigation, route }: Props) {
       Alert.alert('Invalid amount', 'Enter a valid collection amount.');
       return;
     }
-    if (method === 'card' && !/^\d{4}$/.test(paymentReference.trim())) {
-      Alert.alert('Invalid card', 'Enter last 4 digits of the card.');
+    if (method === 'netbanking' && paymentReference.trim().length < 4) {
+      Alert.alert('Invalid reference', 'Enter the bank reference / UTR number.');
       return;
     }
     if (method === 'upi' && paymentReference.trim().length < 4) {
@@ -82,16 +95,19 @@ export function CashCollectionScreen({ navigation, route }: Props) {
     };
     try {
       await recordCollection(payload).unwrap();
-      Alert.alert('Recorded', 'Collection recorded successfully.');
+      Alert.alert('Recorded', 'Collection submitted for admin verification.');
       navigation.goBack();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Could not record this collection. Try again.';
+      const message = formatSupabaseRpcError(
+        err,
+        err instanceof Error ? err.message : 'Could not record this collection. Try again.',
+      );
       if (
         message.includes('not assigned') ||
         message.includes('another officer') ||
         message.includes('policy') ||
-        message.includes('permission')
+        message.includes('permission') ||
+        message.includes('not authorized')
       ) {
         Alert.alert('Cannot collect', message);
         return;
@@ -130,6 +146,14 @@ export function CashCollectionScreen({ navigation, route }: Props) {
     recordCollection,
   ]);
 
+  const gpsLabel = coords
+    ? `📍 ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)} · Captured`
+    : locationError
+      ? `📍 Location unavailable — collection can still proceed (${locationError})`
+      : gpsTimedOut
+        ? '📍 GPS timed out — collection can still proceed without location'
+        : '📍 Waiting for GPS…';
+
   return (
     <ScreenWrapper scrollable={false} padded={false}>
       <DismissKeyboardScrollView contentContainerStyle={styles.content}>
@@ -154,10 +178,10 @@ export function CashCollectionScreen({ navigation, route }: Props) {
               onChangeText={setAmount}
               placeholderTextColor={colors.textSecondary}
             />
-            <Text style={styles.label}>DENOMINATION BREAKDOWN</Text>
+            <Text style={styles.label}>DENOMINATION BREAKDOWN (OPTIONAL)</Text>
             <DenominationInput
               denominations={denominations}
-              expectedAmount={parseAmountInput(amount)}
+              expectedAmount={parseAmountInput(amount) ?? 0}
               onChange={setDenominations}
             />
           </>
@@ -172,15 +196,15 @@ export function CashCollectionScreen({ navigation, route }: Props) {
               placeholderTextColor={colors.textSecondary}
             />
             <Text style={styles.label}>
-              {method === 'card' ? 'CARD LAST 4 DIGITS' : 'UPI TRANSACTION ID'}
+              {method === 'netbanking' ? 'BANK REFERENCE / UTR NUMBER' : 'UPI TRANSACTION ID'}
             </Text>
             <TextInput
               style={styles.input}
-              keyboardType={method === 'card' ? 'number-pad' : 'default'}
+              keyboardType="default"
               value={paymentReference}
               onChangeText={setPaymentReference}
-              maxLength={method === 'card' ? 4 : 64}
-              placeholder={method === 'card' ? '1234' : 'UPI reference'}
+              maxLength={64}
+              placeholder={method === 'netbanking' ? 'UTR or bank reference' : 'UPI reference'}
               placeholderTextColor={colors.textSecondary}
             />
           </>
@@ -196,13 +220,7 @@ export function CashCollectionScreen({ navigation, route }: Props) {
           placeholderTextColor={colors.textSecondary}
         />
 
-        {coords ? (
-          <Text style={styles.gps}>
-            📍 {coords.latitude.toFixed(4)}, {coords.longitude.toFixed(4)} · Captured
-          </Text>
-        ) : (
-          <Text style={styles.gps}>📍 Waiting for GPS…</Text>
-        )}
+        <Text style={styles.gps}>{gpsLabel}</Text>
 
         <Button
           label={photoUri ? 'Photo captured ✓' : 'Take evidence photo (optional)'}

@@ -76,7 +76,7 @@ export function OfficerCollectionsStackNav() {
       <CollectionsStack.Screen
         name="CashCollection"
         component={CashCollectionScreen}
-        options={{ title: 'Collect cash' }}
+        options={{ title: 'Collect Payment' }}
       />
       <CollectionsStack.Screen
         name="CollectionHistory"

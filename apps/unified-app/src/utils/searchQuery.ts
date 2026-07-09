@@ -20,3 +20,14 @@ export function buildUserSearchOrFilter(search: string): string {
 
   return clauses.join(',');
 }
+
+/** Collection assignments: name, account (customer_id), phone only — avoids email/username false positives. */
+export function buildCollectionAssignmentSearchFilter(search: string): string {
+  const trimmed = search.trim();
+  const pattern = `%${escapeIlikePattern(trimmed)}%`;
+  return [
+    `name.ilike."${pattern}"`,
+    `phone.ilike."${pattern}"`,
+    `customer_id.ilike."${pattern}"`,
+  ].join(',');
+}

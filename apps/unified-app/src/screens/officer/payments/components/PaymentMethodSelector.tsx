@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 
-export type PaymentMethodOption = 'cash' | 'card' | 'upi';
+export type PaymentMethodOption = 'cash' | 'netbanking' | 'upi';
 
 type PaymentMethodSelectorProps = {
   value: PaymentMethodOption;
@@ -12,7 +12,7 @@ type PaymentMethodSelectorProps = {
 
 const METHODS: { key: PaymentMethodOption; label: string; icon: string }[] = [
   { key: 'cash', label: 'Cash', icon: '💵' },
-  { key: 'card', label: 'Card', icon: '💳' },
+  { key: 'netbanking', label: 'Netbanking', icon: '🏦' },
   { key: 'upi', label: 'UPI', icon: '📱' },
 ];
 

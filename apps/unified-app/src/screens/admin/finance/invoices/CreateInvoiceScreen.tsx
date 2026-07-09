@@ -38,6 +38,7 @@ const DEFAULT_LINE: InvoiceLineItem = {
 export function CreateInvoiceScreen({ navigation, route }: Props) {
   const dispatch = useAppDispatch();
   const invoiceType: InvoiceType = route.params?.invoiceType ?? 'gst';
+  const prefill = route.params?.prefillFromPayment;
   const { data: settings } = useGetInvoiceSettingsQuery();
   const [createInvoice, { isLoading: creating }] = useCreateInvoiceMutation();
   const [sendInvoice, { isLoading: sending }] = useSendInvoiceMutation();
@@ -59,6 +60,7 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
   const [recipientPhone, setRecipientPhone] = useState('');
   const [recipientCustomer, setRecipientCustomer] = useState<AdminUserListItem | null>(null);
   const [emailError, setEmailError] = useState<string | undefined>();
+  const [linkedPaymentId, setLinkedPaymentId] = useState<string | null>(null);
 
   const defaultHsn = String(settings?.default_hsn_sac ?? '998422');
 
@@ -71,6 +73,46 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
           : 'Create GST invoice';
     navigation.setOptions({ title });
   }, [invoiceType, navigation]);
+
+  useEffect(() => {
+    if (!prefill) return;
+    setLinkedPaymentId(prefill.paymentId);
+    setCustomerName(prefill.customerName);
+    setCustomerEmail(prefill.customerEmail ?? '');
+    setCustomerPhone(prefill.customerPhone ?? '');
+    setRecipientEmail(prefill.customerEmail ?? '');
+    setRecipientPhone(prefill.customerPhone ?? '');
+    if (prefill.notes?.trim()) {
+      setNotes(`Payment ${prefill.paymentId.slice(0, 8)}… — ${prefill.notes.trim()}`);
+    }
+    setLineItems([
+      {
+        ...DEFAULT_LINE,
+        description: prefill.planName?.trim()
+          ? `Internet service — ${prefill.planName}`
+          : 'Internet service',
+        unitPrice: prefill.amount,
+        gstRate: invoiceType === 'non_gst' ? 0 : 18,
+      },
+    ]);
+    if (prefill.customerId) {
+      setSelectedCustomer({
+        id: prefill.customerId,
+        legacyUserId: null,
+        name: prefill.customerName,
+        email: prefill.customerEmail ?? '',
+        phone: prefill.customerPhone ?? null,
+        username: null,
+        city: null,
+        planName: prefill.planName ?? 'Standard',
+        status: 'active',
+        isBlocked: false,
+      });
+      setManualEntry(false);
+    } else {
+      setManualEntry(true);
+    }
+  }, [invoiceType, prefill]);
 
   useEffect(() => {
     if (selectedCustomer && !manualEntry) {
@@ -115,6 +157,7 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
       notes: notes.trim() || null,
       deliveryChannel,
       saveAsDraft,
+      paymentId: linkedPaymentId,
     }),
     [
       billingAddress,
@@ -126,6 +169,7 @@ export function CreateInvoiceScreen({ navigation, route }: Props) {
       deliveryChannel,
       invoiceType,
       lineItems,
+      linkedPaymentId,
       notes,
       recipientEmail,
       recipientPhone,

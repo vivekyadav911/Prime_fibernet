@@ -141,13 +141,13 @@ export type PaymentActivityEvent = {
 export type ManualPaymentPayload = {
   customerId: string;
   amount: number;
-  method: 'cash' | 'card' | 'upi' | 'bank_transfer' | 'other';
+  method: 'cash' | 'netbanking' | 'upi' | 'bank_transfer' | 'other';
   reference?: string;
   notes?: string;
   confirmed?: boolean;
   ticketId?: string;
   bankAccountId?: string;
-  verificationMethod?: 'manual' | 'webhook';
+  verificationMethod?: 'manual' | 'webhook' | 'qr';
 };
 
 export type BankAccountRecord = {
@@ -292,7 +292,7 @@ export interface CashCollectionPayload {
   accountNumber: string;
   planName?: string;
   amount: number;
-  method?: 'cash' | 'card' | 'upi';
+  method?: 'cash' | 'netbanking' | 'upi';
   paymentReference?: string;
   notes?: string;
   denominations?: Record<string, number>;
@@ -363,7 +363,7 @@ export const PAYMENT_METHOD_CONFIG: Record<
   PaymentMethod,
   { label: string; icon: string; color: string }
 > = {
-  card: { label: 'Card', icon: '💳', color: '#3B82F6' },
+  card: { label: 'Card (legacy)', icon: '💳', color: '#3B82F6' },
   upi: { label: 'UPI', icon: '📱', color: adminColors.primary },
   netbanking: { label: 'Netbanking', icon: '🏦', color: colors.accentTeal },
   wallet: { label: 'Wallet', icon: '👛', color: adminColors.badgePending },

@@ -3,10 +3,11 @@ import type {
   CollectionAssignmentsParams,
   CollectionAssignmentsResponse,
 } from '@/types/api/admin';
+import { COLLECTION_UPCOMING_HORIZON_DAYS } from '@/types/api/admin';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { buildUserSearchOrFilter } from '@/utils/searchQuery';
+import { buildCollectionAssignmentSearchFilter } from '@/utils/searchQuery';
 import { insertOfficerPortalNotification } from '@/utils/officerPortalNotification';
 
 import { baseApi } from './baseApi';
@@ -16,10 +17,12 @@ async function persistCollectionAssignments(
   client: SupabaseClient,
   customerIds: string[],
   officerId: string | null,
+  collectionAmount?: number | null,
 ): Promise<{ updatedCount: number }> {
   const { data, error } = await client.rpc('bulk_assign_collection_officer', {
     p_customer_ids: customerIds,
     p_officer_id: officerId,
+    p_collection_amount: collectionAmount ?? null,
   });
 
   let updatedCount = 0;
@@ -66,9 +69,39 @@ async function persistCollectionAssignments(
   return { updatedCount };
 }
 
+async function enrichAssignmentAmounts(
+  client: SupabaseClient,
+  rows: Record<string, unknown>[],
+): Promise<Map<string, number>> {
+  const ids = rows.map((row) => String(row.id));
+  if (!ids.length) return new Map();
+
+  const { data, error } = await client.rpc('get_customer_collection_amounts', {
+    p_customer_ids: ids,
+  });
+  if (error) throw error;
+
+  return new Map(
+    (data ?? []).map((row: Record<string, unknown>) => [
+      String(row.customer_id),
+      Number(row.effective_amount ?? 0),
+    ]),
+  );
+}
+
+function formatDueDate(
+  nextDueDate: unknown,
+  expiryDate: unknown,
+): string | null {
+  if (nextDueDate != null) return String(nextDueDate).slice(0, 10);
+  if (expiryDate != null) return String(expiryDate).slice(0, 10);
+  return null;
+}
+
 function mapAssignmentRow(
   row: Record<string, unknown>,
   officerNameById: Map<string, string>,
+  effectiveOutstanding?: number,
 ): CollectionAssignmentRow {
   const officerId = (row.assigned_officer_id as string) ?? null;
   const claimedId = (row.claimed_by_officer_id as string) ?? null;
@@ -77,10 +110,11 @@ function mapAssignmentRow(
     name: row.name as string,
     customerId: (row.customer_id as string) ?? '',
     phone: (row.phone as string) ?? null,
-    outstandingAmount: Number(row.outstanding_amount ?? 0),
-    nextDueDate: row.next_due_date != null ? String(row.next_due_date) : null,
+    outstandingAmount: effectiveOutstanding ?? Number(row.outstanding_amount ?? 0),
+    nextDueDate: formatDueDate(row.next_due_date, row.expiry_date),
     paymentStatus: (row.payment_status as string) ?? null,
     collectionStatus: (row.collection_status as string) ?? null,
+    isBlocked: Boolean(row.is_blocked),
     assignedOfficerId: officerId,
     assignedOfficerName: officerId ? officerNameById.get(officerId) ?? null : null,
     claimedByOfficerId: claimedId,
@@ -97,17 +131,20 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
           const limit = filters.limit ?? 25;
           const offset = (page - 1) * limit;
 
+          const queueView = filters.queueView ?? 'upcoming';
+
           let query = client
             .from('users')
             .select(
-              'id, name, customer_id, phone, outstanding_amount, next_due_date, payment_status, assigned_officer_id, collection_status, claimed_by_officer_id',
+              'id, name, customer_id, phone, outstanding_amount, next_due_date, expiry_date, payment_status, collection_status, is_blocked, assigned_officer_id, claimed_by_officer_id',
               { count: 'exact' },
             )
             .eq('role', 'customer');
 
           const search = filters.search?.trim();
+          const searchActive = Boolean(search);
           if (search) {
-            query = query.or(buildUserSearchOrFilter(search));
+            query = query.or(buildCollectionAssignmentSearchFilter(search));
           }
 
           if (filters.officerFilter === 'open_pool' || filters.officerFilter === 'unassigned') {
@@ -119,9 +156,20 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
             query = query.eq('assigned_officer_id', filters.officerFilter);
           }
 
-          if (filters.dueForCollectionOnly) {
+          if (!searchActive && queueView === 'upcoming') {
+            const today = new Date();
+            const todayStr = today.toISOString().slice(0, 10);
+            const horizon = new Date(today);
+            horizon.setUTCDate(horizon.getUTCDate() + COLLECTION_UPCOMING_HORIZON_DAYS);
+            const horizonStr = `${horizon.toISOString().slice(0, 10)}T23:59:59.999Z`;
             query = query
-              .gt('outstanding_amount', 0)
+              .eq('is_blocked', false)
+              .not('payment_status', 'eq', 'suspended')
+              .or(
+                `payment_status.eq.overdue,and(expiry_date.gte.${todayStr},expiry_date.lte.${horizonStr})`,
+              );
+          } else if (!searchActive && queueView === 'due_for_collection') {
+            query = query
               .not('payment_status', 'eq', 'suspended')
               .in('collection_status', ['open', 'assigned', 'claimed']);
           }
@@ -140,10 +188,6 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
             query = query.is('claimed_by_officer_id', null);
           }
 
-          if (filters.outstandingOnly) {
-            query = query.gt('outstanding_amount', 0);
-          }
-
           const sortBy = filters.sortBy ?? 'due_date';
           const ascending = (filters.sortDir ?? 'asc') === 'asc';
 
@@ -153,6 +197,10 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
             query = query.order('outstanding_amount', { ascending }).order('id', { ascending: true });
           } else if (sortBy === 'collection_status') {
             query = query.order('collection_status', { ascending }).order('name', { ascending: true });
+          } else if (queueView === 'upcoming') {
+            query = query
+              .order('expiry_date', { ascending, nullsFirst: false })
+              .order('name', { ascending: true });
           } else {
             query = query
               .order('next_due_date', { ascending, nullsFirst: false })
@@ -174,10 +222,30 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
           ];
 
           const officerNameById = await fetchOfficerNameMap(client, officerIds);
+          const effectiveById = await enrichAssignmentAmounts(client, data ?? []);
+
+          let items = (data ?? []).map((row) =>
+            mapAssignmentRow(
+              row,
+              officerNameById,
+              effectiveById.get(String(row.id)),
+            ),
+          );
+
+          if (
+            !searchActive &&
+            (queueView === 'due_for_collection' || (queueView === 'all' && filters.outstandingOnly))
+          ) {
+            items = items.filter((row) => row.outstandingAmount > 0);
+          }
 
           return {
-            items: (data ?? []).map((row) => mapAssignmentRow(row, officerNameById)),
-            total: count ?? 0,
+            items,
+            total:
+              !searchActive &&
+              (queueView === 'due_for_collection' || (queueView === 'all' && filters.outstandingOnly))
+                ? items.length
+                : count ?? 0,
             page,
             limit,
           };
@@ -192,7 +260,7 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
           const { data, error } = await client
             .from('users')
             .select(
-              'id, name, customer_id, phone, outstanding_amount, next_due_date, payment_status, assigned_officer_id, collection_status, claimed_by_officer_id',
+              'id, name, customer_id, phone, outstanding_amount, next_due_date, expiry_date, payment_status, collection_status, is_blocked, assigned_officer_id, claimed_by_officer_id',
             )
             .eq('id', customerId)
             .single();
@@ -205,7 +273,10 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
 
           const officerNameById = await fetchOfficerNameMap(client, officerIds);
 
-          return mapAssignmentRow(data as Record<string, unknown>, officerNameById);
+          const effectiveById = await enrichAssignmentAmounts(client, [data as Record<string, unknown>]);
+          const effective = effectiveById.get(customerId);
+
+          return mapAssignmentRow(data as Record<string, unknown>, officerNameById, effective);
         },
       }),
       providesTags: (_r, _e, id) => [{ type: 'CollectionAssignments', id }],
@@ -213,21 +284,22 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
 
     bulkAssignCollectionOfficer: builder.mutation<
       { updatedCount: number },
-      { customerIds: string[]; officerId: string | null }
+      { customerIds: string[]; officerId: string | null; collectionAmount?: number | null }
     >({
-      query: ({ customerIds, officerId }) => ({
-        handler: async (client) => persistCollectionAssignments(client, customerIds, officerId),
+      query: ({ customerIds, officerId, collectionAmount }) => ({
+        handler: async (client) =>
+          persistCollectionAssignments(client, customerIds, officerId, collectionAmount),
       }),
       invalidatesTags: ['CollectionAssignments', 'Users', 'Payments'],
     }),
 
     assignCollectionOfficer: builder.mutation<
       { updatedCount: number },
-      { customerId: string; officerId: string | null }
+      { customerId: string; officerId: string | null; collectionAmount?: number | null }
     >({
-      query: ({ customerId, officerId }) => ({
+      query: ({ customerId, officerId, collectionAmount }) => ({
         handler: async (client) =>
-          persistCollectionAssignments(client, [customerId], officerId),
+          persistCollectionAssignments(client, [customerId], officerId, collectionAmount),
       }),
       invalidatesTags: ['CollectionAssignments', 'Users', 'Payments'],
     }),

@@ -28,7 +28,12 @@ function receiptHtml(payment: Record<string, unknown>, company: Record<string, u
       year: 'numeric',
     })
     : '—';
-  const methodLabel = escapeHtml(String(payment.method ?? 'Online')).replace(/_/g, ' ').toUpperCase();
+  const methodLabel = escapeHtml(
+    String(payment.method ?? 'Online')
+      .replace(/_/g, ' ')
+      .replace(/^card$/i, 'Card (legacy)')
+      .replace(/^netbanking$/i, 'Netbanking'),
+  ).toUpperCase();
   const amount = Number(payment.total_amount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
   const companyName = escapeHtml(company.company_name ?? 'Prime Fibernet');
   const companyAddress = escapeHtml(company.company_address ?? '');
@@ -156,6 +161,15 @@ async function createFreshSignedUrl(
   return signed?.signedUrl ?? null;
 }
 
+async function downloadReceiptHtml(
+  supabase: ReturnType<typeof createClient>,
+  storagePath: string,
+): Promise<string | null> {
+  const { data, error } = await supabase.storage.from('exports').download(storagePath);
+  if (error || !data) return null;
+  return new TextDecoder().decode(await data.arrayBuffer());
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -185,6 +199,17 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await userClient.auth.getUser();
     if (authErr || !user) return json401('Invalid or expired token');
 
+    const [{ data: isAdmin }, { data: customerUserId }] = await Promise.all([
+      userClient.rpc('is_admin_user'),
+      userClient.rpc('current_customer_user_id'),
+    ]);
+    const callerIsAdmin = Boolean(isAdmin);
+    const callerIsCustomer = Boolean(customerUserId);
+
+    // #region agent log
+    console.log('[generate-payment-receipt] auth:', { callerIsAdmin, callerIsCustomer, userId: user.id });
+    // #endregion
+
     let body: { paymentId?: string };
     try {
       body = await req.json();
@@ -195,15 +220,11 @@ serve(async (req) => {
     const { paymentId } = body;
     if (!paymentId) return jsonError('paymentId required');
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // #region agent log
+    console.log('[generate-payment-receipt] paymentId:', paymentId);
+    // #endregion
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-    const callerIsAdmin = profile?.role === 'admin';
-    const callerIsCustomer = profile?.role === 'customer';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const { data: payment, error: payErr } = await supabase
       .from('payments')
@@ -211,10 +232,11 @@ serve(async (req) => {
       .eq('id', paymentId)
       .single();
 
-    if (!payErr && payment && callerIsCustomer) {
-      const { data: customerUserId, error: cidErr } = await userClient.rpc('current_customer_user_id');
-      if (cidErr || !customerUserId || payment.customer_id !== customerUserId) return json403();
-    } else if (!payErr && payment && !callerIsAdmin && !callerIsCustomer) {
+    if (!payErr && payment && callerIsAdmin) {
+      // Admin may also have a users row — skip customer/officer checks.
+    } else if (!payErr && payment && callerIsCustomer) {
+      if (!customerUserId || payment.customer_id !== customerUserId) return json403();
+    } else if (!payErr && payment && !callerIsCustomer) {
       const { data: officer } = await supabase
         .from('officers')
         .select('id')
@@ -227,6 +249,10 @@ serve(async (req) => {
       console.error('Payment fetch error:', payErr?.message);
       return jsonError('Payment not found', 404);
     }
+
+    // #region agent log
+    console.log('[generate-payment-receipt] status:', payment.status, 'payment_number:', payment.payment_number);
+    // #endregion
 
     if (payment.status !== 'confirmed') {
       return jsonError(`Receipt only available for confirmed payments. Current status: ${payment.status}`);
@@ -288,13 +314,22 @@ serve(async (req) => {
 
     if (existing) {
       const freshUrl = await createFreshSignedUrl(supabase, storagePath);
+      let cachedHtml = await downloadReceiptHtml(supabase, storagePath);
+      if (!cachedHtml?.trim()) {
+        cachedHtml = receiptHtml(payment, settings ?? {});
+      }
       if (freshUrl) {
         await supabase
           .from('payment_receipts')
           .update({ pdf_url: freshUrl })
           .eq('payment_id', paymentId);
         return new Response(
-          JSON.stringify({ url: freshUrl, receiptNumber: existing.receipt_number, receiptId: existing.id }),
+          JSON.stringify({
+            url: freshUrl,
+            html: cachedHtml,
+            receiptNumber: existing.receipt_number,
+            receiptId: existing.id,
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
@@ -314,6 +349,10 @@ serve(async (req) => {
       console.error('Storage upload error:', uploadError.message);
       return jsonError('Could not store receipt file', 500);
     }
+
+    // #region agent log
+    console.log('[generate-payment-receipt] uploaded:', storagePath);
+    // #endregion
 
     const pdfUrl = await createFreshSignedUrl(supabase, storagePath);
     if (!pdfUrl) return jsonError('Could not generate download link', 500);
@@ -346,7 +385,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ url: pdfUrl, receiptNumber: receipt.receipt_number, receiptId: receipt.id }),
+      JSON.stringify({ url: pdfUrl, html, receiptNumber: receipt.receipt_number, receiptId: receipt.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {

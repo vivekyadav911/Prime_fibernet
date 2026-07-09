@@ -7,25 +7,24 @@ import { z } from 'zod';
 import { SelectCustomerModal } from '@/components/TicketPortal/SelectCustomerModal';
 import { Button } from '@prime/ui';
 import { DismissKeyboardScrollView } from '@/components/common';
-import { useOfficerAssignedTickets } from '@/hooks/officer';
 import {
   useGetBankAccountsQuery,
   useRecordManualPaymentMutation,
 } from '@/services/api/paymentCollectionApi';
-import { useAppSelector } from '@/store/hooks';
 import type { AdminUserListItem } from '@/types/api/admin';
 import type { BankAccountRecord } from '@/types/payments';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { parseAmountInput } from '@/utils/currencyFormat';
 
-import { UpiQrDisplay } from './UpiQrDisplay';
+import { OfficerDigitalUpiFields, type DigitalSubMode } from './OfficerDigitalUpiFields';
 
 type CollectionMode = 'cash' | 'digital';
 
 const formSchema = z.object({
   amount: z.string().min(1, 'Amount is required'),
   notes: z.string().optional(),
+  upiReference: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -35,27 +34,33 @@ type Props = {
   onCancel?: () => void;
 };
 
+function paymentErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return 'Could not record payment. Try again.';
+}
+
 export function OfficerRecordPaymentForm({ onSuccess, onCancel }: Props) {
-  const user = useAppSelector((s) => s.auth.user);
   const [customer, setCustomer] = useState<AdminUserListItem | null>(null);
-  const [ticketId, setTicketId] = useState<string | null>(null);
   const [mode, setMode] = useState<CollectionMode>('cash');
+  const [digitalSubMode, setDigitalSubMode] = useState<DigitalSubMode>('qr');
   const [bankAccountId, setBankAccountId] = useState<string | null>(null);
   const [showQr, setShowQr] = useState(false);
   const [pickerVisible, setPickerVisible] = useState(false);
 
   const { data: bankAccounts = [] } = useGetBankAccountsQuery();
-  const { items: tickets } = useOfficerAssignedTickets(user?.id);
   const [recordPayment, { isLoading }] = useRecordManualPaymentMutation();
 
   const {
     control,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { amount: '', notes: '' },
+    defaultValues: { amount: '', notes: '', upiReference: '' },
   });
 
   const amountStr = watch('amount');
@@ -73,21 +78,10 @@ export function OfficerRecordPaymentForm({ onSuccess, onCancel }: Props) {
     return defaultBank;
   }, [bankAccountId, bankAccounts, defaultBank]);
 
-  const customerTickets = useMemo(() => {
-    if (!customer) return tickets;
-    return tickets.filter(
-      (t) => t.kind === 'ticket' && t.ticket?.customerId === customer.id,
-    );
-  }, [customer, tickets]);
-
   const onSubmitCash = useCallback(
     async (values: FormValues) => {
       if (!customer) {
         Alert.alert('Select customer', 'Choose the customer this payment is for.');
-        return;
-      }
-      if (!ticketId) {
-        Alert.alert('Select ticket', 'Link this payment to an assigned ticket.');
         return;
       }
       const amount = parseAmountInput(values.amount);
@@ -99,26 +93,22 @@ export function OfficerRecordPaymentForm({ onSuccess, onCancel }: Props) {
           amount,
           method: 'cash',
           notes: values.notes?.trim() || undefined,
-          confirmed: true,
-          ticketId,
+          confirmed: false,
           verificationMethod: 'manual',
         }).unwrap();
-        Alert.alert('Cash recorded', 'Payment confirmed.');
+        Alert.alert('Submitted', 'Cash collection sent for admin verification.');
         onSuccess?.(result.paymentId);
       } catch (e) {
-        Alert.alert('Could not record payment', e instanceof Error ? e.message : 'Try again.');
+        console.error('[OfficerRecordPayment] cash collection failed', e);
+        Alert.alert('Could not record payment', paymentErrorMessage(e));
       }
     },
-    [customer, onSuccess, recordPayment, ticketId],
+    [customer, onSuccess, recordPayment],
   );
 
   const onShowQr = useCallback(() => {
     if (!customer) {
       Alert.alert('Select customer', 'Choose the customer first.');
-      return;
-    }
-    if (!ticketId) {
-      Alert.alert('Select ticket', 'Link this payment to an assigned ticket.');
       return;
     }
     if (!selectedBank) {
@@ -130,38 +120,99 @@ export function OfficerRecordPaymentForm({ onSuccess, onCancel }: Props) {
       return;
     }
     setShowQr(true);
-  }, [customer, parsedAmount, selectedBank, ticketId]);
+  }, [customer, parsedAmount, selectedBank]);
 
   const onConfirmDigital = useCallback(
     async (values: FormValues) => {
-      if (!customer || !ticketId || !selectedBank) return;
+      if (!customer) return;
+
       const amount = parseAmountInput(values.amount);
       if (!amount) return;
+
+      const reference = values.upiReference?.trim() ?? '';
+      if (reference.length < 4) {
+        Alert.alert(
+          'UPI reference required',
+          'Enter the UPI transaction reference / UTR from the customer’s payment confirmation.',
+        );
+        return;
+      }
+
+      const verificationMethod = digitalSubMode === 'qr' ? 'qr' : 'manual';
+      const bankId = digitalSubMode === 'qr' ? selectedBank?.id : undefined;
+
+      // #region agent log
+      fetch('http://127.0.0.1:7333/ingest/e1cbfe88-dbfa-476e-aa64-46550e18bd51',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bad3ec'},body:JSON.stringify({sessionId:'bad3ec',location:'OfficerRecordPaymentForm.tsx:onConfirmDigital',message:'confirm digital collection',data:{method:'upi',verificationMethod,hasReference:reference.length>=4,hasBankAccount:Boolean(bankId),amount},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
 
       try {
         const result = await recordPayment({
           customerId: customer.id,
           amount,
           method: 'upi',
+          reference,
           notes: values.notes?.trim() || undefined,
-          confirmed: true,
-          ticketId,
-          bankAccountId: selectedBank.id,
-          verificationMethod: 'manual',
+          confirmed: false,
+          bankAccountId: bankId,
+          verificationMethod,
         }).unwrap();
-        Alert.alert('Payment recorded', 'Manual UPI collection logged for reconciliation.');
+
+        // #region agent log
+        fetch('http://127.0.0.1:7333/ingest/e1cbfe88-dbfa-476e-aa64-46550e18bd51',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bad3ec'},body:JSON.stringify({sessionId:'bad3ec',location:'OfficerRecordPaymentForm.tsx:onConfirmDigital:success',message:'payment recorded',data:{paymentId:result.paymentId,status:result.status},timestamp:Date.now(),hypothesisId:'H5',runId:'post-fix'})}).catch(()=>{});
+        // #endregion
+
+        Alert.alert(
+          'Submitted',
+          'UPI collection sent for admin verification. You can track status in collection history.',
+        );
         onSuccess?.(result.paymentId);
       } catch (e) {
-        Alert.alert('Could not record payment', e instanceof Error ? e.message : 'Try again.');
+        // #region agent log
+        fetch('http://127.0.0.1:7333/ingest/e1cbfe88-dbfa-476e-aa64-46550e18bd51',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bad3ec'},body:JSON.stringify({sessionId:'bad3ec',location:'OfficerRecordPaymentForm.tsx:onConfirmDigital:error',message:'payment failed',data:{errorMessage:paymentErrorMessage(e)},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+        // #endregion
+        console.error('[OfficerRecordPayment] digital collection failed', e);
+        Alert.alert('Could not record payment', paymentErrorMessage(e));
       }
     },
-    [customer, onSuccess, recordPayment, selectedBank, ticketId],
+    [customer, digitalSubMode, onSuccess, recordPayment, selectedBank?.id],
+  );
+
+  const onSubmitManualUpi = useCallback(
+    async (values: FormValues) => {
+      if (!customer) return;
+      const amount = parseAmountInput(values.amount);
+      if (!amount) return;
+
+      const reference = values.upiReference?.trim() ?? '';
+      if (reference.length < 4) {
+        Alert.alert('UPI reference required', 'Enter the UPI transaction reference / UTR.');
+        return;
+      }
+
+      try {
+        const result = await recordPayment({
+          customerId: customer.id,
+          amount,
+          method: 'upi',
+          reference,
+          notes: values.notes?.trim() || undefined,
+          confirmed: false,
+          verificationMethod: 'manual',
+        }).unwrap();
+        Alert.alert('Submitted', 'Manual UPI collection sent for admin verification.');
+        onSuccess?.(result.paymentId);
+      } catch (e) {
+        console.error('[OfficerRecordPayment] manual UPI failed', e);
+        Alert.alert('Could not record payment', paymentErrorMessage(e));
+      }
+    },
+    [customer, onSuccess, recordPayment],
   );
 
   return (
     <>
       <DismissKeyboardScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.sectionTitle}>Customer & ticket</Text>
+        <Text style={styles.sectionTitle}>Customer</Text>
         <Button
           label={
             customer
@@ -171,31 +222,6 @@ export function OfficerRecordPaymentForm({ onSuccess, onCancel }: Props) {
           variant="secondary"
           onPress={() => setPickerVisible(true)}
         />
-
-        {customerTickets.length > 0 ? (
-          <>
-            <Text style={styles.label}>TICKET (REQUIRED)</Text>
-            <View style={styles.ticketRow}>
-              {customerTickets.map((item) => {
-                if (item.kind !== 'ticket' || !item.ticket) return null;
-                const active = ticketId === item.ticket.id;
-                return (
-                  <Pressable
-                    key={item.ticket.id}
-                    style={[styles.ticketChip, active ? styles.ticketChipActive : null]}
-                    onPress={() => setTicketId(item.ticket!.id)}
-                  >
-                    <Text style={[styles.ticketLabel, active ? styles.ticketLabelActive : null]}>
-                      {item.ticket.ticketNumber}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </>
-        ) : customer ? (
-          <Text style={styles.error}>No assigned tickets for this customer.</Text>
-        ) : null}
 
         <Text style={styles.label}>AMOUNT (₹)</Text>
         <Controller
@@ -227,7 +253,7 @@ export function OfficerRecordPaymentForm({ onSuccess, onCancel }: Props) {
             <Text style={[styles.modeLabel, mode === 'cash' ? styles.modeLabelActive : null]}>
               Cash
             </Text>
-            <Text style={styles.modeHint}>Officer confirms immediately</Text>
+            <Text style={styles.modeHint}>Submitted for admin verification</Text>
           </Pressable>
           <Pressable
             style={[styles.modeChip, mode === 'digital' ? styles.modeChipActive : null]}
@@ -236,46 +262,29 @@ export function OfficerRecordPaymentForm({ onSuccess, onCancel }: Props) {
             <Text style={[styles.modeLabel, mode === 'digital' ? styles.modeLabelActive : null]}>
               Digital (UPI QR)
             </Text>
-            <Text style={styles.modeHint}>Show QR, confirm after payment</Text>
+            <Text style={styles.modeHint}>QR or manual UPI entry</Text>
           </Pressable>
         </View>
 
         {mode === 'digital' ? (
-          <>
-            <Text style={styles.label}>BANK ACCOUNT</Text>
-            <View style={styles.ticketRow}>
-              {bankAccounts.map((account) => {
-                const active = (selectedBank?.id ?? '') === account.id;
-                return (
-                  <Pressable
-                    key={account.id}
-                    style={[styles.ticketChip, active ? styles.ticketChipActive : null]}
-                    onPress={() => setBankAccountId(account.id)}
-                  >
-                    <Text style={[styles.ticketLabel, active ? styles.ticketLabelActive : null]}>
-                      {account.nickname}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            {!showQr ? (
-              <Button label="Show payment QR" onPress={onShowQr} />
-            ) : selectedBank ? (
-              <UpiQrDisplay
-                vpa={selectedBank.upi_vpa}
-                amount={parsedAmount}
-                payeeName={selectedBank.nickname}
-              />
-            ) : null}
-            {showQr ? (
-              <Button
-                label="Customer paid — confirm collection"
-                onPress={() => void handleSubmit(onConfirmDigital)()}
-                disabled={isLoading}
-              />
-            ) : null}
-          </>
+          <OfficerDigitalUpiFields
+            amount={parsedAmount}
+            upiReference={watch('upiReference') ?? ''}
+            onUpiReferenceChange={(value) => setValue('upiReference', value)}
+            digitalSubMode={digitalSubMode}
+            onDigitalSubModeChange={(next) => {
+              setDigitalSubMode(next);
+              if (next === 'manual') setShowQr(false);
+            }}
+            showQr={showQr}
+            onShowQr={onShowQr}
+            bankAccounts={bankAccounts}
+            selectedBank={selectedBank}
+            onBankAccountSelect={setBankAccountId}
+            onConfirmManual={() => void handleSubmit(onSubmitManualUpi)()}
+            onConfirmDigital={() => void handleSubmit(onConfirmDigital)()}
+            isLoading={isLoading}
+          />
         ) : (
           <Button
             label="Record cash payment"
@@ -308,10 +317,7 @@ export function OfficerRecordPaymentForm({ onSuccess, onCancel }: Props) {
         visible={pickerVisible}
         selectedCustomerId={customer?.id ?? null}
         onClose={() => setPickerVisible(false)}
-        onSelect={(c) => {
-          setCustomer(c);
-          setTicketId(null);
-        }}
+        onSelect={setCustomer}
       />
     </>
   );
@@ -361,19 +367,4 @@ const styles = StyleSheet.create({
   modeLabel: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   modeLabelActive: { color: colors.primaryNavy },
   modeHint: { fontSize: 11, color: colors.textSecondary, marginTop: spacing.xs },
-  ticketRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  ticketChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    backgroundColor: colors.surfaceWhite,
-  },
-  ticketChipActive: {
-    borderColor: colors.primaryNavy,
-    backgroundColor: colors.background,
-  },
-  ticketLabel: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
-  ticketLabelActive: { color: colors.primaryNavy },
 });

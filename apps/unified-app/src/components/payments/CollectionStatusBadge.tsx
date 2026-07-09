@@ -8,7 +8,7 @@ const STATUS_CONFIG: Record<
   CollectionStatus,
   { label: string; bg: string; text: string }
 > = {
-  inactive: { label: 'INACTIVE', bg: colors.background, text: colors.textSecondary },
+  inactive: { label: 'NOT IN POOL', bg: colors.background, text: colors.textSecondary },
   open: { label: 'OPEN', bg: '#EFF6FF', text: colors.primaryNavy },
   assigned: { label: 'ASSIGNED', bg: adminColors.navPillWarningBg, text: adminColors.navPillWarningText },
   claimed: { label: 'CLAIMED', bg: '#F3E8FF', text: adminColors.primary },

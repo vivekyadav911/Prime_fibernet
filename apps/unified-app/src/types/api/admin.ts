@@ -81,11 +81,17 @@ export type CollectionAssignmentRow = {
   nextDueDate: string | null;
   paymentStatus: string | null;
   collectionStatus: string | null;
+  isBlocked: boolean;
   assignedOfficerId: string | null;
   assignedOfficerName: string | null;
   claimedByOfficerId: string | null;
   claimedByOfficerName: string | null;
 };
+
+export type CollectionQueueView = 'upcoming' | 'due_for_collection' | 'all';
+
+/** Active accounts with overdue status or plan expiry within this window. */
+export const COLLECTION_UPCOMING_HORIZON_DAYS = 30;
 
 export type CollectionAssignmentsParams = {
   page?: number;
@@ -94,7 +100,7 @@ export type CollectionAssignmentsParams = {
   officerFilter?: 'all' | 'unassigned' | 'open_pool' | string;
   paymentStatus?: 'all' | 'paid' | 'pending' | 'overdue' | 'suspended';
   outstandingOnly?: boolean;
-  dueForCollectionOnly?: boolean;
+  queueView?: CollectionQueueView;
   collectionStatus?: 'all' | 'inactive' | 'open' | 'assigned' | 'claimed' | 'collected';
   claimFilter?: 'all' | 'claimed' | 'unclaimed';
   sortBy?: 'due_date' | 'name' | 'outstanding' | 'collection_status';
@@ -106,7 +112,7 @@ export type CollectionAssignmentsFilters = {
   paymentStatus: 'all' | 'paid' | 'pending' | 'overdue' | 'suspended';
   collectionStatus: 'all' | 'inactive' | 'open' | 'assigned' | 'claimed' | 'collected';
   outstandingOnly: boolean;
-  dueForCollectionOnly: boolean;
+  queueView: CollectionQueueView;
   claimFilter: 'all' | 'claimed' | 'unclaimed';
 };
 
@@ -114,8 +120,8 @@ export const DEFAULT_COLLECTION_ASSIGNMENTS_FILTERS: CollectionAssignmentsFilter
   officerFilter: 'all',
   paymentStatus: 'all',
   collectionStatus: 'all',
-  outstandingOnly: true,
-  dueForCollectionOnly: true,
+  outstandingOnly: false,
+  queueView: 'upcoming',
   claimFilter: 'all',
 };
 

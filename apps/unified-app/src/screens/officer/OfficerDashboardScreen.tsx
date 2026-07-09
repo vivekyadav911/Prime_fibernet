@@ -18,7 +18,6 @@ import { queryErrorMessage } from '@/utils/queryError';
 
 import { AssignmentPreviewList } from './components/AssignmentPreviewList';
 import { AttendanceWidget } from './components/AttendanceWidget';
-import { EarningsWidget } from './components/EarningsWidget';
 import { ShiftClockWidget } from './components/ShiftClockWidget';
 import { StatsRow } from './components/StatsRow';
 
@@ -142,11 +141,7 @@ export function OfficerDashboardScreen() {
       <AssignmentPreviewList items={items} />
 
       <Text style={styles.sectionTitle}>This Month</Text>
-      <View style={styles.monthRow}>
-        <EarningsWidget />
-        <View style={styles.gap} />
-        <AttendanceWidget />
-      </View>
+      <AttendanceWidget />
 
       <ContractSignaturePromptModal
         visible={modalVisible}
@@ -169,6 +164,4 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginTop: spacing.sm,
   },
-  monthRow: { flexDirection: 'row', marginBottom: spacing.lg },
-  gap: { width: spacing.sm },
 });
