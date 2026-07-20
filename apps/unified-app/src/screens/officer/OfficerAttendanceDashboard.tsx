@@ -1,32 +1,36 @@
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import type { DrawerNavigationProp } from '@react-navigation/drawer';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '@prime/ui';
 
-import { CheckInSheet } from '@/components/attendance/CheckInSheet';
+import { ApprovalReasonDialog } from '@/components/attendance/ApprovalReasonDialog';
 import { InfoRow } from '@/components/attendance/InfoRow';
 import { LocationPermissionGate } from '@/components/attendance/LocationPermissionGate';
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
-import { ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import { ErrorState, SkeletonLoader } from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
 import {
   useCheckIn,
   useCheckOut,
+  useMyApprovalRequests,
   useRequestApproval,
   useTodayAttendance,
   useOfficerMonthAttendance,
 } from '@/hooks/attendance/useAttendance';
 import { useMyAssignedZones } from '@/hooks/attendance/useMyAssignedZones';
+import { useOfficerAttendanceRealtimeSync } from '@/hooks/attendance/useOfficerAttendanceRealtimeSync';
+import { navigateToOfficerSettingsLeave } from '@/navigation/officerShellNavigation';
 import { locationService } from '@/services/LocationService';
 import { useAppDispatch } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
-import type { OfficerDrawerParamList } from '@/types/navigation';
+import type { OfficerAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type { ApprovalType } from '@/types/attendance';
 import { AttendanceActionError } from '@/utils/attendanceErrors';
+import { confirmStartShift } from '@/utils/confirmShiftAction';
 import { formatOutsideZoneDistance } from '@/utils/formatDistance';
 import { queryErrorMessage } from '@/utils/queryError';
 
@@ -34,11 +38,12 @@ import { GeofenceStatusBanner } from './components/GeofenceStatusBanner';
 import { AttendanceHistoryListItem } from './components/AttendanceHistoryListItem';
 
 export function OfficerAttendanceDashboard() {
-  const navigation = useNavigation<DrawerNavigationProp<OfficerDrawerParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<OfficerAttendanceStackParamList>>();
   const dispatch = useAppDispatch();
-  const sheetRef = useRef<BottomSheetModal>(null);
-  const [sheetMode, setSheetMode] = useState<'check_in' | 'approval'>('check_in');
+  useOfficerAttendanceRealtimeSync(true);
+
   const [approvalIntent, setApprovalIntent] = useState<'check_in' | 'check_out'>('check_in');
+  const [reasonVisible, setReasonVisible] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   const now = new Date();
@@ -57,18 +62,25 @@ export function OfficerAttendanceDashboard() {
   const [checkIn] = useCheckIn();
   const [checkOut] = useCheckOut();
   const [requestApproval] = useRequestApproval();
+  const { data: myApprovals, refetch: refetchApprovals } = useMyApprovalRequests();
 
-  useEffect(() => {
-    void locationService.clearGeofenceCache().then(() => zones.refreshZones());
-    void locationService.startBackgroundTracking().catch(() => undefined);
-    void locationService.verifyGeofenceRegistration();
-    return () => {
-      void locationService.stopBackgroundTracking();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const pendingCheckIn = useMemo(
+    () =>
+      (myApprovals ?? []).find(
+        (r) => r.status === 'pending' && r.type === 'out_of_zone_checkin',
+      ) ?? null,
+    [myApprovals],
+  );
+  const pendingCheckOut = useMemo(
+    () =>
+      (myApprovals ?? []).find(
+        (r) => r.status === 'pending' && r.type === 'out_of_zone_checkout',
+      ) ?? null,
+    [myApprovals],
+  );
 
   const isCheckedIn = Boolean(today?.checkInTime && !today?.checkOutTime);
+  const shiftCompletedToday = Boolean(today?.checkInTime && today?.checkOutTime);
   const todayLabel = now.toLocaleDateString(undefined, {
     weekday: 'long',
     day: 'numeric',
@@ -79,108 +91,194 @@ export function OfficerAttendanceDashboard() {
   const presentCount = counts.present + counts.late;
   const absentCount = counts.absent;
   const leaveCount = counts.onLeave + counts.halfDay;
+  const hasZone = zones.hasZone;
 
-  const openCheckInSheet = useCallback(() => {
-    setSheetMode('check_in');
-    sheetRef.current?.present();
-  }, []);
-
-  const openApprovalSheet = useCallback((intent: 'check_in' | 'check_out' = 'check_in') => {
-    setApprovalIntent(intent);
-    setSheetMode('approval');
-    sheetRef.current?.present();
-  }, []);
-
-  const handleConfirm = useCallback(
-    async (payload: { notes?: string; reason?: string }) => {
+  const submitApproval = useCallback(
+    async (reason: string, intent: 'check_in' | 'check_out') => {
       setActionLoading(true);
       try {
-        if (sheetMode === 'check_in') {
-          const result = await checkIn({
-            notes: payload.notes,
-            uiSaysInside: zones.geofenceStatus.isInside,
-            selectedGeofenceId: zones.selectedZone?.id,
-          });
-          if (result.action === 'already_checked_in') {
-            dispatch(
-              enqueueToast({
-                id: `toast-${Date.now()}`,
-                type: 'info',
-                message: 'You are already checked in for today.',
-              }),
-            );
-            sheetRef.current?.dismiss();
-            refetch();
-            return;
-          }
-          if (result.action === 'offline_queued') {
-            dispatch(
-              enqueueToast({
-                id: `toast-${Date.now()}`,
-                type: 'info',
-                message: 'Check-in queued — will sync when online.',
-              }),
-            );
-            sheetRef.current?.dismiss();
-            return;
-          }
-          if (result.action === 'checked_in') {
-            dispatch(
-              enqueueToast({
-                id: `toast-${Date.now()}`,
-                type: 'success',
-                message: 'Checked in successfully.',
-              }),
-            );
-          }
-        } else {
-          const coords = zones.coords ?? (await locationService.getCurrentLocation());
-          const approvalType: ApprovalType =
-            approvalIntent === 'check_out' ? 'out_of_zone_checkout' : 'out_of_zone_checkin';
-          await requestApproval({
-            type: approvalType,
-            reason: payload.reason ?? '',
-            coords,
-            date: new Date().toISOString().slice(0, 10),
-            geofenceId: zones.selectedZone?.id,
-          });
-          dispatch(
-            enqueueToast({
-              id: `toast-${Date.now()}`,
-              type: 'success',
-              message: 'Approval request submitted.',
-            }),
-          );
+        let coords = zones.coords;
+        if (!coords) {
+          coords = await locationService.getCurrentLocation();
         }
-        sheetRef.current?.dismiss();
-        refetch();
+        const approvalType: ApprovalType =
+          intent === 'check_out' ? 'out_of_zone_checkout' : 'out_of_zone_checkin';
+        await requestApproval({
+          type: approvalType,
+          reason,
+          coords,
+          geofenceId: zones.selectedZone?.id,
+        });
+        setReasonVisible(false);
+        dispatch(
+          enqueueToast({
+            id: `toast-${Date.now()}`,
+            type: 'success',
+            message: 'Approval request submitted — waiting for admin.',
+          }),
+        );
+        await Promise.all([refetch(), refetchApprovals()]);
       } catch (e) {
-        if (e instanceof AttendanceActionError && e.code === 'outside_zone') {
-          Alert.alert('Outside zone', e.message, [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Request approval',
-              onPress: () => {
-                setApprovalIntent('check_in');
-                setSheetMode('approval');
-                sheetRef.current?.present();
-              },
-            },
-          ]);
+        if (e instanceof AttendanceActionError && e.code === 'pending_approval') {
+          setReasonVisible(false);
+          Alert.alert('Waiting for approval', e.message);
+          await refetchApprovals();
+          return;
+        }
+        if (e instanceof AttendanceActionError && e.code === 'shift_already_completed') {
+          setReasonVisible(false);
+          Alert.alert('Attendance complete', e.message);
+          await refetch();
           return;
         }
         Alert.alert(
-          'Attendance failed',
-          e instanceof Error ? e.message : 'Could not complete attendance action.',
+          'Request failed',
+          e instanceof Error ? e.message : 'Could not submit approval request.',
         );
       } finally {
         setActionLoading(false);
       }
     },
-    [approvalIntent, checkIn, dispatch, refetch, requestApproval, sheetMode, zones.coords, zones.geofenceStatus.isInside, zones.selectedZone?.id],
+    [dispatch, refetch, refetchApprovals, requestApproval, zones.coords, zones.selectedZone?.id],
   );
 
+  const runInsideCheckIn = useCallback(async () => {
+    setActionLoading(true);
+    try {
+      const result = await checkIn({
+        uiSaysInside: true,
+        selectedGeofenceId: zones.selectedZone?.id,
+      });
+      if (result.action === 'already_checked_in') {
+        dispatch(
+          enqueueToast({
+            id: `toast-${Date.now()}`,
+            type: 'info',
+            message: 'You are already checked in for today.',
+          }),
+        );
+      } else if (result.action === 'offline_queued') {
+        dispatch(
+          enqueueToast({
+            id: `toast-${Date.now()}`,
+            type: 'info',
+            message: 'Check-in queued — will sync when online.',
+          }),
+        );
+      } else if (result.action === 'checked_in') {
+        dispatch(
+          enqueueToast({
+            id: `toast-${Date.now()}`,
+            type: 'success',
+            message: 'Checked in successfully.',
+          }),
+        );
+      } else if (result.action === 'shift_already_completed') {
+        Alert.alert(
+          'Attendance complete',
+          'Maximum one attendance is allowed per day. If there is an issue, contact your admin or officers.',
+        );
+      }
+      refetch();
+    } catch (e) {
+      if (e instanceof AttendanceActionError && e.code === 'shift_already_completed') {
+        Alert.alert('Attendance complete', e.message);
+        refetch();
+        return;
+      }
+      if (e instanceof AttendanceActionError && e.code === 'outside_zone') {
+        Alert.alert('Outside zone', e.message, [
+          { text: 'No', style: 'cancel' },
+          {
+            text: 'Yes, request approval',
+            onPress: () => {
+              setApprovalIntent('check_in');
+              setReasonVisible(true);
+            },
+          },
+        ]);
+        return;
+      }
+      Alert.alert('Check-in failed', e instanceof Error ? e.message : 'Could not check in.');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [checkIn, dispatch, refetch, zones.selectedZone?.id]);
+
+  const handleCheckInPress = useCallback(async () => {
+
+    if (shiftCompletedToday) {
+      Alert.alert(
+        'Attendance complete',
+        'Maximum one attendance is allowed per day. If there is an issue, contact your admin or officers.',
+      );
+      return;
+    }
+
+    if (!hasZone) {
+      Alert.alert('No zone assigned', 'Contact your admin to assign a geofence before checking in.');
+      return;
+    }
+
+    if (pendingCheckIn) {
+      if (zones.geofenceStatus.isInside) {
+        const ok = await confirmStartShift();
+        if (!ok) return;
+        await runInsideCheckIn();
+        return;
+      }
+      const zoneChanged =
+        !!zones.selectedZone?.id &&
+        !!pendingCheckIn.geofenceId &&
+        pendingCheckIn.geofenceId !== zones.selectedZone.id;
+      if (!zoneChanged) {
+        Alert.alert(
+          'Waiting for approval',
+          'Your out-of-zone check-in request is pending. You will be clocked in when an admin approves it, or you can check in normally once you are inside the zone.',
+        );
+        return;
+      }
+      // Zone changed — allow a new request for the new zone.
+      setApprovalIntent('check_in');
+      Alert.alert(
+        'Zone changed',
+        'Request approval for your newly selected zone?',
+        [
+          { text: 'No', style: 'cancel' },
+          { text: 'Yes', onPress: () => setReasonVisible(true) },
+        ],
+      );
+      return;
+    }
+
+    if (zones.geofenceStatus.isInside) {
+      const ok = await confirmStartShift();
+      if (!ok) return;
+      await runInsideCheckIn();
+      return;
+    }
+
+    Alert.alert(
+      'Outside zone',
+      'You are outside your assigned zone. Request approval to start your shift?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes',
+          onPress: () => {
+            setApprovalIntent('check_in');
+            setReasonVisible(true);
+          },
+        },
+      ],
+    );
+  }, [hasZone, pendingCheckIn, runInsideCheckIn, shiftCompletedToday, zones.geofenceStatus.isInside, zones.selectedZone?.id]);
+
   const handleCheckOut = useCallback(async () => {
+    if (pendingCheckOut) {
+      Alert.alert('Waiting for approval', 'Your out-of-zone check-out request is already pending.');
+      return;
+    }
     setActionLoading(true);
     try {
       const result = await checkOut({
@@ -214,13 +312,12 @@ export function OfficerAttendanceDashboard() {
     } catch (e) {
       if (e instanceof AttendanceActionError && e.code === 'outside_zone') {
         Alert.alert('Outside zone', e.message, [
-          { text: 'Cancel', style: 'cancel' },
+          { text: 'No', style: 'cancel' },
           {
-            text: 'Request approval',
+            text: 'Yes, request approval',
             onPress: () => {
               setApprovalIntent('check_out');
-              setSheetMode('approval');
-              sheetRef.current?.present();
+              setReasonVisible(true);
             },
           },
         ]);
@@ -233,9 +330,15 @@ export function OfficerAttendanceDashboard() {
     } finally {
       setActionLoading(false);
     }
-  }, [checkOut, dispatch, refetch, zones.geofenceStatus.isInside, zones.selectedZone?.id]);
+  }, [
+    checkOut,
+    dispatch,
+    pendingCheckOut,
+    refetch,
+    zones.geofenceStatus.isInside,
+    zones.selectedZone?.id,
+  ]);
 
-  const hasZone = zones.hasZone;
   const zoneLabel = !hasZone
     ? 'No zone assigned'
     : zones.geofenceStatus.isInside
@@ -247,21 +350,20 @@ export function OfficerAttendanceDashboard() {
 
   if (isLoading || monthLoading) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <SkeletonLoader rows={8} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   if (isError) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
-  const coords = zones.coords ?? { latitude: 28.6139, longitude: 77.209 };
   const durationMs =
     today?.checkInTime && isCheckedIn
       ? Date.now() - new Date(today.checkInTime).getTime()
@@ -269,9 +371,27 @@ export function OfficerAttendanceDashboard() {
   const durationH = Math.floor(durationMs / 3600000);
   const durationM = Math.floor((durationMs % 3600000) / 60000);
 
+  const checkInLabel = shiftCompletedToday
+    ? 'Attendance complete'
+    : pendingCheckIn
+      ? 'Waiting for approval'
+      : actionLoading
+        ? 'Working…'
+        : 'Check in';
+
+  const statusHeadline = isCheckedIn
+    ? 'CHECKED IN'
+    : shiftCompletedToday
+      ? 'SHIFT COMPLETED'
+      : 'NOT CHECKED IN';
+
   return (
     <LocationPermissionGate>
-      <ScreenWrapper>
+      <OfficerScreenWrapper
+        onRefresh={async () => {
+          await Promise.all([refetch(), refetchApprovals(), zones.refreshLocation()]);
+        }}
+      >
         <Text style={styles.monthTitle}>
           Attendance — {now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
         </Text>
@@ -280,7 +400,7 @@ export function OfficerAttendanceDashboard() {
 
         <View style={styles.statusCard}>
           <Text style={styles.todayLabel}>TODAY: {todayLabel.split(',')[0]}</Text>
-          <Text style={styles.statusLabel}>{isCheckedIn ? 'CHECKED IN' : 'NOT CHECKED IN'}</Text>
+          <Text style={styles.statusLabel}>{statusHeadline}</Text>
           {today?.checkInTime ? (
             <Text style={styles.statusMeta}>
               Checked in: {new Date(today.checkInTime).toLocaleTimeString()} · Checked out:{' '}
@@ -294,6 +414,17 @@ export function OfficerAttendanceDashboard() {
           ) : null}
 
           <InfoRow icon="📍" label="Zone" value={zoneLabel} />
+          {shiftCompletedToday ? (
+            <Text style={styles.pendingHint}>
+              Maximum one attendance is allowed per day. If there is an issue, contact your admin or
+              officers.
+            </Text>
+          ) : pendingCheckIn ? (
+            <Text style={styles.pendingHint}>
+              Approval pending — you will clock in when an admin approves, or check in once inside
+              the zone.
+            </Text>
+          ) : null}
 
           {zones.status === 'multiple' ? (
             <View style={styles.zonePicker}>
@@ -320,27 +451,26 @@ export function OfficerAttendanceDashboard() {
           ) : null}
 
           <View style={styles.actions}>
-            {!isCheckedIn ? (
-              <>
-                <Button
-                  label="Check in"
-                  onPress={openCheckInSheet}
-                  disabled={actionLoading || !hasZone || !zones.geofenceStatus.isInside}
-                  style={styles.cta}
-                />
-                <Button
-                  label="Request approval"
-                  variant="secondary"
-                  onPress={() => openApprovalSheet('check_in')}
-                  disabled={actionLoading}
-                  style={styles.cta}
-                />
-              </>
-            ) : (
+            {isCheckedIn ? (
               <Button
-                label={actionLoading ? 'Checking out…' : 'Check out'}
+                label={
+                  pendingCheckOut
+                    ? 'Waiting for approval'
+                    : actionLoading
+                      ? 'Checking out…'
+                      : 'Check out'
+                }
                 onPress={() => void handleCheckOut()}
                 disabled={actionLoading || Boolean(today?.checkOutTime)}
+                style={styles.cta}
+              />
+            ) : shiftCompletedToday ? (
+              <Button label={checkInLabel} onPress={() => void handleCheckInPress()} style={styles.cta} />
+            ) : (
+              <Button
+                label={checkInLabel}
+                onPress={() => void handleCheckInPress()}
+                disabled={actionLoading || (!hasZone && !pendingCheckIn)}
                 style={styles.cta}
               />
             )}
@@ -378,24 +508,25 @@ export function OfficerAttendanceDashboard() {
           <Text style={styles.emptyRecent}>No attendance records this month yet.</Text>
         ) : null}
 
-        <Pressable style={styles.leaveLink} onPress={() => navigation.navigate('LeaveStack')}>
+        <Pressable style={styles.leaveLink} onPress={() => navigateToOfficerSettingsLeave(navigation)}>
           <Text style={styles.leaveLinkText}>Apply Leave Request →</Text>
         </Pressable>
 
         {actionLoading ? <ActivityIndicator color={adminColors.primary} /> : null}
 
-        <CheckInSheet
-          ref={sheetRef}
-          mode={sheetMode}
-          geofence={zones.selectedZone}
-          coords={coords}
-          distance={zones.geofenceStatus.distance ?? 0}
-          isInside={zones.geofenceStatus.isInside}
-          onConfirm={(p) => void handleConfirm(p)}
-          onDismiss={() => undefined}
-          isLoading={actionLoading}
+        <ApprovalReasonDialog
+          visible={reasonVisible}
+          title={
+            approvalIntent === 'check_out'
+              ? 'Request check-out approval'
+              : 'Request shift start approval'
+          }
+          message="You can add a short note for admin, or submit without one."
+          loading={actionLoading}
+          onCancel={() => setReasonVisible(false)}
+          onSubmit={(reason) => void submitApproval(reason, approvalIntent)}
         />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     </LocationPermissionGate>
   );
 }
@@ -415,6 +546,7 @@ const styles = StyleSheet.create({
   statusLabel: { fontSize: 18, fontWeight: '700', color: adminColors.primary },
   statusMeta: { fontSize: 13, color: colors.textSecondary },
   duration: { fontSize: 14, fontWeight: '600', color: colors.accentTeal },
+  pendingHint: { fontSize: 13, color: colors.amber, lineHeight: 18 },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
   cta: { minHeight: 48 },
   summary: { fontSize: 14, color: colors.textSecondary, marginBottom: spacing.sm },

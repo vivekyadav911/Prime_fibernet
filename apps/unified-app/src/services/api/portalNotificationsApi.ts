@@ -2,6 +2,41 @@ import type { PortalNotification, PortalNotificationType } from '@/types/payment
 
 import { baseApi } from './baseApi';
 
+function patchAllNotificationListsAsRead(
+  dispatch: (action: unknown) => { undo: () => void },
+  getState: () => unknown,
+): Array<{ undo: () => void }> {
+  const patches: Array<{ undo: () => void }> = [];
+  const apiState = (getState() as { api: { queries: Record<string, { data?: PortalNotification[]; originalArgs?: unknown }> } }).api;
+
+  for (const key of Object.keys(apiState.queries)) {
+    if (!key.startsWith('getPortalNotifications(')) continue;
+    const entry = apiState.queries[key];
+    if (!entry?.data) continue;
+    patches.push(
+      dispatch(
+        portalNotificationsApi.util.updateQueryData(
+          'getPortalNotifications',
+          entry.originalArgs as { limit?: number } | void,
+          (draft) => {
+            for (const notification of draft) {
+              notification.is_read = true;
+            }
+          },
+        ),
+      ) as { undo: () => void },
+    );
+  }
+
+  patches.push(
+    dispatch(
+      portalNotificationsApi.util.updateQueryData('getPortalUnreadCount', undefined, () => 0),
+    ) as { undo: () => void },
+  );
+
+  return patches;
+}
+
 function mapPortalNotification(row: Record<string, unknown>): PortalNotification {
   return {
     id: String(row.id),
@@ -70,7 +105,35 @@ export const portalNotificationsApi = baseApi.injectEndpoints({
           if (error) throw error;
         },
       }),
-      invalidatesTags: ['PortalNotifications'],
+      async onQueryStarted(id, { dispatch, queryFulfilled, getState }) {
+        const patches: Array<{ undo: () => void }> = [];
+        const apiState = (getState() as { api: { queries: Record<string, { data?: PortalNotification[]; originalArgs?: unknown }> } }).api;
+
+        for (const key of Object.keys(apiState.queries)) {
+          if (!key.startsWith('getPortalNotifications(')) continue;
+          const entry = apiState.queries[key];
+          if (!entry?.data) continue;
+          patches.push(
+            dispatch(
+              portalNotificationsApi.util.updateQueryData(
+                'getPortalNotifications',
+                entry.originalArgs as { limit?: number } | void,
+                (draft) => {
+                  const row = draft.find((n) => n.id === id);
+                  if (row) row.is_read = true;
+                },
+              ),
+            ) as { undo: () => void },
+          );
+        }
+
+        try {
+          await queryFulfilled;
+          dispatch(portalNotificationsApi.util.invalidateTags(['PortalNotifications']));
+        } catch {
+          patches.forEach((patch) => patch.undo());
+        }
+      },
     }),
 
     markAllPortalNotificationsRead: builder.mutation<void, void>({
@@ -87,7 +150,14 @@ export const portalNotificationsApi = baseApi.injectEndpoints({
           if (error) throw error;
         },
       }),
-      invalidatesTags: ['PortalNotifications'],
+      async onQueryStarted(_arg, { dispatch, queryFulfilled, getState }) {
+        const patches = patchAllNotificationListsAsRead(dispatch, getState);
+        try {
+          await queryFulfilled;
+        } catch {
+          patches.forEach((patch) => patch.undo());
+        }
+      },
     }),
   }),
 });

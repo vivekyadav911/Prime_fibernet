@@ -1,11 +1,22 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
-import { Keyboard, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
 import { z } from 'zod';
 
-import { KeyboardDismissView } from '@/components/common';
+import { DismissKeyboardScrollView } from '@/components/common';
+import { useKeyboardBottomInset } from '@/hooks/useKeyboardBottomInset';
 
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
@@ -31,6 +42,7 @@ type ChangePasswordModalProps = {
 
 export function ChangePasswordModal({ visible, loading, onClose, onSubmit }: ChangePasswordModalProps) {
   const insets = useSafeAreaInsets();
+  const keyboardInset = useKeyboardBottomInset(spacing.md);
   const { control, handleSubmit, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { newPassword: '', confirmPassword: '' },
@@ -44,63 +56,75 @@ export function ChangePasswordModal({ visible, loading, onClose, onSubmit }: Cha
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable
-        style={[styles.overlay, { paddingTop: insets.top }]}
-        onPress={() => {
-          Keyboard.dismiss();
-          onClose();
-        }}
+      <KeyboardAvoidingView
+        style={styles.root}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <Pressable
-          style={[styles.sheet, { paddingBottom: insets.bottom + spacing.lg }]}
-          onPress={(e) => e.stopPropagation()}
+          style={[styles.overlay, { paddingTop: insets.top }]}
+          onPress={() => {
+            Keyboard.dismiss();
+            onClose();
+          }}
         >
-          <KeyboardDismissView>
-            <Text style={styles.title}>Change password</Text>
-          <Controller
-            control={control}
-            name="newPassword"
-            render={({ field: { onChange, value }, fieldState: { error } }) => (
-              <View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="New password"
-                  placeholderTextColor={colors.textSecondary}
-                  secureTextEntry
-                  value={value}
-                  onChangeText={onChange}
-                />
-                {error ? <Text style={styles.error}>{error.message}</Text> : null}
-              </View>
-            )}
-          />
-          <Controller
-            control={control}
-            name="confirmPassword"
-            render={({ field: { onChange, value }, fieldState: { error } }) => (
-              <View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Confirm password"
-                  placeholderTextColor={colors.textSecondary}
-                  secureTextEntry
-                  value={value}
-                  onChangeText={onChange}
-                />
-                {error ? <Text style={styles.error}>{error.message}</Text> : null}
-              </View>
-            )}
-          />
-          <Button label={loading ? 'Updating…' : 'Update password'} onPress={submit} />
-          <Button label="Cancel" variant="secondary" onPress={onClose} style={styles.cancel} />
-          </KeyboardDismissView>
+          <Pressable
+            style={[
+              styles.sheet,
+              {
+                paddingBottom: Math.max(insets.bottom + spacing.lg, keyboardInset),
+                maxHeight: keyboardInset > 0 ? '78%' : '88%',
+              },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <DismissKeyboardScrollView contentContainerStyle={styles.sheetContent}>
+              <Text style={styles.title}>Change password</Text>
+              <Controller
+                control={control}
+                name="newPassword"
+                render={({ field: { onChange, value }, fieldState: { error } }) => (
+                  <View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="New password"
+                      placeholderTextColor={colors.textSecondary}
+                      secureTextEntry
+                      value={value}
+                      onChangeText={onChange}
+                    />
+                    {error ? <Text style={styles.error}>{error.message}</Text> : null}
+                  </View>
+                )}
+              />
+              <Controller
+                control={control}
+                name="confirmPassword"
+                render={({ field: { onChange, value }, fieldState: { error } }) => (
+                  <View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Confirm password"
+                      placeholderTextColor={colors.textSecondary}
+                      secureTextEntry
+                      value={value}
+                      onChangeText={onChange}
+                    />
+                    {error ? <Text style={styles.error}>{error.message}</Text> : null}
+                  </View>
+                )}
+              />
+              <Button label={loading ? 'Updating…' : 'Update password'} onPress={submit} />
+              <Button label="Cancel" variant="secondary" onPress={onClose} style={styles.cancel} />
+            </DismissKeyboardScrollView>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   overlay: {
     flex: 1,
     backgroundColor: `${colors.textPrimary}88`,
@@ -110,8 +134,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+  },
+  sheetContent: {
     gap: spacing.sm,
+    paddingBottom: spacing.sm,
   },
   title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   input: {

@@ -6,6 +6,8 @@ import type { PaymentFilters } from '@/types/payments';
 import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { downloadOrShareUrl } from '@/utils/shareFile';
+import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = { filters?: PaymentFilters };
 
@@ -16,10 +18,17 @@ export function ExportButton({ filters }: Props) {
   const runExport = async (format: 'xlsx' | 'pdf') => {
     setOpen(false);
     try {
-      const result = await exportPayments({ filters, format }).unwrap();
-      Alert.alert('Export ready', `Download: ${result.filename}`);
+      // Edge function maps pdf → honest HTML report (was previously a fake PDF).
+      const result = await exportPayments({
+        filters,
+        format: format === 'pdf' ? 'pdf' : 'xlsx',
+      }).unwrap();
+      if (!result?.url) {
+        throw new Error('Export returned no download URL');
+      }
+      await downloadOrShareUrl(result.url, result.filename);
     } catch (e) {
-      Alert.alert('Export failed', e instanceof Error ? e.message : 'Could not export');
+      Alert.alert('Export failed', queryErrorMessage(e));
     }
   };
 
@@ -34,7 +43,7 @@ export function ExportButton({ filters }: Props) {
             <Text style={styles.optionText}>Excel (.xlsx)</Text>
           </Pressable>
           <Pressable style={styles.option} onPress={() => runExport('pdf')}>
-            <Text style={styles.optionText}>PDF report</Text>
+            <Text style={styles.optionText}>HTML report</Text>
           </Pressable>
         </>
       ) : null}

@@ -4,7 +4,8 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { ContractSignaturePromptCard } from '@/components/officer/ContractSignaturePromptCard';
 import { ContractSignaturePromptModal } from '@/components/officer/ContractSignaturePromptModal';
-import { ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import {ErrorState, SkeletonLoader} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
 import {
   contractSignaturePromptKey,
   useOfficerProfile,
@@ -42,6 +43,9 @@ export function OfficerDashboardScreen() {
     navigateToContractPdf,
   } = usePendingContractSignature();
   const { items, isLoading, isError, error, refetch } = useOfficerDashboardStats(user?.id);
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([refetch(), refetchContract()]);
+  }, [refetch, refetchContract]);
 
   const [modalVisible, setModalVisible] = useState(false);
   const lastPromptKeyRef = useRef<string | null>(null);
@@ -104,22 +108,22 @@ export function OfficerDashboardScreen() {
 
   if (isLoading && items == null) {
     return (
-      <ScreenWrapper>
+      <OfficerScreenWrapper onRefresh={handleRefresh}>
         <SkeletonLoader rows={4} tall />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   if (isError) {
     return (
-      <ScreenWrapper>
+      <OfficerScreenWrapper onRefresh={handleRefresh}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   return (
-    <ScreenWrapper>
+    <OfficerScreenWrapper onRefresh={handleRefresh}>
       <View style={styles.header}>
         <Text style={styles.greeting}>
           {greeting()}, {profile?.name?.split(' ')[0] ?? user?.name ?? 'Officer'} 👋
@@ -151,7 +155,7 @@ export function OfficerDashboardScreen() {
         onSignNow={handleSignNow}
         onRemindLater={handleRemindLater}
       />
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 

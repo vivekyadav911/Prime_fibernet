@@ -71,12 +71,12 @@ class NotificationService {
     switch (type) {
       case NotificationType.APPROVAL_APPROVED:
       case NotificationType.APPROVAL_REJECTED:
-        return 'OfficerDrawer/Shifts';
+        return 'OfficerTabs/Attendance/Shifts';
       case NotificationType.APPROVAL_REQUESTED:
       case NotificationType.LATE_CHECKIN:
         return 'Admin/Attendance/ApprovalRequests';
       case NotificationType.MISSED_CHECKOUT:
-        return 'OfficerDrawer/Shifts';
+        return 'OfficerTabs/Attendance/Shifts';
       default:
         return null;
     }

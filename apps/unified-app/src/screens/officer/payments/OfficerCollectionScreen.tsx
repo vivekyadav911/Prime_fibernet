@@ -11,9 +11,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '@prime/ui';
-
+import { useOfficerPullToRefresh } from '@/hooks/officer/useOfficerPullToRefresh';
 import { AmountDisplay, CollectionStatusBadge } from '@/components/payments';
-import { EmptyState, ErrorState, DismissKeyboardFlatList, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import {EmptyState, ErrorState, DismissKeyboardFlatList, SkeletonLoader} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
 import { useClaimCollection } from '@/hooks/officer/useClaimCollection';
 import { useOfficerCollections } from '@/hooks/usePayments';
 import { formatINR } from '@/utils/currencyFormat';
@@ -53,6 +54,7 @@ export function OfficerCollectionScreen({ route }: Props) {
   const [tab, setTab] = useState<CollectionTab>(initialTab);
   const [query, setQuery] = useState('');
   const { data, isLoading, isError, error, refetch } = useOfficerCollections();
+  const { refreshControl } = useOfficerPullToRefresh(refetch);
   const { claim, isLoading: claiming } = useClaimCollection();
 
   useEffect(() => {
@@ -140,22 +142,22 @@ export function OfficerCollectionScreen({ route }: Props) {
 
   if (isLoading) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <SkeletonLoader rows={5} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   if (isError) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   return (
-    <ScreenWrapper scrollable={false} padded={false}>
+    <OfficerScreenWrapper scrollable={false} padded={false}>
       <View style={styles.summaryBar}>
         <Text style={styles.summaryLine}>
           Collected today: {formatINR(data?.todayTotal ?? 0)} · Confirmed:{' '}
@@ -210,6 +212,7 @@ export function OfficerCollectionScreen({ route }: Props) {
       </View>
 
       <DismissKeyboardFlatList
+        refreshControl={refreshControl} 
         data={filteredList}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
@@ -228,7 +231,7 @@ export function OfficerCollectionScreen({ route }: Props) {
         }
         renderItem={renderItem}
       />
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 

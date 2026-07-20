@@ -96,6 +96,17 @@ export function SystemSettingsScreen() {
         />
       </SettingsSection>
 
+      <SettingsSection title="Admin Session">
+        <SettingsSlider
+          label="Stay signed in for"
+          value={form.adminSessionHours ?? 24}
+          minimumValue={1}
+          maximumValue={72}
+          unit=" h"
+          onValueChange={(v) => set('adminSessionHours', v)}
+        />
+      </SettingsSection>
+
       <SettingsSection title="Backup Settings">
         <SettingsRow label="Auto Backup" value={form.autoBackup} onValueChange={(v) => set('autoBackup', v)} />
       </SettingsSection>

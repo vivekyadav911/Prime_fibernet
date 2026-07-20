@@ -40,6 +40,7 @@ export interface AppSettings {
   queryOptimization: boolean;
   sessionTimeoutMinutes: number;
   cacheTimeoutMinutes: number;
+  adminSessionHours: number;
   autoBackup: boolean;
   backupFrequency: BackupFrequency;
   backupTime: string;
@@ -147,4 +148,5 @@ export type SettingsNavRoute =
   | 'Appearance'
   | 'System'
   | 'BackupExport'
+  | 'DataImport'
   | 'AuditLogs';

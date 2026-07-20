@@ -1,333 +1,214 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Animated,
+  FlatList,
   Pressable,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
+  useWindowDimensions,
 } from 'react-native';
-import { Marker, type Region } from 'react-native-maps';
-import type MapView from 'react-native-maps';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
 
 import { AdminScreenLayout, RoleGuard } from '@/components/admin';
+import { AdminTrackingMap } from '@/components/map/AdminTrackingMap';
+import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
-  DwellCircle,
-  FreeMapView,
-  GeofenceOverlay,
-  MapControlsPanel,
-  OfficerCardList,
-  OfficerMarker,
-  TrailPolyline,
-} from '@/components/map';
-import { SkeletonLoader } from '@/components/common';
-import { useGeofences } from '@/hooks/attendance/useAdminAttendance';
-import { useLocationHistory } from '@/hooks/useLocationHistory';
-import { useMapControls } from '@/hooks/useMapControls';
-import { useOfficerDwells } from '@/hooks/useOfficerDwells';
-import { useOfficerLocations } from '@/hooks/useOfficerLocations';
-import { OfficerActivitySheet } from '@/screens/admin/map/OfficerActivitySheet';
-import { useGetOpenRequestPinsQuery } from '@/store/api/endpoints';
-import type { AdminMapStackParamList } from '@/types/navigation';
+  useGetTrackingOfficerLocationsQuery,
+  useGetOpenRequestPinsQuery,
+} from '@/store/api/endpoints';
+import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
-import { spacing } from '@/theme/spacing';
-import type { OfficerLocation } from '@/types/map';
+import { radius, spacing } from '@/theme/spacing';
+import { queryErrorMessage } from '@/utils/queryError';
 
-const DEFAULT_REGION: Region = {
-  latitude: -37.8136,
-  longitude: 144.9631,
-  latitudeDelta: 0.3,
-  longitudeDelta: 0.3,
-};
+type FilterMode = 'officers' | 'requests' | 'both';
 
-const TABLET_BREAKPOINT = 768;
-const PANEL_WIDTH = 300;
-
+/**
+ * Native Admin Map — Leaflet WebView (same OSM path as web).
+ * react-native-maps on Android requires a Google Maps API key even for UrlTile;
+ * this screen avoids that so officer tracking works in the current dev client.
+ */
 export function AdminMapScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<AdminMapStackParamList, 'MapMain'>>();
-  const { width } = useWindowDimensions();
-  const isTablet = width >= TABLET_BREAKPOINT;
-  const mapRef = useRef<MapView>(null);
-  const panelAnim = useRef(new Animated.Value(isTablet ? 0 : PANEL_WIDTH)).current;
+  const [filter, setFilter] = useState<FilterMode>('both');
+  const { width, height } = useWindowDimensions();
 
-  const { locations, isLoading, isError, refetch, livePaused } = useOfficerLocations();
-  const allOfficerIds = useMemo(() => locations.map((l) => l.officer_id), [locations]);
-  const { controls, dispatch, toggleOfficer, deselectAll, selectAll } = useMapControls(allOfficerIds);
+  const {
+    data: officers,
+    isLoading: oLoad,
+    isError: oErr,
+    error: oError,
+    refetch: oRefetch,
+  } = useGetTrackingOfficerLocationsQuery(undefined, { pollingInterval: 30_000 });
+  const {
+    data: requests,
+    isLoading: rLoad,
+    isError: rErr,
+    error: rError,
+    refetch: rRefetch,
+  } = useGetOpenRequestPinsQuery();
 
-  const visibleOfficerIds = controls.selectedOfficerIds.length > 0
-    ? controls.selectedOfficerIds
-    : allOfficerIds;
+  const showOfficers = filter === 'officers' || filter === 'both';
+  const showRequests = filter === 'requests' || filter === 'both';
 
-  const visibleOfficers = useMemo(
-    () => locations.filter((l) => visibleOfficerIds.includes(l.officer_id)),
-    [locations, visibleOfficerIds],
-  );
-
-  const officerOptions = useMemo(
-    () =>
-      locations.map((l) => ({
-        id: l.officer_id,
-        name: l.officer?.name ?? 'Officer',
-      })),
-    [locations],
-  );
-
-  const { trailsByOfficer } = useLocationHistory(
-    visibleOfficerIds,
-    controls.selectedDate,
-    controls.timeRange,
-    controls.showTrails,
-  );
-
-  const { data: dwells = [] } = useOfficerDwells(
-    controls.selectedDate,
-    visibleOfficerIds.length === 1 ? visibleOfficerIds[0] : undefined,
-    controls.showDwellTime,
-  );
-
-  const filteredDwells = useMemo(() => {
-    if (!controls.showDwellTime) return [];
-    return dwells.filter((d) => visibleOfficerIds.includes(d.officer_id));
-  }, [dwells, controls.showDwellTime, visibleOfficerIds]);
-
-  const { data: geofences = [] } = useGeofences();
-  const { data: requests = [] } = useGetOpenRequestPinsQuery(undefined, {
-    skip: !controls.showRequests,
-  });
-
-  const [selectedOfficer, setSelectedOfficer] = useState<OfficerLocation | null>(null);
-  const [sheetVisible, setSheetVisible] = useState(false);
-
-  const initialRegion = useMemo((): Region => {
-    const first = visibleOfficers[0] ?? locations[0];
-    if (!first) return DEFAULT_REGION;
-    return {
-      latitude: first.latitude,
-      longitude: first.longitude,
-      latitudeDelta: 0.15,
-      longitudeDelta: 0.15,
-    };
-  }, [visibleOfficers, locations]);
-
-  const openActivitySheet = useCallback((officer: OfficerLocation) => {
-    setSelectedOfficer(officer);
-    setSheetVisible(true);
-  }, []);
-
-  const flyToOfficer = useCallback((officer: OfficerLocation) => {
-    mapRef.current?.animateCamera({
-      center: { latitude: officer.latitude, longitude: officer.longitude },
-      zoom: 14,
-    });
-    openActivitySheet(officer);
-  }, [openActivitySheet]);
-
-  const togglePanel = useCallback(() => {
-    const open = !controls.isPanelOpen;
-    dispatch({ type: 'SET_PANEL_OPEN', open });
-    if (!isTablet) {
-      Animated.timing(panelAnim, {
-        toValue: open ? 0 : PANEL_WIDTH,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
+  const listData = useMemo(() => {
+    const rows: { id: string; title: string; subtitle: string; kind: 'officer' | 'request' }[] =
+      [];
+    if (showOfficers) {
+      for (const o of officers ?? []) {
+        rows.push({
+          id: `officer-${o.officer_id}`,
+          title: o.officer?.name ?? 'Officer',
+          subtitle: `Officer · ${o.is_online ? 'online' : 'offline'} · ${o.latitude.toFixed(4)}, ${o.longitude.toFixed(4)}`,
+          kind: 'officer',
+        });
+      }
     }
-  }, [controls.isPanelOpen, dispatch, isTablet, panelAnim]);
+    if (showRequests) {
+      for (const r of requests ?? []) {
+        rows.push({
+          id: `request-${r.requestId}`,
+          title: r.type,
+          subtitle: `Request · ${r.status} · ${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}`,
+          kind: 'request',
+        });
+      }
+    }
+    return rows;
+  }, [officers, requests, showOfficers, showRequests]);
 
-  if (isLoading && locations.length === 0) {
+  if (oLoad || rLoad) {
     return (
-      <RoleGuard requiredPermission="map.view">
-        <AdminScreenLayout>
-          <SkeletonLoader rows={3} tall />
-        </AdminScreenLayout>
-      </RoleGuard>
+      <AdminScreenLayout>
+        <SkeletonLoader rows={3} tall />
+      </AdminScreenLayout>
+    );
+  }
+  if (oErr || rErr) {
+    return (
+      <AdminScreenLayout>
+        <ErrorState
+          message={queryErrorMessage(oError ?? rError)}
+          onRetry={() => {
+            oRefetch();
+            rRefetch();
+          }}
+        />
+      </AdminScreenLayout>
     );
   }
 
   return (
     <RoleGuard requiredPermission="map.view">
-      <AdminScreenLayout>
-        {isError || livePaused ? (
-          <View style={styles.statusStrip}>
-            {isError ? (
-              <Pressable onPress={refetch}>
-                <Text style={styles.errorBanner}>Tap to retry loading officers</Text>
-              </Pressable>
-            ) : null}
-            {livePaused ? <Text style={styles.liveBanner}>Live updates paused</Text> : null}
+      <AdminScreenLayout padded={false}>
+        <View style={styles.root}>
+          <View style={styles.mapPane}>
+            <AdminTrackingMap
+              officers={officers ?? []}
+              requests={requests ?? []}
+              showOfficers={showOfficers}
+              showRequests={showRequests}
+            />
           </View>
-        ) : null}
 
-        <View style={styles.body}>
-          <View style={styles.mapWrap}>
-            <FreeMapView
-              ref={mapRef}
-              style={styles.map}
-              mapStyle={controls.mapStyle}
-              initialRegion={initialRegion}
-              showsCompass
-              showsScale
-              showsUserLocation={false}
-            >
-              {geofences.filter((g) => g.isActive).map((fence) => (
-                <GeofenceOverlay key={fence.id} fence={fence} />
+          <View style={styles.panel}>
+            <View style={styles.filters}>
+              {(['officers', 'requests', 'both'] as FilterMode[]).map((f) => (
+                <Pressable
+                  key={f}
+                  style={[styles.chip, filter === f && styles.chipActive]}
+                  onPress={() => setFilter(f)}
+                >
+                  <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>{f}</Text>
+                </Pressable>
               ))}
-
-              {controls.showTrails
-                ? visibleOfficerIds.map((id) => {
-                    const pts = trailsByOfficer.get(id);
-                    if (!pts?.length) return null;
-                    return (
-                      <TrailPolyline
-                        key={`trail-${id}`}
-                        officerId={id}
-                        points={pts}
-                      />
-                    );
-                  })
-                : null}
-
-              {controls.showDwellTime
-                ? filteredDwells.map((d) => <DwellCircle key={d.id} dwell={d} />)
-                : null}
-
-              {controls.showOfficers
-                ? visibleOfficers.map((o, idx) => (
-                    <OfficerMarker
-                      key={o.officer_id}
-                      officer={o}
-                      colorIndex={idx}
-                      onPress={() => openActivitySheet(o)}
-                    />
-                  ))
-                : null}
-
-              {controls.showRequests
-                ? (requests ?? []).map((r) => (
-                    <Marker
-                      key={r.requestId}
-                      coordinate={{ latitude: r.lat, longitude: r.lng }}
-                      title={r.type}
-                      pinColor={colors.warningAmber}
-                    />
-                  ))
-                : null}
-            </FreeMapView>
-
-            {!isTablet ? (
-              <Pressable style={styles.eyeBtn} onPress={togglePanel}>
-                <Text style={styles.eyeIcon}>👁️</Text>
-              </Pressable>
-            ) : null}
-
-            {!isTablet && controls.isPanelOpen ? (
-              <Animated.View
-                style={[styles.panelOverlay, { transform: [{ translateX: panelAnim }] }]}
-              >
-                <MapControlsPanel
-                  controls={controls}
-                  officers={officerOptions}
-                  onDateChange={(d) => dispatch({ type: 'SET_DATE', date: d })}
-                  onTimeRangeChange={(tr) => dispatch({ type: 'SET_TIME_RANGE', timeRange: tr })}
-                  onToggleOfficer={toggleOfficer}
-                  onDeselectAll={deselectAll}
-                  onSelectAll={selectAll}
-                  onShowOfficersChange={(v) => dispatch({ type: 'SET_SHOW_OFFICERS', value: v })}
-                  onShowTrailsChange={(v) => dispatch({ type: 'SET_SHOW_TRAILS', value: v })}
-                  onShowDwellChange={(v) => dispatch({ type: 'SET_SHOW_DWELL', value: v })}
-                  onShowRequestsChange={(v) => dispatch({ type: 'SET_SHOW_REQUESTS', value: v })}
-                  onMapStyleChange={(s) => dispatch({ type: 'SET_MAP_STYLE', style: s })}
-                  onClose={togglePanel}
-                />
-              </Animated.View>
-            ) : null}
-          </View>
-
-          {isTablet ? (
-            <View style={styles.sidePanel}>
-              <MapControlsPanel
-                controls={controls}
-                officers={officerOptions}
-                onDateChange={(d) => dispatch({ type: 'SET_DATE', date: d })}
-                onTimeRangeChange={(tr) => dispatch({ type: 'SET_TIME_RANGE', timeRange: tr })}
-                onToggleOfficer={toggleOfficer}
-                onDeselectAll={deselectAll}
-                onSelectAll={selectAll}
-                onShowOfficersChange={(v) => dispatch({ type: 'SET_SHOW_OFFICERS', value: v })}
-                onShowTrailsChange={(v) => dispatch({ type: 'SET_SHOW_TRAILS', value: v })}
-                onShowDwellChange={(v) => dispatch({ type: 'SET_SHOW_DWELL', value: v })}
-                onShowRequestsChange={(v) => dispatch({ type: 'SET_SHOW_REQUESTS', value: v })}
-                onMapStyleChange={(s) => dispatch({ type: 'SET_MAP_STYLE', style: s })}
-                onClose={() => dispatch({ type: 'SET_PANEL_OPEN', open: false })}
-              />
             </View>
-          ) : null}
+            <FlatList
+              data={listData}
+              keyExtractor={(item) => item.id}
+              style={styles.list}
+              contentContainerStyle={styles.listContent}
+              ListEmptyComponent={
+                <Text style={styles.empty}>No live pins for the selected filter.</Text>
+              }
+              renderItem={({ item }) => (
+                <View style={styles.row}>
+                  <View
+                    style={[
+                      styles.dot,
+                      {
+                        backgroundColor:
+                          item.kind === 'request'
+                            ? colors.warningAmber
+                            : adminColors.badgeActive,
+                      },
+                    ]}
+                  />
+                  <View style={styles.rowBody}>
+                    <Text style={styles.rowTitle}>{item.title}</Text>
+                    <Text style={styles.rowMeta}>{item.subtitle}</Text>
+                  </View>
+                </View>
+              )}
+            />
+          </View>
         </View>
-
-        <OfficerCardList officers={visibleOfficers} onSelect={flyToOfficer} />
-
-        {sheetVisible && selectedOfficer ? (
-          <OfficerActivitySheet
-            visible={sheetVisible}
-            officer={selectedOfficer}
-            date={controls.selectedDate}
-            timeRange={controls.timeRange}
-            onClose={() => setSheetVisible(false)}
-            navigation={navigation}
-          />
-        ) : null}
       </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  statusStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+  root: {
+    flex: 1,
+    minHeight: 0,
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.surfaceWhite,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderDefault,
+    paddingBottom: spacing.sm,
   },
-  errorBanner: { fontSize: 12, color: colors.errorRed, fontWeight: '600' },
-  liveBanner: { fontSize: 12, color: colors.warningAmber, fontWeight: '600' },
-  body: { flex: 1, flexDirection: 'row' },
-  mapWrap: { flex: 1, position: 'relative' },
-  map: { flex: 1, minHeight: 280 },
-  eyeBtn: {
-    position: 'absolute',
-    bottom: spacing.md,
-    right: spacing.md,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  mapPane: {
+    flex: 1.4,
+    minHeight: 220,
+  },
+  panel: {
+    flex: 1,
+    minHeight: 160,
     backgroundColor: colors.surfaceWhite,
+    borderRadius: radius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderDefault,
+    overflow: 'hidden',
+  },
+  filters: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  chip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+  },
+  chipActive: { borderColor: adminColors.primary, backgroundColor: adminColors.primaryTint },
+  chipText: { fontSize: 12, textTransform: 'capitalize', color: colors.textSecondary },
+  chipTextActive: { color: adminColors.primary, fontWeight: '600' },
+  list: { flex: 1 },
+  listContent: { paddingHorizontal: spacing.sm, paddingBottom: spacing.md, gap: spacing.xs },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    backgroundColor: adminColors.surfaceMuted,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    marginBottom: spacing.xs,
   },
-  eyeIcon: { fontSize: 20 },
-  panelOverlay: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: PANEL_WIDTH,
-    shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  sidePanel: { width: PANEL_WIDTH, borderLeftWidth: 1, borderLeftColor: colors.borderDefault },
+  dot: { width: 10, height: 10, borderRadius: 5, marginRight: spacing.sm },
+  rowBody: { flex: 1 },
+  rowTitle: { fontWeight: '600', color: colors.textPrimary },
+  rowMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+  empty: { color: colors.textSecondary, textAlign: 'center', paddingVertical: spacing.lg },
 });

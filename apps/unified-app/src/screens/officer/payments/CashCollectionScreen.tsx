@@ -5,7 +5,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@prime/ui';
 
 import { AmountDisplay, DenominationInput } from '@/components/payments';
-import { DismissKeyboardScrollView, ScreenWrapper } from '@/components/common';
+import {DismissKeyboardScrollView} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
+import { useOfficerPullToRefresh } from '@/hooks/officer';
 import { useLocation } from '@/hooks/useLocation';
 import {
   useGetBankAccountsQuery,
@@ -250,9 +252,11 @@ export function CashCollectionScreen({ navigation, route }: Props) {
         ? '📍 GPS timed out — collection can still proceed without location'
         : '📍 Waiting for GPS…';
 
+  const { refreshControl } = useOfficerPullToRefresh();
+
   return (
-    <ScreenWrapper scrollable={false} padded={false}>
-      <DismissKeyboardScrollView contentContainerStyle={styles.content}>
+    <OfficerScreenWrapper scrollable={false} padded={false}>
+      <DismissKeyboardScrollView contentContainerStyle={styles.content} refreshControl={refreshControl}>
         <Text style={styles.title}>Collect — {customerName}</Text>
         <Text style={styles.sub}>
           {accountNumber}
@@ -361,7 +365,7 @@ export function CashCollectionScreen({ navigation, route }: Props) {
         ) : null}
         <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
       </DismissKeyboardScrollView>
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 

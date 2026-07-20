@@ -1,4 +1,5 @@
 import type { AttendanceStatus } from '@/types/attendance';
+import { getLocalDateString } from '@/utils/dateUtils';
 import { getMonthIsoRange } from '@/utils/attendanceCalendarGrid';
 
 /** Canonical day status from `get_attendance_status_by_day` — single source of truth. */
@@ -212,13 +213,13 @@ export function warnUnresolvedCalendarCells(
   if (!__DEV__) return;
 
   const { from, to } = getMonthIsoRange(year, month);
-  const [y, m, d] = from.split('-').map(Number);
-  const [ty, tm, td] = to.split('-').map(Number);
-  const start = new Date(y!, m! - 1, d!);
-  const end = new Date(ty!, tm! - 1, td!);
+  const [startY, startM, startD] = from.split('-').map(Number);
+  const [endY, endM, endD] = to.split('-').map(Number);
+  const start = new Date(startY!, startM! - 1, startD!);
+  const end = new Date(endY!, endM! - 1, endD!);
 
   for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
-    const iso = cursor.toISOString().slice(0, 10);
+    const iso = getLocalDateString(cursor);
     if (!statusByDate.has(iso)) {
       console.warn(`[attendance] No canonical status for in-month date ${iso}`);
     }

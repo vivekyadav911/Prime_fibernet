@@ -11,4 +11,5 @@ export { WhatsAppLogsScreen } from './WhatsAppLogsScreen';
 export { AppearanceSettingsScreen } from './AppearanceSettingsScreen';
 export { SystemSettingsScreen } from './SystemSettingsScreen';
 export { BackupExportScreen } from './BackupExportScreen';
+export { DataImportScreen } from './DataImportScreen';
 export { AuditLogsScreen } from './AuditLogsScreen';

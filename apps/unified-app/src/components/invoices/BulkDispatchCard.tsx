@@ -23,6 +23,7 @@ type BulkDispatchCardProps = {
   onChannelChange: (channel: 'email' | 'whatsapp') => void;
   onSend: () => void;
   sending?: boolean;
+  selectedCount?: number;
 };
 
 export const BulkDispatchCard = memo(function BulkDispatchCard({
@@ -32,22 +33,41 @@ export const BulkDispatchCard = memo(function BulkDispatchCard({
   onChannelChange,
   onSend,
   sending,
+  selectedCount = 0,
 }: BulkDispatchCardProps) {
+  const hasSelection = selectedCount > 0;
+
   return (
     <SectionCard title="Bulk dispatch">
-      <Text style={styles.hint}>Send all pending invoices of the selected type</Text>
-      <FilterChips
-        options={INVOICE_TYPE_OPTIONS}
-        selected={invoiceType}
-        onSelect={onInvoiceTypeChange}
-      />
+      <Text style={styles.hint}>
+        {hasSelection
+          ? `Send ${selectedCount} selected invoice${selectedCount === 1 ? '' : 's'}`
+          : 'Send all pending invoices of the selected type, or tap Select to pick specific ones'}
+      </Text>
+      {!hasSelection ? (
+        <FilterChips
+          options={INVOICE_TYPE_OPTIONS}
+          selected={invoiceType}
+          onSelect={onInvoiceTypeChange}
+        />
+      ) : null}
       <FilterChips
         options={CHANNEL_OPTIONS}
         selected={channel}
         onSelect={onChannelChange}
       />
       <View style={styles.btnWrap}>
-        <Button label="Send bulk invoices" onPress={onSend} disabled={sending} />
+        <Button
+          label={
+            sending
+              ? 'Sending…'
+              : hasSelection
+                ? `Send selected (${selectedCount})`
+                : 'Send bulk invoices'
+          }
+          onPress={onSend}
+          disabled={sending}
+        />
       </View>
     </SectionCard>
   );

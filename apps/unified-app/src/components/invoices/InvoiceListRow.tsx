@@ -16,7 +16,14 @@ type InvoiceListRowProps = {
   onSendEmail?: (invoiceId: string) => void;
   onSendWhatsApp?: (invoiceId: string) => void;
   showDivider?: boolean;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (invoiceId: string) => void;
 };
+
+function isSelectable(item: AdminInvoice): boolean {
+  return item.deliveryStatus === 'draft' || item.deliveryStatus === 'pending';
+}
 
 function typeLabel(type: AdminInvoice['invoiceType']): string {
   if (type === 'non_gst') return 'NON-GST';
@@ -44,17 +51,36 @@ export const InvoiceListRow = memo(function InvoiceListRow({
   onSendEmail,
   onSendWhatsApp,
   showDivider = true,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
 }: InvoiceListRowProps) {
   const primaryLine = item.lineItems[0]?.description ?? 'Internet service';
+  const canSelect = selectionMode && isSelectable(item);
 
   return (
     <Pressable
-      style={[styles.row, showDivider && styles.rowDivider]}
-      onPress={onPress ? () => onPress(item.id) : undefined}
-      disabled={!onPress}
+      style={[
+        styles.row,
+        showDivider && styles.rowDivider,
+        selected && styles.rowSelected,
+      ]}
+      onPress={() => {
+        if (canSelect) {
+          onToggleSelect?.(item.id);
+          return;
+        }
+        onPress?.(item.id);
+      }}
+      disabled={!canSelect && !onPress}
     >
       <View style={styles.topRow}>
-        <StatusBadge status={statusLabel(item)} />
+        <View style={styles.topLeft}>
+          {selectionMode && isSelectable(item) ? (
+            <Text style={styles.selectMark}>{selected ? '☑' : '☐'}</Text>
+          ) : null}
+          <StatusBadge status={statusLabel(item)} />
+        </View>
         <View style={styles.typePill}>
           <Text style={styles.typeText}>{typeLabel(item.invoiceType)}</Text>
         </View>
@@ -80,26 +106,28 @@ export const InvoiceListRow = memo(function InvoiceListRow({
         </View>
       </View>
 
-      <View style={styles.actions}>
-        {onDownload ? (
-          <Pressable style={styles.actionBtn} onPress={() => onDownload(item.id)}>
-            <Ionicons name="download-outline" size={14} color={adminColors.primary} />
-            <Text style={styles.actionText}>PDF</Text>
-          </Pressable>
-        ) : null}
-        {onSendEmail ? (
-          <Pressable style={styles.actionBtn} onPress={() => onSendEmail(item.id)}>
-            <Ionicons name="mail-outline" size={14} color={adminColors.primary} />
-            <Text style={styles.actionText}>Email</Text>
-          </Pressable>
-        ) : null}
-        {onSendWhatsApp ? (
-          <Pressable style={styles.actionBtn} onPress={() => onSendWhatsApp(item.id)}>
-            <Ionicons name="logo-whatsapp" size={14} color={adminColors.primary} />
-            <Text style={styles.actionText}>WhatsApp</Text>
-          </Pressable>
-        ) : null}
-      </View>
+      {!selectionMode ? (
+        <View style={styles.actions}>
+          {onDownload ? (
+            <Pressable style={styles.actionBtn} onPress={() => onDownload(item.id)}>
+              <Ionicons name="download-outline" size={14} color={adminColors.primary} />
+              <Text style={styles.actionText}>PDF</Text>
+            </Pressable>
+          ) : null}
+          {onSendEmail ? (
+            <Pressable style={styles.actionBtn} onPress={() => onSendEmail(item.id)}>
+              <Ionicons name="mail-outline" size={14} color={adminColors.primary} />
+              <Text style={styles.actionText}>Email</Text>
+            </Pressable>
+          ) : null}
+          {onSendWhatsApp ? (
+            <Pressable style={styles.actionBtn} onPress={() => onSendWhatsApp(item.id)}>
+              <Ionicons name="logo-whatsapp" size={14} color={adminColors.primary} />
+              <Text style={styles.actionText}>WhatsApp</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
     </Pressable>
   );
 });
@@ -114,10 +142,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: colors.borderDefault,
   },
+  rowSelected: {
+    backgroundColor: adminColors.chipTones.info.bg,
+  },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  topLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  selectMark: {
+    fontSize: 18,
+    color: adminColors.primary,
+    minWidth: 24,
   },
   typePill: {
     borderWidth: 1,

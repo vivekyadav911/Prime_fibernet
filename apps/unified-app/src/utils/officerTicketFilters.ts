@@ -118,9 +118,9 @@ export const OFFICER_TICKET_SORT_OPTIONS: Array<{ key: OfficerTicketSortKey; lab
 ];
 
 export const OFFICER_TICKET_DATE_FILTERS: Array<{ key: OfficerTicketDateFilterKey; label: string }> = [
-  { key: 'all', label: 'All dates' },
+  { key: 'all', label: 'All' },
   { key: 'today', label: 'Today' },
-  { key: 'week', label: 'This week' },
+  { key: 'week', label: 'Week' },
 ];
 
 function portalItemActivityTimestamp(item: PortalTicketItem): number {
@@ -147,6 +147,8 @@ function matchesOfficerTicketSearch(item: PortalTicketItem, query: string): bool
     item.customerName,
     item.customerAddress,
     item.planName,
+    item.ticket?.description,
+    item.request?.description,
   ]
     .join(' ')
     .toLowerCase();

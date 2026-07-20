@@ -1,9 +1,8 @@
 {
   "compilerOptions": {
-    "baseUrl": "./apps/unified-app",
     "paths": {
       "@/*": [
-        "./src/*"
+        "./apps/unified-app/src/*"
       ]
     }
   },

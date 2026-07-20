@@ -68,6 +68,7 @@ import {
   AppearanceSettingsScreen,
   AuditLogsScreen,
   BackupExportScreen,
+  DataImportScreen,
   GeneralSettingsScreen,
   IntegrationsSettingsScreen,
   NotificationsSettingsScreen,
@@ -435,6 +436,7 @@ export function AdminSettingsStackNav() {
       <SettingsStack.Screen name="Appearance" component={AppearanceSettingsScreen} options={{ title: 'Appearance' }} />
       <SettingsStack.Screen name="System" component={SystemSettingsScreen} options={{ title: 'System' }} />
       <SettingsStack.Screen name="BackupExport" component={BackupExportScreen} options={{ title: 'Backup & Export' }} />
+      <SettingsStack.Screen name="DataImport" component={DataImportScreen} options={{ title: 'Data Import' }} />
       <SettingsStack.Screen name="AuditLogs" component={AuditLogsScreen} options={{ title: 'Audit Logs' }} />
     </SettingsStack.Navigator>
   );

@@ -4,6 +4,7 @@ import { radius, spacing } from '@/theme/spacing';
 
 const STATUS_COLORS: Record<string, string> = {
   draft: adminColors.badgePending,
+  pending: adminColors.badgePending,
   pending_review: adminColors.badgePending,
   needs_review: adminColors.badgeWarning,
   flagged_zero_pay: adminColors.badgeBlocked,
@@ -27,6 +28,7 @@ const STATUS_COLORS: Record<string, string> = {
   half_day: adminColors.badgeWarning,
   on_leave: adminColors.badgePending,
   holiday: '#6B7280',
+  not_yet_recorded: adminColors.badgePending,
   assigned: '#0D7377',
   in_progress: '#0D7377',
   completed: adminColors.badgeActive,
@@ -41,8 +43,9 @@ const STATUS_COLORS: Record<string, string> = {
 type StatusBadgeProps = { status: string };
 
 export function StatusBadge({ status }: StatusBadgeProps) {
-  const color = STATUS_COLORS[status.toLowerCase()] ?? '#6B7280';
-  const label = status.replace(/_/g, ' ');
+  const safe = (status ?? 'unknown').toString();
+  const color = STATUS_COLORS[safe.toLowerCase()] ?? '#6B7280';
+  const label = safe.replace(/_/g, ' ');
 
   return (
     <View style={[styles.badge, { borderColor: color, backgroundColor: `${color}18` }]}>

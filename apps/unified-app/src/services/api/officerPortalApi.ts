@@ -11,7 +11,6 @@ import { buildPortalItems, serializePortalItemForCache, serializePortalItemsForC
 import { mapDbRowToServiceRequest } from '@/utils/requestViewMappers';
 import { mapDbRowToTicket } from '@/utils/ticketViewMappers';
 import { getPortalItemCoordinates } from '@/utils/officerPortalCoordinates';
-
 export type OfficerPortalItemDetail = PortalTicketItem & {
   coordinates: ReturnType<typeof getPortalItemCoordinates>;
   activityTimeline: Array<{
@@ -59,11 +58,17 @@ async function loadTicketActivities(client: TypedSupabaseClient, ticketId: strin
 }
 
 async function fetchOfficerPortalItems(client: TypedSupabaseClient, officerId: string): Promise<PortalTicketItem[]> {
-  const [ticketResult, requestResult, planMap] = await Promise.all([
+  const [mineTicketResult, openPoolTicketResult, requestResult, planMap] = await Promise.all([
     client
       .from('ticket_sla_live')
       .select('*')
       .eq('assigned_officer_id', officerId)
+      .order('created_at', { ascending: false }),
+    client
+      .from('ticket_sla_live')
+      .select('*')
+      .is('assigned_officer_id', null)
+      .not('status', 'in', '("Resolved","Closed")')
       .order('created_at', { ascending: false }),
     client
       .from('service_requests')
@@ -73,22 +78,33 @@ async function fetchOfficerPortalItems(client: TypedSupabaseClient, officerId: s
     fetchPlanMap(client),
   ]);
 
-  if (ticketResult.error) throw ticketResult.error;
+  if (mineTicketResult.error) throw mineTicketResult.error;
+  if (openPoolTicketResult.error) throw openPoolTicketResult.error;
   if (requestResult.error) throw requestResult.error;
 
   const officerNameById = await fetchOfficerNameMap(client, [officerId]);
   const requestRows = (requestResult.data ?? []) as Record<string, unknown>[];
   const requestRowById = new Map(requestRows.map((row) => [String(row.id), row]));
 
-  const ticketRows = (ticketResult.data ?? []) as Record<string, unknown>[];
-  const ticketRowById = new Map(ticketRows.map((row) => [String(row.id), row]));
+  const ticketRowsById = new Map<string, Record<string, unknown>>();
+  for (const row of [
+    ...((mineTicketResult.data ?? []) as Record<string, unknown>[]),
+    ...((openPoolTicketResult.data ?? []) as Record<string, unknown>[]),
+  ]) {
+    ticketRowsById.set(String(row.id), row);
+  }
+  const ticketRows = [...ticketRowsById.values()];
+  const ticketRowById = ticketRowsById;
 
   const tickets: Ticket[] = await Promise.all(
     ticketRows.map(async (row) => {
+      const rowOfficerId = row.assigned_officer_id ? String(row.assigned_officer_id) : null;
       const enriched = {
         ...row,
         assigned_officer_name:
-          officerNameById.get(officerId) ?? (row.assigned_officer_name as string | null),
+          rowOfficerId === officerId
+            ? officerNameById.get(officerId) ?? (row.assigned_officer_name as string | null)
+            : (row.assigned_officer_name as string | null),
       };
       return mapDbRowToTicket(enriched, [], [], []);
     }),
@@ -360,7 +376,7 @@ export const officerPortalApi = baseApi.injectEndpoints({
             .maybeSingle();
           if (ticketFetchError) throw ticketFetchError;
 
-          const { error: ticketUpdateError } = await client
+          const { data: updatedTicket, error: ticketUpdateError } = await client
             .from('tickets')
             .update({
               lat: latitude,
@@ -368,8 +384,13 @@ export const officerPortalApi = baseApi.injectEndpoints({
               address,
               updated_at: now,
             })
-            .eq('id', itemId);
+            .eq('id', itemId)
+            .select('id, address, lat, lng')
+            .maybeSingle();
           if (ticketUpdateError) throw ticketUpdateError;
+          if (!updatedTicket) {
+            throw new Error('Could not update ticket location. Check assignment and try again.');
+          }
 
           if (ticket?.linked_request_id) {
             // ponytail: ticket pin is canonical; linked request sync is best-effort (RLS may block)
@@ -380,6 +401,7 @@ export const officerPortalApi = baseApi.injectEndpoints({
           }
 
           if (officerName) {
+            // ponytail: activity note is UX-only; never fail the pin save on it
             await client.from('ticket_activity_events').insert({
               ticket_id: itemId,
               type: 'note_added',
@@ -400,22 +422,27 @@ export const officerPortalApi = baseApi.injectEndpoints({
         { itemId, kind, latitude, longitude, address },
         { dispatch, queryFulfilled, getState },
       ) {
+        try {
+          await queryFulfilled;
+        } catch {
+          return;
+        }
+
+        // Patch cache only after success — optimistic lat/lng remounts MapView under the
+        // open Fix-pin modal and crashes Android.
         const coordinates: PortalItemCoordinates = { latitude, longitude, address };
-        const patches: Array<{ undo: () => void }> = [];
 
         const detailArgs = { itemId, kind };
         const detailEntry = officerPortalApi.endpoints.getOfficerPortalItemDetail.select(detailArgs)(
           getState(),
         );
         if (detailEntry.data) {
-          patches.push(
-            dispatch(
-              officerPortalApi.util.updateQueryData('getOfficerPortalItemDetail', detailArgs, (draft) => {
-                applyLocationToPortalItem(draft, itemId, kind, coordinates, address);
-                draft.coordinates = coordinates;
-                draft.customerAddress = address;
-              }),
-            ),
+          dispatch(
+            officerPortalApi.util.updateQueryData('getOfficerPortalItemDetail', detailArgs, (draft) => {
+              applyLocationToPortalItem(draft, itemId, kind, coordinates, address);
+              draft.coordinates = coordinates;
+              draft.customerAddress = address;
+            }),
           );
         }
 
@@ -425,23 +452,49 @@ export const officerPortalApi = baseApi.injectEndpoints({
           const entry = apiQueries[cacheKey];
           if (!entry?.data) continue;
           const userId = entry.originalArgs as string | undefined;
-          patches.push(
-            dispatch(
-              officerPortalApi.util.updateQueryData('getOfficerAssignedPortalItems', userId, (draft) => {
-                for (const item of draft) {
-                  applyLocationToPortalItem(item, itemId, kind, coordinates, address);
-                }
-              }),
-            ),
+          dispatch(
+            officerPortalApi.util.updateQueryData('getOfficerAssignedPortalItems', userId, (draft) => {
+              for (const item of draft) {
+                applyLocationToPortalItem(item, itemId, kind, coordinates, address);
+              }
+            }),
           );
         }
-
-        try {
-          await queryFulfilled;
-        } catch {
-          patches.forEach((patch) => patch.undo());
-        }
       },
+    }),
+
+    claimOfficerTicket: builder.mutation<
+      { ticketId: string; claimed: boolean },
+      string
+    >({
+      query: (ticketId) => ({
+        handler: async (client) => {
+          const { data, error } = await client.rpc('claim_officer_ticket', {
+            p_ticket_id: ticketId,
+          });
+          if (error) {
+            throw error;
+          }
+          const result = (data ?? {}) as {
+            ticket_id?: string;
+            claimed?: boolean;
+            already_assigned?: boolean;
+            assigned?: boolean;
+          };
+          const claimed = Boolean(result.claimed ?? result.already_assigned ?? result.assigned);
+          if (!claimed) {
+            throw new Error('Could not pick up ticket');
+          }
+          return {
+            ticketId: String(result.ticket_id ?? ticketId),
+            claimed: true,
+          };
+        },
+      }),
+      invalidatesTags: (_result, _error, ticketId) => [
+        { type: 'OfficerPortal', id: ticketId },
+        'OfficerPortal',
+      ],
     }),
 
     createOfficerFieldTicket: builder.mutation<
@@ -513,5 +566,6 @@ export const {
   useUpdateOfficerTicketStatusMutation,
   useAddOfficerTicketNoteMutation,
   useUpdateOfficerPortalItemLocationMutation,
+  useClaimOfficerTicketMutation,
   useCreateOfficerFieldTicketMutation,
 } = officerPortalApi;

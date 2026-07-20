@@ -1,32 +1,40 @@
-import { BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
-import { forwardRef, useCallback, useMemo, useState } from 'react';
+import { BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native';
-import { Circle, Marker, Polygon } from 'react-native-maps';
 import { Button } from '@prime/ui';
-
-import { FreeMapView } from '@/components/map';
 
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { Coordinates, Geofence } from '@/types/attendance';
-import { circleToPolygon } from '@/utils/geofenceUtils';
+import { formatOutsideZoneDistance } from '@/utils/formatDistance';
 
 type Props = {
   mode: 'check_in' | 'approval';
   geofence: Geofence | null;
-  coords: Coordinates;
+  coords: Coordinates | null;
   distance: number;
   isInside: boolean;
   onConfirm: (payload: { notes?: string; reason?: string }) => void;
   onDismiss: () => void;
   isLoading?: boolean;
 };
+
+function isValidCoord(coords: Coordinates | null | undefined): coords is Coordinates {
+  return (
+    coords != null &&
+    Number.isFinite(coords.latitude) &&
+    Number.isFinite(coords.longitude) &&
+    Math.abs(coords.latitude) <= 90 &&
+    Math.abs(coords.longitude) <= 180
+  );
+}
 
 export const CheckInSheet = forwardRef<BottomSheetModal, Props>(function CheckInSheet(
   { mode, geofence, coords, distance, isInside, onConfirm, onDismiss, isLoading },
@@ -42,25 +50,30 @@ export const CheckInSheet = forwardRef<BottomSheetModal, Props>(function CheckIn
     } else {
       onConfirm({ notes });
     }
-  }, [mode, notes, onConfirm, reason]);
+  }, [distance, geofence, isInside, mode, notes, onConfirm, reason]);
 
-  const mapRegion = {
-    latitude: coords.latitude,
-    longitude: coords.longitude,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  };
+  const safeCoords = isValidCoord(coords) ? coords : null;
 
-  const polygonCoords =
-    geofence?.geometry.shape === 'circle'
-      ? circleToPolygon(geofence.geometry.center, geofence.geometry.radius, 32)
-      : geofence?.geometry.shape === 'polygon'
-        ? geofence.geometry.vertices
-        : [];
+  const radiusM =
+    geofence?.geometry.shape === 'circle' && Number.isFinite(geofence.geometry.radius)
+      ? geofence.geometry.radius
+      : null;
+
+  const outsideLabel = formatOutsideZoneDistance(
+    Number.isFinite(distance) ? distance : null,
+    radiusM,
+  );
 
   return (
-    <BottomSheetModal ref={ref} snapPoints={snapPoints} onDismiss={onDismiss}>
-      <BottomSheetView style={styles.content}>
+    <BottomSheetModal
+      ref={ref}
+      snapPoints={snapPoints}
+      onDismiss={onDismiss}
+      enableDynamicSizing={false}
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
+    >
+      <BottomSheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <Text style={styles.title}>
             {mode === 'check_in' ? 'Check In' : 'Request Attendance Approval'}
@@ -69,28 +82,23 @@ export const CheckInSheet = forwardRef<BottomSheetModal, Props>(function CheckIn
           {geofence ? (
             <Text style={styles.subtitle}>
               {isInside
-                ? `✅ Inside ${geofence.name}`
-                : `⚠ ${(distance / 1000).toFixed(1)} km outside zone`}
+                ? `Inside ${geofence.name}`
+                : outsideLabel
+                  ? `Outside ${geofence.name} — ${outsideLabel}`
+                  : `Outside ${geofence.name}`}
             </Text>
-          ) : null}
+          ) : (
+            <Text style={styles.subtitle}>No zone selected — request will still be sent to admin.</Text>
+          )}
 
-          <FreeMapView style={styles.map} region={mapRegion}>
-            <Marker coordinate={coords} />
-            {geofence?.geometry.shape === 'circle' ? (
-              <Circle
-                center={geofence.geometry.center}
-                radius={geofence.geometry.radius}
-                strokeColor={colors.primaryNavy}
-                fillColor="rgba(27,58,107,0.15)"
-              />
-            ) : polygonCoords.length >= 3 ? (
-              <Polygon
-                coordinates={polygonCoords}
-                strokeColor={colors.primaryNavy}
-                fillColor="rgba(27,58,107,0.15)"
-              />
-            ) : null}
-          </FreeMapView>
+          {/* ponytail: no MapView in Gorhom sheet — Android native crash; text location only */}
+          <View style={styles.mapFallback}>
+            <Text style={styles.mapFallbackText}>
+              {safeCoords
+                ? `Your location: ${safeCoords.latitude.toFixed(5)}, ${safeCoords.longitude.toFixed(5)}`
+                : 'Waiting for GPS fix…'}
+            </Text>
+          </View>
 
           {mode === 'check_in' ? (
             <TextInput
@@ -103,7 +111,7 @@ export const CheckInSheet = forwardRef<BottomSheetModal, Props>(function CheckIn
           ) : (
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Reason (required, min 20 characters)"
+              placeholder="Reason (optional)"
               value={reason}
               onChangeText={setReason}
               multiline
@@ -114,19 +122,33 @@ export const CheckInSheet = forwardRef<BottomSheetModal, Props>(function CheckIn
           <Button
             label={mode === 'check_in' ? 'Confirm check in' : 'Submit approval request'}
             onPress={handleConfirm}
-            disabled={isLoading || (mode === 'approval' && reason.trim().length < 20)}
+            disabled={isLoading || (mode === 'approval' && !safeCoords)}
           />
+          {mode === 'approval' && !safeCoords ? (
+            <Text style={styles.hint}>Location is required to submit an approval request.</Text>
+          ) : null}
         </KeyboardAvoidingView>
-      </BottomSheetView>
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 });
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.md, gap: spacing.sm },
+  content: { padding: spacing.md, gap: spacing.sm, paddingBottom: spacing.xxl },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   subtitle: { fontSize: 14, color: colors.textSecondary },
-  map: { height: 120, borderRadius: 8, overflow: 'hidden' },
+  mapFallback: {
+    height: 88,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    backgroundColor: colors.surfaceWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    gap: spacing.xxs,
+  },
+  mapFallbackText: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
   input: {
     borderWidth: 1,
     borderColor: colors.borderDefault,
@@ -136,4 +158,5 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   textArea: { minHeight: 80, textAlignVertical: 'top' },
+  hint: { fontSize: 12, color: colors.red },
 });

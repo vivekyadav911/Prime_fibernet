@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@prime/ui';
 import { Ionicons } from '@expo/vector-icons';
 
-import { ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import {ErrorState, SkeletonLoader} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
 import { useOfficerProfile, usePendingContractSignature } from '@/hooks/officer';
 import { signOut } from '@/hooks/useAuth';
 import { useOfficerId } from '@/hooks/useOfficerId';
@@ -15,6 +15,12 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import type { OfficerProfileStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { resolveOfficerPhotoUrl } from '@/utils/resolveOfficerPhotoUrl';
+import {
+  OFFICER_DOCUMENTS_BUCKET,
+  pickOfficerImage,
+  uploadOfficerDocumentForOfficer,
+} from '@/utils/uploadOfficerDocument';
 
 export function OfficerProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<OfficerProfileStackParamList>>();
@@ -22,7 +28,7 @@ export function OfficerProfileScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const { profile, isLoading: profileLoading, isError: profileError, refetch } = useOfficerProfile();
   const officerId = useOfficerId();
-  const { needsSignature, navigateToSign } = usePendingContractSignature();
+  const { needsSignature } = usePendingContractSignature();
   const [displayName, setDisplayName] = useState(profile?.name ?? '');
   const [editingName, setEditingName] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -56,29 +62,23 @@ export function OfficerProfileScreen() {
     if (!officerId) return;
     setAvatarError(null);
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.7,
-      });
-      if (result.canceled || !result.assets[0]) return;
+      const picked = await pickOfficerImage();
+      if (!picked) return;
 
-      const uri = result.assets[0].uri;
-      const fileName = `avatars/${officerId}_${Date.now()}.jpg`;
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      const { storagePath } = await uploadOfficerDocumentForOfficer(officerId, 'profile_photo', picked);
+      const { data: urlData } = getSupabase()
+        .storage.from(OFFICER_DOCUMENTS_BUCKET)
+        .getPublicUrl(storagePath);
 
-      const { error: uploadError } = await getSupabase().storage
-        .from('officer-avatars')
-        .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = getSupabase().storage.from('officer-avatars').getPublicUrl(fileName);
-      const { error: updateError } = await getSupabase()
+      const photoUrl = urlData.publicUrl;
+      const { data: updated, error: updateError } = await getSupabase()
         .from('officers')
-        .update({ profile_photo_url: urlData.publicUrl })
-        .eq('id', officerId);
+        .update({ profile_photo_url: photoUrl })
+        .eq('id', officerId)
+        .select('id');
       if (updateError) throw updateError;
+      if (!updated?.length) throw new Error('Could not save profile photo. Please try again.');
+
       refetch();
     } catch (err) {
       setAvatarError((err as Error).message ?? 'Photo upload failed. Please try again.');
@@ -87,32 +87,43 @@ export function OfficerProfileScreen() {
 
   if (profileLoading) {
     return (
-      <ScreenWrapper>
+      <OfficerScreenWrapper onRefresh={refetch}>
         <SkeletonLoader rows={6} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   if (profileError) {
     return (
-      <ScreenWrapper>
+      <OfficerScreenWrapper onRefresh={refetch}>
         <ErrorState message="Could not load profile. Please try again." onRetry={refetch} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   return (
-    <ScreenWrapper>
+    <OfficerScreenWrapper onRefresh={refetch}>
       <View style={styles.avatarWrap}>
-        <Pressable onPress={() => void onAvatar()}>
-          {profile?.avatarUrl ? (
-            <Image source={{ uri: profile.avatarUrl }} style={styles.avatar} />
+        <Pressable
+          onPress={() => void onAvatar()}
+          accessibilityLabel="Change profile photo"
+          style={styles.avatarPressable}
+        >
+          {resolveOfficerPhotoUrl(profile?.avatarUrl) ? (
+            <Image
+              source={{ uri: resolveOfficerPhotoUrl(profile?.avatarUrl)! }}
+              style={styles.avatar}
+            />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarInitial}>{profile?.name?.charAt(0) ?? 'O'}</Text>
             </View>
           )}
+          <View style={styles.cameraBadge}>
+            <Ionicons name="camera" size={14} color={colors.white} />
+          </View>
         </Pressable>
+        <Text style={styles.changePhotoHint}>Tap to change photo</Text>
         <Text style={styles.name}>{profile?.name ?? user?.name}</Text>
         <Text style={styles.role}>
           {profile?.designation ?? 'Field Technician'}
@@ -147,9 +158,12 @@ export function OfficerProfileScreen() {
 
       <Pressable
         style={styles.linkRow}
-        onPress={() =>
-          needsSignature ? navigateToSign() : navigation.navigate('EmploymentContract')
-        }
+        onPress={() => {
+          navigation.navigate(
+            'EmploymentContract',
+            needsSignature ? { highlightSign: true } : undefined,
+          );
+        }}
       >
         <Ionicons name="document-text-outline" size={20} color={colors.primaryNavy} />
         <Text style={styles.linkText}>Employment Contract</Text>
@@ -176,7 +190,7 @@ export function OfficerProfileScreen() {
       </View>
 
       <Button label="Sign Out" variant="secondary" onPress={() => void signOut(dispatch)} />
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 
@@ -194,7 +208,8 @@ function InfoRow({ label, value, locked }: { label: string; value: string; locke
 
 const styles = StyleSheet.create({
   avatarWrap: { alignItems: 'center', marginBottom: spacing.lg },
-  avatar: { width: 88, height: 88, borderRadius: 44, marginBottom: spacing.sm },
+  avatarPressable: { width: 88, height: 88 },
+  avatar: { width: 88, height: 88, borderRadius: 44 },
   avatarPlaceholder: {
     width: 88,
     height: 88,
@@ -202,9 +217,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryNavy,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
   },
   avatarInitial: { fontSize: 32, fontWeight: '700', color: colors.white },
+  cameraBadge: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primaryNavy,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.surfaceWhite,
+  },
+  changePhotoHint: {
+    marginTop: spacing.sm,
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
   name: { fontSize: 22, fontWeight: '700', color: colors.textPrimary },
   role: { fontSize: 14, color: colors.textSecondary, marginTop: spacing.xxs },
   editLink: { minHeight: 48, justifyContent: 'center', marginTop: spacing.sm },

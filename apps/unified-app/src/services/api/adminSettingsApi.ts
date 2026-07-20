@@ -66,6 +66,7 @@ function mapRowToAppSettings(row: Record<string, unknown>): AppSettings {
     queryOptimization: Boolean(row.query_optimization ?? true),
     sessionTimeoutMinutes: Number(row.session_timeout_minutes ?? 30),
     cacheTimeoutMinutes: Number(row.cache_timeout_minutes ?? 60),
+    adminSessionHours: Number(row.admin_session_hours ?? 24),
     autoBackup: Boolean(row.auto_backup ?? true),
     backupFrequency: (row.backup_frequency as AppSettings['backupFrequency']) ?? 'daily',
     backupTime: String(row.backup_time ?? '02:00'),
@@ -145,6 +146,7 @@ function sectionToDbPatch(section: AppSettingsSection, updates: Partial<AppSetti
         query_optimization: updates.queryOptimization,
         session_timeout_minutes: updates.sessionTimeoutMinutes,
         cache_timeout_minutes: updates.cacheTimeoutMinutes,
+        admin_session_hours: updates.adminSessionHours,
         auto_backup: updates.autoBackup,
       };
     case 'officers':
@@ -548,12 +550,13 @@ export const adminSettingsApi = baseApi.injectEndpoints({
           if (!(data instanceof Blob)) {
             throw new Error('Export failed — edge function may not be configured');
           }
+          const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + 'Z';
           const filenames: Record<string, string> = {
-            export_users: 'users_export.xlsx',
-            export_officers: 'officers_export.xlsx',
-            export_reports: 'reports_export.xlsx',
-            export_transactions: 'transactions_export.xlsx',
-            export_workbook: 'full_workbook.xlsx',
+            export_users: `users_export_${stamp}.xlsx`,
+            export_officers: `officers_export_${stamp}.xlsx`,
+            export_reports: `reports_snapshot_${stamp}.xlsx`,
+            export_transactions: `transactions_export_${stamp}.xlsx`,
+            export_workbook: `prime_fibernet_full_export_${stamp}.xlsx`,
           };
           await logAuditEvent({
             client,

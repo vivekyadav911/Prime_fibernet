@@ -1,4 +1,4 @@
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, RefreshControl, StyleSheet, View } from 'react-native';
 import { Screen } from '@prime/ui';
 
 import { useKeyboardVerticalOffset } from '@/hooks/useKeyboardVerticalOffset';
@@ -17,6 +17,8 @@ type ScreenWrapperProps = {
   safeAreaTop?: boolean;
   /** Set false when the screen manages its own KeyboardAvoidingView (e.g. chat). */
   keyboardAvoiding?: boolean;
+  refreshing?: boolean;
+  onRefresh?: () => unknown;
 };
 
 export function ScreenWrapper({
@@ -26,15 +28,27 @@ export function ScreenWrapper({
   background = colors.background,
   safeAreaTop = false,
   keyboardAvoiding = true,
+  refreshing = false,
+  onRefresh,
 }: ScreenWrapperProps) {
   const inner = padded ? <View style={styles.inner}>{children}</View> : children;
   const keyboardOffset = useKeyboardVerticalOffset(Platform.OS === 'android' ? 8 : 0);
+  const refreshControl =
+    onRefresh != null ? (
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={() => void onRefresh()}
+        tintColor={colors.primaryNavy}
+        colors={[colors.primaryNavy]}
+      />
+    ) : undefined;
 
   const body = scrollable ? (
     <DismissKeyboardScrollView
       style={scrollLayoutStyles.scrollContainer}
       contentContainerStyle={[styles.scrollContent, padded && styles.scrollPadded]}
       showsVerticalScrollIndicator={false}
+      refreshControl={refreshControl}
     >
       {inner}
     </DismissKeyboardScrollView>

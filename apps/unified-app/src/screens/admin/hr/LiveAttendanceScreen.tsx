@@ -1,24 +1,15 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Alert, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Circle } from 'react-native-maps';
-import type MapView from 'react-native-maps';
-import type { LongPressEvent, MapPressEvent, Region } from 'react-native-maps';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 
-import { AdminScreenLayout, RoleGuard, StatusBadge } from '@/components/admin';
-import {
-  FreeMapView,
-  LiveOfficerMarker,
-  MapSearchBar,
-  SavedPlaceMarker,
-  type MapSearchResult,
-} from '@/components/map';
+import { AdminScreenLayout, RoleGuard, StatusBadge, useAdminPermission, AvatarIcon } from '@/components/admin';
+import { AdminShiftEditModal } from '@/components/admin/attendance/AdminShiftEditModal';
+import { LiveOfficerMap } from '@/components/map/LiveOfficerMap';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useAttendanceRealtimeSync } from '@/hooks/attendance/useAttendanceRealtimeSync';
 import { useAttendanceStats } from '@/hooks/attendance/useAttendanceStats';
-import { useSavedMapPlaces } from '@/hooks/useSavedMapPlaces';
-import type { AttendanceRecord, CheckInMethod, Geofence, OfficerLiveLocation } from '@/types/attendance';
+import type { AttendanceRecord, CheckInMethod } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
@@ -26,7 +17,6 @@ import { colors } from '@/theme/colors';
 import { pageLayout } from '@/theme/pageLayout';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
-import { SHOW_SAVED_MAP_PLACES } from '@/constants/attendanceFeatures';
 import { formatSyncLabel } from '@/utils/dateUtils';
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'LiveAttendance'>;
@@ -35,14 +25,6 @@ const PAGE_PADDING = pageLayout.pagePadding;
 const TOOLBAR_INSET = 72;
 const CARD_RADIUS = radius.xl;
 const MAP_HEIGHT = 228;
-const DOUBLE_TAP_ZOOM_FACTOR = 0.5;
-const DEFAULT_MAP_REGION: Region = {
-  latitude: 28.6139,
-  longitude: 77.209,
-  latitudeDelta: 0.15,
-  longitudeDelta: 0.15,
-};
-
 type ChipTone = keyof typeof adminColors.chipTones;
 
 function formatTime(iso?: string): string {
@@ -174,234 +156,6 @@ const MAP_EDGE_PADDING = {
   left: 12,
 };
 
-type MapModuleProps = {
-  initialRegion: Region;
-  locations: OfficerLiveLocation[];
-  geofences: Geofence[];
-  geofenceOverlays: ReactNode;
-  siteLabel: string;
-  lastSync?: string;
-  inGeofenceCount: number;
-  geofenceActive: boolean;
-  savedPlaces: ReturnType<typeof useSavedMapPlaces>['places'];
-  onSavePlace: (type: 'home' | 'office', latitude: number, longitude: number) => void;
-  onClearPlace: (type: 'home' | 'office') => void;
-};
-
-const GeofenceMapModule = memo(function GeofenceMapModule({
-  initialRegion,
-  locations,
-  geofences,
-  geofenceOverlays,
-  siteLabel,
-  lastSync,
-  inGeofenceCount,
-  geofenceActive,
-  savedPlaces,
-  onSavePlace,
-  onClearPlace,
-}: MapModuleProps) {
-  const mapRef = useRef<MapView>(null);
-  const regionRef = useRef<Region>(initialRegion);
-  const lastTapRef = useRef(0);
-
-  const handleRegionChange = useCallback((region: Region) => {
-    regionRef.current = region;
-  }, []);
-
-  const zoomAtCoordinate = useCallback((latitude: number, longitude: number) => {
-    const region = regionRef.current;
-    mapRef.current?.animateToRegion(
-      {
-        latitude,
-        longitude,
-        latitudeDelta: region.latitudeDelta * DOUBLE_TAP_ZOOM_FACTOR,
-        longitudeDelta: region.longitudeDelta * DOUBLE_TAP_ZOOM_FACTOR,
-      },
-      280,
-    );
-  }, []);
-
-  const handlePress = useCallback(
-    (event: MapPressEvent) => {
-      const now = Date.now();
-      const { latitude, longitude } = event.nativeEvent.coordinate;
-      if (now - lastTapRef.current < 320) {
-        zoomAtCoordinate(latitude, longitude);
-      }
-      lastTapRef.current = now;
-    },
-    [zoomAtCoordinate],
-  );
-
-  const handleLongPress = useCallback(
-    (event: LongPressEvent) => {
-      const { latitude, longitude } = event.nativeEvent.coordinate;
-      const actions: Array<{ text: string; onPress?: () => void; style?: 'cancel' | 'destructive' }> = [
-        { text: 'Set as Home', onPress: () => onSavePlace('home', latitude, longitude) },
-        { text: 'Set as Office', onPress: () => onSavePlace('office', latitude, longitude) },
-      ];
-      if (savedPlaces.home) {
-        actions.push({
-          text: 'Remove Home pin',
-          style: 'destructive',
-          onPress: () => onClearPlace('home'),
-        });
-      }
-      if (savedPlaces.office) {
-        actions.push({
-          text: 'Remove Office pin',
-          style: 'destructive',
-          onPress: () => onClearPlace('office'),
-        });
-      }
-      actions.push({ text: 'Cancel', style: 'cancel' });
-      Alert.alert('Save location', 'Pin this spot on the map:', actions);
-    },
-    [onClearPlace, onSavePlace, savedPlaces.home, savedPlaces.office],
-  );
-
-  const flyToSavedPlace = useCallback((type: 'home' | 'office') => {
-    const place = savedPlaces[type];
-    if (!place) return;
-    mapRef.current?.animateToRegion(
-      {
-        latitude: place.latitude,
-        longitude: place.longitude,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      },
-      300,
-    );
-  }, [savedPlaces]);
-
-  const pinCenterAs = useCallback(
-    (type: 'home' | 'office') => {
-      const { latitude, longitude } = regionRef.current;
-      onSavePlace(type, latitude, longitude);
-    },
-    [onSavePlace],
-  );
-
-  const handlePlaceButtonPress = useCallback(
-    (type: 'home' | 'office') => {
-      const label = type === 'home' ? 'Home' : 'Office';
-      const saved = savedPlaces[type];
-      if (!saved) {
-        pinCenterAs(type);
-        return;
-      }
-      Alert.alert(label, `${label} is pinned on the map.`, [
-        { text: 'Go to', onPress: () => flyToSavedPlace(type) },
-        { text: 'Update pin', onPress: () => pinCenterAs(type) },
-        {
-          text: 'Remove pin',
-          style: 'destructive',
-          onPress: () => onClearPlace(type),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
-    },
-    [flyToSavedPlace, onClearPlace, pinCenterAs, savedPlaces],
-  );
-
-  const flyToSearchResult = useCallback((result: MapSearchResult) => {
-    const delta =
-      result.kind === 'geofence' ? 0.05 : result.kind === 'address' ? 0.035 : 0.02;
-    mapRef.current?.animateToRegion(
-      {
-        latitude: result.latitude,
-        longitude: result.longitude,
-        latitudeDelta: delta,
-        longitudeDelta: delta,
-      },
-      320,
-    );
-  }, []);
-
-  return (
-    <View style={styles.mapModule}>
-      <View style={styles.mapClip}>
-        <FreeMapView
-          ref={mapRef}
-          style={styles.map}
-          initialRegion={initialRegion}
-          mapPadding={MAP_EDGE_PADDING}
-          scrollEnabled
-          zoomEnabled
-          zoomTapEnabled
-          zoomControlEnabled={Platform.OS === 'android'}
-          pitchEnabled={false}
-          rotateEnabled={false}
-          onRegionChangeComplete={handleRegionChange}
-          onLongPress={handleLongPress}
-          onPress={handlePress}
-        >
-          {locations.map((loc, index) => (
-            <LiveOfficerMarker key={loc.officerId} location={loc} colorIndex={index} />
-          ))}
-          {savedPlaces.home ? <SavedPlaceMarker place={savedPlaces.home} /> : null}
-          {savedPlaces.office ? <SavedPlaceMarker place={savedPlaces.office} /> : null}
-          {geofenceOverlays}
-        </FreeMapView>
-
-        <MapSearchBar
-          officers={locations}
-          geofences={geofences}
-          savedPlaces={savedPlaces}
-          onSelect={flyToSearchResult}
-        />
-
-        <View style={styles.mapOverlayTop} pointerEvents="box-none">
-          <View pointerEvents="none">
-            <OperationalChip
-              label={geofenceActive ? 'Geofence active' : 'Geofence inactive'}
-              tone={geofenceActive ? 'success' : 'neutral'}
-            />
-          </View>
-          <View style={styles.mapOverlayTopRight} pointerEvents="box-none">
-            {inGeofenceCount > 0 ? (
-              <View pointerEvents="none">
-                <OperationalChip label={`${inGeofenceCount} in zone`} tone="info" />
-              </View>
-            ) : null}
-          </View>
-        </View>
-
-        {SHOW_SAVED_MAP_PLACES ? (
-          <View style={styles.mapPlaceActions} pointerEvents="box-none">
-            <Pressable
-              accessibilityLabel="Home location — tap to pin or go to saved home"
-              style={[styles.placeActionBtn, savedPlaces.home && styles.placeActionBtnSaved]}
-              onPress={() => handlePlaceButtonPress('home')}
-              onLongPress={() => flyToSavedPlace('home')}
-            >
-              <Text style={styles.placeActionText}>🏠 Home</Text>
-            </Pressable>
-            <Pressable
-              accessibilityLabel="Office location — tap to pin or go to saved office"
-              style={[styles.placeActionBtn, savedPlaces.office && styles.placeActionBtnSaved]}
-              onPress={() => handlePlaceButtonPress('office')}
-              onLongPress={() => flyToSavedPlace('office')}
-            >
-              <Text style={styles.placeActionText}>🏢 Office</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        <View style={styles.mapOverlayBottom} pointerEvents="none">
-          <Text style={styles.mapSiteLabel} numberOfLines={1}>
-            {siteLabel}
-          </Text>
-          <Text style={styles.mapSyncLabel}>
-            {formatRelativeSync(lastSync)} · Long-press map to pin · Double-tap to zoom
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-});
-
 type KpiStripProps = {
   present: number;
   absent: number;
@@ -432,7 +186,15 @@ function AttendanceKpiStrip({ present, absent, late }: KpiStripProps) {
   );
 }
 
-function AttendanceRecordCard({ item }: { item: AttendanceRecord }) {
+function AttendanceRecordCard({
+  item,
+  canEdit,
+  onEdit,
+}: {
+  item: AttendanceRecord;
+  canEdit: boolean;
+  onEdit: (record: AttendanceRecord) => void;
+}) {
   const isCompleted = Boolean(item.checkOutTime);
   const isOutsideZone = item.checkInMethod === 'approved_outside';
   const needsApproval = Boolean(item.approvalRequestId);
@@ -440,13 +202,16 @@ function AttendanceRecordCard({ item }: { item: AttendanceRecord }) {
   return (
     <View style={styles.recordCard}>
       <View style={styles.recordHeader}>
-        <Text style={styles.recordName}>{item.officerName}</Text>
-        <View style={styles.recordChipRow}>
-          <StatusBadge status={item.status} />
-          {item.isLate ? <OperationalChip label="Late" tone="warning" /> : null}
-          {isCompleted ? <OperationalChip label="Completed" tone="success" /> : null}
-          {needsApproval ? <OperationalChip label="Pending approval" tone="warning" /> : null}
-          {isOutsideZone ? <OperationalChip label="Outside geofence" tone="error" /> : null}
+        <AvatarIcon name={item.officerName} uri={item.officerAvatar} size={40} />
+        <View style={styles.recordHeaderText}>
+          <Text style={styles.recordName}>{item.officerName}</Text>
+          <View style={styles.recordChipRow}>
+            <StatusBadge status={item.status} />
+            {item.isLate ? <OperationalChip label="Late" tone="warning" /> : null}
+            {isCompleted ? <OperationalChip label="Completed" tone="success" /> : null}
+            {needsApproval ? <OperationalChip label="Pending approval" tone="warning" /> : null}
+            {isOutsideZone ? <OperationalChip label="Outside geofence" tone="error" /> : null}
+          </View>
         </View>
       </View>
 
@@ -480,6 +245,12 @@ function AttendanceRecordCard({ item }: { item: AttendanceRecord }) {
       {item.lateByMinutes != null && item.lateByMinutes > 0 ? (
         <Text style={styles.recordLateNote}>Late by {item.lateByMinutes} min</Text>
       ) : null}
+
+      {canEdit ? (
+        <Pressable style={styles.editBtn} onPress={() => onEdit(item)}>
+          <Text style={styles.editBtnText}>Edit shift</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -501,6 +272,8 @@ function RecordsEmptyState({ onAddGeofence }: { onAddGeofence: () => void }) {
 
 export function LiveAttendanceScreen({ navigation }: Props) {
   useAttendanceRealtimeSync();
+  const canEditShifts = useAdminPermission('attendance.edit');
+  const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
   const {
     stats,
     isLoading,
@@ -512,32 +285,8 @@ export function LiveAttendanceScreen({ navigation }: Props) {
   const locations = stats.locations;
   const geofences = stats.geofences;
   const locationsLoading = isLoading;
-  const { places: savedPlaces, savePlace, clearPlace } = useSavedMapPlaces();
   const [userRefreshing, setUserRefreshing] = useState(false);
   const [lastFetchAt, setLastFetchAt] = useState<string | undefined>();
-  const [mapInitialRegion, setMapInitialRegion] = useState<Region | null>(null);
-  const mapRegionInitializedRef = useRef(false);
-
-  useEffect(() => {
-    if (mapRegionInitializedRef.current) return;
-
-    const first = locations?.[0];
-    if (first) {
-      mapRegionInitializedRef.current = true;
-      setMapInitialRegion({
-        latitude: first.coordinates.latitude,
-        longitude: first.coordinates.longitude,
-        latitudeDelta: 0.15,
-        longitudeDelta: 0.15,
-      });
-      return;
-    }
-
-    if (!isLoading && !locationsLoading) {
-      mapRegionInitializedRef.current = true;
-      setMapInitialRegion(DEFAULT_MAP_REGION);
-    }
-  }, [locations, isLoading, locationsLoading]);
 
   useEffect(() => {
     if (!isLoading && !locationsLoading) {
@@ -585,8 +334,14 @@ export function LiveAttendanceScreen({ navigation }: Props) {
   }, [geofences, lastFetchAt, locations, stats]);
 
   const renderItem = useCallback(
-    ({ item }: { item: AttendanceRecord }) => <AttendanceRecordCard item={item} />,
-    [],
+    ({ item }: { item: AttendanceRecord }) => (
+      <AttendanceRecordCard
+        item={item}
+        canEdit={canEditShifts}
+        onEdit={setEditingRecord}
+      />
+    ),
+    [canEditShifts],
   );
 
   const handleRefresh = useCallback(() => {
@@ -596,24 +351,6 @@ export function LiveAttendanceScreen({ navigation }: Props) {
       setUserRefreshing(false);
     });
   }, [refetchStats]);
-
-  const geofenceOverlays = useMemo(
-    () =>
-      (geofences ?? []).map((g) => {
-        if (g.geometry.shape !== 'circle') return null;
-        return (
-          <Circle
-            key={g.id}
-            center={g.geometry.center}
-            radius={g.geometry.radius}
-            strokeColor={g.isActive ? adminColors.primary : colors.textSecondary}
-            strokeWidth={g.isActive ? 2 : 1}
-            fillColor={g.isActive ? 'rgba(91,79,207,0.16)' : 'rgba(150,150,150,0.12)'}
-          />
-        );
-      }),
-    [geofences],
-  );
 
   const listHeader = useMemo(
     () => (
@@ -626,23 +363,14 @@ export function LiveAttendanceScreen({ navigation }: Props) {
           lastSync={opsSummary.lastSync}
         />
 
-        {mapInitialRegion ? (
-          <GeofenceMapModule
-            initialRegion={mapInitialRegion}
-            locations={locations ?? []}
-            geofences={geofences ?? []}
-            geofenceOverlays={geofenceOverlays}
-            siteLabel={opsSummary.siteLabel}
-            lastSync={opsSummary.lastSync}
-            inGeofenceCount={opsSummary.inGeofence}
-            geofenceActive={opsSummary.geofenceActive}
-            savedPlaces={savedPlaces}
-            onSavePlace={savePlace}
-            onClearPlace={clearPlace}
-          />
-        ) : (
-          <View style={styles.mapModulePlaceholder} />
-        )}
+        <LiveOfficerMap
+          locations={locations ?? []}
+          geofences={geofences ?? []}
+          siteLabel={opsSummary.siteLabel}
+          lastSync={opsSummary.lastSync}
+          inGeofenceCount={opsSummary.inGeofence}
+          geofenceActive={opsSummary.geofenceActive}
+        />
 
         <AttendanceKpiStrip
           present={counts.present}
@@ -663,14 +391,9 @@ export function LiveAttendanceScreen({ navigation }: Props) {
       counts.absent,
       counts.late,
       counts.present,
-      geofenceOverlays,
       geofences,
       locations,
-      mapInitialRegion,
       opsSummary,
-      savePlace,
-      clearPlace,
-      savedPlaces,
     ],
   );
 
@@ -733,6 +456,13 @@ export function LiveAttendanceScreen({ navigation }: Props) {
           </Pressable>
         </View>
         </View>
+
+        <AdminShiftEditModal
+          visible={editingRecord != null}
+          record={editingRecord}
+          onClose={() => setEditingRecord(null)}
+          onSaved={() => void refetchStats()}
+        />
       </AdminScreenLayout>
     </RoleGuard>
   );
@@ -1031,7 +761,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   recordHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  recordHeaderText: {
+    flex: 1,
     gap: spacing.xs,
+    minWidth: 0,
   },
   recordName: {
     fontSize: 17,
@@ -1139,6 +876,19 @@ const styles = StyleSheet.create({
   },
   recordsEmptyCtaText: {
     fontSize: 13,
+    fontWeight: '700',
+    color: adminColors.primary,
+  },
+
+  editBtn: {
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+    marginTop: spacing.xxs,
+  },
+  editBtnText: {
+    fontSize: 14,
     fontWeight: '700',
     color: adminColors.primary,
   },

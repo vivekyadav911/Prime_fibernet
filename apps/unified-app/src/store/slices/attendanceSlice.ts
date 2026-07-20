@@ -7,6 +7,7 @@ import type {
   Coordinates,
   Geofence,
 } from '@/types/attendance';
+import { getLocalDateString } from '@/utils/dateUtils';
 
 export type PermissionLevel = 'granted' | 'denied' | 'restricted' | 'undetermined';
 
@@ -37,11 +38,7 @@ type AttendanceState = {
 };
 
 function defaultAdminRecordsPrefs(): AdminRecordsPrefs {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  const iso = `${year}-${month}-${day}`;
+  const iso = getLocalDateString();
   return {
     viewMode: 'list',
     selectedDate: iso,
@@ -50,6 +47,8 @@ function defaultAdminRecordsPrefs(): AdminRecordsPrefs {
     useDateRange: false,
   };
 }
+
+export { defaultAdminRecordsPrefs };
 
 const initialState: AttendanceState = {
   currentLocation: null,

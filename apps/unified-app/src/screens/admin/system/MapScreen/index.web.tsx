@@ -1,30 +1,33 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
 
-import { AdminScreenLayout, AdminWebLayout, RoleGuard } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard } from '@/components/admin';
+import { AdminTrackingMap } from '@/components/map/AdminTrackingMap.web';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { useGetTrackingOfficerLocationsQuery, useGetOpenRequestPinsQuery } from '@/store/api/endpoints';
 import { adminColors } from '@/theme/admin';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type FilterMode = 'officers' | 'requests' | 'both';
 
-const OFFICER_COLORS: Record<string, string> = {
-  available: adminColors.badgeActive,
-  offline: colors.textSecondary,
-  busy: adminColors.badgePending,
-};
-
 export function AdminMapScreen() {
   const [filter, setFilter] = useState<FilterMode>('both');
+  const { width, height } = useWindowDimensions();
 
   const { data: officers, isLoading: oLoad, isError: oErr, error: oError, refetch: oRefetch } =
-    useGetTrackingOfficerLocationsQuery();
-  const { data: requests, isLoading: rLoad, isError: rErr, error: rError, refetch: rRefetch } = useGetOpenRequestPinsQuery();
+    useGetTrackingOfficerLocationsQuery(undefined, { pollingInterval: 30_000 });
+  const { data: requests, isLoading: rLoad, isError: rErr, error: rError, refetch: rRefetch } =
+    useGetOpenRequestPinsQuery();
 
   const showOfficers = filter === 'officers' || filter === 'both';
   const showRequests = filter === 'requests' || filter === 'both';
@@ -54,70 +57,113 @@ export function AdminMapScreen() {
     return rows;
   }, [officers, requests, showOfficers, showRequests]);
 
-  if (oLoad || rLoad) return <AdminScreenLayout><SkeletonLoader rows={3} tall /></AdminScreenLayout>;
-  if (oErr || rErr) return <AdminScreenLayout><ErrorState message={queryErrorMessage(oError ?? rError)} onRetry={() => { oRefetch(); rRefetch(); }} /></AdminScreenLayout>;
+  if (oLoad || rLoad) {
+    return (
+      <AdminScreenLayout>
+        <SkeletonLoader rows={3} tall />
+      </AdminScreenLayout>
+    );
+  }
+  if (oErr || rErr) {
+    return (
+      <AdminScreenLayout>
+        <ErrorState
+          message={queryErrorMessage(oError ?? rError)}
+          onRetry={() => {
+            oRefetch();
+            rRefetch();
+          }}
+        />
+      </AdminScreenLayout>
+    );
+  }
 
   return (
     <RoleGuard requiredPermission="map.view">
-      <AdminScreenLayout>
-        <AdminWebLayout>
-          <View style={styles.notice}>
-            <Text style={styles.noticeTitle}>Map view</Text>
-            <Text style={styles.noticeBody}>
-              Interactive map pins are available in the mobile admin app. On web, live officer and request
-              locations are listed below.
-            </Text>
+      <AdminScreenLayout padded={false}>
+        <View style={styles.root}>
+          <View style={styles.mapPane}>
+            <AdminTrackingMap
+              officers={officers ?? []}
+              requests={requests ?? []}
+              showOfficers={showOfficers}
+              showRequests={showRequests}
+            />
           </View>
-          <View style={styles.filters}>
-            {(['officers', 'requests', 'both'] as FilterMode[]).map((f) => (
-              <Pressable key={f} style={[styles.chip, filter === f && styles.chipActive]} onPress={() => setFilter(f)}>
-                <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>{f}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <FlatList
-            data={listData}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
-            ListEmptyComponent={
-              <Text style={styles.empty}>No live pins for the selected filter.</Text>
-            }
-            renderItem={({ item }) => (
-              <View style={styles.row}>
-                <View
-                  style={[
-                    styles.dot,
-                    {
-                      backgroundColor:
-                        item.kind === 'request' ? colors.warningAmber : OFFICER_COLORS.available,
-                    },
-                  ]}
-                />
-                <View style={styles.rowBody}>
-                  <Text style={styles.rowTitle}>{item.title}</Text>
-                  <Text style={styles.rowMeta}>{item.subtitle}</Text>
+
+          <View style={styles.panel}>
+            <View style={styles.filters}>
+              {(['officers', 'requests', 'both'] as FilterMode[]).map((f) => (
+                <Pressable
+                  key={f}
+                  style={[styles.chip, filter === f && styles.chipActive]}
+                  onPress={() => setFilter(f)}
+                >
+                  <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>{f}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <FlatList
+              data={listData}
+              keyExtractor={(item) => item.id}
+              style={styles.list}
+              contentContainerStyle={styles.listContent}
+              ListEmptyComponent={
+                <Text style={styles.empty}>No live pins for the selected filter.</Text>
+              }
+              renderItem={({ item }) => (
+                <View style={styles.row}>
+                  <View
+                    style={[
+                      styles.dot,
+                      {
+                        backgroundColor:
+                          item.kind === 'request' ? colors.warningAmber : adminColors.badgeActive,
+                      },
+                    ]}
+                  />
+                  <View style={styles.rowBody}>
+                    <Text style={styles.rowTitle}>{item.title}</Text>
+                    <Text style={styles.rowMeta}>{item.subtitle}</Text>
+                  </View>
                 </View>
-              </View>
-            )}
-          />
-        </AdminWebLayout>
+              )}
+            />
+          </View>
+        </View>
       </AdminScreenLayout>
     </RoleGuard>
   );
 }
 
 const styles = StyleSheet.create({
-  notice: {
-    backgroundColor: adminColors.primaryTint,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: adminColors.permissionBoxBorder,
+  root: {
+    flex: 1,
+    minHeight: 0,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
   },
-  noticeTitle: { fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.xxs },
-  noticeBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
-  filters: { flexDirection: 'row', gap: spacing.xs, paddingBottom: spacing.sm },
+  mapPane: {
+    flex: 1.4,
+    minHeight: 220,
+  },
+  panel: {
+    flex: 1,
+    minHeight: 160,
+    backgroundColor: colors.surfaceWhite,
+    borderRadius: radius.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderDefault,
+    overflow: 'hidden',
+  },
+  filters: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
   chip: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
@@ -128,11 +174,12 @@ const styles = StyleSheet.create({
   chipActive: { borderColor: adminColors.primary, backgroundColor: adminColors.primaryTint },
   chipText: { fontSize: 12, textTransform: 'capitalize', color: colors.textSecondary },
   chipTextActive: { color: adminColors.primary, fontWeight: '600' },
-  list: { paddingBottom: spacing.xl, gap: spacing.xs },
+  list: { flex: 1 },
+  listContent: { paddingHorizontal: spacing.sm, paddingBottom: spacing.md, gap: spacing.xs },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceWhite,
+    backgroundColor: adminColors.surfaceMuted,
     borderRadius: radius.sm,
     padding: spacing.sm,
     borderWidth: 1,

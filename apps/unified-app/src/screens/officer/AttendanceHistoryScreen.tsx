@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { Screen } from '@prime/ui';
-
+import { useOfficerPullToRefresh } from '@/hooks/officer/useOfficerPullToRefresh';
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
+import { OfficerScreen } from '@/components/officer';
 import { useOfficerMonthAttendance } from '@/hooks/attendance/useAttendance';
 import type { OfficerDrawerParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
@@ -32,8 +32,7 @@ function canGoForward(month: number, year: number): boolean {
 function ViewModeChip({
   label,
   active,
-  onPress,
-}: {
+  onPress}: {
   label: string;
   active: boolean;
   onPress: () => void;
@@ -53,6 +52,7 @@ export function AttendanceHistoryScreen(_props: Props) {
 
   const { statusRows, recordsByDate, counts, officerId, isLoading, isError, error, refetch } =
     useOfficerMonthAttendance(month, year);
+  const { refreshControl } = useOfficerPullToRefresh(refetch);
 
   const listRows = useMemo(
     () =>
@@ -84,22 +84,22 @@ export function AttendanceHistoryScreen(_props: Props) {
 
   if (isLoading) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <SkeletonLoader rows={10} />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   if (isError) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   return (
-    <Screen padded={false}>
+    <OfficerScreen padded={false} scrollable={false}>
       <View style={styles.toolbar}>
         <View style={styles.monthNav}>
           <Pressable style={styles.navBtn} onPress={goPrevMonth} accessibilityLabel="Previous month">
@@ -142,16 +142,21 @@ export function AttendanceHistoryScreen(_props: Props) {
       </View>
 
       {viewMode === 'calendar' ? (
-        <View style={styles.calendarWrap}>
+        <ScrollView
+          refreshControl={refreshControl}
+          contentContainerStyle={styles.calendarWrap}
+          showsVerticalScrollIndicator={false}
+        >
           <AttendanceCalendar
             year={year}
             month={month}
             statusRows={statusRows}
             selectedOfficerId={officerId}
           />
-        </View>
+        </ScrollView>
       ) : (
         <FlatList
+          refreshControl={refreshControl} 
           data={listRows}
           keyExtractor={(item) => item.shiftDate}
           renderItem={renderItem}
@@ -164,7 +169,7 @@ export function AttendanceHistoryScreen(_props: Props) {
           }
         />
       )}
-    </Screen>
+    </OfficerScreen>
   );
 }
 
@@ -173,19 +178,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
-    gap: spacing.sm,
-  },
+    gap: spacing.sm},
   monthNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+    justifyContent: 'space-between'},
   navBtn: {
     minWidth: 48,
     minHeight: 48,
     alignItems: 'center',
-    justifyContent: 'center',
-  },
+    justifyContent: 'center'},
   navBtnDisabled: { opacity: 0.4 },
   monthLabel: { fontSize: 18, fontWeight: '700', color: colors.primaryNavy },
   chipRow: { flexDirection: 'row', gap: spacing.xs },
@@ -197,8 +199,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderDefault,
     minHeight: 36,
-    justifyContent: 'center',
-  },
+    justifyContent: 'center'},
   chipActive: { backgroundColor: colors.primaryNavy, borderColor: colors.primaryNavy },
   chipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   chipTextActive: { color: colors.white },
@@ -207,9 +208,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
-  },
+    paddingBottom: spacing.sm},
   summaryText: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   calendarWrap: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg },
-  listContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl },
-});
+  listContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.xxl }});

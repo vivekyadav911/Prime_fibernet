@@ -1,6 +1,7 @@
 import type { Payment, PaymentGateway, PaymentOrderResponse, PaymentStatus } from '@prime/types';
 
 import { mapDbRowToInvoiceRecord } from '@/utils/invoicePdf';
+import { parseSupabaseFunctionError } from '@/utils/supabaseFunctionError';
 
 import { baseApi } from './baseApi';
 
@@ -121,7 +122,7 @@ export const paymentsApi = baseApi.injectEndpoints({
     }),
 
     createPaymentOrder: builder.mutation<
-      PaymentOrderResponse,
+      PaymentOrderResponse & { keyId: string },
       {
         userId: string;
         userName: string;
@@ -145,17 +146,22 @@ export const paymentsApi = baseApi.injectEndpoints({
               planName: body.planName,
               amount: body.amount,
               billingCycle: body.billingCycle ?? 'monthly',
+              intent: 'plan',
               paymentMethod: 'gateway',
             },
           });
-          if (error) throw error;
+          if (error) {
+            throw new Error(await parseSupabaseFunctionError(error, 'Could not start checkout.'));
+          }
           const res = data as Record<string, unknown>;
+          if (res.error) throw new Error(String(res.error));
           return {
             paymentId: String(res.paymentId ?? ''),
             orderId: String(res.orderId ?? ''),
             checkoutUrl: (res.checkoutUrl ?? res.paymentUrl ?? null) as string | null,
             gateway: (res.gateway ?? 'easybuzz') as PaymentGateway,
             amount: Number(res.amount ?? body.amount),
+            keyId: String(res.keyId ?? ''),
           };
         },
       }),
@@ -208,6 +214,7 @@ export const paymentsApi = baseApi.injectEndpoints({
         paymentId: string;
         orderId?: string;
         gateway?: PaymentGateway;
+        planId?: string;
         paymentResponse?: Record<string, unknown>;
         razorpayPaymentId?: string;
         razorpaySignature?: string;
@@ -240,6 +247,7 @@ export const paymentsApi = baseApi.injectEndpoints({
               paymentId: body.paymentId,
               orderId: body.orderId,
               gateway: body.gateway,
+              planId: body.planId,
               razorpayPaymentId: body.razorpayPaymentId,
               razorpaySignature: body.razorpaySignature,
               pollOnly: body.pollOnly ? '1' : undefined,

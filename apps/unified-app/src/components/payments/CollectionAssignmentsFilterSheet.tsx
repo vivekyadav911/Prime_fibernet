@@ -18,7 +18,16 @@ type CollectionAssignmentsFilterSheetProps = {
   onClose: () => void;
   onApply: (filters: CollectionAssignmentsFilters) => void;
   onClear: () => void;
+  /** History tab only needs officer + event status filters. */
+  mode?: 'board' | 'history';
 };
+
+export function countActiveHistoryFilters(filters: CollectionAssignmentsFilters): number {
+  let count = 0;
+  if (filters.officerFilter !== 'all') count += 1;
+  if (filters.collectionStatus !== 'all') count += 1;
+  return count;
+}
 
 const PAYMENT_STATUS_OPTIONS = [
   { value: 'all' as const, label: 'All' },
@@ -72,6 +81,7 @@ export function CollectionAssignmentsFilterSheet({
   onClose,
   onApply,
   onClear,
+  mode = 'board',
 }: CollectionAssignmentsFilterSheetProps) {
   const sheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['80%'], []);
@@ -113,56 +123,60 @@ export function CollectionAssignmentsFilterSheet({
         <Text style={styles.title}>Filters</Text>
 
         <SelectField
-          label="Assigned officer"
+          label={mode === 'history' ? 'Officer' : 'Assigned officer'}
           value={localFilters.officerFilter}
           options={officerOptions}
           onSelect={(value) => setLocalFilters((prev) => ({ ...prev, officerFilter: value }))}
         />
 
         <SelectField
-          label="Payment status"
-          value={localFilters.paymentStatus}
-          options={PAYMENT_STATUS_OPTIONS}
-          onSelect={(value) => setLocalFilters((prev) => ({ ...prev, paymentStatus: value }))}
-        />
-
-        <SelectField
-          label="Collection status"
+          label={mode === 'history' ? 'Event status' : 'Collection status'}
           value={localFilters.collectionStatus}
           options={COLLECTION_STATUS_OPTIONS}
           onSelect={(value) => setLocalFilters((prev) => ({ ...prev, collectionStatus: value }))}
         />
 
-        <SelectField
-          label="Queue view"
-          value={localFilters.queueView}
-          options={VIEW_MODE_OPTIONS}
-          onSelect={(value) =>
-            setLocalFilters((prev) => ({
-              ...prev,
-              queueView: value,
-              outstandingOnly: value === 'due_for_collection' ? true : prev.outstandingOnly,
-            }))
-          }
-        />
+        {mode === 'board' ? (
+          <>
+            <SelectField
+              label="Payment status"
+              value={localFilters.paymentStatus}
+              options={PAYMENT_STATUS_OPTIONS}
+              onSelect={(value) => setLocalFilters((prev) => ({ ...prev, paymentStatus: value }))}
+            />
 
-        {localFilters.queueView === 'all' ? (
-          <SelectField
-            label="Balance"
-            value={localFilters.outstandingOnly ? 'outstanding' : 'all'}
-            options={BALANCE_OPTIONS}
-            onSelect={(value) =>
-              setLocalFilters((prev) => ({ ...prev, outstandingOnly: value === 'outstanding' }))
-            }
-          />
+            <SelectField
+              label="Queue view"
+              value={localFilters.queueView}
+              options={VIEW_MODE_OPTIONS}
+              onSelect={(value) =>
+                setLocalFilters((prev) => ({
+                  ...prev,
+                  queueView: value,
+                  outstandingOnly: value === 'due_for_collection' ? true : prev.outstandingOnly,
+                }))
+              }
+            />
+
+            {localFilters.queueView === 'all' ? (
+              <SelectField
+                label="Balance"
+                value={localFilters.outstandingOnly ? 'outstanding' : 'all'}
+                options={BALANCE_OPTIONS}
+                onSelect={(value) =>
+                  setLocalFilters((prev) => ({ ...prev, outstandingOnly: value === 'outstanding' }))
+                }
+              />
+            ) : null}
+
+            <SelectField
+              label="Claim state"
+              value={localFilters.claimFilter}
+              options={CLAIM_OPTIONS}
+              onSelect={(value) => setLocalFilters((prev) => ({ ...prev, claimFilter: value }))}
+            />
+          </>
         ) : null}
-
-        <SelectField
-          label="Claim state"
-          value={localFilters.claimFilter}
-          options={CLAIM_OPTIONS}
-          onSelect={(value) => setLocalFilters((prev) => ({ ...prev, claimFilter: value }))}
-        />
 
         <View style={styles.actions}>
           <Button label="Apply" onPress={() => onApply(localFilters)} />

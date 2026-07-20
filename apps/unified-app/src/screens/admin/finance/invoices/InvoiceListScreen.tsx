@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { AdminScreenLayout, AdminKPICard, FilterChips, RoleGuard, SearchBar } from '@/components/admin';
+import { AdminScreenLayout, AdminKPICard, AdminButton, FilterChips, RoleGuard, SearchBar } from '@/components/admin';
 import { BulkDispatchCard, InvoiceListRow, SendInvoiceRecipientModal } from '@/components/invoices';
 import type { SendInvoiceRecipientPayload } from '@/components/invoices';
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
@@ -38,6 +38,8 @@ export function InvoiceListScreen({ navigation }: Props) {
   const [bulkChannel, setBulkChannel] = useState<'email' | 'whatsapp'>('email');
   const [sendTarget, setSendTarget] = useState<AdminInvoice | null>(null);
   const [sendChannel, setSendChannel] = useState<'email' | 'whatsapp'>('email');
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const { data: stats, isLoading: statsLoading } = useGetInvoiceStatsQuery();
   const { data: gstRequests } = useGetGstInvoiceRequestsQuery({ status: 'pending' });
@@ -141,31 +143,79 @@ export function InvoiceListScreen({ navigation }: Props) {
     [openSendModalById],
   );
 
-  const handleBulkSend = useCallback(async () => {
-    try {
-      const result = await bulkSend({ invoiceType: bulkType, channel: bulkChannel }).unwrap();
-      dispatch(
-        enqueueToast({
-          id: Date.now().toString(),
-          type: result.failed > 0 ? 'error' : 'success',
-          message: `Sent ${result.sent}, failed ${result.failed}`,
-        }),
-      );
-    } catch (e) {
-      Alert.alert('Bulk send failed', queryErrorMessage(e));
-    }
-  }, [bulkChannel, bulkSend, bulkType, dispatch]);
+  const handleBulkSend = useCallback(
+    async (channelOverride?: 'email' | 'whatsapp') => {
+      const channel = channelOverride ?? bulkChannel;
+      try {
+        const usingSelection = selectionMode && selectedIds.length > 0;
+        const result = await bulkSend({
+          invoiceType: usingSelection ? undefined : bulkType,
+          channel,
+          invoiceIds: usingSelection ? selectedIds : undefined,
+        }).unwrap();
+        const message =
+          result.sent === 0 && result.failed === 0
+            ? usingSelection
+              ? 'No sendable invoices in selection (draft or pending only)'
+              : 'No pending invoices to send for this type'
+            : result.failed > 0
+              ? `Sent ${result.sent}, failed ${result.failed}: ${result.errors[0]?.message ?? 'unknown error'}`
+              : `Sent ${result.sent} invoice${result.sent === 1 ? '' : 's'}`;
+        dispatch(
+          enqueueToast({
+            id: Date.now().toString(),
+            type: result.failed > 0 ? 'error' : 'success',
+            message,
+          }),
+        );
+        if (usingSelection && result.sent > 0) {
+          setSelectedIds([]);
+          setSelectionMode(false);
+        }
+        refetch();
+      } catch (e) {
+        Alert.alert('Bulk send failed', queryErrorMessage(e));
+      }
+    },
+    [bulkChannel, bulkSend, bulkType, dispatch, refetch, selectedIds, selectionMode],
+  );
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  const toggleSelectionMode = useCallback(() => {
+    setSelectionMode((v) => !v);
+    setSelectedIds([]);
+  }, []);
+
+  const selectAllSendable = useCallback(() => {
+    const ids = invoicesRef.current
+      .filter((inv) => inv.deliveryStatus === 'draft' || inv.deliveryStatus === 'pending')
+      .map((inv) => inv.id);
+    setSelectedIds(ids);
+  }, []);
 
   const renderItem = useCallback(
     ({ item }: { item: AdminInvoice }) => (
       <InvoiceListRow
         item={item}
-        onDownload={handleDownloadById}
-        onSendEmail={handleSendEmailById}
-        onSendWhatsApp={handleSendWhatsAppById}
+        onDownload={selectionMode ? undefined : handleDownloadById}
+        onSendEmail={selectionMode ? undefined : handleSendEmailById}
+        onSendWhatsApp={selectionMode ? undefined : handleSendWhatsAppById}
+        selectionMode={selectionMode}
+        selected={selectedIds.includes(item.id)}
+        onToggleSelect={toggleSelect}
       />
     ),
-    [handleDownloadById, handleSendEmailById, handleSendWhatsAppById],
+    [
+      handleDownloadById,
+      handleSendEmailById,
+      handleSendWhatsAppById,
+      selectedIds,
+      selectionMode,
+      toggleSelect,
+    ],
   );
 
   const listHeader = useMemo(
@@ -244,6 +294,40 @@ export function InvoiceListScreen({ navigation }: Props) {
 
         <SearchBar value={search} onChangeText={setSearch} placeholder="Search customer or invoice ID…" />
 
+        <View style={styles.bulkToolbar}>
+          <AdminButton
+            label={selectionMode ? 'Cancel selection' : 'Select invoices'}
+            variant="ghost"
+            onPress={toggleSelectionMode}
+          />
+          {selectionMode ? (
+            <>
+              <AdminButton
+                label="Select all"
+                variant="secondary"
+                onPress={selectAllSendable}
+              />
+              <AdminButton
+                label={`Email (${selectedIds.length})`}
+                onPress={() => {
+                  setBulkChannel('email');
+                  void handleBulkSend('email');
+                }}
+                disabled={selectedIds.length === 0 || bulkSending}
+              />
+              <AdminButton
+                label={`WhatsApp (${selectedIds.length})`}
+                variant="secondary"
+                onPress={() => {
+                  setBulkChannel('whatsapp');
+                  void handleBulkSend('whatsapp');
+                }}
+                disabled={selectedIds.length === 0 || bulkSending}
+              />
+            </>
+          ) : null}
+        </View>
+
         <BulkDispatchCard
           invoiceType={bulkType}
           channel={bulkChannel}
@@ -251,6 +335,7 @@ export function InvoiceListScreen({ navigation }: Props) {
           onChannelChange={setBulkChannel}
           onSend={() => void handleBulkSend()}
           sending={bulkSending}
+          selectedCount={selectionMode ? selectedIds.length : 0}
         />
 
         <FilterChips options={filterOptions} selected={listFilter} onSelect={setListFilter} />
@@ -266,8 +351,12 @@ export function InvoiceListScreen({ navigation }: Props) {
       navigation,
       pendingGstCount,
       search,
+      selectAllSendable,
+      selectedIds.length,
+      selectionMode,
       stats,
       statsLoading,
+      toggleSelectionMode,
     ],
   );
 
@@ -343,6 +432,12 @@ const styles = StyleSheet.create({
   toolbarActions: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  bulkToolbar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    alignItems: 'center',
   },
   typeActions: {
     flexDirection: 'row',

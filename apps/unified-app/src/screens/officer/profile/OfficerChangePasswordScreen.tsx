@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button } from '@prime/ui';
 
-import { ScreenWrapper } from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
 import { signInWithPassword } from '@/hooks/useAuth';
 import { useChangePasswordMutation } from '@/services/api/authApi';
 import { useAppSelector } from '@/store/hooks';
@@ -43,7 +43,7 @@ export function OfficerChangePasswordScreen({ navigation }: Props) {
   }, [changePassword, confirm, current, navigation, next]);
 
   return (
-    <ScreenWrapper>
+    <OfficerScreenWrapper>
       <Text style={styles.label}>CURRENT PASSWORD</Text>
       <TextInput
         style={styles.input}
@@ -82,7 +82,7 @@ export function OfficerChangePasswordScreen({ navigation }: Props) {
         disabled={isLoading || !user?.email}
         style={styles.cta}
       />
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 

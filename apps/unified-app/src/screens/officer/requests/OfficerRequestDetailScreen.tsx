@@ -11,20 +11,21 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Marker } from 'react-native-maps';
 import { Button, Screen } from '@prime/ui';
 import { colors } from '@/theme/colors';
-
+import { useOfficerPullToRefresh } from '@/hooks/officer/useOfficerPullToRefresh';
 import { TicketStatusBadge } from '@/components/TicketPortal/TicketStatusBadge';
 import { TicketTimeline } from '@/components/TicketPortal/TicketTimeline';
-import { ErrorState, LoadingOverlay, SkeletonLoader, ScreenWrapper } from '@/components/common';
-import { FreeMapView } from '@/components/map';
+import {ErrorState, LoadingOverlay, ScreenErrorBoundary, SkeletonLoader} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
+import { LeafletMapView } from '@/components/map/LeafletMapView';
 import { useCamera } from '@/hooks/useCamera';
 import {
   useAddActivityNoteMutation,
 } from '@/services/api/officersApi';
 import {
   useAddOfficerTicketNoteMutation,
+  useClaimOfficerTicketMutation,
   useGetOfficerPortalItemDetailQuery,
   useUpdateOfficerTicketStatusMutation,
 } from '@/services/api/officerPortalApi';
@@ -58,10 +59,12 @@ export function OfficerRequestDetailScreen({ route }: Props) {
     itemId: requestId,
     kind,
   });
+  const { refreshControl } = useOfficerPullToRefresh(refetch);
   const [updateRequestStatus, { isLoading: updatingRequestStatus }] = useUpdateRequestStatusMutation();
   const [updateTicketStatus, { isLoading: updatingTicketStatus }] = useUpdateOfficerTicketStatusMutation();
   const [addRequestNote, { isLoading: addingRequestNote }] = useAddActivityNoteMutation();
   const [addTicketNote, { isLoading: addingTicketNote }] = useAddOfficerTicketNoteMutation();
+  const [claimTicket, { isLoading: claiming }] = useClaimOfficerTicketMutation();
   const updatingStatus = updatingRequestStatus || updatingTicketStatus;
   const addingNote = addingRequestNote || addingTicketNote;
   const { takePhoto, pickFromGallery, uploadToSupabase, isUploading } = useCamera();
@@ -73,10 +76,22 @@ export function OfficerRequestDetailScreen({ route }: Props) {
   const [pendingResolve, setPendingResolve] = useState(false);
   const [fixLocationVisible, setFixLocationVisible] = useState(false);
   const [savedLocation, setSavedLocation] = useState<PortalItemCoordinates | null>(null);
+  /** Android: MapView + Modal on the same screen crashes; hide map for the rest of this visit. */
+  const [showNativeMap, setShowNativeMap] = useState(true);
 
   useEffect(() => {
     setSavedLocation(null);
+    setShowNativeMap(true);
   }, [requestId, kind]);
+
+  const openFixLocation = useCallback(() => {
+    setShowNativeMap(false);
+    setFixLocationVisible(true);
+  }, [kind, requestId]);
+
+  const closeFixLocation = useCallback(() => {
+    setFixLocationVisible(false);
+  }, [requestId]);
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -86,10 +101,35 @@ export function OfficerRequestDetailScreen({ route }: Props) {
   );
 
   const activityCount = detail?.activityTimeline.length ?? 0;
-  const statusActionLabel = detail ? getOfficerTicketAdvanceLabel(detail.statusBucket) : null;
+  const needsClaim = Boolean(detail && detail.kind === 'ticket' && !detail.assignedOfficerId);
+  const statusActionLabel =
+    detail && !needsClaim ? getOfficerTicketAdvanceLabel(detail.statusBucket) : null;
+
+  const onClaimPress = useCallback(async () => {
+    if (!detail || detail.kind !== 'ticket') return;
+    try {
+      await claimTicket(detail.id).unwrap();
+      dispatch(
+        enqueueToast({
+          id: `claim-detail-${detail.id}`,
+          type: 'success',
+          message: 'Ticket assigned to you',
+        }),
+      );
+      void refetch();
+    } catch (err) {
+      dispatch(
+        enqueueToast({
+          id: `claim-detail-err-${detail.id}`,
+          type: 'error',
+          message: queryErrorMessage(err, 'Could not pick up ticket'),
+        }),
+      );
+    }
+  }, [claimTicket, detail, dispatch, refetch]);
 
   const onStatusPress = async () => {
-    if (!detail || !statusActionLabel || !user) return;
+    if (!detail || !statusActionLabel || !user || needsClaim) return;
 
     if (detail.kind === 'ticket' && detail.ticket) {
       const next = nextTicketStatusForOfficer(detail.ticket.status);
@@ -237,8 +277,8 @@ export function OfficerRequestDetailScreen({ route }: Props) {
       : [];
 
   return (
-    <ScreenWrapper scrollable={false} padded={false}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <OfficerScreenWrapper scrollable={false} padded={false}>
+      <ScrollView contentContainerStyle={styles.content} refreshControl={refreshControl}>
         <View style={styles.card}>
           <View style={styles.headerRow}>
             <Text style={styles.ticketNumber}>{detail.displayNumber}</Text>
@@ -258,7 +298,17 @@ export function OfficerRequestDetailScreen({ route }: Props) {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Status</Text>
-          {statusActionLabel ? (
+          {needsClaim ? (
+            <>
+              <Text style={styles.meta}>This ticket is in the open pool. Pick it up to work it.</Text>
+              <Button
+                label={claiming ? 'Picking up…' : 'Pick up ticket'}
+                onPress={() => void onClaimPress()}
+                disabled={claiming}
+                style={styles.statusCta}
+              />
+            </>
+          ) : statusActionLabel ? (
             <Button
               label={statusActionLabel}
               onPress={() => void onStatusPress()}
@@ -294,6 +344,12 @@ export function OfficerRequestDetailScreen({ route }: Props) {
               latitude={displayCoordinates?.latitude}
               longitude={displayCoordinates?.longitude}
               variant="primary"
+              onSheetVisibilityChange={(visible) => {
+                if (visible) {
+                  setShowNativeMap(false);
+                  setFixLocationVisible(false);
+                }
+              }}
               onLocationUpdated={(location) => {
                 setSavedLocation(location);
                 void refetch();
@@ -301,37 +357,46 @@ export function OfficerRequestDetailScreen({ route }: Props) {
             />
             <Pressable
               style={styles.fixPin}
-              onPress={() => setFixLocationVisible(true)}
+              onPress={openFixLocation}
               hitSlop={8}
             >
               <Text style={styles.fixPinText}>Fix pin</Text>
             </Pressable>
           </View>
           <OfficerLocationSummary address={displayAddress} coordinates={displayCoordinates} />
-          {hasLocation && displayCoordinates ? (
-            <FreeMapView
-              key={`${displayCoordinates.latitude}-${displayCoordinates.longitude}`}
-              style={styles.map}
-              initialRegion={{
-                latitude: displayCoordinates.latitude,
-                longitude: displayCoordinates.longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              }}
-            >
-              <Marker
-                coordinate={{
-                  latitude: displayCoordinates.latitude,
-                  longitude: displayCoordinates.longitude,
-                }}
-                title={detail.customerName}
-                description={displayAddress}
+          {hasLocation && displayCoordinates && showNativeMap ? (
+            <ScreenErrorBoundary screenName="Officer ticket map">
+              <LeafletMapView
+                key={`ticket-map-${detail.id}`}
+                style={styles.map}
+                zoom={16}
+                fitToContent
+                pins={[
+                  {
+                    id: `ticket-${detail.id}`,
+                    latitude: displayCoordinates.latitude,
+                    longitude: displayCoordinates.longitude,
+                    title: detail.customerName,
+                    subtitle: displayAddress,
+                  },
+                ]}
               />
-            </FreeMapView>
+            </ScreenErrorBoundary>
+          ) : hasLocation && displayCoordinates ? (
+            <View style={styles.mapPlaceholder}>
+              <Text style={styles.meta}>
+                Pin saved
+                {` · ${displayCoordinates.latitude.toFixed(5)}, ${displayCoordinates.longitude.toFixed(5)}`}
+              </Text>
+              <Text style={styles.meta}>
+                Map preview is paused after editing so a wrong address cannot crash the app. Reopen
+                this ticket to see the map again.
+              </Text>
+            </View>
           ) : (
             <View style={styles.missingLocation}>
               <Text style={styles.meta}>Location missing or incorrect.</Text>
-              <Button label="Add location" onPress={() => setFixLocationVisible(true)} />
+              <Button label="Add location" onPress={openFixLocation} />
             </View>
           )}
         </View>
@@ -410,18 +475,19 @@ export function OfficerRequestDetailScreen({ route }: Props) {
 
       <OfficerLocationSheet
         visible={fixLocationVisible}
-        onClose={() => setFixLocationVisible(false)}
+        onClose={closeFixLocation}
         itemId={detail.id}
         kind={detail.kind}
         initialAddress={displayAddress}
         initialLatitude={displayCoordinates?.latitude}
         initialLongitude={displayCoordinates?.longitude}
         onSaved={(location) => {
+          setShowNativeMap(false);
           setSavedLocation(location);
           void refetch();
         }}
       />
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 
@@ -449,6 +515,15 @@ const styles = StyleSheet.create({
   fixPinText: { color: colors.textSecondary, fontWeight: '600', fontSize: 13 },
   missingLocation: { gap: spacing.sm, marginTop: spacing.sm },
   map: { height: 180, borderRadius: radius.md, marginTop: spacing.sm },
+  mapPlaceholder: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    backgroundColor: colors.surfaceWhite,
+    gap: spacing.xs,
+  },
   actions: { gap: spacing.sm },
   statusCta: { marginTop: spacing.sm, minHeight: 48 },
   timelineItem: {

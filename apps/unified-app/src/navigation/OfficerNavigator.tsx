@@ -1,134 +1,17 @@
-import { Platform, useWindowDimensions, View } from 'react-native';
-import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { OfficerDrawerContent, ShiftPulseChip } from '@/components/navigation/officer';
-import { OfficerNotificationBell } from '@/components/navigation/officer/OfficerNotificationBell';
-import { OfficerDrawerHeader } from '@/components/navigation/officer/OfficerDrawerHeader';
-import { useOfficerTicketsSync } from '@/hooks/officer';
-import { usePortalNotificationsSync } from '@/hooks/usePortalNotificationsSync';
-import { OfficerSupportChatScreen } from '@/screens/officer/support/OfficerSupportChatScreen';
-import { CollectPaymentScreen } from '@/screens/officer/CollectPaymentScreen';
-import { InvoiceScreen } from '@/screens/officer/InvoiceScreen';
+import { OfficerProfileStackNav } from './officerStackNavigators';
+import { OfficerTabNavigator } from './OfficerTabNavigator';
+import { OfficerStackHeaderLeft } from './OfficerStackHeaderLeft';
 import { LocationGateScreen } from '@/screens/officer/LocationGateScreen';
-import { OfficerDashboardScreen } from '@/screens/officer/OfficerDashboardScreen';
-import { OfficerInventoryScreen } from '@/screens/officer/OfficerInventoryScreen';
-import { OfficerMapScreen } from '@/screens/officer/OfficerMapScreen';
-import { OfficerPayslipStackNav } from './OfficerPayslipStackNav';
-import { OfficerAttendanceDashboard } from '@/screens/officer/OfficerAttendanceDashboard';
-import { AttendanceHistoryScreen } from '@/screens/officer/AttendanceHistoryScreen';
-import type { OfficerDrawerParamList, OfficerStackParamList } from '@/types/navigation';
-import { adminColors, getAdminDrawerWidth } from '@/theme/admin';
+import type { OfficerStackParamList } from '@/types/navigation';
 import { colors, officerColors } from '@/theme/colors';
-import { spacing } from '@/theme/spacing';
-import { ThemeProvider } from '@/theme/ThemeProvider';
 
-import { AdminDrawerToggleButton } from './AdminDrawerToggleButton';
-import {
-  OfficerCollectionsStackNav,
-  OfficerLeaveStackNav,
-  OfficerNotificationsStackNav,
-  OfficerProfileStackNav,
-  OfficerRequestsStackNav,
-} from './officerStackNavigators';
 import { OfficerRequestDetailScreen } from './officerStackScreens';
 
-const Drawer = createDrawerNavigator<OfficerDrawerParamList>();
 const Stack = createNativeStackNavigator<OfficerStackParamList>();
 
 const OFFICER_HEADER_PURPLE = officerColors.navBar;
-
-function DrawerHeaderActions() {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-      <OfficerNotificationBell />
-      <ShiftPulseChip />
-    </View>
-  );
-}
-
-function OfficerDrawerNav() {
-  usePortalNotificationsSync();
-  useOfficerTicketsSync();
-
-  const { width } = useWindowDimensions();
-  const isWebSidebar = Platform.OS === 'web' && width >= 1024;
-
-  return (
-    <ThemeProvider>
-      <Drawer.Navigator
-        drawerContent={(props) => <OfficerDrawerContent {...props} />}
-        screenOptions={{
-          header: (props) => <OfficerDrawerHeader {...props} />,
-          headerStyle: { backgroundColor: OFFICER_HEADER_PURPLE },
-          headerTintColor: colors.white,
-          headerTitleStyle: { fontSize: 20, fontWeight: '600' },
-          headerShadowVisible: false,
-          drawerActiveTintColor: adminColors.primary,
-          drawerType: isWebSidebar ? 'permanent' : 'front',
-          drawerStyle: {
-            width: getAdminDrawerWidth(width, isWebSidebar),
-            backgroundColor: adminColors.sidebarBg,
-          },
-          overlayColor: isWebSidebar ? 'transparent' : undefined,
-          headerLeft: isWebSidebar ? () => null : () => <AdminDrawerToggleButton />,
-          headerRight: () => <DrawerHeaderActions />,
-          swipeEnabled: !isWebSidebar,
-          drawerItemStyle: { display: 'none' },
-        }}
-      >
-        <Drawer.Screen
-          name="Dashboard"
-          component={OfficerDashboardScreen}
-          options={{ title: 'Dashboard' }}
-        />
-        <Drawer.Screen
-          name="RequestsStack"
-          component={OfficerRequestsStackNav}
-          options={{ title: 'My Tickets', headerShown: false }}
-        />
-        <Drawer.Screen name="Map" component={OfficerMapScreen} options={{ title: 'Map' }} />
-        <Drawer.Screen
-          name="Attendance"
-          component={OfficerAttendanceDashboard}
-          options={{ title: 'Attendance' }}
-        />
-        <Drawer.Screen
-          name="CollectionsStack"
-          component={OfficerCollectionsStackNav}
-          options={{ title: 'Collect Payment', headerShown: false }}
-        />
-        <Drawer.Screen
-          name="NotificationsStack"
-          component={OfficerNotificationsStackNav}
-          options={{ title: 'Notifications', headerShown: false }}
-        />
-        <Drawer.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Invoice' }} />
-        <Drawer.Screen name="Inventory" component={OfficerInventoryScreen} options={{ title: 'Inventory' }} />
-        <Drawer.Screen
-          name="Payslip"
-          component={OfficerPayslipStackNav}
-          options={{ title: 'My Payslips', headerShown: false }}
-        />
-        <Drawer.Screen
-          name="LeaveStack"
-          component={OfficerLeaveStackNav}
-          options={{ title: 'Leave', headerShown: false }}
-        />
-        <Drawer.Screen name="Support" component={OfficerSupportChatScreen} options={{ title: 'Support Chat' }} />
-        <Drawer.Screen
-          name="ProfileStack"
-          component={OfficerProfileStackNav}
-          options={{ title: 'Profile', headerShown: false }}
-        />
-        {/* Hidden legacy routes */}
-        <Drawer.Screen name="Shifts" component={OfficerAttendanceDashboard} options={{ drawerItemStyle: { display: 'none' }, title: 'Attendance' }} />
-        <Drawer.Screen name="AttendanceHistory" component={AttendanceHistoryScreen} options={{ drawerItemStyle: { display: 'none' }, title: 'History' }} />
-        <Drawer.Screen name="CollectPayment" component={CollectPaymentScreen} options={{ drawerItemStyle: { display: 'none' }, title: 'Collect payment' }} />
-      </Drawer.Navigator>
-    </ThemeProvider>
-  );
-}
 
 /**
  * Flutter `OfficerRootShell` — LocationGate gates access until GPS is enabled.
@@ -144,11 +27,15 @@ export function OfficerNavigator() {
       }}
     >
       <Stack.Screen name="LocationGate" component={LocationGateScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="OfficerDrawer" component={OfficerDrawerNav} options={{ headerShown: false }} />
+      <Stack.Screen name="OfficerTabs" component={OfficerTabNavigator} options={{ headerShown: false }} />
+      <Stack.Screen name="Profile" component={OfficerProfileStackNav} options={{ headerShown: false }} />
       <Stack.Screen
         name="RequestDetail"
         component={OfficerRequestDetailScreen}
-        options={{ title: 'Ticket detail' }}
+        options={{
+          title: 'Ticket detail',
+          headerLeft: (props) => <OfficerStackHeaderLeft {...props} />,
+        }}
       />
     </Stack.Navigator>
   );

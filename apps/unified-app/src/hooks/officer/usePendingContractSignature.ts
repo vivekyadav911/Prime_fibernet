@@ -1,11 +1,13 @@
 import { useCallback, useMemo } from 'react';
-import { CommonActions, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 
 import { useGetMyEmploymentContractQuery } from '@/services/api/employmentContractsApi';
+import { navigateToOfficerProfile } from '@/navigation/officerShellNavigation';
 import type { EmploymentContract } from '@/types/contract';
 
 export function usePendingContractSignature() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const { data: contract, isLoading, isError, error, refetch } = useGetMyEmploymentContractQuery();
 
   const needsSignature = useMemo(
@@ -14,43 +16,28 @@ export function usePendingContractSignature() {
   );
 
   const navigateToSign = useCallback(() => {
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: 'ProfileStack',
-        params: {
-          screen: 'EmploymentContract',
-          params: { highlightSign: true },
-        },
-      }),
-    );
+    navigateToOfficerProfile(navigation, {
+      screen: 'EmploymentContract',
+      params: { highlightSign: true },
+    });
   }, [navigation]);
 
   const navigateToContract = useCallback(() => {
-    navigation.dispatch(
-      CommonActions.navigate({
-        name: 'ProfileStack',
-        params: {
-          screen: 'EmploymentContract',
-        },
-      }),
-    );
+    navigateToOfficerProfile(navigation, {
+      screen: 'EmploymentContract',
+    });
   }, [navigation]);
 
   const navigateToContractPdf = useCallback(
     (target: EmploymentContract) => {
       if (!target.generatedPdfUrl) return;
-      navigation.dispatch(
-        CommonActions.navigate({
-          name: 'ProfileStack',
-          params: {
-            screen: 'ContractPdfViewer',
-            params: {
-              storagePath: target.generatedPdfUrl,
-              title: 'Employment Contract',
-            },
-          },
-        }),
-      );
+      navigateToOfficerProfile(navigation, {
+        screen: 'ContractPdfViewer',
+        params: {
+          storagePath: target.generatedPdfUrl,
+          title: 'Employment Contract',
+        },
+      });
     },
     [navigation],
   );

@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatDistanceToNow } from 'date-fns';
 
-import { getOfficerColor, getOfficerInitials } from '@/constants/mapTheme';
+import { AvatarIcon } from '@/components/admin/AvatarIcon';
+import { getOfficerColor } from '@/constants/mapTheme';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import type { OfficerLocation } from '@/types/map';
@@ -16,7 +17,6 @@ type Props = {
 export function OfficerCard({ officer, colorIndex, onPress }: Props) {
   const name = officer.officer?.name ?? 'Officer';
   const color = officer.officer?.avatar_color ?? getOfficerColor(name, colorIndex);
-  const initials = officer.officer?.initials ?? getOfficerInitials(name);
   const isOffline =
     Date.now() - new Date(officer.last_seen_at).getTime() > OFFLINE_THRESHOLD_MS;
   const lastSeen = formatDistanceToNow(new Date(officer.last_seen_at), { addSuffix: true });
@@ -24,8 +24,9 @@ export function OfficerCard({ officer, colorIndex, onPress }: Props) {
 
   return (
     <Pressable style={[styles.card, isOffline && styles.cardOffline]} onPress={onPress}>
-      <View style={[styles.avatar, { backgroundColor: isOffline ? colors.textSecondary : color }]}>
-        <Text style={styles.initials}>{initials}</Text>
+      <View style={styles.avatarWrap}>
+        <AvatarIcon name={name} uri={officer.officer?.avatar_url} size={44} />
+        <View style={[styles.statusDot, { backgroundColor: isOffline ? colors.textSecondary : color }]} />
       </View>
       <Text style={styles.name} numberOfLines={1}>{name}</Text>
       <Text style={styles.meta}>⏱ {lastSeen}</Text>
@@ -57,16 +58,20 @@ const styles = StyleSheet.create({
     borderColor: colors.borderDefault,
   },
   cardOffline: { opacity: 0.75 },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  avatarWrap: {
     alignSelf: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: spacing.xs,
   },
-  initials: { color: colors.white, fontWeight: '700', fontSize: 14 },
+  statusDot: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: colors.surfaceWhite,
+  },
   name: { fontSize: 13, fontWeight: '700', color: colors.textPrimary, textAlign: 'center' },
   meta: { fontSize: 11, color: colors.textSecondary, marginTop: 2, textAlign: 'center' },
   coords: { fontSize: 10, color: colors.textSecondary, marginTop: 4, textAlign: 'center' },

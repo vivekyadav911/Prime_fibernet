@@ -1,75 +1,113 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { StyleSheet, Text, TextInput } from 'react-native';
-import { Button, Screen } from '@prime/ui';
-import { colors } from '@/theme/colors';
+import { StyleSheet, Text } from 'react-native';
+import { Button } from '@prime/ui';
 import { z } from 'zod';
 
-import type { AuthStackParamList } from '@/types/navigation';
-import { radius, spacing } from '@/theme/spacing';
+import { AuthField, AuthScreen, GENERIC_CODE_ERROR } from '@/components/auth/AuthLayout';
+import {
+  commitAuthenticatedSession,
+  fetchLoginState,
+  fetchMyRole,
+  setInteractiveLogin,
+  signOut,
+} from '@/hooks/useAuth';
+import { getSupabase } from '@/services/supabase';
 import {
   useSendLoginOtpMutation,
+  useTouchFullLoginMutation,
   useVerifyLoginOtpMutation,
 } from '@/store/api/endpoints';
+import { useAppDispatch } from '@/store/hooks';
+import { colors } from '@/theme/colors';
+import { spacing } from '@/theme/spacing';
+import type { AuthStackParamList } from '@/types/navigation';
 
-const otpSchema = z.object({
-  token: z.string().length(6, 'Enter the 6-digit code'),
-});
-
+const otpSchema = z.object({ token: z.string().length(6, 'Enter the 6-digit code') });
 type FormData = z.infer<typeof otpSchema>;
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'OTPVerification'>;
 
 export function OtpVerificationScreen({ route }: Props) {
-  const { identifier } = route.params;
+  const { identifier, role } = route.params;
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const dispatch = useAppDispatch();
   const [sendOtp, sendState] = useSendLoginOtpMutation();
   const [verifyOtp, verifyState] = useVerifyLoginOtpMutation();
+  const [touchFullLogin] = useTouchFullLoginMutation();
   const [message, setMessage] = useState<string | null>(null);
 
-  const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(otpSchema),
-    defaultValues: { token: '' },
-  });
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormData>({ resolver: zodResolver(otpSchema), defaultValues: { token: '' } });
 
   const onResend = async () => {
+    setMessage(null);
     try {
       await sendOtp({ identifier }).unwrap();
-      setMessage('A new code was sent.');
+      setMessage('If an account exists, a new code was sent.');
     } catch {
-      setMessage('Could not resend code. Try again.');
+      setMessage('If an account exists, a new code was sent.');
     }
   };
 
   const onSubmit = async (data: FormData) => {
     setMessage(null);
+    setInteractiveLogin(true);
+    let handedOff = false;
     try {
-      await verifyOtp({ identifier, token: data.token }).unwrap();
+      const { session, user } = await verifyOtp({ identifier, token: data.token }).unwrap();
+
+      const actualRole = await fetchMyRole();
+      if (!actualRole || (role && actualRole !== role)) {
+        await signOut(dispatch);
+        setMessage(GENERIC_CODE_ERROR);
+        return;
+      }
+
+      const { passwordSet } = await fetchLoginState();
+      if (!passwordSet) {
+        // First-login claim: they must set a password before entering the app.
+        handedOff = true;
+        navigation.navigate('CreatePassword', { role: actualRole });
+        return;
+      }
+
+      await touchFullLogin().unwrap().catch(() => undefined);
+      commitAuthenticatedSession(dispatch, session, user, actualRole);
     } catch {
-      setMessage('Invalid or expired code.');
+      setMessage(GENERIC_CODE_ERROR);
+      await getSupabase().auth.signOut({ scope: 'local' }).catch(() => undefined);
+    } finally {
+      if (!handedOff) setInteractiveLogin(false);
     }
   };
 
   return (
-    <Screen safeAreaTop>
-      <Text style={styles.title}>Verify OTP</Text>
-      <Text style={styles.subtitle}>Code sent to {identifier}</Text>
+    <AuthScreen>
+      <Text style={styles.title}>Enter your code</Text>
+      <Text style={styles.subtitle}>We sent a 6-digit code to {identifier}</Text>
       <Controller
         control={control}
         name="token"
         render={({ field: { onChange, value } }) => (
-          <TextInput
-            style={styles.input}
-            placeholder="6-digit code"
+          <AuthField
+            label="Verification code"
+            placeholder="000000"
             keyboardType="number-pad"
             maxLength={6}
             value={value}
             onChangeText={onChange}
+            style={styles.codeInput}
+            error={errors.token?.message}
           />
         )}
       />
-      {errors.token ? <Text style={styles.error}>{errors.token.message}</Text> : null}
       {message ? <Text style={styles.message}>{message}</Text> : null}
       <Button
         label={verifyState.isLoading ? 'Verifying…' : 'Verify'}
@@ -81,24 +119,14 @@ export function OtpVerificationScreen({ route }: Props) {
         variant="secondary"
         onPress={onResend}
       />
-    </Screen>
+    </AuthScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 24, fontWeight: '600', color: colors.textPrimary },
+  title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary },
   subtitle: { color: colors.textSecondary, marginTop: spacing.sm, marginBottom: spacing.md },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    borderRadius: radius.sm,
-    padding: spacing.sm,
-    fontSize: 20,
-    letterSpacing: 8,
-    textAlign: 'center',
-    backgroundColor: colors.surfaceWhite,
-  },
-  error: { color: colors.errorRed, marginTop: 8 },
-  message: { color: colors.textSecondary, marginTop: 8 },
-  btn: { marginTop: 16, marginBottom: 8 },
+  codeInput: { letterSpacing: 8, textAlign: 'center', fontSize: 22 },
+  message: { color: colors.errorRed, marginTop: spacing.xs },
+  btn: { marginTop: spacing.md, marginBottom: spacing.sm },
 });

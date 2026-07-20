@@ -26,6 +26,10 @@ ios/
 
 # Local MCP secrets (copy from .cursor/mcp.json.example)
 .cursor/mcp.json
+.cursor/debug-*.log
+
+# Local build artifacts
+build-output/
 
 # Logs
 npm-debug.*

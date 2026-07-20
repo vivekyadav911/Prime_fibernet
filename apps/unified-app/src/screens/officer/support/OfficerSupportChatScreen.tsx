@@ -10,9 +10,10 @@ import {
 } from 'react-native';
 import { Button } from '@prime/ui';
 
-import { KeyboardDismissView, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import {KeyboardDismissView, ErrorState, SkeletonLoader} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
+import { useOfficerProfile, useOfficerPullToRefresh } from '@/hooks/officer';
 import { useKeyboardVerticalOffset } from '@/hooks/useKeyboardVerticalOffset';
-import { useOfficerProfile } from '@/hooks/officer';
 import { useAppSelector } from '@/store/hooks';
 import {
   fetchChatMessages,
@@ -95,6 +96,13 @@ export function OfficerSupportChatScreen() {
     };
   }, [sessionId]);
 
+  const reloadMessages = useCallback(async () => {
+    if (!sessionId) return;
+    const initial = await fetchChatMessages(sessionId);
+    setMessages(initial);
+  }, [sessionId]);
+  const { refreshControl } = useOfficerPullToRefresh(reloadMessages);
+
   const onSend = useCallback(async () => {
     const text = draft.trim();
     if (!sessionId || !user || !text) return;
@@ -117,15 +125,15 @@ export function OfficerSupportChatScreen() {
 
   if (loading) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <SkeletonLoader rows={6} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   if (sessionError) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <ErrorState
           message={sessionError}
           onRetry={() => {
@@ -133,12 +141,12 @@ export function OfficerSupportChatScreen() {
             setLoading(true);
           }}
         />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   return (
-    <ScreenWrapper scrollable={false} padded={false} keyboardAvoiding={false}>
+    <OfficerScreenWrapper scrollable={false} padded={false} keyboardAvoiding={false}>
       <KeyboardDismissView style={styles.flex}>
         <View style={styles.banner}>
           <Text style={styles.bannerText}>
@@ -152,6 +160,7 @@ export function OfficerSupportChatScreen() {
         >
           <FlatList
             ref={listRef}
+            refreshControl={refreshControl}
             data={messages}
             keyExtractor={(m) => m.id}
             contentContainerStyle={styles.list}
@@ -179,7 +188,7 @@ export function OfficerSupportChatScreen() {
           </View>
         </KeyboardAvoidingView>
       </KeyboardDismissView>
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 

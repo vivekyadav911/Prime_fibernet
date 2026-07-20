@@ -3,10 +3,12 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { DismissKeyboardFlatList, EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import {DismissKeyboardFlatList, EmptyState, ErrorState, SkeletonLoader} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
 import { useOfficerAssignedTickets } from '@/hooks/officer';
+import { useOfficerPullToRefresh } from '@/hooks/officer/useOfficerPullToRefresh';
 import { SyncManager } from '@/services/offline/syncManager';
-import { useUpdateOfficerTicketStatusMutation } from '@/services/api/officerPortalApi';
+import { useUpdateOfficerTicketStatusMutation, useClaimOfficerTicketMutation } from '@/services/api/officerPortalApi';
 import { useUpdateRequestStatusMutation } from '@/store/api/endpoints';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { enqueueToast } from '@/store/slices/uiSlice';
@@ -32,35 +34,51 @@ import { queryErrorMessage } from '@/utils/queryError';
 
 import { OfficerTicketCard } from './requests/components/OfficerRequestCard';
 
+type TicketPoolTab = 'mine' | 'open_pool';
+
+const POOL_TABS: Array<{ key: TicketPoolTab; label: string }> = [
+  { key: 'mine', label: 'Self' },
+  { key: 'open_pool', label: 'Open pool' },
+];
+
+function isOpenPoolTicket(item: PortalTicketItem): boolean {
+  return item.kind === 'ticket' && !item.assignedOfficerId;
+}
+
 function FilterChipRow<T extends string>({
+  label,
   options,
   value,
   onChange,
 }: {
+  label: string;
   options: Array<{ key: T; label: string }>;
   value: T;
   onChange: (key: T) => void;
 }) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.chipRow}
-      keyboardShouldPersistTaps="handled"
-    >
-      {options.map((option) => {
-        const active = option.key === value;
-        return (
-          <Pressable
-            key={option.key}
-            style={[styles.chip, active && styles.chipActive]}
-            onPress={() => onChange(option.key)}
-          >
-            <Text style={[styles.chipText, active && styles.chipTextActive]}>{option.label}</Text>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+    <View style={styles.filterRow}>
+      <Text style={styles.filterLabel}>{label}</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipRow}
+        keyboardShouldPersistTaps="handled"
+      >
+        {options.map((option) => {
+          const active = option.key === value;
+          return (
+            <Pressable
+              key={option.key}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => onChange(option.key)}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{option.label}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -72,9 +90,12 @@ export function OfficerRequestsScreen() {
   const [dateFilter, setDateFilter] = useState<OfficerTicketDateFilterKey>('all');
   const [sortBy, setSortBy] = useState<OfficerTicketSortKey>('newest');
   const [searchQuery, setSearchQuery] = useState('');
+  const [poolTab, setPoolTab] = useState<TicketPoolTab>('mine');
   const { items, isLoading, isError, error, refetch } = useOfficerAssignedTickets(user?.id);
+  const { refreshControl } = useOfficerPullToRefresh(refetch);
   const [updateRequestStatus] = useUpdateRequestStatusMutation();
   const [updateTicketStatus] = useUpdateOfficerTicketStatusMutation();
+  const [claimTicket, { isLoading: claiming }] = useClaimOfficerTicketMutation();
 
   useFocusEffect(
     useCallback(() => {
@@ -82,15 +103,32 @@ export function OfficerRequestsScreen() {
     }, [refetch]),
   );
 
+  const mineCount = useMemo(
+    () => items.filter((item) => !isOpenPoolTicket(item)).length,
+    [items],
+  );
+  const openPoolCount = useMemo(
+    () => items.filter((item) => isOpenPoolTicket(item)).length,
+    [items],
+  );
+
+  const poolItems = useMemo(
+    () =>
+      items.filter((item) =>
+        poolTab === 'open_pool' ? isOpenPoolTicket(item) : !isOpenPoolTicket(item),
+      ),
+    [items, poolTab],
+  );
+
   const filtered = useMemo(
     () =>
-      applyOfficerTicketListFilters(items, {
+      applyOfficerTicketListFilters(poolItems, {
         statusFilter,
         dateFilter,
         sortBy,
         searchQuery,
       }),
-    [dateFilter, items, searchQuery, sortBy, statusFilter],
+    [dateFilter, poolItems, searchQuery, sortBy, statusFilter],
   );
 
   const handlePress = useCallback(
@@ -154,26 +192,81 @@ export function OfficerRequestsScreen() {
     [dispatch, refetch, updateRequestStatus, updateTicketStatus, user],
   );
 
+  const handleClaim = useCallback(
+    async (item: PortalTicketItem) => {
+      if (item.kind !== 'ticket') return;
+      try {
+        await claimTicket(item.id).unwrap();
+        dispatch(
+          enqueueToast({
+            id: `claim-ticket-${item.id}`,
+            type: 'success',
+            message: 'Ticket assigned to you',
+          }),
+        );
+        setPoolTab('mine');
+        void refetch();
+      } catch (err) {
+        dispatch(
+          enqueueToast({
+            id: `claim-ticket-err-${item.id}`,
+            type: 'error',
+            message: queryErrorMessage(err, 'Could not pick up ticket'),
+          }),
+        );
+      }
+    },
+    [claimTicket, dispatch, refetch],
+  );
+
   const keyExtractor = useCallback((item: PortalTicketItem) => `${item.kind}-${item.id}`, []);
 
   const renderItem = useCallback(
-    ({ item }: { item: PortalTicketItem }) => (
-      <OfficerTicketCard
-        item={item}
-        advanceLabel={getOfficerTicketAdvanceLabel(item.statusBucket)}
-        onPress={handlePress}
-        onAdvance={handleAdvance}
-        onLocationSaved={() => void refetch()}
-      />
-    ),
-    [handleAdvance, handlePress, refetch],
+    ({ item }: { item: PortalTicketItem }) => {
+      const openPool = isOpenPoolTicket(item);
+      return (
+        <OfficerTicketCard
+          item={item}
+          advanceLabel={openPool ? undefined : getOfficerTicketAdvanceLabel(item.statusBucket)}
+          claimLabel={openPool ? 'Pick up' : undefined}
+          claiming={claiming}
+          onPress={handlePress}
+          onAdvance={openPool ? undefined : handleAdvance}
+          onClaim={openPool ? handleClaim : undefined}
+          onLocationSaved={() => void refetch()}
+        />
+      );
+    },
+    [claiming, handleAdvance, handleClaim, handlePress, refetch],
   );
 
   const listHeader = (
     <View style={styles.header}>
+      <View style={styles.tabRow}>
+        {POOL_TABS.map((tab) => {
+          const active = poolTab === tab.key;
+          const count = tab.key === 'mine' ? mineCount : openPoolCount;
+          return (
+            <Pressable
+              key={tab.key}
+              style={[styles.tabChip, active && styles.tabChipActive]}
+              onPress={() => setPoolTab(tab.key)}
+            >
+              <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>
+                {tab.label} ({count})
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <TextInput
         style={styles.searchInput}
-        placeholder="Search tickets, customers, addresses…"
+        placeholder={
+          poolTab === 'open_pool'
+            ? 'Search open pool…'
+            : 'Search tickets, customers…'
+        }
         placeholderTextColor={colors.textSecondary}
         value={searchQuery}
         onChangeText={setSearchQuery}
@@ -182,12 +275,26 @@ export function OfficerRequestsScreen() {
         autoCorrect={false}
         clearButtonMode="while-editing"
       />
-      <Text style={styles.sectionLabel}>STATUS</Text>
-      <FilterChipRow options={OFFICER_TICKET_FILTERS} value={statusFilter} onChange={setStatusFilter} />
-      <Text style={styles.sectionLabel}>DATE</Text>
-      <FilterChipRow options={OFFICER_TICKET_DATE_FILTERS} value={dateFilter} onChange={setDateFilter} />
-      <Text style={styles.sectionLabel}>SORT</Text>
-      <FilterChipRow options={OFFICER_TICKET_SORT_OPTIONS} value={sortBy} onChange={setSortBy} />
+
+      <FilterChipRow
+        label="Status"
+        options={OFFICER_TICKET_FILTERS}
+        value={statusFilter}
+        onChange={setStatusFilter}
+      />
+      <FilterChipRow
+        label="Date"
+        options={OFFICER_TICKET_DATE_FILTERS}
+        value={dateFilter}
+        onChange={setDateFilter}
+      />
+      <FilterChipRow
+        label="Sort"
+        options={OFFICER_TICKET_SORT_OPTIONS}
+        value={sortBy}
+        onChange={setSortBy}
+      />
+
       <Text style={styles.resultCount}>
         {filtered.length} ticket{filtered.length === 1 ? '' : 's'}
       </Text>
@@ -196,23 +303,24 @@ export function OfficerRequestsScreen() {
 
   if (isLoading) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <SkeletonLoader rows={6} showAvatar />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   if (isError) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   return (
-    <ScreenWrapper scrollable={false} padded={false}>
+    <OfficerScreenWrapper scrollable={false} padded={false}>
       <DismissKeyboardFlatList
+        refreshControl={refreshControl}
         data={filtered}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
@@ -221,26 +329,60 @@ export function OfficerRequestsScreen() {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <EmptyState
-            title="No tickets"
+            title={poolTab === 'open_pool' ? 'No open-pool tickets' : 'No tickets'}
             subtitle={
               searchQuery.trim()
                 ? 'No matches for your search or filters'
-                : 'Nothing in this filter'
+                : poolTab === 'open_pool'
+                  ? 'Unassigned open tickets will appear here for pickup'
+                  : 'Nothing in this filter'
             }
           />
         }
       />
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { paddingBottom: spacing.xxl },
+  list: {
+    paddingBottom: spacing.xxl,
+    flexGrow: 1,
+  },
   header: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
     gap: spacing.xs,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  tabChip: {
+    flex: 1,
+    minHeight: 40,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    backgroundColor: colors.surfaceWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabChipActive: {
+    borderColor: colors.primaryNavy,
+    backgroundColor: colors.primaryNavy,
+  },
+  tabLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  tabLabelActive: {
+    color: colors.white,
   },
   searchInput: {
     borderWidth: 1,
@@ -249,38 +391,55 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceWhite,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
-    fontSize: 15,
+    minHeight: 44,
+    fontSize: 14,
     color: colors.textPrimary,
-    marginBottom: spacing.xs,
   },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 32,
+  },
+  filterLabel: {
+    width: 44,
+    fontSize: 11,
+    fontWeight: '700',
     color: colors.textSecondary,
-    marginTop: spacing.xxs,
+    textTransform: 'uppercase',
   },
   chipRow: {
     flexDirection: 'row',
-    gap: spacing.xs,
-    paddingVertical: spacing.xxs,
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingRight: spacing.md,
   },
   chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
     borderRadius: radius.full,
     backgroundColor: colors.surfaceWhite,
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    minHeight: 36,
+    minHeight: 28,
     justifyContent: 'center',
   },
-  chipActive: { backgroundColor: colors.primaryNavy, borderColor: colors.primaryNavy },
-  chipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
-  chipTextActive: { color: colors.white },
-  resultCount: {
-    fontSize: 13,
+  chipActive: {
+    backgroundColor: colors.primaryNavy,
+    borderColor: colors.primaryNavy,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textSecondary,
-    marginTop: spacing.xs,
-    marginBottom: spacing.xs,
+  },
+  chipTextActive: {
+    color: colors.white,
+  },
+  resultCount: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: spacing.xxs,
+    marginBottom: spacing.xxs,
   },
 });

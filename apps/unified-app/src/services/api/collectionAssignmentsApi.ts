@@ -1,7 +1,10 @@
 import type {
+  CollectionAssignmentHistoryResponse,
+  CollectionAssignmentHistoryRow,
   CollectionAssignmentRow,
   CollectionAssignmentsParams,
   CollectionAssignmentsResponse,
+  CollectionHistoryParams,
 } from '@/types/api/admin';
 import { COLLECTION_UPCOMING_HORIZON_DAYS } from '@/types/api/admin';
 
@@ -124,6 +127,51 @@ function mapAssignmentRow(
     claimedByOfficerId: claimedId,
     claimedByOfficerName: claimedId ? officerNameById.get(claimedId) ?? null : null,
   };
+}
+
+function mapHistoryRow(
+  row: Record<string, unknown>,
+  officerNameById: Map<string, string>,
+): CollectionAssignmentHistoryRow {
+  const customer = row.customer as Record<string, unknown> | null | undefined;
+  const assignedOfficerId = (row.assigned_officer_id as string) ?? null;
+  const claimedByOfficerId = (row.claimed_by_officer_id as string) ?? null;
+
+  return {
+    id: String(row.id),
+    customerId: String(row.customer_id),
+    customerName: String(customer?.name ?? 'Customer'),
+    customerAccountId: String(customer?.customer_id ?? ''),
+    customerPhone: (customer?.phone as string) ?? null,
+    assignedOfficerId,
+    assignedOfficerName: assignedOfficerId ? officerNameById.get(assignedOfficerId) ?? null : null,
+    claimedByOfficerId,
+    claimedByOfficerName: claimedByOfficerId
+      ? officerNameById.get(claimedByOfficerId) ?? null
+      : null,
+    status: String(row.status),
+    actorRole: (row.actor_role as string) ?? null,
+    notes: (row.notes as string) ?? null,
+    createdAt: String(row.created_at),
+  };
+}
+
+async function resolveHistoryCustomerIds(
+  client: SupabaseClient,
+  search: string,
+): Promise<string[] | null> {
+  const trimmed = search.trim();
+  if (!trimmed) return null;
+
+  const { data, error } = await client
+    .from('users')
+    .select('id')
+    .eq('role', 'customer')
+    .or(buildCollectionAssignmentSearchFilter(trimmed));
+
+  if (error) throw error;
+  const ids = (data ?? []).map((row) => String(row.id));
+  return ids;
 }
 
 export const collectionAssignmentsApi = baseApi.injectEndpoints({
@@ -258,6 +306,84 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
       providesTags: ['CollectionAssignments'],
     }),
 
+    getCollectionAssignmentHistory: builder.query<
+      CollectionAssignmentHistoryResponse,
+      CollectionHistoryParams
+    >({
+      query: (filters) => ({
+        handler: async (client) => {
+          const page = filters.page ?? 1;
+          const limit = filters.limit ?? 25;
+          const offset = (page - 1) * limit;
+          const search = filters.search?.trim();
+
+          const customerIds = search ? await resolveHistoryCustomerIds(client, search) : null;
+          if (customerIds && customerIds.length === 0) {
+            return { items: [], total: 0, page, limit };
+          }
+
+          let query = client
+            .from('collection_assignment_events')
+            .select(
+              `
+              id,
+              customer_id,
+              assigned_officer_id,
+              claimed_by_officer_id,
+              status,
+              actor_role,
+              notes,
+              created_at,
+              customer:users!collection_assignment_events_customer_id_fkey(name, customer_id, phone)
+            `,
+              { count: 'exact' },
+            );
+
+          if (customerIds) {
+            query = query.in('customer_id', customerIds);
+          }
+
+          if (filters.officerFilter === 'open_pool') {
+            query = query.is('assigned_officer_id', null).eq('status', 'open');
+          } else if (filters.officerFilter && filters.officerFilter !== 'all') {
+            query = query.eq('assigned_officer_id', filters.officerFilter);
+          }
+
+          if (filters.statusFilter && filters.statusFilter !== 'all') {
+            query = query.eq('status', filters.statusFilter);
+          }
+
+          const ascending = filters.sortKey === 'oldest';
+          query = query.order('created_at', { ascending });
+
+          const { data, error, count } = await query.range(offset, offset + limit - 1);
+          if (error) throw error;
+
+          const officerIds = [
+            ...new Set(
+              (data ?? [])
+                .flatMap((row) => [
+                  row.assigned_officer_id as string | null,
+                  row.claimed_by_officer_id as string | null,
+                ])
+                .filter((id): id is string => Boolean(id)),
+            ),
+          ];
+          const officerNameById = await fetchOfficerNameMap(client, officerIds);
+
+          return {
+            items: (data ?? []).map((row) =>
+              mapHistoryRow(row as Record<string, unknown>, officerNameById),
+            ),
+            total: count ?? 0,
+            page,
+            limit,
+          };
+        },
+      }),
+      providesTags: ['CollectionAssignments'],
+    }),
+
     getCustomerCollectionDetail: builder.query<CollectionAssignmentRow, string>({
       query: (customerId) => ({
         handler: async (client) => {
@@ -329,6 +455,7 @@ export const collectionAssignmentsApi = baseApi.injectEndpoints({
 
 export const {
   useGetCollectionAssignmentsQuery,
+  useGetCollectionAssignmentHistoryQuery,
   useGetCustomerCollectionDetailQuery,
   useBulkAssignCollectionOfficerMutation,
   useAssignCollectionOfficerMutation,

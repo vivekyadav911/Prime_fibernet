@@ -70,7 +70,7 @@ export const adminPlanChangesApi = baseApi.injectEndpoints({
       query: ({ id, action, adminNotes }) => ({
         handler: async (client) => {
           const status = action === 'approve' ? 'approved' : 'rejected';
-          const { data: request, error } = await client
+          const { data: updatedRows, error } = await client
             .from('plan_change_requests')
             .update({
               status,
@@ -78,54 +78,53 @@ export const adminPlanChangesApi = baseApi.injectEndpoints({
               reviewed_at: new Date().toISOString(),
             })
             .eq('id', id)
-            .select(
-              `
-              *,
-              customer:users!plan_change_requests_customer_id_fkey(id, name, auth_user_id)
-            `,
-            )
-            .single();
+            .select('id, customer_id, requested_plan_id');
           if (error) throw new Error(formatSupabaseError(error));
+          const request = (updatedRows ?? [])[0] as Record<string, unknown> | undefined;
+          if (!request) throw new Error('Request not found or you do not have permission to review it.');
 
-          const customer = request.customer as Record<string, unknown> | null;
+          const { data: customer } = await client
+            .from('users')
+            .select('id, name, auth_user_id')
+            .eq('id', request.customer_id as string)
+            .maybeSingle();
           const authUserId = customer?.auth_user_id as string | undefined;
 
-          if (action === 'approve' && request.requested_plan_id) {
-            const { data: plan } = await client
-              .from('plans')
-              .select('name, speed_mbps')
-              .eq('id', request.requested_plan_id)
-              .maybeSingle();
-
+          // When approving, supersede any OTHER pending request from the same
+          // customer so only the latest approved request is actionable.
+          if (action === 'approve') {
             await client
-              .from('subscriptions')
+              .from('plan_change_requests')
               .update({
-                plan_id: request.requested_plan_id,
-                plan_name: plan?.name ?? null,
-                speed_mbps: plan?.speed_mbps ?? null,
-                billing_cycle: request.requested_cycle,
+                status: 'rejected',
+                admin_notes: 'Superseded by a newer request',
+                reviewed_at: new Date().toISOString(),
               })
-              .eq('user_id', request.customer_id)
-              .eq('status', 'active');
+              .eq('customer_id', request.customer_id as string)
+              .eq('status', 'pending')
+              .neq('id', id);
           }
 
+          // Approval only unlocks the payment step; the plan is activated when the
+          // customer pays (verify-payment creates the subscription). We do not touch
+          // the subscriptions table here.
           if (authUserId) {
             await client.from('portal_notifications').insert({
               recipient_auth_id: authUserId,
               type: 'plan_change_update',
               category: 'plan',
-              title: action === 'approve' ? 'Plan change approved' : 'Plan change declined',
+              title: action === 'approve' ? 'Plan request approved' : 'Plan request declined',
               body:
                 action === 'approve'
-                  ? 'Your plan change request has been approved. Updates may take a few minutes to reflect.'
-                  : adminNotes?.trim() || 'Your plan change request was declined. Contact support for details.',
+                  ? 'Your plan request was approved. Open the app and pay to activate your plan.'
+                  : adminNotes?.trim() || 'Your plan request was declined. Contact support for details.',
               action_url: '/customer/plans',
               data: { plan_change_request_id: id, status },
             });
           }
         },
       }),
-      invalidatesTags: ['PlanChangeRequests', 'Subscriptions', 'PortalNotifications', 'CustomerDashboard'],
+      invalidatesTags: ['PlanChangeRequests', 'PortalNotifications'],
     }),
   }),
 });

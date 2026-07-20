@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
 
 import { DismissKeyboardScrollView, ModalSheetHeader } from '@/components/common';
-import { geocodeAddress } from '@/services/GeocodingService';
+import { geocodeAddress, reverseGeocode } from '@/services/GeocodingService';
 import { useAppSelector } from '@/store/hooks';
 import { useUpdateOfficerPortalItemLocationMutation } from '@/services/api/officerPortalApi';
 import { colors } from '@/theme/colors';
@@ -23,6 +23,7 @@ import { radius, spacing } from '@/theme/spacing';
 import type { PortalItemKind } from '@/types/portalTicket';
 import { formatCoordinatePair, parseCoordinatePair } from '@/utils/coordinates';
 import { isUsableMapCoordinate } from '@/utils/officerPortalCoordinates';
+import { queryErrorMessage } from '@/utils/queryError';
 
 export type OfficerLocationSheetProps = {
   visible: boolean;
@@ -52,6 +53,7 @@ export function OfficerLocationSheet({
   const [latitudeText, setLatitudeText] = useState('');
   const [longitudeText, setLongitudeText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [helperNote, setHelperNote] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
 
@@ -59,6 +61,7 @@ export function OfficerLocationSheet({
     if (!visible) return;
     setAddress(initialAddress);
     setError(null);
+    setHelperNote(null);
     if (
       initialLatitude != null &&
       initialLongitude != null &&
@@ -91,6 +94,7 @@ export function OfficerLocationSheet({
 
   const handleSearchAddress = useCallback(async () => {
     setError(null);
+    setHelperNote(null);
     setIsSearching(true);
     try {
       const result = await geocodeAddress({ address });
@@ -101,15 +105,27 @@ export function OfficerLocationSheet({
       setLatitudeText(formatted.latitude);
       setLongitudeText(formatted.longitude);
       if (result.formattedAddress) setAddress(result.formattedAddress);
+      setHelperNote(
+        result.formattedAddress
+          ? `Matched: ${result.formattedAddress}. If this is wrong, edit the address and look up again — do not save.`
+          : 'Pin set from address lookup. Save only if the coordinates look correct.',
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Address lookup failed.');
+      setLatitudeText('');
+      setLongitudeText('');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Address not found. Try a simpler area + city, or enter coordinates manually.',
+      );
     } finally {
       setIsSearching(false);
     }
-  }, [address]);
+  }, [address, itemId]);
 
   const handleUseCurrentLocation = useCallback(async () => {
     setError(null);
+    setHelperNote(null);
     setIsLocating(true);
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
@@ -117,21 +133,39 @@ export function OfficerLocationSheet({
         setError('Location permission is required.');
         return;
       }
+      const enabled = await Location.hasServicesEnabledAsync();
+      if (!enabled) {
+        setError('Turn on location services to use GPS.');
+        return;
+      }
+      // Fresh fix — High alone often returns a cached last-known position on Android.
       const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
+        accuracy: Location.Accuracy.Highest,
+        mayShowUserSettingsDialog: true,
       });
-      const formatted = formatCoordinatePair({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
+      const { latitude, longitude } = position.coords;
+      const formatted = formatCoordinatePair({ latitude, longitude });
       setLatitudeText(formatted.latitude);
       setLongitudeText(formatted.longitude);
+
+      try {
+        const reverse = await reverseGeocode(latitude, longitude);
+        if (reverse.formattedAddress) {
+          setAddress(reverse.formattedAddress);
+        }
+      } catch {
+        // Keep existing address text if reverse fails; coords still apply.
+      }
+
+      setHelperNote(
+        'Pin set to your current device location (not the typed customer address). Save only if you are at the customer site.',
+      );
     } catch {
       setError('Could not read GPS location. Enter coordinates manually.');
     } finally {
       setIsLocating(false);
     }
-  }, []);
+  }, [itemId]);
 
   const handleSave = useCallback(async () => {
     const coords = resolveCoordinates();
@@ -155,7 +189,7 @@ export function OfficerLocationSheet({
       onSaved?.({ ...coords, address: trimmedAddress });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save location.');
+      setError(queryErrorMessage(err) || 'Could not save location.');
     }
   }, [address, itemId, kind, onClose, onSaved, resolveCoordinates, updateLocation, user?.name]);
 
@@ -183,7 +217,8 @@ export function OfficerLocationSheet({
               showsVerticalScrollIndicator={false}
             >
               <Text style={styles.helper}>
-                Update the pin if the saved address is wrong. This saves to the ticket or request.
+                Look up the customer address to set the pin, or use My location only when you are
+                at the site. Saving updates this ticket permanently.
               </Text>
 
               <Text style={styles.label}>ADDRESS</Text>
@@ -203,7 +238,7 @@ export function OfficerLocationSheet({
                   disabled={isSearching || isLocating || saving}
                 />
                 <Button
-                  label={isLocating ? 'Locating…' : 'Use GPS'}
+                  label={isLocating ? 'Locating…' : 'My location'}
                   variant="ghost"
                   onPress={() => void handleUseCurrentLocation()}
                   disabled={isSearching || isLocating || saving}
@@ -237,6 +272,7 @@ export function OfficerLocationSheet({
                 keyboardType="numbers-and-punctuation"
               />
 
+              {helperNote ? <Text style={styles.note}>{helperNote}</Text> : null}
               {error ? <Text style={styles.error}>{error}</Text> : null}
 
               <Button
@@ -312,6 +348,11 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 13,
     color: colors.textSecondary,
+  },
+  note: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
   },
   error: {
     color: colors.errorRed,

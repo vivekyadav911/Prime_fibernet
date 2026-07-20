@@ -1,5 +1,7 @@
 export { FreeMapView } from './FreeMapView';
 export type { FreeMapViewProps } from './FreeMapView';
+export { LeafletMapView } from './LeafletMapView';
+export type { LeafletMapViewProps } from './LeafletMapView';
 export { OfficerMarker } from './OfficerMarker';
 export { LiveOfficerMarker } from './LiveOfficerMarker';
 export { SavedPlaceMarker } from './SavedPlaceMarker';

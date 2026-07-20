@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, Screen } from '@prime/ui';
+import { Button} from '@prime/ui';
 
 import { StatusBadge } from '@/components/admin';
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
+import { OfficerScreen } from '@/components/officer';
 import { SignaturePadSheet } from '@/components/common/SignaturePadSheet';
 import { useCompanyDefaults } from '@/hooks/useCompanyDefaults';
 import { useContractPDF } from '@/hooks/useContractPDF';
@@ -34,6 +35,9 @@ export function OfficerEmploymentContractScreen({ route, navigation }: Props) {
   const needsSignature = !!contract?.generatedPdfUrl && !contract.employeeSignaturePath;
 
   useEffect(() => {
+  }, [isLoading, isError, error, contract, needsSignature, highlightSign]);
+
+  useEffect(() => {
     if (highlightSign && needsSignature) {
       setSignPadVisible(true);
     }
@@ -56,8 +60,7 @@ export function OfficerEmploymentContractScreen({ route, navigation }: Props) {
     navigation.navigate('ContractPdfViewer', {
       storagePath: contract.generatedPdfUrl,
       title: 'Employment Contract',
-      contractSnapshot: contract,
-    });
+      contractSnapshot: contract});
   }, [contract, navigation]);
 
   const handleSignConfirm = useCallback(
@@ -76,33 +79,33 @@ export function OfficerEmploymentContractScreen({ route, navigation }: Props) {
 
   if (isLoading) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <SkeletonLoader rows={5} />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   if (isError) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   if (!contract) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <EmptyState
           title="No contract on file"
           subtitle="Your employment contract will appear here once it has been created by HR."
         />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   return (
-    <Screen style={styles.screen}>
+    <OfficerScreen onRefresh={refetch} style={styles.screen}>
       {needsSignature ? (
         <Pressable style={styles.banner} onPress={() => setSignPadVisible(true)}>
           <Text style={styles.bannerTitle}>Signature required</Text>
@@ -142,7 +145,7 @@ export function OfficerEmploymentContractScreen({ route, navigation }: Props) {
         onConfirm={handleSignConfirm}
         submitting={submittingSignature}
       />
-    </Screen>
+    </OfficerScreen>
   );
 }
 
@@ -152,8 +155,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryNavy,
     borderRadius: radius.md,
     padding: spacing.md,
-    marginBottom: spacing.xs,
-  },
+    marginBottom: spacing.xs},
   bannerTitle: { color: colors.white, fontWeight: '700', fontSize: 15, marginBottom: spacing.xxs },
   bannerBody: { color: colors.white, fontSize: 13, opacity: 0.9 },
   card: {
@@ -162,12 +164,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    gap: spacing.sm,
-  },
+    gap: spacing.sm},
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   row: { fontSize: 14, color: colors.textSecondary },
   signed: { fontSize: 13, color: colors.textPrimary, fontWeight: '600' },
   pending: { fontSize: 13, color: colors.textSecondary, fontStyle: 'italic' },
-  actions: { gap: spacing.sm, marginTop: spacing.xs },
-});
+  actions: { gap: spacing.sm, marginTop: spacing.xs }});

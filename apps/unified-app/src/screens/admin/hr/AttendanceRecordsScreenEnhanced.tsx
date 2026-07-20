@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AttendanceCalendar } from '@/components/attendance/AttendanceCalendar';
 import { AttendanceDayDetailSheet } from '@/components/attendance/AttendanceDayDetailSheet';
 import { EmployeeSelector } from '@/components/attendance/EmployeeSelector';
-import { AdminButton, AdminScreenLayout, AdminStateShell, DateField, FilterChips, RoleGuard, SearchBar, SelectField, StatusBadge } from '@/components/admin';
+import { AdminButton, AdminScreenLayout, AdminStateShell, AvatarIcon, DateField, FilterChips, RoleGuard, SearchBar, SelectField, StatusBadge, useAdminPermission } from '@/components/admin';
+import { AdminShiftEditModal } from '@/components/admin/attendance/AdminShiftEditModal';
 import { useAdminAttendance, useAttendanceStatusByDay } from '@/hooks/attendance/useAdminAttendance';
 import { useGetOfficersQuery } from '@/services/api/officersApi';
 import { setAdminRecordsPrefs } from '@/store/slices/attendanceSlice';
@@ -25,7 +27,7 @@ import {
   type AttendanceRecordsSortKey,
   type AttendanceStatusFilter,
 } from '@/utils/attendanceRecordsFilters';
-import { parseLocalDateString } from '@/utils/dateUtils';
+import { parseLocalDateString, getLocalDateString } from '@/utils/dateUtils';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'AttendanceRecords'>;
@@ -176,31 +178,42 @@ function ViewTabs({
   );
 }
 
-function AttendanceHistoryCard({ item }: { item: AttendanceRecord }) {
+function AttendanceHistoryCard({
+  item,
+  canEdit,
+  onEdit,
+}: {
+  item: AttendanceRecord;
+  canEdit: boolean;
+  onEdit: (record: AttendanceRecord) => void;
+}) {
   const isOutsideZone = item.checkInMethod === 'approved_outside';
   const isManual = item.checkInMethod === 'admin_override' || Boolean(item.manualEntryByName);
 
   return (
     <View style={styles.recordCard}>
       <View style={styles.recordHeader}>
-        <Text style={styles.recordName}>{item.officerName || 'Unknown officer'}</Text>
-        <View style={styles.recordChipRow}>
-          <StatusBadge status={item.status} />
-          {item.isLate ? (
-            <View style={[styles.chip, styles.chipWarning]}>
-              <Text style={[styles.chipText, styles.chipTextWarning]}>Late</Text>
-            </View>
-          ) : null}
-          {isOutsideZone ? (
-            <View style={[styles.chip, styles.chipError]}>
-              <Text style={[styles.chipText, styles.chipTextError]}>Outside zone</Text>
-            </View>
-          ) : null}
-          {isManual ? (
-            <View style={[styles.chip, styles.chipInfo]}>
-              <Text style={[styles.chipText, styles.chipTextInfo]}>Manual entry</Text>
-            </View>
-          ) : null}
+        <AvatarIcon name={item.officerName || 'Officer'} uri={item.officerAvatar} size={36} />
+        <View style={styles.recordHeaderText}>
+          <Text style={styles.recordName}>{item.officerName || 'Unknown officer'}</Text>
+          <View style={styles.recordChipRow}>
+            <StatusBadge status={item.status} />
+            {item.isLate ? (
+              <View style={[styles.chip, styles.chipWarning]}>
+                <Text style={[styles.chipText, styles.chipTextWarning]}>Late</Text>
+              </View>
+            ) : null}
+            {isOutsideZone ? (
+              <View style={[styles.chip, styles.chipError]}>
+                <Text style={[styles.chipText, styles.chipTextError]}>Outside zone</Text>
+              </View>
+            ) : null}
+            {isManual ? (
+              <View style={[styles.chip, styles.chipInfo]}>
+                <Text style={[styles.chipText, styles.chipTextInfo]}>Manual entry</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
       </View>
 
@@ -239,32 +252,80 @@ function AttendanceHistoryCard({ item }: { item: AttendanceRecord }) {
           {checkInMethodLabel(item.checkInMethod)}
         </Text>
       </View>
+
+      {canEdit ? (
+        <Pressable style={styles.editBtn} onPress={() => onEdit(item)}>
+          <Text style={styles.editBtnText}>Edit shift</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
   const dispatch = useAppDispatch();
+  const canEditShifts = useAdminPermission('attendance.edit');
+  const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
   const prefs = useAppSelector((s) => s.attendance.adminRecordsPrefs);
   const { viewMode, selectedDate, dateFrom, dateTo, useDateRange } = prefs;
 
   const [selectedOfficerId, setSelectedOfficerId] = useState<string | null>(route.params?.officerId ?? null);
   const [searchQuery, setSearchQuery] = useState('');
   const [dayDetailDate, setDayDetailDate] = useState<string | null>(null);
+  const datePinnedRef = useRef(false);
 
   const { data: officers = [] } = useGetOfficersQuery();
 
+  useFocusEffect(
+    useCallback(() => {
+      const params = route.params;
+      const today = getLocalDateString();
+
+      if (params?.dateFrom && params?.dateTo) {
+        dispatch(
+          setAdminRecordsPrefs({
+            useDateRange: true,
+            dateFrom: params.dateFrom,
+            dateTo: params.dateTo,
+          }),
+        );
+        datePinnedRef.current = true;
+        return;
+      }
+
+      if (params?.selectedDate) {
+        dispatch(
+          setAdminRecordsPrefs({
+            selectedDate: params.selectedDate,
+            dateFrom: params.selectedDate,
+            dateTo: params.selectedDate,
+            useDateRange: false,
+          }),
+        );
+        datePinnedRef.current = true;
+        return;
+      }
+
+      if (!datePinnedRef.current) {
+        dispatch(
+          setAdminRecordsPrefs({
+            selectedDate: today,
+            dateFrom: today,
+            dateTo: today,
+            useDateRange: false,
+          }),
+        );
+      }
+
+      return () => {
+        datePinnedRef.current = false;
+      };
+    }, [dispatch, route.params?.dateFrom, route.params?.dateTo, route.params?.selectedDate]),
+  );
+
   useEffect(() => {
     const params = route.params;
-    if (!params?.dateFrom && !params?.dateTo && !params?.officerId && !params?.officerName) return;
-
-    dispatch(
-      setAdminRecordsPrefs({
-        useDateRange: Boolean(params.dateFrom && params.dateTo),
-        ...(params.dateFrom ? { dateFrom: params.dateFrom } : {}),
-        ...(params.dateTo ? { dateTo: params.dateTo } : {}),
-      }),
-    );
+    if (!params?.officerId && !params?.officerName) return;
 
     if (params.officerId !== undefined) {
       setSelectedOfficerId(params.officerId ?? null);
@@ -274,7 +335,7 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
       );
       if (match) setSelectedOfficerId(match.id);
     }
-  }, [dispatch, officers, route.params]);
+  }, [officers, route.params?.officerId, route.params?.officerName]);
 
   const calendarAnchor = useDateRange ? dateFrom : selectedDate;
   const calendarAnchorDate = parseLocalDateString(calendarAnchor);
@@ -402,6 +463,14 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
 
   const updatePrefs = useCallback(
     (patch: Partial<typeof prefs>) => {
+      if (
+        'selectedDate' in patch ||
+        'dateFrom' in patch ||
+        'dateTo' in patch ||
+        'useDateRange' in patch
+      ) {
+        datePinnedRef.current = true;
+      }
       dispatch(setAdminRecordsPrefs(patch));
     },
     [dispatch],
@@ -470,8 +539,10 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
   ]);
 
   const renderItem = useCallback(
-    ({ item }: { item: AttendanceRecord }) => <AttendanceHistoryCard item={item} />,
-    [],
+    ({ item }: { item: AttendanceRecord }) => (
+      <AttendanceHistoryCard item={item} canEdit={canEditShifts} onEdit={setEditingRecord} />
+    ),
+    [canEditShifts],
   );
 
   const listHeader = useMemo(() => {
@@ -690,6 +761,16 @@ export function AttendanceRecordsScreenEnhanced({ route, navigation }: Props) {
           selectedOfficerId={selectedOfficerId}
           onClose={() => setDayDetailDate(null)}
         />
+
+        <AdminShiftEditModal
+          visible={editingRecord != null}
+          record={editingRecord}
+          onClose={() => setEditingRecord(null)}
+          onSaved={() => {
+            void refetch();
+            void refetchStatus();
+          }}
+        />
       </AdminScreenLayout>
       </AdminStateShell>
     </RoleGuard>
@@ -839,7 +920,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     gap: spacing.xxs,
   },
-  recordHeader: { gap: 4 },
+  recordHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  recordHeaderText: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+  },
   recordName: {
     fontSize: 15,
     fontWeight: '700',
@@ -901,6 +991,17 @@ const styles = StyleSheet.create({
   recordMetaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   recordMeta: { flexShrink: 1, fontSize: 11, color: colors.textSecondary },
   recordMetaDot: { fontSize: 11, color: colors.textSecondary },
+  editBtn: {
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xs,
+  },
+  editBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: adminColors.primary,
+  },
   emptyCard: {
     backgroundColor: adminColors.cardBg,
     borderRadius: CARD_RADIUS,

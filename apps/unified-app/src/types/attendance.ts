@@ -107,7 +107,7 @@ export interface AttendanceSummary {
 
 // ─── Approval Requests ───────────────────────────────────────────────────────
 
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export type ApprovalType =
   | 'out_of_zone_checkin'
@@ -115,7 +115,8 @@ export type ApprovalType =
   | 'manual_correction'
   | 'late_checkin'
   | 'early_checkout'
-  | 'missed_checkout';
+  | 'missed_checkout'
+  | 'second_shift_checkin';
 
 export interface ApprovalRequest {
   id: string;
@@ -221,6 +222,7 @@ export type CheckInResult =
   | { action: 'checked_in'; record: AttendanceRecord }
   | { action: 'needs_approval'; distance: number; geofenceName?: string }
   | { action: 'already_checked_in'; record: AttendanceRecord }
+  | { action: 'shift_already_completed'; record: AttendanceRecord }
   | { action: 'offline_queued' };
 
 export type CheckOutResult =

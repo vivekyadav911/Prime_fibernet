@@ -94,7 +94,7 @@ export function buildInvoiceHtmlFromDb(
   const companyName = String(company.company_name ?? 'Prime Fibernet');
   const companyAddress = String(company.company_address ?? '');
   const companyPhone = String(company.company_phone ?? '');
-  const companyEmail = String(company.company_email ?? 'billing@primefiber.net');
+  const companyEmail = String(company.company_email ?? 'invoices@dizitel.in');
   const companyGstin = String(company.company_gstin ?? '—');
   const companyState = String(company.company_state ?? 'Uttar Pradesh');
   const footerNote = String(company.invoice_footer_note ?? '');
@@ -215,8 +215,8 @@ export function buildInvoiceHtmlFromDb(
 
 export function resolveEmailFromAddress(company: Record<string, unknown> | null | undefined): string {
   const smtpUser = String(company?.smtp_user ?? '').trim();
-  if (smtpUser && !smtpUser.toLowerCase().includes('dizitel')) return smtpUser;
-  return 'Prime Fibernet Billing <billing@primefiber.net>';
+  if (smtpUser) return smtpUser;
+  return 'Prime Fibernet Billing <invoices@dizitel.in>';
 }
 
 export function buildInvoiceEmailHtml(params: {
@@ -229,13 +229,15 @@ export function buildInvoiceEmailHtml(params: {
   lineItems?: LineItem[];
   companyName?: string;
   companyEmail?: string;
+  companyWebsite?: string;
 }): string {
   const statusLabel = params.status === 'paid' ? 'paid' : 'unpaid';
   const dueDate = params.dueDate
     ? new Date(params.dueDate).toLocaleDateString('en-IN')
     : '—';
   const companyName = params.companyName ?? 'Prime Fibernet';
-  const supportEmail = params.companyEmail ?? 'support@primefiber.net';
+  const supportEmail = params.companyEmail ?? 'invoices@dizitel.in';
+  const companyWebsite = params.companyWebsite ?? 'https://dizitel.in';
   const lineRows = (params.lineItems ?? []).map((item) => {
     const total = item.quantity * item.unitPrice;
     return `<tr>
@@ -250,7 +252,7 @@ export function buildInvoiceEmailHtml(params: {
   <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(30,64,175,.08);">
     <div style="background:#eff6ff;padding:20px 24px;">
       <div style="font-size:20px;font-weight:800;color:#1e40af;">${escapeHtml(companyName)}</div>
-      <div style="font-size:12px;color:#3b82f6;margin-top:4px;">www.primefiber.net</div>
+      <div style="font-size:12px;color:#3b82f6;margin-top:4px;">${escapeHtml(companyWebsite.replace(/^https?:\/\//, '').replace(/\/$/, ''))}</div>
     </div>
     <div style="padding:24px;">
       <p style="margin:0 0 12px;">Hi ${escapeHtml(params.customerName)},</p>

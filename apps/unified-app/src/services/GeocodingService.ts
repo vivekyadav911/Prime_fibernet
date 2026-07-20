@@ -15,10 +15,27 @@ export type ReverseGeocodeResult = {
 };
 
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
-const USER_AGENT = 'PrimeFibernet/1.0 (geofence-admin)';
+const USER_AGENT = 'PrimeFibernet/1.0 (officer-location; contact=support@primefibernet.local)';
 
 function buildAddressQuery(parts: { address?: string; city?: string; state?: string }): string {
   return [parts.address, parts.city, parts.state].filter(Boolean).join(', ').trim();
+}
+
+/** Broaden street queries Nominatim often misses (house no. + colony). */
+function broadenAddressQuery(query: string): string[] {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  const variants = [trimmed];
+  // Drop leading plot/house token: "G-198, shyam park, ghaziabad" → "shyam park, ghaziabad"
+  const withoutPlot = trimmed.replace(/^[^,]+,\s*/i, '').trim();
+  if (withoutPlot && withoutPlot.toLowerCase() !== trimmed.toLowerCase()) {
+    variants.push(withoutPlot);
+  }
+  if (!/india/i.test(trimmed)) {
+    variants.push(`${trimmed}, India`);
+    if (withoutPlot) variants.push(`${withoutPlot}, India`);
+  }
+  return [...new Set(variants)];
 }
 
 async function geocodeWithNominatim(query: string, limit = 1): Promise<GeocodeResult[]> {
@@ -71,6 +88,22 @@ async function geocodeWithNominatim(query: string, limit = 1): Promise<GeocodeRe
   }, []);
 }
 
+async function geocodeWithExpo(query: string): Promise<GeocodeResult[]> {
+  try {
+    const Location = await import('expo-location');
+    const results = await Location.geocodeAsync(query);
+    return results
+      .filter((r) => Number.isFinite(r.latitude) && Number.isFinite(r.longitude))
+      .map((r) => ({
+        latitude: r.latitude,
+        longitude: r.longitude,
+        formattedAddress: query,
+      }));
+  } catch {
+    return [];
+  }
+}
+
 async function reverseGeocodeWithNominatim(
   latitude: number,
   longitude: number,
@@ -109,7 +142,30 @@ async function reverseGeocodeWithNominatim(
   };
 }
 
-/** Geocode an address using free OpenStreetMap Nominatim (no API key). */
+async function reverseGeocodeWithExpo(
+  latitude: number,
+  longitude: number,
+): Promise<ReverseGeocodeResult | null> {
+  try {
+    const Location = await import('expo-location');
+    const results = await Location.reverseGeocodeAsync({ latitude, longitude });
+    const top = results[0];
+    if (!top) return null;
+    const formattedAddress = [top.name, top.street, top.city, top.region, top.postalCode, top.country]
+      .filter(Boolean)
+      .join(', ');
+    return {
+      formattedAddress: formattedAddress || undefined,
+      address: top.street ?? top.name ?? undefined,
+      city: top.city ?? undefined,
+      state: top.region ?? undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Geocode an address using Nominatim, then device geocoder as fallback. */
 export async function geocodeAddress(parts: {
   address?: string;
   city?: string;
@@ -120,11 +176,19 @@ export async function geocodeAddress(parts: {
     throw new Error('Enter an address before searching on the map.');
   }
 
-  const results = await geocodeWithNominatim(query, 1);
-  if (!results.length) {
-    throw new Error('Address not found. Try a more specific address or set coordinates manually.');
+  for (const variant of broadenAddressQuery(query)) {
+    const nominatim = await geocodeWithNominatim(variant, 3);
+    if (nominatim.length) return nominatim[0]!;
   }
-  return results[0]!;
+
+  for (const variant of broadenAddressQuery(query)) {
+    const expo = await geocodeWithExpo(variant);
+    if (expo.length) return expo[0]!;
+  }
+
+  throw new Error(
+    'Address not found. Try area + city (e.g. “Shyam Park, Ghaziabad, UP”) or enter coordinates.',
+  );
 }
 
 /** Return multiple address suggestions for map search (OpenStreetMap Nominatim). */
@@ -134,13 +198,23 @@ export async function searchAddressSuggestions(
 ): Promise<GeocodeResult[]> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
-  return geocodeWithNominatim(trimmed, limit);
+  for (const variant of broadenAddressQuery(trimmed)) {
+    const nominatim = await geocodeWithNominatim(variant, limit);
+    if (nominatim.length) return nominatim;
+  }
+  return geocodeWithExpo(trimmed);
 }
 
-/** Reverse geocode coordinates using free OpenStreetMap Nominatim (no API key). */
+/** Reverse geocode coordinates using Nominatim, then device geocoder as fallback. */
 export async function reverseGeocode(
   latitude: number,
   longitude: number,
 ): Promise<ReverseGeocodeResult> {
-  return reverseGeocodeWithNominatim(latitude, longitude);
+  try {
+    return await reverseGeocodeWithNominatim(latitude, longitude);
+  } catch {
+    const expo = await reverseGeocodeWithExpo(latitude, longitude);
+    if (expo) return expo;
+    throw new Error('Could not resolve address for this location.');
+  }
 }

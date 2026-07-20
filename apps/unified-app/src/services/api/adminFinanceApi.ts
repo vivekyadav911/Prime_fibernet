@@ -124,7 +124,7 @@ async function fetchCompanySettings(client: import('@supabase/supabase-js').Supa
       .filter(Boolean)
       .join(', '),
     companyPhone: String(data?.company_phone ?? ''),
-    companyEmail: String(data?.company_email ?? 'support@primefiber.net'),
+    companyEmail: String(data?.company_email ?? 'invoices@dizitel.in'),
     companyGstin: String(data?.company_gstin ?? ''),
     companyState: String(data?.company_state ?? 'Uttar Pradesh'),
   };

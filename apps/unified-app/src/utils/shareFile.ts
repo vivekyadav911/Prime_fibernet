@@ -1,8 +1,19 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
+import { downloadBlobInBrowser, isWebBrowser } from '@/utils/webFileDownload';
+
 export async function shareBlob(blob: Blob, filename: string): Promise<void> {
-  const base64 = await blobToBase64(blob);
+  if (isWebBrowser()) {
+    await downloadBlobInBrowser(blob, filename);
+    return;
+  }
+  let base64: string;
+  try {
+    base64 = await blobToBase64(blob);
+  } catch (e) {
+    throw e;
+  }
   const uri = `${FileSystem.cacheDirectory}${filename}`;
   await FileSystem.writeAsStringAsync(uri, base64, {
     encoding: 'base64',
@@ -11,6 +22,20 @@ export async function shareBlob(blob: Blob, filename: string): Promise<void> {
   if (canShare) {
     await Sharing.shareAsync(uri, { mimeType: guessMime(filename), dialogTitle: filename });
   }
+}
+
+/** Fetch a signed URL and download/share the file. */
+export async function downloadOrShareUrl(url: string, filename: string): Promise<void> {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Download failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  await shareBlob(blob, filename);
+}
+
+function csvEscape(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
 }
 
 export function auditLogsToCsv(
@@ -29,11 +54,11 @@ export function auditLogsToCsv(
       r.timestamp,
       r.action,
       r.category ?? '',
-      (r.description ?? '').replace(/"/g, '""'),
+      r.description ?? '',
       r.actorId ?? '',
       r.status ?? '',
     ]
-      .map((v) => `"${v}"`)
+      .map((v) => csvEscape(String(v)))
       .join(','),
   );
   return [header, ...lines].join('\n');

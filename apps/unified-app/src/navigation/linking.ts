@@ -29,12 +29,13 @@ export const linking: LinkingOptions<RootStackParamList> = {
       Auth: {
         path: 'auth',
         screens: {
+          Landing: '',
           Login: 'login',
-          Register: 'register',
-          SignUp: 'sign-up',
           ForgotPassword: 'forgot-password',
+          ForgotUsername: 'forgot-username',
           OTPVerification: 'otp-verify/:identifier',
-          Totp: 'totp',
+          CreatePassword: 'create-password',
+          AdminMfa: 'admin-mfa',
         },
       },
       WebUnsupported: 'unsupported',
@@ -73,23 +74,48 @@ export const linking: LinkingOptions<RootStackParamList> = {
       Officer: {
         path: 'officer',
         screens: {
-          OfficerDrawer: {
+          OfficerTabs: {
             screens: {
-              Dashboard: 'dashboard',
-              RequestsStack: { screens: { RequestsList: 'requests' } },
-              Map: 'map',
-              Attendance: 'attendance',
-              CollectionsStack: {
+              Dashboard: { screens: { DashboardHome: 'dashboard' } },
+              Tickets: { screens: { RequestsList: 'requests' } },
+              Attendance: {
                 screens: {
-                  CollectionsList: 'collect-payment',
-                  CollectionHistory: 'collection-history',
-                  AssignedCustomers: 'collections/search',
-                  CustomerPaymentHistory: 'collections/customer/:customerId',
+                  AttendanceHome: 'attendance',
+                  AttendanceHistory: 'attendance/history',
+                  Shifts: 'shifts',
                 },
               },
-              LeaveStack: { screens: { LeaveList: 'leave' } },
-              NotificationsStack: { screens: { NotificationsList: 'notifications' } },
-              ProfileStack: { screens: { ProfileHome: 'profile' } },
+              Payments: {
+                screens: {
+                  CollectionsStack: {
+                    screens: {
+                      CollectionsList: 'collect-payment',
+                      CollectionHistory: 'collection-history',
+                      AssignedCustomers: 'collections/search',
+                      CustomerPaymentHistory: 'collections/customer/:customerId',
+                    },
+                  },
+                  Invoice: 'invoice',
+                },
+              },
+              Settings: {
+                screens: {
+                  SettingsHome: 'settings',
+                  Map: 'map',
+                  Inventory: 'inventory',
+                  Support: 'support',
+                  NotificationsStack: { screens: { NotificationsList: 'notifications' } },
+                  LeaveStack: { screens: { LeaveList: 'leave' } },
+                  Payslip: { screens: { PayslipList: 'payslips' } },
+                },
+              },
+            },
+          },
+          Profile: {
+            screens: {
+              ProfileHome: 'profile',
+              ChangePassword: 'profile/change-password',
+              EmploymentContract: 'profile/employment-contract',
             },
           },
           RequestDetail: 'request/:requestId',
@@ -143,6 +169,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
                   Appearance: 'settings/appearance',
                   System: 'settings/system',
                   BackupExport: 'settings/backup',
+                  DataImport: 'settings/import',
                   AuditLogs: 'settings/audit',
                 },
               },
@@ -157,7 +184,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
           AdminAuth: 'login',
         },
       },
-      Totp: 'totp-verify',
     },
   },
 };

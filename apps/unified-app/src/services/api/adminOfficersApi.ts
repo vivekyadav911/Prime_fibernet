@@ -892,12 +892,12 @@ export const adminOfficersApi = baseApi.injectEndpoints({
           }
 
           if (documentType === 'profile_photo') {
-            const { data: signed } = await client.storage
+            const { data: urlData } = client.storage
               .from('officer-documents')
-              .createSignedUrl(storagePath, 604800);
+              .getPublicUrl(storagePath);
             await client
               .from('officers')
-              .update({ profile_photo_url: signed?.signedUrl ?? storagePath })
+              .update({ profile_photo_url: urlData.publicUrl })
               .eq('id', officerId);
           }
         },
@@ -1037,6 +1037,40 @@ export const adminOfficersApi = baseApi.injectEndpoints({
       invalidatesTags: (_r, _e, { officerId }) => [{ type: 'Officers', id: officerId }],
     }),
 
+    updateOfficerLoginEmail: builder.mutation<
+      { loginEmail: string; provisioned: boolean; generatedPassword: string | null },
+      { officerId: string; newEmail: string }
+    >({
+      query: ({ officerId, newEmail }) => ({
+        handler: async (client) => {
+          const { data, error } = await client.functions.invoke('admin-update-officer-email', {
+            body: { officerId, newEmail },
+          });
+          // Edge errors carry the real message in the response body, not the
+          // generic FunctionsHttpError, so read it back before surfacing.
+          if (error) {
+            const body = (await (error as { context?: Response })?.context
+              ?.json?.()
+              .catch(() => null)) as { error?: string } | null;
+            throw new Error(body?.error ?? (error as Error).message);
+          }
+          const result = data as {
+            loginEmail?: string;
+            provisioned?: boolean;
+            generatedPassword?: string | null;
+            error?: string;
+          };
+          if (result.error) throw new Error(result.error);
+          return {
+            loginEmail: result.loginEmail ?? newEmail,
+            provisioned: Boolean(result.provisioned),
+            generatedPassword: result.generatedPassword ?? null,
+          };
+        },
+      }),
+      invalidatesTags: (_r, _e, { officerId }) => [{ type: 'Officers', id: officerId }, 'Officers'],
+    }),
+
     getOfficerPerformance: builder.query<
       { requestsCompleted: number; avgResponseHours: number; rating: number },
       string
@@ -1131,6 +1165,7 @@ export const {
   useRevealOfficerPasswordMutation,
   useRevealOfficerBankMutation,
   useResetOfficerPasswordMutation,
+  useUpdateOfficerLoginEmailMutation,
   useGetOfficerPerformanceQuery,
   useGetOfficerPayslipsQuery,
   useGetOfficerAssignedInventoryQuery,

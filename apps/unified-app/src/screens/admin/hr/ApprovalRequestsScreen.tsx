@@ -49,7 +49,7 @@ function formatDateTime(iso: string): string {
 }
 
 function formatDistance(meters: number): string {
-  if (meters <= 0) return '';
+  if (!Number.isFinite(meters) || meters <= 0) return '';
   if (meters < 1000) return `${Math.round(meters)} m from zone`;
   return `${(meters / 1000).toFixed(1)} km from zone`;
 }

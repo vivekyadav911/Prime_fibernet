@@ -13,12 +13,13 @@ export async function fetchActiveSubscriptionRow(
   client: SupabaseClient,
   userId: string,
 ): Promise<Record<string, unknown> | null> {
+  const cutoff = activeSubscriptionCutoffDate();
   const { data, error } = await client
     .from('subscriptions')
     .select(ACTIVE_SUBSCRIPTION_SELECT)
     .eq('user_id', userId)
     .in('status', CURRENT_SUBSCRIPTION_STATUSES)
-    .gte('end_at', activeSubscriptionCutoffDate())
+    .gte('end_at', cutoff)
     .order('end_at', { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -47,9 +47,15 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
     skip: !subscription?.planId,
   });
   const { data: activeGateway } = useGetActivePaymentGatewayQuery();
-  const { submitRequest, isSubmitting } = usePlanChangeRequest();
+  const { submitRequest, isSubmitting, myRequests } = usePlanChangeRequest();
 
   const isCurrentPlan = subscription?.planId === planId;
+  // Latest request for THIS plan (myRequests is ordered newest first).
+  const planRequest = useMemo(
+    () => myRequests.find((r) => r.requestedPlanId === planId),
+    [myRequests, planId],
+  );
+  const requestStatus = planRequest?.status;
   const changeDirection: PlanChangeDirection = plan
     ? getPlanChangeDirection(currentPlan, plan)
     : 'switch';
@@ -184,8 +190,23 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
       </ScrollView>
 
       <View style={styles.footer}>
+        {requestStatus === 'rejected' ? (
+          <Text style={styles.rejectedNote}>
+            {planRequest?.adminNotes?.trim()
+              ? `Request declined: ${planRequest.adminNotes.trim()}`
+              : 'Your previous request for this plan was declined. You can request again.'}
+          </Text>
+        ) : null}
         {isCurrentPlan ? (
           <CustomerButton label="Back to plans" variant="outline" onPress={() => navigation.goBack()} />
+        ) : requestStatus === 'pending' ? (
+          <CustomerButton label="Awaiting admin approval" icon="clock-outline" disabled onPress={() => {}} />
+        ) : requestStatus === 'approved' ? (
+          <CustomerButton
+            label="Pay now to activate"
+            icon="credit-card-outline"
+            onPress={() => navigation.navigate('Checkout', { planId: plan.id, amount: price })}
+          />
         ) : subscription ? (
           <CustomerButton
             label={planChangeActionLabel(changeDirection, plan.speedMbps)}
@@ -197,12 +218,23 @@ export function PlanDetailsScreen({ navigation, route }: Props) {
                   : 'arrow-up-bold'
             }
             variant={changeDirection === 'downgrade' ? 'outline' : 'primary'}
+            disabled={isSubmitting}
             onPress={() => setConfirmVisible(true)}
           />
         ) : (
           <CustomerButton
-            label="Select this plan"
-            onPress={() => navigation.navigate('Checkout', { planId: plan.id, amount: price })}
+            label="Request this plan"
+            disabled={isSubmitting}
+            onPress={() =>
+              Alert.alert(
+                'Request this plan',
+                `Send a request for ${plan.name}? An admin will review it, then you can pay to activate.`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Send request', onPress: () => void submitPlanChange() },
+                ],
+              )
+            }
           />
         )}
       </View>
@@ -359,5 +391,11 @@ const createStyles = (theme: CustomerTheme) =>
       borderTopWidth: 1,
       borderTopColor: theme.colors.borderSubtle,
       backgroundColor: theme.colors.bgDeep,
+      gap: theme.spacing.sm,
+    },
+    rejectedNote: {
+      ...theme.typography.caption,
+      color: theme.colors.textMuted,
+      fontFamily: theme.fonts.body,
     },
   });

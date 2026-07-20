@@ -2,9 +2,9 @@ import { spacing } from '@/theme/spacing';
 import { useCallback } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
 import type { InventoryItem } from '@prime/types';
-import { Screen } from '@prime/ui';
-
+import { useOfficerPullToRefresh } from '@/hooks/officer/useOfficerPullToRefresh';
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
+import { OfficerScreen } from '@/components/officer';
 import { useAppSelector } from '@/store/hooks';
 import { useGetInventoryQuery } from '@/store/api/endpoints';
 import { queryErrorMessage } from '@/utils/queryError';
@@ -14,6 +14,7 @@ import { InventoryItemRow } from './components/InventoryItemRow';
 export function OfficerInventoryScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const { data, isLoading, isError, error, refetch } = useGetInventoryQuery(user?.id ?? '', { skip: !user?.id });
+  const { refreshControl } = useOfficerPullToRefresh(refetch);
 
   const keyExtractor = useCallback((item: InventoryItem) => item.id, []);
 
@@ -24,40 +25,40 @@ export function OfficerInventoryScreen() {
 
   if (isLoading) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <SkeletonLoader rows={6} showAvatar />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   if (isError) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   if (!data?.length) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <EmptyState title="No items assigned" subtitle="Contact admin for equipment" icon="📦" />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   return (
-    <Screen padded={false}>
+    <OfficerScreen scrollable={false} padded={false}>
       <FlatList
+        refreshControl={refreshControl}
         data={data}
         keyExtractor={keyExtractor}
         contentContainerStyle={styles.list}
         renderItem={renderItem}
       />
-    </Screen>
+    </OfficerScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { padding: spacing.md },
-});
+  list: { padding: spacing.md }});

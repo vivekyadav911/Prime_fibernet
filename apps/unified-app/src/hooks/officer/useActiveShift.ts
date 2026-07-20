@@ -7,6 +7,7 @@ import type { AttendanceRecord } from '@/types/attendance';
 import { useAppDispatch } from '@/store/hooks';
 import { setCurrentShift } from '@/store/slices/officeSlice';
 import { formatElapsed } from '@/utils/formatElapsed';
+import { confirmFinishShift, confirmStartShift } from '@/utils/confirmShiftAction';
 
 function attendanceToShift(record: AttendanceRecord | null | undefined): Shift | null {
   if (!record?.checkInTime) return null;
@@ -30,6 +31,7 @@ export function useActiveShift() {
 
   const shift = useMemo(() => attendanceToShift(today), [today]);
   const isActive = Boolean(today?.checkInTime && !today?.checkOutTime);
+  const hasCompletedShiftToday = Boolean(today?.checkInTime && today?.checkOutTime);
 
   useEffect(() => {
     dispatch(setCurrentShift(shift));
@@ -48,7 +50,26 @@ export function useActiveShift() {
   }, [today?.checkInTime, today?.checkOutTime, today?.id]);
 
   const handleClockIn = useCallback(async () => {
+    if (hasCompletedShiftToday) {
+      Alert.alert(
+        'Attendance complete',
+        'Maximum one attendance is allowed per day. If there is an issue, contact your admin or officers.',
+        [{ text: 'OK' }],
+      );
+      return;
+    }
+
+    const confirmed = await confirmStartShift();
+    if (!confirmed) return;
+
     const result = await checkIn();
+    if (result.action === 'shift_already_completed') {
+      Alert.alert(
+        'Attendance complete',
+        'Maximum one attendance is allowed per day. If there is an issue, contact your admin or officers.',
+      );
+      return;
+    }
     if (result.action === 'needs_approval') {
       Alert.alert(
         'Outside assigned zone',
@@ -67,9 +88,12 @@ export function useActiveShift() {
     if (result.action === 'checked_in') {
       await refetch();
     }
-  }, [checkIn, refetch]);
+  }, [checkIn, hasCompletedShiftToday, refetch]);
 
   const handleClockOut = useCallback(async () => {
+    const confirmed = await confirmFinishShift();
+    if (!confirmed) return;
+
     const result = await checkOut();
     if (result.action === 'needs_approval') {
       Alert.alert(
@@ -95,6 +119,8 @@ export function useActiveShift() {
   return {
     shift,
     isActive,
+    hasCompletedShiftToday,
+    completedCheckOutTime: today?.checkOutTime ?? null,
     isLoading,
     elapsed,
     elapsedLabel: formatElapsed(elapsed),

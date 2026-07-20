@@ -23,15 +23,8 @@ function isAssignedWork(item: OfficerAssignedCustomer): boolean {
   return item.assignmentType === 'assigned' || item.assignmentType === 'claimed';
 }
 
-/** Up to `limit` assigned/claimed items: today's updates first, then most recent. */
-export function selectCollectionAssignmentPreview(
-  items: OfficerAssignedCustomer[],
-  limit = 3,
-): OfficerAssignedCustomer[] {
-  const work = items.filter(isAssignedWork);
-  if (work.length === 0) return [];
-
-  const ranked = [...work].sort((a, b) => {
+function rankCollectionPreviewItems(items: OfficerAssignedCustomer[]): OfficerAssignedCustomer[] {
+  return [...items].sort((a, b) => {
     const aToday = parseDate(a.collectionUpdatedAt);
     const bToday = parseDate(b.collectionUpdatedAt);
     const aIsToday = aToday !== null && isCalendarToday(aToday);
@@ -43,16 +36,24 @@ export function selectCollectionAssignmentPreview(
     const dueB = parseDate(b.next_due_date)?.getTime() ?? Infinity;
     return dueA - dueB;
   });
+}
 
-  const today = ranked.filter((item) => {
-    const d = parseDate(item.collectionUpdatedAt);
-    return d !== null && isCalendarToday(d);
-  });
-
+function pickUniquePreviewItems(
+  ranked: OfficerAssignedCustomer[],
+  limit: number,
+  preferToday: boolean,
+): OfficerAssignedCustomer[] {
   const picked: OfficerAssignedCustomer[] = [];
   const seen = new Set<string>();
 
-  for (const item of today) {
+  const candidates = preferToday
+    ? ranked.filter((item) => {
+        const d = parseDate(item.collectionUpdatedAt);
+        return d !== null && isCalendarToday(d);
+      })
+    : ranked;
+
+  for (const item of candidates) {
     if (picked.length >= limit) break;
     if (seen.has(item.id)) continue;
     seen.add(item.id);
@@ -69,4 +70,53 @@ export function selectCollectionAssignmentPreview(
   }
 
   return picked;
+}
+
+/** Up to `limit` assigned/claimed items: today's updates first, then most recent. */
+export function selectCollectionAssignmentPreview(
+  items: OfficerAssignedCustomer[],
+  limit = 3,
+): OfficerAssignedCustomer[] {
+  const work = items.filter(isAssignedWork);
+  if (work.length === 0) return [];
+  return pickUniquePreviewItems(rankCollectionPreviewItems(work), limit, true);
+}
+
+function rankOpenPoolPreview(items: OfficerAssignedCustomer[]): OfficerAssignedCustomer[] {
+  return [...items].sort((a, b) => {
+    const dueA = parseDate(a.next_due_date)?.getTime() ?? Infinity;
+    const dueB = parseDate(b.next_due_date)?.getTime() ?? Infinity;
+    if (dueA !== dueB) return dueA - dueB;
+    return b.outstanding_amount - a.outstanding_amount;
+  });
+}
+
+/**
+ * Dashboard preview: direct assignments first, then open-pool items (same pattern as ticket pool + mine).
+ */
+export function selectCollectionDashboardPreview(
+  myWork: OfficerAssignedCustomer[],
+  openPool: OfficerAssignedCustomer[],
+  limit = 3,
+): OfficerAssignedCustomer[] {
+  const assigned = pickUniquePreviewItems(
+    rankCollectionPreviewItems(myWork.filter(isAssignedWork)),
+    limit,
+    true,
+  );
+
+  if (assigned.length >= limit) return assigned.slice(0, limit);
+
+  const pool = rankOpenPoolPreview(openPool);
+  const seen = new Set(assigned.map((item) => item.id));
+  const merged = [...assigned];
+
+  for (const item of pool) {
+    if (merged.length >= limit) break;
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    merged.push(item);
+  }
+
+  return merged;
 }

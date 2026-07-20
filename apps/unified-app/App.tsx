@@ -41,11 +41,6 @@ function Root() {
       void registerToken();
       setupForegroundHandler();
       void recoverStuckSendingNotifications();
-      if (Platform.OS !== 'web') {
-        void import('@/tasks/scheduledNotificationsTask')
-          .then((mod) => mod.registerScheduledNotificationsTask())
-          .catch(() => undefined);
-      }
     }
   }, [isAuthenticated, registerToken, setupForegroundHandler]);
 

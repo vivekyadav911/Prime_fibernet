@@ -45,18 +45,69 @@ serve(async (req) => {
 
     const { data: officer } = await adminClient
       .from('officers')
-      .select('auth_user_id, user_id, email')
+      .select('auth_user_id, user_id, email, full_name')
       .eq('id', officerId)
       .maybeSingle();
+    if (!officer) throw new Error('Officer not found');
 
-    const authUid = (officer?.auth_user_id ?? officer?.user_id) as string | undefined;
-    if (!authUid) throw new Error('Officer auth user not found');
+    // Resolve the officer's real auth account; the stored id may be orphaned
+    // (points at no auth.users row), in which case we provision a fresh account
+    // so the password is actually settable and the officer can log in.
+    const candidateId = (officer.auth_user_id ?? officer.user_id) as string | undefined;
+    let realId: string | null = null;
+    if (candidateId) {
+      const { data: got } = await adminClient.auth.admin.getUserById(candidateId);
+      if (got?.user) realId = got.user.id;
+    }
 
     const plainPassword = newPassword && newPassword.length >= 8 ? newPassword : generatePassword();
-    const { error: authError } = await adminClient.auth.admin.updateUserById(authUid, {
-      password: plainPassword,
-    });
-    if (authError) throw authError;
+    const loginEmail = (officer.email as string) ?? '';
+
+    if (realId) {
+      const { error: authError } = await adminClient.auth.admin.updateUserById(realId, {
+        password: plainPassword,
+      });
+      if (authError) throw authError;
+    } else {
+      if (!loginEmail) throw new Error('Set an email for this officer before resetting the password.');
+      const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
+        email: loginEmail,
+        email_confirm: true,
+        password: plainPassword,
+        user_metadata: { role: 'officer', name: officer.full_name ?? null },
+      });
+      if (createErr || !created?.user) {
+        throw new Error(createErr?.message ?? 'Could not create login account');
+      }
+      realId = created.user.id;
+      // officers.user_id is FK -> public.users.id; resolve a valid users row.
+      let usersRowId: string | null = null;
+      const { data: urow } = await adminClient
+        .from('users')
+        .select('id')
+        .eq('auth_user_id', realId)
+        .maybeSingle();
+      if (urow?.id) {
+        usersRowId = urow.id as string;
+      } else {
+        const { data: ins } = await adminClient
+          .from('users')
+          .insert({ auth_user_id: realId, email: loginEmail, name: officer.full_name ?? loginEmail, role: 'officer' })
+          .select('id')
+          .maybeSingle();
+        usersRowId = (ins?.id as string) ?? null;
+      }
+      // guard_officer_self_update reverts direct service-role updates, so relink
+      // the officer's auth identity through the SECURITY DEFINER RPC.
+      const { error: relinkErr } = await adminClient.rpc('admin_relink_officer_identity', {
+        p_officer_id: officerId,
+        p_auth_id: realId,
+        p_user_id: usersRowId,
+        p_email: loginEmail,
+      });
+      if (relinkErr) throw new Error(relinkErr.message);
+      await adminClient.from('profiles').update({ email: loginEmail }).eq('id', realId);
+    }
 
     const ciphertext = await encryptPassword(plainPassword);
 

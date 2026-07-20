@@ -1,16 +1,17 @@
 import { useEffect } from 'react';
-import type { DrawerScreenProps } from '@react-navigation/drawer';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 
-import type { OfficerDrawerParamList } from '@/types/navigation';
+import { navigateToOfficerPayments } from '@/navigation/officerShellNavigation';
 import { adminColors } from '@/theme/admin';
 
-type Props = DrawerScreenProps<OfficerDrawerParamList, 'CollectPayment'>;
-
 /** Legacy route — redirects to the assigned customers collect flow. */
-export function CollectPaymentScreen({ navigation }: Props) {
+export function CollectPaymentScreen() {
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+
   useEffect(() => {
-    navigation.navigate('CollectionsStack', { screen: 'CollectionsList' });
+    navigateToOfficerPayments(navigation, { screen: 'CollectionsList' });
   }, [navigation]);
 
   return (

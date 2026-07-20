@@ -1,4 +1,7 @@
-import type { NavigatorScreenParams } from '@react-navigation/native';
+import type { CompositeScreenProps, NavigatorScreenParams } from '@react-navigation/native';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AppRole } from '@prime/types';
 
 import type { EmploymentContract } from '@/types/contract';
 import type { TimeRange } from '@/types/map';
@@ -8,15 +11,27 @@ import type { PaymentMethod } from '@/types/payments';
  * Auth stack — Flutter `AdminAuthScreen`, customer/officer login, shared auth package.
  */
 export type AuthStackParamList = {
-  Login: undefined;
+  /** Role-select entry screen (no auth check) */
+  Landing: undefined;
+  /** Shared login, parameterized by the role picked on Landing */
+  Login: { role?: AppRole } | undefined;
   /** Flutter: customer/officer registration flows */
   Register: undefined;
   /** @deprecated Use Register — kept for existing navigate() calls */
   SignUp: undefined;
-  ForgotPassword: undefined;
-  /** Flutter: `AppState.loginWithOtp` / officer OTP auth */
-  OTPVerification: { identifier: string };
-  Totp: undefined;
+  ForgotPassword: { role?: AppRole } | undefined;
+  /** Phase 4 fills this in; Phase 1 ships a placeholder */
+  ForgotUsername: { role?: AppRole } | undefined;
+  /**
+   * Email-OTP entry. `mode: 'claim'` runs the first-login claim (routes to
+   * CreatePassword when the account has no password yet); otherwise a plain
+   * OTP login. `role` carries the portal picked on Landing for the role check.
+   */
+  OTPVerification: { identifier: string; mode?: 'claim' | 'login'; role?: AppRole };
+  /** First-login: customer/officer sets their own password after OTP claim */
+  CreatePassword: { role?: AppRole } | undefined;
+  /** Admin second factor (enroll on first login, else challenge) — every login */
+  AdminMfa: { role?: AppRole } | undefined;
   /** Flutter: `prime_fibernet_auth` UnifiedLoginScreen / UnifiedAuthScreen */
   UnifiedLogin: undefined;
   UnifiedAuth: { role?: 'customer' | 'officer' | 'admin' } | undefined;
@@ -168,8 +183,42 @@ export type OfficerCollectionsStackParamList = {
   RecordPayment: undefined;
 };
 
+export type OfficerDashboardStackParamList = {
+  DashboardHome: undefined;
+};
+
+export type OfficerAttendanceStackParamList = {
+  AttendanceHome: undefined;
+  AttendanceHistory: undefined;
+  Shifts: undefined;
+};
+
+export type OfficerPaymentsStackParamList = {
+  CollectionsStack: NavigatorScreenParams<OfficerCollectionsStackParamList> | undefined;
+  Invoice: { invoiceId?: string } | undefined;
+  CollectPayment: { userId?: string; customerName?: string } | undefined;
+};
+
+export type OfficerSettingsStackParamList = {
+  SettingsHome: undefined;
+  Map: undefined;
+  Inventory: undefined;
+  Support: undefined;
+  NotificationsStack: NavigatorScreenParams<OfficerNotificationsStackParamList> | undefined;
+  LeaveStack: NavigatorScreenParams<OfficerLeaveStackParamList> | undefined;
+  Payslip: NavigatorScreenParams<OfficerPayslipStackParamList> | undefined;
+};
+
+export type OfficerTabParamList = {
+  Dashboard: NavigatorScreenParams<OfficerDashboardStackParamList> | undefined;
+  Tickets: NavigatorScreenParams<OfficerRequestsStackParamList> | undefined;
+  Attendance: NavigatorScreenParams<OfficerAttendanceStackParamList> | undefined;
+  Payments: NavigatorScreenParams<OfficerPaymentsStackParamList> | undefined;
+  Settings: NavigatorScreenParams<OfficerSettingsStackParamList> | undefined;
+};
+
 /**
- * Officer drawer + tabs — Flutter `OfficerRootShell` + drawer pushes.
+ * @deprecated Officer drawer removed — use OfficerTabParamList + OfficerStackParamList.
  */
 export type OfficerDrawerParamList = {
   Dashboard: undefined;
@@ -230,12 +279,19 @@ export type OfficerDrawerParamList = {
 
 export type OfficerStackParamList = {
   LocationGate: undefined;
-  OfficerDrawer: NavigatorScreenParams<OfficerDrawerParamList> | undefined;
+  OfficerTabs: NavigatorScreenParams<OfficerTabParamList> | undefined;
+  Profile: NavigatorScreenParams<OfficerProfileStackParamList> | undefined;
   /** Flutter: `RequestDetailScreen.route` */
   RequestDetail: { requestId: string; kind?: 'ticket' | 'request' };
   OfficerLogin: undefined;
   OfficerAuth: undefined;
 };
+
+/** Composite props for screens inside a tab that may navigate to root stack routes. */
+export type OfficerShellScreenProps<Tab extends keyof OfficerTabParamList> = CompositeScreenProps<
+  BottomTabScreenProps<OfficerTabParamList, Tab>,
+  NativeStackScreenProps<OfficerStackParamList>
+>;
 
 /** Nested admin stack param lists */
 export type AdminDashboardStackParamList = {
@@ -275,6 +331,7 @@ export type AdminAttendanceStackParamList = {
         officerName?: string;
         dateFrom?: string;
         dateTo?: string;
+        selectedDate?: string;
       }
     | undefined;
   ManualAttendanceEntry: undefined;
@@ -440,6 +497,7 @@ export type AdminSettingsStackParamList = {
   Appearance: undefined;
   System: undefined;
   BackupExport: undefined;
+  DataImport: undefined;
   AuditLogs: undefined;
 };
 
@@ -536,7 +594,6 @@ export type RootStackParamList = {
   Customer: NavigatorScreenParams<CustomerStackParamList> | undefined;
   Officer: NavigatorScreenParams<OfficerStackParamList> | undefined;
   Admin: NavigatorScreenParams<AdminStackParamList> | undefined;
-  Totp: undefined;
   /** Shown on web when a customer or officer account tries to use the browser app */
   WebUnsupported: undefined;
 };

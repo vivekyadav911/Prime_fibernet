@@ -1,9 +1,10 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
+import { useOfficerPullToRefresh } from '@/hooks/officer/useOfficerPullToRefresh';
 import { AmountDisplay, PaymentStatusBadge } from '@/components/payments';
-import { EmptyState, ErrorState, DismissKeyboardFlatList, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import {EmptyState, ErrorState, DismissKeyboardFlatList, SkeletonLoader} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
 import { useOfficerId } from '@/hooks/useOfficerId';
 import { useGetPaymentsQuery } from '@/services/api/paymentCollectionApi';
 import type { PaymentMethod, PaymentRecord, PaymentStatus } from '@/types/payments';
@@ -241,6 +242,7 @@ export function OfficerCollectionHistoryScreen({ embedded }: Props) {
   const { data, isLoading, isError, error, refetch, isFetching } = useGetPaymentsQuery(baseFilters, {
     skip: !officerId,
   });
+  const { refreshControl } = useOfficerPullToRefresh(refetch);
 
   const rows = useMemo(
     () =>
@@ -274,9 +276,9 @@ export function OfficerCollectionHistoryScreen({ embedded }: Props) {
     return embedded ? (
       <ErrorState message="Officer profile not found." />
     ) : (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <ErrorState message="Officer profile not found." />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
@@ -284,9 +286,9 @@ export function OfficerCollectionHistoryScreen({ embedded }: Props) {
     return embedded ? (
       <SkeletonLoader rows={5} />
     ) : (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <SkeletonLoader rows={5} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
@@ -294,9 +296,9 @@ export function OfficerCollectionHistoryScreen({ embedded }: Props) {
     return embedded ? (
       <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
     ) : (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
@@ -330,6 +332,7 @@ export function OfficerCollectionHistoryScreen({ embedded }: Props) {
 
   const list = (
     <DismissKeyboardFlatList
+      refreshControl={refreshControl} 
       data={rows}
       keyExtractor={(item) => item.id}
       extraData={viewMode}
@@ -359,7 +362,7 @@ export function OfficerCollectionHistoryScreen({ embedded }: Props) {
     );
   }
 
-  return <ScreenWrapper scrollable={false}>{list}</ScreenWrapper>;
+  return <OfficerScreenWrapper scrollable={false}>{list}</OfficerScreenWrapper>;
 }
 
 const styles = StyleSheet.create({

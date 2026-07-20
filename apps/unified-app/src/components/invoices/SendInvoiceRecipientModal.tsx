@@ -2,11 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@prime/ui';
@@ -49,6 +53,7 @@ export function SendInvoiceRecipientModal({
   onSend,
 }: SendInvoiceRecipientModalProps) {
   const insets = useSafeAreaInsets();
+  const windowDims = useWindowDimensions();
   const [channel, setChannel] = useState<'email' | 'whatsapp'>(initialChannel);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
@@ -105,118 +110,138 @@ export function SendInvoiceRecipientModal({
     });
   }, [channel, onSend, recipientEmail, recipientPhone, selectedCustomer?.id]);
 
+  const dialogMaxHeight = Math.min(windowDims.height * 0.85, windowDims.height - insets.top - insets.bottom - spacing.xl);
+
   return (
     <>
       <Modal
         visible={visible}
         transparent
-        animationType="slide"
+        animationType="fade"
         presentationStyle="overFullScreen"
         statusBarTranslucent
         onRequestClose={onClose}
       >
-        <View style={styles.modalRoot}>
+        <KeyboardAvoidingView
+          style={styles.avoid}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <Pressable
-            style={styles.backdrop}
+            style={[
+              styles.backdrop,
+              { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + spacing.md },
+            ]}
             onPress={() => {
               Keyboard.dismiss();
               onClose();
             }}
-          />
-          <Pressable
-            style={[styles.card, { paddingBottom: insets.bottom + spacing.md, marginTop: insets.top + spacing.md }]}
-            onPress={(e) => e.stopPropagation()}
           >
-            <View style={styles.header}>
-              <Text style={styles.title}>Send invoice</Text>
-              <Pressable
-                onPress={onClose}
-                hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-                disabled={sending}
-              >
-                <Text style={styles.close}>✕</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.body}>
-              <Text style={styles.meta}>
-                {invoiceNumber} · {customerName}
-              </Text>
-
-            <FilterChips
-              options={[
-                { value: 'email', label: 'Email' },
-                { value: 'whatsapp', label: 'WhatsApp' },
-              ]}
-              selected={channel}
-              onSelect={setChannel}
-            />
-
             <Pressable
-              style={styles.pickBtn}
-              onPress={() => setCustomerPickerVisible(true)}
-              disabled={sending}
+              style={[styles.card, { maxHeight: dialogMaxHeight }]}
+              onPress={(e) => e.stopPropagation()}
             >
-              <Text style={styles.pickBtnLabel}>
-                {selectedCustomer ? `Selected: ${selectedCustomer.name}` : 'Select customer from list'}
-              </Text>
-              <Text style={styles.pickBtnHint}>Auto-fills email and phone from profile</Text>
-            </Pressable>
+              <View style={styles.header}>
+                <Text style={styles.title}>Send invoice</Text>
+                <Pressable
+                  onPress={onClose}
+                  hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                  disabled={sending}
+                  style={styles.closeBtn}
+                >
+                  <Text style={styles.close}>✕</Text>
+                </Pressable>
+              </View>
 
-            {selectedCustomer ? (
-              <Pressable onPress={() => handleCustomerSelect(null)} disabled={sending}>
-                <Text style={styles.clearLink}>Clear customer selection</Text>
-              </Pressable>
-            ) : null}
-
-            {channel === 'email' ? (
-              <>
-                <FormField
-                  label="Recipient email"
-                  value={recipientEmail}
-                  onChangeText={(v) => {
-                    setRecipientEmail(v);
-                    setEmailError(undefined);
-                  }}
-                  placeholder="billing@example.com"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  error={emailError}
-                />
-                <Text style={styles.hint}>Or type a different email manually.</Text>
-              </>
-            ) : (
-              <>
-                <FormField
-                  label="Recipient phone"
-                  value={recipientPhone}
-                  onChangeText={(v) => {
-                    setRecipientPhone(v);
-                    setPhoneError(undefined);
-                  }}
-                  placeholder="+91 98765 43210"
-                  keyboardType="phone-pad"
-                  error={phoneError}
-                />
-                <Text style={styles.hint}>
-                  If WhatsApp is not configured, download the PDF and share from your device.
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+                contentContainerStyle={styles.body}
+              >
+                <Text style={styles.meta}>
+                  {invoiceNumber} · {customerName}
                 </Text>
-              </>
-            )}
 
-            <View style={styles.actions}>
-              <Button label="Cancel" variant="secondary" onPress={onClose} disabled={sending} />
-              <Button
-                label={sending ? 'Sending…' : 'Send invoice'}
-                onPress={handleSend}
-                disabled={sending}
-              />
-            </View>
+                <FilterChips
+                  options={[
+                    { value: 'email', label: 'Email' },
+                    { value: 'whatsapp', label: 'WhatsApp' },
+                  ]}
+                  selected={channel}
+                  onSelect={setChannel}
+                />
 
-            {sending ? <ActivityIndicator color={adminColors.primary} style={styles.sending} /> : null}
-            </View>
+                <Pressable
+                  style={styles.pickBtn}
+                  onPress={() => setCustomerPickerVisible(true)}
+                  disabled={sending}
+                >
+                  <Text style={styles.pickBtnLabel}>
+                    {selectedCustomer
+                      ? `Selected: ${selectedCustomer.name}`
+                      : 'Select customer from list'}
+                  </Text>
+                  <Text style={styles.pickBtnHint}>Auto-fills email and phone from profile</Text>
+                </Pressable>
+
+                {selectedCustomer ? (
+                  <Pressable onPress={() => handleCustomerSelect(null)} disabled={sending}>
+                    <Text style={styles.clearLink}>Clear customer selection</Text>
+                  </Pressable>
+                ) : null}
+
+                {channel === 'email' ? (
+                  <>
+                    <FormField
+                      label="Recipient email"
+                      value={recipientEmail}
+                      onChangeText={(v) => {
+                        setRecipientEmail(v);
+                        setEmailError(undefined);
+                      }}
+                      placeholder="billing@example.com"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      error={emailError}
+                    />
+                    <Text style={styles.hint}>Or type a different email manually.</Text>
+                  </>
+                ) : (
+                  <>
+                    <FormField
+                      label="Recipient phone"
+                      value={recipientPhone}
+                      onChangeText={(v) => {
+                        setRecipientPhone(v);
+                        setPhoneError(undefined);
+                      }}
+                      placeholder="+91 98765 43210"
+                      keyboardType="phone-pad"
+                      error={phoneError}
+                    />
+                    <Text style={styles.hint}>
+                      If WhatsApp is not configured, download the PDF and share from your device.
+                    </Text>
+                  </>
+                )}
+
+                <View style={styles.actions}>
+                  <Button label="Cancel" variant="secondary" onPress={onClose} disabled={sending} />
+                  <Button
+                    label={sending ? 'Sending…' : 'Send invoice'}
+                    onPress={handleSend}
+                    disabled={sending}
+                  />
+                </View>
+
+                {sending ? (
+                  <ActivityIndicator color={adminColors.primary} style={styles.sending} />
+                ) : null}
+              </ScrollView>
+            </Pressable>
           </Pressable>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <SelectCustomerModal
@@ -230,33 +255,48 @@ export function SendInvoiceRecipientModal({
 }
 
 const styles = StyleSheet.create({
-  modalRoot: {
+  avoid: {
     flex: 1,
-    justifyContent: 'flex-end',
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     backgroundColor: colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
   },
   card: {
     backgroundColor: colors.surfaceWhite,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    maxHeight: '85%',
-    padding: spacing.md,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    width: '100%',
+    maxWidth: 420,
   },
   body: {
     gap: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 48,
+    marginBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
   },
   title: {
     fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  closeBtn: {
+    minHeight: 48,
+    minWidth: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   close: {
     fontSize: 20,

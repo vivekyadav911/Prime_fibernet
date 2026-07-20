@@ -1,14 +1,21 @@
 import { AdminScreenLayout } from '@/components/admin';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Marker } from 'react-native-maps';
-import type MapView from 'react-native-maps';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { format } from 'date-fns';
 
-
-import { DwellCircle, FreeMapView, TrailPolyline } from '@/components/map';
-import { getOfficerColor, getOfficerInitials } from '@/constants/mapTheme';
+import {
+  LeafletMapView,
+  type LeafletCircle,
+  type LeafletPin,
+  type LeafletPolyline,
+} from '@/components/map/LeafletMapView';
+import {
+  MAP_THEME,
+  getOfficerColor,
+  getOfficerInitials,
+  getTrailColorForSpeed,
+} from '@/constants/mapTheme';
 import { useGetLocationHistoryQuery, useGetOfficerDwellsQuery } from '@/services/api/officerTrackingApi';
 import type { AdminMapStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
@@ -26,7 +33,6 @@ export function TrailReplayScreen({ route, navigation }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speedIdx, setSpeedIdx] = useState(0);
-  const mapRef = useRef<MapView>(null);
 
   const { data: points = [] } = useGetLocationHistoryQuery({ officerId, date, timeRange });
   const { data: dwells = [] } = useGetOfficerDwellsQuery({ date, officerId });
@@ -48,31 +54,74 @@ export function TrailReplayScreen({ route, navigation }: Props) {
     return () => clearInterval(interval);
   }, [isPlaying, points.length, speedMultiplier]);
 
-  useEffect(() => {
-    if (!current || !mapRef.current) return;
-    mapRef.current.animateCamera({
-      center: { latitude: current.latitude, longitude: current.longitude },
-      zoom: 15,
-    });
-  }, [current]);
-
   const replayPoints = useMemo(() => points.slice(0, currentIndex + 1), [points, currentIndex]);
-
-  const initialRegion = useMemo(() => {
-    const p = points[0];
-    if (!p) {
-      return { latitude: -37.8136, longitude: 144.9631, latitudeDelta: 0.05, longitudeDelta: 0.05 };
-    }
-    return {
-      latitude: p.latitude,
-      longitude: p.longitude,
-      latitudeDelta: 0.05,
-      longitudeDelta: 0.05,
-    };
-  }, [points]);
 
   const color = getOfficerColor(officerName);
   const initials = getOfficerInitials(officerName);
+
+  // Speed-coloured trail segments (same banding as the old react-native-maps polyline).
+  const trailSegments = useMemo<LeafletPolyline[]>(() => {
+    const segments: LeafletPolyline[] = [];
+    let seg: LeafletPolyline | null = null;
+    for (let i = 1; i < replayPoints.length; i += 1) {
+      const prev = replayPoints[i - 1]!;
+      const curr = replayPoints[i]!;
+      const segColor = getTrailColorForSpeed(curr.speed);
+      const dashed = (curr.speed ?? 0) < 0.5;
+      const coord = { latitude: curr.latitude, longitude: curr.longitude };
+      if (seg && seg.color === segColor && seg.dashed === dashed) {
+        seg.points.push(coord);
+      } else {
+        if (seg) segments.push(seg);
+        seg = {
+          id: `seg-${segments.length}`,
+          color: segColor,
+          dashed,
+          points: [{ latitude: prev.latitude, longitude: prev.longitude }, coord],
+        };
+      }
+    }
+    if (seg) segments.push(seg);
+    return segments;
+  }, [replayPoints]);
+
+  const dwellCircles = useMemo<LeafletCircle[]>(
+    () =>
+      dwells.map((d) => ({
+        id: d.id,
+        latitude: d.latitude,
+        longitude: d.longitude,
+        radius: d.radius_metres,
+        color: MAP_THEME.dwellStroke,
+        fillColor: MAP_THEME.dwellStroke,
+        fillOpacity: 0.15,
+      })),
+    [dwells],
+  );
+
+  const mapPins = useMemo<LeafletPin[]>(() => {
+    const pins: LeafletPin[] = dwells
+      .filter((d) => d.duration_minutes != null || !d.departed_at)
+      .map((d) => ({
+        id: `dwell-${d.id}`,
+        latitude: d.latitude,
+        longitude: d.longitude,
+        kind: 'pill' as const,
+        label: d.duration_minutes != null ? `${d.duration_minutes}m` : '…',
+        color: MAP_THEME.dwellStroke,
+      }));
+    if (current) {
+      pins.push({
+        id: 'officer',
+        latitude: current.latitude,
+        longitude: current.longitude,
+        kind: 'avatar',
+        label: initials,
+        color,
+      });
+    }
+    return pins;
+  }, [color, current, dwells, initials]);
 
   const togglePlay = useCallback(() => {
     if (currentIndex >= points.length - 1) setCurrentIndex(0);
@@ -87,19 +136,14 @@ export function TrailReplayScreen({ route, navigation }: Props) {
 
   return (
     <AdminScreenLayout>
-      <FreeMapView ref={mapRef} style={styles.map} initialRegion={initialRegion}>
-        <TrailPolyline officerId={officerId} points={replayPoints} />
-        {dwells.map((d) => (
-          <DwellCircle key={d.id} dwell={d} />
-        ))}
-        {current ? (
-          <Marker coordinate={{ latitude: current.latitude, longitude: current.longitude }}>
-            <View style={[styles.marker, { backgroundColor: color }]}>
-              <Text style={styles.initials}>{initials}</Text>
-            </View>
-          </Marker>
-        ) : null}
-      </FreeMapView>
+      <LeafletMapView
+        style={styles.map}
+        center={current ? { latitude: current.latitude, longitude: current.longitude } : null}
+        zoom={15}
+        polylines={trailSegments}
+        circles={dwellCircles}
+        pins={mapPins}
+      />
 
       <View style={styles.controls}>
         <View style={styles.transport}>
@@ -134,14 +178,6 @@ export function TrailReplayScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   map: { flex: 1 },
-  marker: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  initials: { color: colors.white, fontWeight: '700' },
   controls: {
     padding: spacing.md,
     backgroundColor: colors.surfaceWhite,

@@ -68,10 +68,28 @@ serve(async (req) => {
     const { data: invoice, error } = await supabase.from('invoices').select('*').eq('id', invoiceId).single();
     if (error || !invoice) throw new Error('Invoice not found');
 
-    const recipient =
+    const trimOrNull = (value: unknown): string | null => {
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      return trimmed.length ? trimmed : null;
+    };
+
+    let recipient =
       channel === 'email'
-        ? recipientEmail ?? invoice.recipient_email ?? invoice.customer_email
-        : recipientPhone ?? invoice.recipient_phone ?? invoice.customer_phone;
+        ? trimOrNull(recipientEmail) ?? trimOrNull(invoice.recipient_email) ?? trimOrNull(invoice.customer_email)
+        : trimOrNull(recipientPhone) ?? trimOrNull(invoice.recipient_phone) ?? trimOrNull(invoice.customer_phone);
+
+    // Invoice rows can carry a stale or empty contact snapshot (e.g. created
+    // before the customer record had contact info). Fall back to the
+    // customer's current contact details so sends don't fail needlessly.
+    if (!recipient && invoice.user_id) {
+      const { data: contact } = await supabase
+        .from('users')
+        .select('email, phone')
+        .eq('id', invoice.user_id)
+        .maybeSingle();
+      recipient = channel === 'email' ? trimOrNull(contact?.email) : trimOrNull(contact?.phone);
+    }
 
     if (!recipient) throw new Error(`No ${channel} recipient on file`);
 
@@ -197,6 +215,7 @@ serve(async (req) => {
     const fromAddress = resolveEmailFromAddress(company ?? {});
     const subject = `Invoice ${invoice.invoice_number} — ${company?.company_name ?? 'Prime Fibernet'}`;
     const lineItems = mapDbLineItems(invoice.line_items as Record<string, unknown>[] | undefined);
+    const companyEmail = String(company?.company_email ?? 'invoices@dizitel.in');
     const html = buildInvoiceEmailHtml({
       customerName: String(invoice.customer_name ?? 'Customer'),
       invoiceNumber: String(invoice.invoice_number ?? invoice.id),
@@ -206,7 +225,8 @@ serve(async (req) => {
       pdfUrl,
       lineItems,
       companyName: String(company?.company_name ?? 'Prime Fibernet'),
-      companyEmail: 'support@primefiber.net',
+      companyEmail,
+      companyWebsite: String(company?.company_website ?? 'https://dizitel.in'),
     });
 
     await sendEmailViaResend(recipient, subject, html, fromAddress);

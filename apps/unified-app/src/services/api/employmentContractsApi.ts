@@ -66,6 +66,8 @@ export const employmentContractsApi = baseApi.injectEndpoints({
           return mapEmploymentContractRow(data as EmploymentContractRow);
         },
       }),
+      // Transient NetInfo flaps (debug ingest / flaky LAN) must not hammer this endpoint.
+      refetchOnReconnect: false,
       providesTags: [{ type: 'EmploymentContracts', id: 'SELF' }],
     }),
 

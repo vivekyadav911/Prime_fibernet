@@ -12,9 +12,11 @@ import Animated, {
 import { useActiveShift } from '@/hooks/officer';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { formatElapsedHeader } from '@/utils/formatElapsed';
 
 export function ShiftPulseChip() {
-  const { isActive, elapsedLabel } = useActiveShift();
+  const { isActive, elapsed } = useActiveShift();
+  const elapsedLabel = formatElapsedHeader(elapsed);
   const opacity = useSharedValue(1);
 
   useEffect(() => {
@@ -34,10 +36,15 @@ export function ShiftPulseChip() {
   if (!isActive) return null;
 
   return (
-    <View style={styles.chip}>
+    <View
+      style={styles.chip}
+      accessibilityLabel={`Shift active, ${elapsedLabel} elapsed`}
+      accessibilityRole="text"
+    >
       <Animated.View style={[styles.dot, dotStyle]} />
-      <Text style={styles.label}>SHIFT ON</Text>
-      <Text style={styles.time}>{elapsedLabel}</Text>
+      <Text style={styles.time} numberOfLines={1}>
+        {elapsedLabel}
+      </Text>
     </View>
   );
 }
@@ -47,29 +54,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.emeraldLight,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.xxs,
+    paddingVertical: 2,
     borderRadius: radius.full,
-    gap: spacing.xxs,
-    marginRight: spacing.sm,
-    minHeight: 32,
+    gap: 4,
+    maxWidth: 56,
+    flexShrink: 1,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.emerald,
   },
-  label: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.emerald,
-    letterSpacing: 0.5,
-  },
   time: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
+    flexShrink: 1,
   },
 });

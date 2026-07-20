@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
+import { CommonActions, StackActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,12 +16,16 @@ import { adminColors } from '@/theme/admin';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import type {
+  AdminAttendanceStackParamList,
   AdminDrawerParamList,
   AdminInventoryStackParamList,
   AdminPaymentsStackParamList,
 } from '@/types/navigation';
 
-type DrawerNestedScreen = keyof AdminInventoryStackParamList | keyof AdminPaymentsStackParamList;
+type DrawerNestedScreen =
+  | keyof AdminInventoryStackParamList
+  | keyof AdminPaymentsStackParamList
+  | keyof Pick<AdminAttendanceStackParamList, 'LiveAttendance'>;
 
 type DrawerItem = {
   route: keyof AdminDrawerParamList;
@@ -54,7 +59,7 @@ const SECTIONS: DrawerSection[] = [
     id: 'hr',
     label: 'HR & Workforce',
     items: [
-      { route: 'Attendance', label: 'Attendance', icon: 'calendar-outline' },
+      { route: 'Attendance', screen: 'LiveAttendance', label: 'Attendance', icon: 'calendar-outline' },
       { route: 'Payroll', label: 'Payroll', icon: 'cash-outline' },
       { route: 'RoleManagement', label: 'Role Management', icon: 'key-outline' },
     ],
@@ -190,6 +195,36 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
 
   const navigate = useCallback(
     (route: keyof AdminDrawerParamList, screen?: DrawerNestedScreen) => {
+      // Attendance must always land on Live Attendance (geofences is nested, not home).
+      if (route === 'Attendance') {
+        const attendanceRoute = state.routes.find((r) => r.name === 'Attendance');
+        const nestedState = attendanceRoute?.state;
+        const nestedKey = nestedState && 'key' in nestedState ? nestedState.key : undefined;
+        const nestedIndex =
+          nestedState && 'index' in nestedState && typeof nestedState.index === 'number'
+            ? nestedState.index
+            : 0;
+        const nestedName =
+          nestedState && 'routes' in nestedState && nestedState.routes
+            ? nestedState.routes[nestedIndex]?.name
+            : undefined;
+
+        if (nestedKey && nestedIndex > 0) {
+          navigation.dispatch({
+            ...StackActions.popToTop(),
+            target: nestedKey,
+          });
+        }
+
+        navigation.dispatch(
+          CommonActions.navigate({
+            name: 'Attendance',
+            params: { screen: 'LiveAttendance' },
+          }),
+        );
+        return;
+      }
+
       if (screen) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         navigation.navigate(route as any, { screen });
@@ -198,7 +233,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
         navigation.navigate(route as any);
       }
     },
-    [navigation],
+    [navigation, state.routes],
   );
 
   const handleSignOut = useCallback(() => {
@@ -219,6 +254,7 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
           {section.items.map((item) => {
             const inventoryState = state.routes.find((r) => r.name === 'Inventory')?.state;
             const paymentsState = state.routes.find((r) => r.name === 'Payments')?.state;
+            const attendanceState = state.routes.find((r) => r.name === 'Attendance')?.state;
             const nestedRoute =
               item.route === 'Payments' && paymentsState && 'routes' in paymentsState && paymentsState.index != null
                 ? paymentsState.routes[paymentsState.index]?.name
@@ -227,11 +263,19 @@ export function AdminDrawerContent(props: DrawerContentComponentProps) {
                     'routes' in inventoryState &&
                     inventoryState.index != null
                   ? inventoryState.routes[inventoryState.index]?.name
-                  : undefined;
+                  : item.route === 'Attendance' &&
+                      attendanceState &&
+                      'routes' in attendanceState &&
+                      attendanceState.index != null
+                    ? attendanceState.routes[attendanceState.index]?.name
+                    : undefined;
+            // Attendance home is Live Attendance — highlight whenever that stack is focused.
             const isActive =
-              item.screen != null
-                ? activeRoute === item.route && nestedRoute === item.screen
-                : activeRoute === item.route && nestedRoute == null;
+              item.route === 'Attendance'
+                ? activeRoute === 'Attendance'
+                : item.screen != null
+                  ? activeRoute === item.route && nestedRoute === item.screen
+                  : activeRoute === item.route && nestedRoute == null;
             const itemKey = item.screen ? `${item.route}-${item.screen}` : item.route;
             const notification = getNotification(item.route, item.showBadge);
 

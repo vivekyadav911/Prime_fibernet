@@ -402,7 +402,10 @@ export function preparePdfViewContent(
     return { viewMode: 'file' };
   }
 
-  // Android: embed base64 when available; otherwise try file URI.
+  // Android WebView blanks on data:application/pdf embeds — use PDF.js over HTTPS.
+  if (isHttpUrl) {
+    return { viewMode: 'html', viewerHtml: buildPdfJsViewerHtml(signedUrl) };
+  }
   if (base64) {
     return { viewMode: 'html', viewerHtml: buildPdfViewerHtml(base64) };
   }

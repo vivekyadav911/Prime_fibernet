@@ -110,6 +110,15 @@ export const customerPlansApi = baseApi.injectEndpoints({
             throw new Error(formatSupabaseError(error, 'Could not submit plan change request'));
           }
 
+          // Only the latest request should be actionable: supersede any earlier
+          // pending requests from this customer.
+          await client
+            .from('plan_change_requests')
+            .update({ status: 'rejected', admin_notes: 'Superseded by a newer request' })
+            .eq('customer_id', customerId)
+            .eq('status', 'pending')
+            .neq('id', data.id);
+
           const { error: _notifyErr } = await client.rpc('notify_collection_admins', {
             p_type: 'plan_change',
             p_title: 'Plan change request',

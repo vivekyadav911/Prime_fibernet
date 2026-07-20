@@ -8,3 +8,4 @@ export { useOfficerTicketsSync } from './useOfficerTicketsSync';
 export { usePendingCollections } from './usePendingCollections';
 export { useOfficerCollectionsSync } from './useOfficerCollectionsSync';
 export { usePendingContractSignature, contractSignaturePromptKey } from './usePendingContractSignature';
+export { useOfficerPullToRefresh } from './useOfficerPullToRefresh';

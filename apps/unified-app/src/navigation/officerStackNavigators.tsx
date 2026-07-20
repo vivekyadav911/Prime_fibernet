@@ -1,4 +1,5 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { NativeStackHeaderBackProps } from '@react-navigation/native-stack';
 
 import { useOfficerCollectionsSync } from '@/hooks/officer/useOfficerCollectionsSync';
 import {
@@ -26,6 +27,11 @@ import type {
 } from '@/types/navigation';
 import { colors, officerColors } from '@/theme/colors';
 
+import { OfficerStackHeader } from '@/components/navigation/officer/OfficerStackHeader';
+
+import { OfficerHeaderActions } from './officerHeaderActions';
+import { OfficerStackHeaderLeft } from './OfficerStackHeaderLeft';
+
 const RequestsStack = createNativeStackNavigator<OfficerRequestsStackParamList>();
 const CollectionsStack = createNativeStackNavigator<OfficerCollectionsStackParamList>();
 const ProfileStack = createNativeStackNavigator<OfficerProfileStackParamList>();
@@ -35,10 +41,14 @@ const NotificationsStack = createNativeStackNavigator<OfficerNotificationsStackP
 const OFFICER_HEADER_PURPLE = officerColors.navBar;
 
 const stackScreenOptions = {
+  header: OfficerStackHeader,
   headerStyle: { backgroundColor: OFFICER_HEADER_PURPLE },
   headerTintColor: colors.white,
   headerTitleStyle: { fontSize: 20, fontWeight: '600' as const },
   headerShadowVisible: false,
+  headerBackVisible: false,
+  headerLeft: (props: NativeStackHeaderBackProps) => <OfficerStackHeaderLeft {...props} />,
+  headerRight: () => <OfficerHeaderActions />,
 };
 
 export function OfficerRequestsStackNav() {
@@ -47,7 +57,7 @@ export function OfficerRequestsStackNav() {
       <RequestsStack.Screen
         name="RequestsList"
         component={OfficerRequestsScreen}
-        options={{ title: 'My Tickets' }}
+        options={{ title: 'My Tickets', headerLeft: () => null }}
       />
     </RequestsStack.Navigator>
   );
@@ -61,7 +71,7 @@ export function OfficerCollectionsStackNav() {
       <CollectionsStack.Screen
         name="CollectionsList"
         component={OfficerCollectionScreen}
-        options={{ title: 'Collect Payment' }}
+        options={{ title: 'Collect Payment', headerLeft: () => null }}
       />
       <CollectionsStack.Screen
         name="AssignedCustomers"
@@ -98,7 +108,7 @@ export function OfficerNotificationsStackNav() {
       <NotificationsStack.Screen
         name="NotificationsList"
         component={OfficerPortalNotificationsScreen}
-        options={{ title: 'Notifications' }}
+        options={{ title: 'Notifications', headerLeft: () => null }}
       />
     </NotificationsStack.Navigator>
   );
@@ -110,7 +120,7 @@ export function OfficerLeaveStackNav() {
       <LeaveStack.Screen
         name="LeaveList"
         component={OfficerLeaveScreen}
-        options={{ title: 'Leave' }}
+        options={{ title: 'Leave', headerLeft: () => null }}
       />
       <LeaveStack.Screen
         name="ApplyLeave"
@@ -127,7 +137,10 @@ export function OfficerProfileStackNav() {
       <ProfileStack.Screen
         name="ProfileHome"
         component={OfficerProfileScreen}
-        options={{ title: 'Profile' }}
+        options={{
+          title: 'Profile',
+          headerLeft: (props) => <OfficerStackHeaderLeft {...props} allowGoBack={false} />,
+        }}
       />
       <ProfileStack.Screen
         name="ChangePassword"

@@ -9,6 +9,7 @@ import {
   REHYDRATE,
   persistReducer,
   persistStore,
+  createTransform,
 } from 'redux-persist';
 
 import { baseApi } from '@/services/api/baseApi';
@@ -16,7 +17,12 @@ import '@/services/api';
 
 import { securePersistStorage } from './persistStorage';
 import { authSlice } from './slices/authSlice';
-import { attendanceSlice } from './slices/attendanceSlice';
+import {
+  attendanceSlice,
+  defaultAdminRecordsPrefs,
+  type AdminRecordsPrefs,
+  type AdminRecordsViewMode,
+} from './slices/attendanceSlice';
 import { officeSlice } from './slices/officeSlice';
 import { paymentsSlice } from './slices/paymentsSlice';
 import { plansSlice } from './slices/plansSlice';
@@ -30,10 +36,20 @@ const authPersistConfig = {
   whitelist: ['user', 'isAuthenticated', 'requires2FA'],
 };
 
+const adminRecordsPrefsTransform = createTransform(
+  (inbound: AdminRecordsPrefs) => ({ viewMode: inbound.viewMode }),
+  (outbound: { viewMode?: AdminRecordsViewMode }) => ({
+    ...defaultAdminRecordsPrefs(),
+    viewMode: outbound?.viewMode ?? 'list',
+  }),
+  { whitelist: ['adminRecordsPrefs'] },
+);
+
 const attendancePersistConfig = {
   key: 'attendance',
   storage: securePersistStorage,
   whitelist: ['adminRecordsPrefs'],
+  transforms: [adminRecordsPrefsTransform],
 };
 
 const rootReducer = combineReducers({

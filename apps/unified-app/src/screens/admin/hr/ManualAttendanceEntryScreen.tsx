@@ -97,6 +97,11 @@ export function ManualAttendanceEntryScreen({ navigation }: Props) {
       );
 
       if (navigation.canGoBack()) {
+        navigation.navigate({
+          name: 'AttendanceRecords',
+          params: { selectedDate: date },
+          merge: true,
+        });
         navigation.goBack();
       }
     } catch (e) {

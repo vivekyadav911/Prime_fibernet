@@ -5,12 +5,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { GeofenceLocationControls } from '@/components/attendance/GeofenceLocationControls';
 import { GeofenceLocationPicker } from '@/components/attendance/GeofenceLocationPicker';
 import { AdminButton, AdminScreenLayout, AdminStateShell, FormField, RoleGuard } from '@/components/admin';
+import { scrollLayoutStyles } from '@/components/common/scrollLayoutStyles';
 import { useCreateGeofence, useGeofence, useUpdateGeofence } from '@/hooks/attendance/useAdminAttendance';
 import { reverseGeocode } from '@/services/GeocodingService';
 import type { Coordinates } from '@/types/attendance';
 import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
-import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { resolveGeofenceAddressFields } from '@/utils/geofenceDisplay';
@@ -132,8 +132,15 @@ export function CreateGeofenceScreen({ route, navigation }: Props) {
     <RoleGuard requiredPermission="attendance.edit">
       <AdminStateShell isLoading={isEdit && isLoading} loadingRows={6}>
       <AdminScreenLayout>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={styles.scroll}>
+        <KeyboardAvoidingView
+          style={scrollLayoutStyles.scrollContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView
+            style={scrollLayoutStyles.scrollContainer}
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+          >
             <Text style={styles.title}>{isEdit ? 'Edit geofence' : 'Add geofence'}</Text>
             {error ? <Text style={styles.error}>{error}</Text> : null}
             {radiusValidation.warning ? (

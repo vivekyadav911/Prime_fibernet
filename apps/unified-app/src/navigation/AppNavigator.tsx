@@ -1,7 +1,7 @@
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { TotpScreen } from '@/screens/auth/TotpScreen';
+import { useAdminSessionTimeout } from '@/hooks/useAuth';
 import { WebUnsupportedScreen } from '@/screens/auth/WebUnsupportedScreen';
 import { useAppSelector } from '@/store/hooks';
 import type { RootStackParamList } from '@/types/navigation';
@@ -16,9 +16,17 @@ const RootStack = createNativeStackNavigator<RootStackParamList>();
 const isWeb = Platform.OS === 'web';
 
 export function AppNavigator() {
-  const { isAuthenticated, isLoading, user, requires2FA } = useAppSelector((s) => s.auth);
+  const { isAuthenticated, isLoading, user, requires2FA, roleStatus } = useAppSelector(
+    (s) => s.auth,
+  );
 
-  if (isLoading) {
+  useAdminSessionTimeout();
+
+  // Hold on the spinner until the authoritative DB role is resolved, otherwise
+  // a session with a stale JWT role would briefly render the wrong navigator.
+  const resolvingRole = isAuthenticated && !!user && roleStatus !== 'ready';
+
+  if (isLoading || resolvingRole) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
         <ActivityIndicator size="large" color={colors.primaryNavy} />
@@ -27,7 +35,6 @@ export function AppNavigator() {
   }
 
   const showAuth = !isAuthenticated || !user;
-  const showTotp = isAuthenticated && user && requires2FA;
   const showWebUnsupported =
     isWeb && isAuthenticated && user && !requires2FA && user.role !== 'admin';
   const showAdmin = isAuthenticated && user && !requires2FA && user.role === 'admin';
@@ -46,7 +53,6 @@ export function AppNavigator() {
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
       {showAuth && <RootStack.Screen name="Auth" component={AuthNavigator} />}
-      {showTotp && <RootStack.Screen name="Totp" component={TotpScreen} />}
       {showWebUnsupported && (
         <RootStack.Screen name="WebUnsupported" component={WebUnsupportedScreen} />
       )}

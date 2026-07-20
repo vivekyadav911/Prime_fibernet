@@ -79,13 +79,21 @@ export const authApi = baseApi.injectEndpoints({
       query: ({ identifier }) => ({
         handler: async (client) => {
           const id = identifier.trim();
+          // Closed, pre-provisioned user base: NEVER create a new account from a
+          // typo or a non-customer email. shouldCreateUser:false is mandatory.
           if (id.includes('@')) {
-            const { error } = await client.auth.signInWithOtp({ email: id });
+            const { error } = await client.auth.signInWithOtp({
+              email: id,
+              options: { shouldCreateUser: false },
+            });
             if (error) throw error;
             return;
           }
           const phone = normalizePhone(id);
-          const { error } = await client.auth.signInWithOtp({ phone });
+          const { error } = await client.auth.signInWithOtp({
+            phone,
+            options: { shouldCreateUser: false },
+          });
           if (error) throw error;
         },
       }),
@@ -149,17 +157,77 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ['Auth', 'Profile'],
     }),
 
-    verifyAdminTotp: builder.mutation<{ valid: boolean }, { code: string; userId: string }>({
-      query: ({ code, userId }) => ({
+    getLoginState: builder.query<
+      { role: string | null; passwordSet: boolean; lastFullLoginAt: string | null },
+      void
+    >({
+      query: () => ({
         handler: async (client) => {
-          const { data, error } = await client.functions.invoke('verify-admin-totp', {
-            body: { code, userId },
-          });
+          const { data, error } = await client.rpc('get_login_state');
           if (error) throw error;
-          return { valid: Boolean((data as { valid?: boolean })?.valid) };
+          const row = (Array.isArray(data) ? data[0] : data) as
+            | { role?: string | null; password_set?: boolean; last_full_login_at?: string | null }
+            | undefined;
+          return {
+            role: row?.role ?? null,
+            passwordSet: Boolean(row?.password_set),
+            lastFullLoginAt: row?.last_full_login_at ?? null,
+          };
+        },
+      }),
+      providesTags: ['Auth'],
+    }),
+
+    // First-login claim: set the user's own password, then flip password_set + touch login.
+    completePasswordSetup: builder.mutation<void, { newPassword: string }>({
+      query: ({ newPassword }) => ({
+        handler: async (client) => {
+          const { error: updErr } = await client.auth.updateUser({ password: newPassword });
+          if (updErr) throw updErr;
+          const { error } = await client.rpc('complete_password_setup');
+          if (error) throw error;
+        },
+      }),
+      invalidatesTags: ['Auth', 'Profile'],
+    }),
+
+    // Slide the 30-day silent-session window after any real login.
+    touchFullLogin: builder.mutation<void, void>({
+      query: () => ({
+        handler: async (client) => {
+          const { error } = await client.rpc('touch_full_login');
+          if (error) throw error;
         },
       }),
       invalidatesTags: ['Auth'],
+    }),
+
+    // Admin-only one-time migration runner: provisions auth.users for legacy
+    // customers/officers in batches. Loop client-side until remaining === 0.
+    provisionUserAuthBatch: builder.mutation<
+      { created: number; linkedExisting: number; failed: number; remaining: number },
+      { batchSize?: number } | void
+    >({
+      query: (arg) => ({
+        handler: async (client) => {
+          const { data, error } = await client.functions.invoke('provision-user-auth', {
+            body: { batchSize: (arg && 'batchSize' in arg ? arg.batchSize : undefined) ?? 200 },
+          });
+          if (error) throw error;
+          const r = (data ?? {}) as {
+            created?: number;
+            linkedExisting?: number;
+            failed?: number;
+            remaining?: number;
+          };
+          return {
+            created: r.created ?? 0,
+            linkedExisting: r.linkedExisting ?? 0,
+            failed: r.failed ?? 0,
+            remaining: r.remaining ?? 0,
+          };
+        },
+      }),
     }),
 
     getCustomerProfile: builder.query<UserProfile, void>({
@@ -394,7 +462,10 @@ export const {
   useResetPasswordMutation,
   useChangePasswordMutation,
   useRequestAccountDeletionMutation,
-  useVerifyAdminTotpMutation,
+  useGetLoginStateQuery,
+  useCompletePasswordSetupMutation,
+  useTouchFullLoginMutation,
+  useProvisionUserAuthBatchMutation,
   useGetCustomerProfileQuery,
   useGetCustomerUserRecordQuery,
   useGetOfficerSessionProfileQuery,

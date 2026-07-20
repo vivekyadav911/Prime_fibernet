@@ -16,6 +16,7 @@ export interface OfficerLocation {
     id: string;
     name: string;
     email: string;
+    avatar_url?: string | null;
     avatar_color?: string;
     initials?: string;
   };

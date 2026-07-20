@@ -1,14 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { DrawerActions, useNavigation } from '@react-navigation/native';
-import type { DrawerNavigationProp } from '@react-navigation/drawer';
 import { Ionicons } from '@expo/vector-icons';
-import { Screen } from '@prime/ui';
-
+import { useOfficerPullToRefresh } from '@/hooks/officer/useOfficerPullToRefresh';
 import { DismissKeyboardFlatList, EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
+import { OfficerScreen } from '@/components/officer';
 import { usePortalNotifications } from '@/hooks/usePortalNotifications';
 import type { PortalNotification } from '@/types/payments';
-import type { OfficerDrawerParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
 import {
@@ -65,24 +62,65 @@ function ToolbarIconButton({
   );
 }
 
-function isSignContractNotification(item: PortalNotification): boolean {
-  const action = item.data?.action;
-  return action === 'sign_contract' || item.category === 'hr';
-}
+function NotificationRow({ item }: { item: PortalNotification }) {
+  const unread = !item.is_read;
 
-function isCollectionNotification(item: PortalNotification): boolean {
-  return item.category === 'payment' || item.type === 'assignment' || item.type === 'claim';
+  return (
+    <View
+      style={[styles.card, unread ? styles.cardUnread : styles.cardRead]}
+      accessibilityRole="text"
+    >
+      {unread ? <View style={styles.unreadAccent} /> : null}
+      <View style={styles.cardContent}>
+        <View style={styles.cardHeader}>
+          <Text style={[styles.title, unread ? styles.titleUnread : styles.titleRead]}>
+            {resolveNotificationText(item.title, item.data)}
+          </Text>
+          {unread ? (
+            <View style={styles.unreadPill}>
+              <Text style={styles.unreadPillText}>Unread</Text>
+            </View>
+          ) : (
+            <View style={styles.readPill}>
+              <Text style={styles.readPillText}>Read</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.metaRow}>
+          {item.category ? (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>
+                {portalNotificationCategoryLabel(item.category)}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+        {item.body ? (
+          <Text
+            style={[styles.body, unread ? styles.bodyUnread : styles.bodyRead]}
+            numberOfLines={3}
+          >
+            {resolveNotificationText(item.body, item.data)}
+          </Text>
+        ) : null}
+        <View style={styles.cardFooter}>
+          <Text style={styles.time}>{new Date(item.created_at).toLocaleString()}</Text>
+          {unread ? <View style={styles.unreadDot} /> : null}
+        </View>
+      </View>
+    </View>
+  );
 }
 
 export function OfficerPortalNotificationsScreen() {
-  const navigation = useNavigation<DrawerNavigationProp<OfficerDrawerParamList>>();
   const [filters, setFilters] = useState<OfficerNotificationFilterState>(
     DEFAULT_OFFICER_NOTIFICATION_FILTERS,
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [openSheet, setOpenSheet] = useState<SheetKind | null>(null);
-  const { notifications, isLoading, isError, error, refetch, markRead, markAllRead } =
+  const { notifications, isLoading, isError, error, refetch, markAllRead } =
     usePortalNotifications(100);
+  const { refreshControl } = useOfficerPullToRefresh(refetch);
 
   const productionCount = useMemo(
     () => notifications.filter((n) => !isJunkPortalNotification(n)).length,
@@ -101,60 +139,9 @@ export function OfficerPortalNotificationsScreen() {
   const dateActive = Boolean(filters.dateFrom || filters.dateTo);
   const activeCount = countActiveOfficerNotificationFilters(filters, searchQuery);
 
-  const onPress = useCallback(
-    async (item: PortalNotification) => {
-      if (!item.is_read) {
-        await markRead(item.id);
-      }
-
-      if (isSignContractNotification(item)) {
-        navigation.getParent()?.navigate('ProfileStack', {
-          screen: 'EmploymentContract',
-          params: { highlightSign: true },
-        });
-        return;
-      }
-
-      if (isCollectionNotification(item)) {
-        navigation.getParent()?.navigate('CollectionsStack', { screen: 'CollectionsList' });
-        return;
-      }
-
-      if (item.category === 'ticket' || item.category === 'request') {
-        navigation.dispatch(DrawerActions.jumpTo('RequestsStack'));
-      }
-    },
-    [markRead, navigation],
-  );
-
   const renderItem = useCallback(
-    ({ item }: { item: PortalNotification }) => (
-      <Pressable
-        style={[styles.card, !item.is_read && styles.cardUnread]}
-        onPress={() => void onPress(item)}
-      >
-        <View style={styles.cardHeader}>
-          <Text style={styles.title}>{resolveNotificationText(item.title, item.data)}</Text>
-          {item.category ? (
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>
-                {portalNotificationCategoryLabel(item.category)}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-        {item.body ? (
-          <Text style={styles.body} numberOfLines={3}>
-            {resolveNotificationText(item.body, item.data)}
-          </Text>
-        ) : null}
-        <View style={styles.cardFooter}>
-          <Text style={styles.time}>{new Date(item.created_at).toLocaleString()}</Text>
-          {!item.is_read ? <View style={styles.unreadDot} /> : null}
-        </View>
-      </Pressable>
-    ),
-    [onPress],
+    ({ item }: { item: PortalNotification }) => <NotificationRow item={item} />,
+    [],
   );
 
   const listHeader = (
@@ -206,9 +193,11 @@ export function OfficerPortalNotificationsScreen() {
             </Text>
           ) : null}
         </View>
-        <Pressable style={styles.markAll} onPress={() => void markAllRead()} hitSlop={8}>
-          <Text style={styles.markAllText}>Mark all read</Text>
-        </Pressable>
+        {unreadInView > 0 ? (
+          <Pressable style={styles.markAll} onPress={() => void markAllRead()} hitSlop={8}>
+            <Text style={styles.markAllText}>Mark all read</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {activeCount > 0 ? (
@@ -227,23 +216,24 @@ export function OfficerPortalNotificationsScreen() {
 
   if (isLoading) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <SkeletonLoader rows={6} />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   if (isError) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   return (
-    <Screen padded={false}>
+    <OfficerScreen scrollable={false} padded={false}>
       <DismissKeyboardFlatList
+        refreshControl={refreshControl}
         data={filtered}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
@@ -270,7 +260,7 @@ export function OfficerPortalNotificationsScreen() {
           setFilters((prev) => ({ ...prev, sortKey }))
         }
       />
-    </Screen>
+    </OfficerScreen>
   );
 }
 
@@ -360,22 +350,70 @@ const styles = StyleSheet.create({
   },
   list: { padding: spacing.md, paddingBottom: spacing.xxxl },
   card: {
-    backgroundColor: colors.surfaceWhite,
+    flexDirection: 'row',
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.borderDefault,
-    padding: spacing.md,
     marginBottom: spacing.sm,
-    gap: spacing.xs,
+    overflow: 'hidden',
   },
-  cardUnread: { borderColor: colors.primaryNavy, backgroundColor: colors.background },
+  cardUnread: {
+    borderColor: colors.primaryNavy,
+    backgroundColor: colors.background,
+  },
+  cardRead: {
+    borderColor: colors.borderDefault,
+    backgroundColor: colors.surfaceWhite,
+    opacity: 0.92,
+  },
+  unreadAccent: {
+    width: 4,
+    backgroundColor: colors.primaryNavy,
+  },
+  cardContent: {
+    flex: 1,
+    padding: spacing.md,
+    gap: spacing.xxs,
+  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  title: { flex: 1, fontWeight: '700', color: colors.textPrimary, fontSize: 15 },
+  title: { flex: 1, fontSize: 15 },
+  titleUnread: { fontWeight: '700', color: colors.textPrimary },
+  titleRead: { fontWeight: '500', color: colors.textSecondary },
+  unreadPill: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryNavy,
+  },
+  unreadPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.white,
+    textTransform: 'uppercase',
+  },
+  readPill: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+  },
+  readPillText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
   categoryBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
@@ -390,7 +428,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textTransform: 'uppercase',
   },
-  body: { color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
+  body: { fontSize: 14, lineHeight: 20 },
+  bodyUnread: { color: colors.textPrimary },
+  bodyRead: { color: colors.textSecondary },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',

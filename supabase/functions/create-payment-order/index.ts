@@ -39,6 +39,18 @@ async function resolveAuthoritativeAmount(
   customerOutstanding?: number | null,
   recentCutoffIso?: string,
 ): Promise<{ amount: number; serverDerived: boolean }> {
+  // New plan purchase: price is fixed by the selected plan, independent of any
+  // outstanding bill or unrelated open payment for this customer.
+  if (intent === 'plan') {
+    if (planId) {
+      const { data: plan } = await supabase.from('plans').select('price').eq('id', planId).maybeSingle();
+      if (plan?.price != null && Number(plan.price) > 0) {
+        return { amount: Math.round(Number(plan.price) * 100) / 100, serverDerived: true };
+      }
+    }
+    return { amount: Math.round(clientAmount * 100) / 100, serverDerived: false };
+  }
+
   const outstanding = Math.round(Number(customerOutstanding ?? 0) * 100) / 100;
   if (outstanding > 0) return { amount: outstanding, serverDerived: true };
 
@@ -304,6 +316,7 @@ serve(async (req) => {
         customer_name: userName ?? customer?.name ?? 'Customer',
         customer_phone: userPhone ?? customer?.phone,
         account_number: accountNumber,
+        plan_id: planId ?? null,
         plan_name: planName ?? null,
         amount: authoritativeAmount,
         total_amount: authoritativeAmount,

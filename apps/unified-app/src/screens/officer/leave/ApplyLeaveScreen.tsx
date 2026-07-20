@@ -5,7 +5,9 @@ import type { LeaveType } from '@/types/attendance';
 import { Button } from '@prime/ui';
 
 import { SelectField } from '@/components/admin';
-import { DateRangePicker, DismissKeyboardScrollView, ScreenWrapper, ToggleSwitch } from '@/components/common';
+import {DateRangePicker, DismissKeyboardScrollView, ToggleSwitch} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
+import { useOfficerPullToRefresh } from '@/hooks/officer';
 import { useApplyLeave } from '@/hooks/attendance/useAttendance';
 import type { OfficerLeaveStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
@@ -53,9 +55,11 @@ export function ApplyLeaveScreen({ navigation }: Props) {
     }
   }, [applyLeave, endDate, isHalfDay, leaveType, navigation, reason, startDate]);
 
+  const { refreshControl } = useOfficerPullToRefresh();
+
   return (
-    <ScreenWrapper scrollable={false} padded={false}>
-      <DismissKeyboardScrollView contentContainerStyle={styles.scroll}>
+    <OfficerScreenWrapper scrollable={false} padded={false}>
+      <DismissKeyboardScrollView contentContainerStyle={styles.scroll} refreshControl={refreshControl}>
       <SelectField
         label="Leave type"
         value={leaveType}
@@ -98,7 +102,7 @@ export function ApplyLeaveScreen({ navigation }: Props) {
       />
       <Button label="Cancel" variant="ghost" onPress={() => navigation.goBack()} />
       </DismissKeyboardScrollView>
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 

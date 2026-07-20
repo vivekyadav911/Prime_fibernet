@@ -186,6 +186,11 @@ function binaryFileResponse(
   return new Response(buf, { status: 200, headers });
 }
 
+function exportTimestamp(): string {
+  return new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + 'Z';
+}
+
+/** Offset pagination with deterministic order (orderColumn + id tiebreaker when present). */
 async function fetchTableAll(
   admin: ReturnType<typeof createClient>,
   table: string,
@@ -196,12 +201,28 @@ async function fetchTableAll(
   let offset = 0;
   while (out.length < maxRows) {
     const take = Math.min(MAX_ROWS_PER_REQUEST, maxRows - out.length);
-    const { data, error } = await admin
+    let query = admin
       .from(table)
       .select('*')
-      .order(orderColumn, { ascending: false })
+      .order(orderColumn, { ascending: true })
+      .order('id', { ascending: true })
       .range(offset, offset + take - 1);
-    if (error) throw error;
+    const { data, error } = await query;
+    if (error) {
+      // Fallback when table has no `id` column
+      const retry = await admin
+        .from(table)
+        .select('*')
+        .order(orderColumn, { ascending: true })
+        .range(offset, offset + take - 1);
+      if (retry.error) throw retry.error;
+      const rows = (retry.data ?? []) as Record<string, unknown>[];
+      if (rows.length === 0) break;
+      out.push(...rows);
+      if (rows.length < take) break;
+      offset += take;
+      continue;
+    }
     const rows = (data ?? []) as Record<string, unknown>[];
     if (rows.length === 0) break;
     out.push(...rows);
@@ -211,17 +232,37 @@ async function fetchTableAll(
   return out;
 }
 
+function setSheetColumnWidths(ws: XLSX.WorkSheet, rows: Record<string, unknown>[]) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]!);
+  ws['!cols'] = headers.map((h) => {
+    let max = h.length;
+    for (const row of rows.slice(0, 40)) {
+      const len = String(row[h] ?? '').length;
+      if (len > max) max = len;
+    }
+    return { wch: Math.min(Math.max(max + 2, 12), 48) };
+  });
+}
+
+function appendJsonSheet(wb: XLSX.WorkBook, rows: Record<string, unknown>[], sheetName: string) {
+  const name = sheetName.slice(0, 31);
+  if (!rows.length) {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['No data']]), name);
+    return;
+  }
+  const sanitized = sanitizeRows(rows);
+  const ws = XLSX.utils.json_to_sheet(sanitized);
+  setSheetColumnWidths(ws, sanitized);
+  XLSX.utils.book_append_sheet(wb, ws, name);
+}
+
 async function exportFullWorkbook(admin: ReturnType<typeof createClient>) {
   const wb = XLSX.utils.book_new();
   for (const def of WORKBOOK_TABLES) {
-    const sheetName = def.sheet.slice(0, 31);
     try {
       const rows = await fetchTableAll(admin, def.table, def.order, def.max);
-      if (rows.length === 0) {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['No data']]), sheetName);
-      } else {
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sanitizeRows(rows)), sheetName);
-      }
+      appendJsonSheet(wb, rows, def.sheet);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const errSheet = (def.sheet + '_err').slice(0, 31);
@@ -229,15 +270,9 @@ async function exportFullWorkbook(admin: ReturnType<typeof createClient>) {
     }
   }
 
-  // Optional payments table (not all projects have it)
   try {
     const payRows = await fetchTableAll(admin, 'payments', 'created_at', MAX_ROWS_EXPORT);
-    const sn = 'payments'.slice(0, 31);
-    if (payRows.length === 0) {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['No data']]), sn);
-    } else {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sanitizeRows(payRows)), sn);
-    }
+    appendJsonSheet(wb, payRows, 'payments');
   } catch {
     XLSX.utils.book_append_sheet(
       wb,
@@ -247,17 +282,17 @@ async function exportFullWorkbook(admin: ReturnType<typeof createClient>) {
   }
 
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Uint8Array;
-  return binaryFileResponse(buf, 'prime_fibernet_full_export.xlsx');
+  return binaryFileResponse(buf, `prime_fibernet_full_export_${exportTimestamp()}.xlsx`);
 }
 
 async function exportUsersXlsx(admin: ReturnType<typeof createClient>) {
   const rows = await fetchTableAll(admin, 'users', 'created_at', MAX_ROWS_EXPORT);
-  return xlsxResponse(rows, 'users_export.xlsx', 'Users');
+  return xlsxResponse(rows, `users_export_${exportTimestamp()}.xlsx`, 'Users');
 }
 
 async function exportOfficersXlsx(admin: ReturnType<typeof createClient>) {
   const rows = await fetchTableAll(admin, 'officers', 'created_at', MAX_ROWS_EXPORT);
-  return xlsxResponse(sanitizeRows(rows), 'officers_export.xlsx', 'Officers');
+  return xlsxResponse(sanitizeRows(rows), `officers_export_${exportTimestamp()}.xlsx`, 'Officers');
 }
 
 async function exportReportsXlsx(admin: ReturnType<typeof createClient>) {
@@ -277,7 +312,7 @@ async function exportReportsXlsx(admin: ReturnType<typeof createClient>) {
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryRows), 'Summary');
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Uint8Array;
-    return binaryFileResponse(buf, 'reports_snapshot.xlsx');
+    return binaryFileResponse(buf, `reports_snapshot_${exportTimestamp()}.xlsx`);
   }
 
   const summarySql = `
@@ -362,7 +397,7 @@ async function exportReportsXlsx(admin: ReturnType<typeof createClient>) {
     appendSheet('UserSeries', userSeries);
 
     const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Uint8Array;
-    return binaryFileResponse(buf, 'reports_snapshot.xlsx');
+    return binaryFileResponse(buf, `reports_snapshot_${exportTimestamp()}.xlsx`);
   } finally {
     client.release();
     await pool.end();
@@ -449,17 +484,12 @@ async function exportTransactionsXlsx(admin: ReturnType<typeof createClient>) {
   }
 
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Uint8Array;
-  return binaryFileResponse(buf, 'transactions_export.xlsx');
+  return binaryFileResponse(buf, `transactions_export_${exportTimestamp()}.xlsx`);
 }
 
 function xlsxResponse(rows: Record<string, unknown>[], filename: string, sheetName: string) {
   const wb = XLSX.utils.book_new();
-  if (rows.length === 0) {
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['No data']]), sheetName.slice(0, 31));
-  } else {
-    const sanitized = sanitizeRows(rows);
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sanitized), sheetName.slice(0, 31));
-  }
+  appendJsonSheet(wb, rows, sheetName);
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Uint8Array;
   return binaryFileResponse(buf, filename);
 }

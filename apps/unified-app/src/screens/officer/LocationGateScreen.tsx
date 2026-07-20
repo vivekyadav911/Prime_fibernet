@@ -16,7 +16,7 @@ export function LocationGateScreen({ navigation }: Props) {
   const proceedIfGranted = useCallback(async () => {
     const granted = permissionGranted ?? (await checkPermission());
     if (granted) {
-      navigation.replace('OfficerDrawer');
+      navigation.replace('OfficerTabs');
     }
   }, [checkPermission, navigation, permissionGranted]);
 
@@ -27,7 +27,7 @@ export function LocationGateScreen({ navigation }: Props) {
   const onEnableLocation = async () => {
     const granted = await requestPermission();
     if (granted) {
-      navigation.replace('OfficerDrawer');
+      navigation.replace('OfficerTabs');
       return;
     }
     await Linking.openSettings();

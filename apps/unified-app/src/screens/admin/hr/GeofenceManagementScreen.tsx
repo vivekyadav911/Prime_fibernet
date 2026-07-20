@@ -1,9 +1,22 @@
 import { useCallback, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Circle } from 'react-native-maps';
+import {
+  FlatList,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { AdminButton, AdminScreenLayout, AdminEmptyState, RoleGuard } from '@/components/admin';
-import { FreeMapView } from '@/components/map';
+import {
+  AdminButton,
+  AdminScreenLayout,
+  AdminEmptyState,
+  ConfirmModal,
+  RoleGuard,
+} from '@/components/admin';
+import { GeofenceOverviewMap } from '@/components/map/GeofenceOverviewMap';
 import { ErrorState, SkeletonLoader, ToggleSwitch } from '@/components/common';
 import { useAttendanceRealtimeSync } from '@/hooks/attendance/useAttendanceRealtimeSync';
 import {
@@ -16,38 +29,48 @@ import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
+import { pageLayout } from '@/theme/pageLayout';
 import { spacing } from '@/theme/spacing';
 import { formatGeofenceAddress } from '@/utils/geofenceDisplay';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'GeofenceManagement'>;
 
+type PendingConfirm =
+  | { kind: 'disable'; geofence: Geofence }
+  | { kind: 'delete'; id: string }
+  | null;
+
+const SPLIT_MIN_WIDTH = 900;
+
 function GeofenceCard({
   item,
+  selected,
   onEdit,
   onAssign,
   onDelete,
   onToggle,
 }: {
   item: Geofence;
+  selected?: boolean;
   onEdit: (g: Geofence) => void;
   onAssign: (g: Geofence) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string, active: boolean) => void;
 }) {
-  const radius =
+  const radiusLabel =
     item.geometry.shape === 'circle' ? `${item.geometry.radius}m` : 'Polygon';
   const addressLine = formatGeofenceAddress(item);
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, selected && styles.cardSelected]}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{item.name || 'Unnamed geofence'}</Text>
         <ToggleSwitch value={item.isActive} onValueChange={(v) => onToggle(item.id, v)} />
       </View>
       <Text style={styles.cardMeta}>📍 {addressLine}</Text>
       <Text style={styles.cardMeta}>
-        ⭕ {radius} · 👥 {item.assignedOfficers.length} officer
+        ⭕ {radiusLabel} · 👥 {item.assignedOfficers.length} officer
         {item.assignedOfficers.length === 1 ? '' : 's'}
       </Text>
       <View style={styles.cardActions}>
@@ -61,48 +84,55 @@ function GeofenceCard({
 
 export function GeofenceManagementScreen({ navigation }: Props) {
   useAttendanceRealtimeSync();
+  const { width } = useWindowDimensions();
+  const useSplit = Platform.OS === 'web' && width >= SPLIT_MIN_WIDTH;
   const { data, isLoading, isError, error, refetch } = useGeofences();
   const [toggleGeofence] = useToggleGeofence();
   const [deleteGeofence] = useDeleteGeofence();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingConfirm>(null);
+
+  const performToggle = useCallback(
+    (geofence: Geofence, isActive: boolean) => {
+      void toggleGeofence({ id: geofence.id, isActive }).then(() => refetch());
+    },
+    [refetch, toggleGeofence],
+  );
 
   const handleToggle = useCallback(
     (geofence: Geofence, isActive: boolean) => {
       const assignedCount = geofence.assignedOfficers.length;
 
-      const performToggle = () => {
-        void toggleGeofence({ id: geofence.id, isActive }).then(() => refetch());
-      };
-
       if (!isActive && assignedCount > 0) {
-        Alert.alert(
-          'Disable geofence?',
-          `${assignedCount} officer${assignedCount === 1 ? '' : 's'} use "${geofence.name}" — disabling will block their check-in. Continue?`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Disable', style: 'destructive', onPress: performToggle },
-          ],
-        );
+        setPending({ kind: 'disable', geofence });
         return;
       }
 
-      performToggle();
+      performToggle(geofence, isActive);
     },
-    [refetch, toggleGeofence],
+    [performToggle],
   );
 
-  const handleDelete = useCallback(
-    (id: string) => {
-      Alert.alert('Delete geofence?', 'This cannot be undone.', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => void deleteGeofence(id).then(() => refetch()),
-        },
-      ]);
+  const handleDelete = useCallback((id: string) => {
+    setPending({ kind: 'delete', id });
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    if (!pending) return;
+    if (pending.kind === 'disable') {
+      performToggle(pending.geofence, false);
+    } else {
+      void deleteGeofence(pending.id).then(() => refetch());
+    }
+    setPending(null);
+  }, [deleteGeofence, pending, performToggle, refetch]);
+
+  const onToggleCard = useCallback(
+    (id: string, v: boolean) => {
+      const geofence = (data ?? []).find((g) => g.id === id);
+      if (geofence) handleToggle(geofence, v);
     },
-    [deleteGeofence, refetch],
+    [data, handleToggle],
   );
 
   const renderItem = useCallback(
@@ -110,17 +140,15 @@ export function GeofenceManagementScreen({ navigation }: Props) {
       <Pressable onPress={() => setSelectedId(item.id)}>
         <GeofenceCard
           item={item}
+          selected={item.id === selectedId}
           onEdit={() => navigation.navigate('CreateGeofence', { geofenceId: item.id })}
           onAssign={() => navigation.navigate('AssignGeofence', { geofenceId: item.id })}
           onDelete={handleDelete}
-          onToggle={(id, v) => {
-            const geofence = (data ?? []).find((g) => g.id === id);
-            if (geofence) handleToggle(geofence, v);
-          }}
+          onToggle={onToggleCard}
         />
       </Pressable>
     ),
-    [data, handleDelete, handleToggle, navigation],
+    [handleDelete, navigation, onToggleCard, selectedId],
   );
 
   if (isLoading) {
@@ -140,41 +168,83 @@ export function GeofenceManagementScreen({ navigation }: Props) {
   }
 
   const geofences = data ?? [];
-  const mapRegion = {
-    latitude: geofences[0]?.geometry.shape === 'circle'
-      ? geofences[0].geometry.center.latitude
-      : 28.6139,
-    longitude: geofences[0]?.geometry.shape === 'circle'
-      ? geofences[0].geometry.center.longitude
-      : 77.209,
-    latitudeDelta: 0.2,
-    longitudeDelta: 0.2,
-  };
+  const disableTarget = pending?.kind === 'disable' ? pending.geofence : null;
+
+  const headerRow = (
+    <View style={styles.header}>
+      <Text style={styles.title}>Geofences</Text>
+      <AdminButton
+        label="Add geofence"
+        onPress={() => navigation.navigate('CreateGeofence', {})}
+      />
+    </View>
+  );
+
+  const confirmModal = (
+    <ConfirmModal
+      visible={pending != null}
+      title={pending?.kind === 'delete' ? 'Delete geofence?' : 'Disable geofence?'}
+      message={
+        pending?.kind === 'delete'
+          ? 'This cannot be undone.'
+          : disableTarget
+            ? `${disableTarget.assignedOfficers.length} officer${disableTarget.assignedOfficers.length === 1 ? '' : 's'} use "${disableTarget.name}" — disabling will block their check-in. Continue?`
+            : ''
+      }
+      confirmLabel={pending?.kind === 'delete' ? 'Delete' : 'Disable'}
+      onConfirm={handleConfirm}
+      onCancel={() => setPending(null)}
+    />
+  );
+
+  const empty = (
+    <AdminEmptyState
+      title="No geofences yet"
+      subtitle="Create a geofence so officers can check in within an approved zone."
+      actionLabel="Add geofence"
+      onAction={() => navigation.navigate('CreateGeofence', {})}
+      iconName="location-outline"
+    />
+  );
+
+  if (useSplit) {
+    return (
+      <RoleGuard requiredPermission="attendance.edit">
+        <AdminScreenLayout padded={false}>
+          <View style={styles.splitPage}>
+            {headerRow}
+            <View style={styles.splitBody}>
+              <View style={styles.mapPane}>
+                <GeofenceOverviewMap
+                  geofences={geofences}
+                  selectedId={selectedId}
+                  fill
+                />
+              </View>
+              <View style={styles.splitDivider} />
+              <View style={styles.listPane}>
+                <FlatList
+                  data={geofences}
+                  keyExtractor={(g) => g.id}
+                  renderItem={renderItem}
+                  contentContainerStyle={styles.splitListContent}
+                  style={styles.list}
+                  showsVerticalScrollIndicator={false}
+                  ListEmptyComponent={empty}
+                />
+              </View>
+            </View>
+          </View>
+          {confirmModal}
+        </AdminScreenLayout>
+      </RoleGuard>
+    );
+  }
 
   const listHeader = (
     <View style={adminScreenStyles.listHeader}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Geofences</Text>
-        <AdminButton
-          label="Add geofence"
-          onPress={() => navigation.navigate('CreateGeofence', {})}
-        />
-      </View>
-
-      <FreeMapView style={styles.map} initialRegion={mapRegion}>
-        {geofences.map((g) => {
-          if (g.geometry.shape !== 'circle') return null;
-          return (
-            <Circle
-              key={g.id}
-              center={g.geometry.center}
-              radius={g.geometry.radius}
-              strokeColor={g.id === selectedId ? adminColors.primary : colors.textSecondary}
-              fillColor={g.isActive ? 'rgba(91,79,207,0.2)' : 'rgba(150,150,150,0.2)'}
-            />
-          );
-        })}
-      </FreeMapView>
+      {headerRow}
+      <GeofenceOverviewMap geofences={geofences} selectedId={selectedId} />
     </View>
   );
 
@@ -189,16 +259,9 @@ export function GeofenceManagementScreen({ navigation }: Props) {
           contentContainerStyle={adminScreenStyles.listContent}
           style={styles.list}
           showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <AdminEmptyState
-              title="No geofences yet"
-              subtitle="Create a geofence so officers can check in within an approved zone."
-              actionLabel="Add geofence"
-              onAction={() => navigation.navigate('CreateGeofence', {})}
-              iconName="location-outline"
-            />
-          }
+          ListEmptyComponent={empty}
         />
+        {confirmModal}
       </AdminScreenLayout>
     </RoleGuard>
   );
@@ -212,7 +275,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-  map: { height: 220 },
+  splitPage: {
+    flex: 1,
+    minHeight: 0,
+    paddingHorizontal: pageLayout.pagePadding,
+    paddingTop: pageLayout.contentTop,
+    paddingBottom: pageLayout.contentBottom,
+    gap: spacing.sm,
+  },
+  splitBody: {
+    flex: 1,
+    minHeight: 0,
+    flexDirection: 'row',
+    gap: 0,
+  },
+  mapPane: {
+    flex: 3,
+    minWidth: 0,
+    minHeight: 0,
+  },
+  splitDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: colors.borderDefault,
+    marginHorizontal: spacing.md,
+  },
+  listPane: {
+    flex: 1,
+    minWidth: 280,
+    maxWidth: 420,
+    minHeight: 0,
+  },
+  splitListContent: {
+    paddingBottom: spacing.lg,
+    flexGrow: 1,
+  },
   card: {
     backgroundColor: adminColors.cardBg,
     borderRadius: 12,
@@ -220,6 +316,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.borderDefault,
+  },
+  cardSelected: {
+    borderColor: adminColors.primary,
+    borderWidth: 1.5,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, flex: 1 },

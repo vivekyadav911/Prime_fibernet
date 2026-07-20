@@ -19,6 +19,7 @@ import {
   mapLocationAccuracyError,
   mapNoZoneError,
   mapOutsideZoneError,
+  mapShiftAlreadyCompletedError,
   mapSupabaseError,
 } from '@/utils/attendanceErrors';
 import { checkGeofenceStatus } from '@/utils/geofenceUtils';
@@ -50,6 +51,9 @@ class AttendanceService {
     const today = await this.getTodayRecord();
     if (today?.checkInTime && !today.checkOutTime) {
       return { action: 'already_checked_in', record: today };
+    }
+    if (today?.checkInTime && today.checkOutTime) {
+      return { action: 'shift_already_completed', record: today };
     }
 
     await locationService.clearGeofenceCache();
@@ -197,9 +201,20 @@ class AttendanceService {
     reason: string;
     coords: Coordinates;
     photoProof?: string;
-    date: string;
+    date?: string;
     geofenceId?: string;
   }): Promise<ApprovalRequest> {
+    if (
+      payload.type === 'out_of_zone_checkin' ||
+      payload.type === 'late_checkin' ||
+      payload.type === 'second_shift_checkin'
+    ) {
+      const today = await this.getTodayRecord();
+      if (today?.checkInTime && today.checkOutTime) {
+        throw mapShiftAlreadyCompletedError();
+      }
+    }
+
     const geofences = await loadActiveZones(true);
     const scoped = payload.geofenceId
       ? geofences.filter((g) => g.id === payload.geofenceId)
@@ -210,13 +225,36 @@ class AttendanceService {
         ? checkGeofenceStatus(payload.coords, scoped, { accuracyMeters: payload.coords.accuracy })
         : { isInside: false, geofence: null as Geofence | null, distance: 0 };
 
+    const existing = await store
+      .dispatch(attendanceApi.endpoints.getMyApprovalRequests.initiate(undefined, { forceRefetch: true }))
+      .unwrap();
+    const pendingSameType = (existing ?? []).find(
+      (r) => r.status === 'pending' && r.type === payload.type,
+    );
+    if (pendingSameType) {
+      const zoneChanged =
+        !!payload.geofenceId &&
+        !!pendingSameType.geofenceId &&
+        pendingSameType.geofenceId !== payload.geofenceId;
+      if (!zoneChanged) {
+        store.dispatch(setPendingApproval(pendingSameType));
+        throw new AttendanceActionError(
+          'Waiting for approval — your request is already pending.',
+          'pending_approval',
+        );
+      }
+      await store
+        .dispatch(attendanceApi.endpoints.cancelMyPendingApproval.initiate({ id: pendingSameType.id }))
+        .unwrap();
+    }
+
     const net = await NetInfo.fetch();
     const body = {
       type: payload.type,
       reason: payload.reason,
       coords: payload.coords,
       photoProof: payload.photoProof,
-      date: payload.date,
+      date: payload.date ?? '',
       distanceFromFence: Number.isFinite(status.distance) ? status.distance : 0,
       geofenceId: status.geofence?.id ?? payload.geofenceId,
     };

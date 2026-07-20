@@ -144,28 +144,35 @@ async function confirmPortalPayment(params: {
     .eq('status', 'initiated')
     .neq('id', paymentId);
 
-  const resolvedPlanId = planId ?? null;
+  const resolvedPlanId = planId ?? (portalPayment.plan_id as string | null) ?? null;
+  // #region agent log
+  console.log('[dbg-3cf4cc]', JSON.stringify({ sessionId: '3cf4cc', hypothesisId: 'G', location: 'verify-payment/index.ts:confirmPortalPayment', message: 'subscription activation decision', data: { paymentId, requestPlanId: planId ?? null, rowPlanId: (portalPayment.plan_id as string | null) ?? null, resolvedPlanId, willActivate: !!resolvedPlanId, customerId: portalPayment.customer_id }, timestamp: Date.now() }));
+  // #endregion
   if (resolvedPlanId) {
     const { data: plan } = await supabase
       .from('plans')
       .select('name, speed_mbps, validity_days')
       .eq('id', resolvedPlanId)
       .maybeSingle();
-    const days = cycleDays(billingCycle);
+    const days = plan?.validity_days != null ? Number(plan.validity_days) : cycleDays(billingCycle);
     const start = new Date();
     const end = new Date(start.getTime() + days * 86400000);
-    await supabase.from('subscriptions').insert({
+    // Expire any stale/previous subscription so the customer has one current row.
+    await supabase
+      .from('subscriptions')
+      .update({ status: 'expired', updated_at: start.toISOString() })
+      .eq('user_id', portalPayment.customer_id as string)
+      .neq('status', 'expired');
+    const { error: subErr } = await supabase.from('subscriptions').insert({
       user_id: portalPayment.customer_id,
       plan_id: resolvedPlanId,
-      plan_name: plan?.name ?? portalPayment.plan_name,
-      speed_mbps: plan?.speed_mbps ?? null,
-      amount_paid: portalPayment.total_amount,
-      billing_cycle: billingCycle,
       start_at: start.toISOString().slice(0, 10),
       end_at: end.toISOString().slice(0, 10),
       status: 'active',
-      auto_renew: true,
     });
+    // #region agent log
+    console.log('[dbg-3cf4cc]', JSON.stringify({ sessionId: '3cf4cc', hypothesisId: 'G', location: 'verify-payment/index.ts:subscriptionInsert', message: 'subscription insert result', data: { paymentId, resolvedPlanId, hasError: !!subErr, errorMsg: subErr?.message ?? null, startAt: start.toISOString().slice(0, 10), endAt: end.toISOString().slice(0, 10) }, timestamp: Date.now() }));
+    // #endregion
 
     await sendActivationWhatsApp({
       supabase,

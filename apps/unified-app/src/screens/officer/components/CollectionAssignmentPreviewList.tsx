@@ -1,16 +1,17 @@
-import { useCallback, useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import type { DrawerNavigationProp } from '@react-navigation/drawer';
+import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 
 import { AmountDisplay, CollectionStatusBadge } from '@/components/payments';
 import { SkeletonLoader } from '@/components/common';
+import { useClaimCollection } from '@/hooks/officer/useClaimCollection';
 import { useOfficerCollections } from '@/hooks/usePayments';
+import { navigateToOfficerPayments } from '@/navigation/officerShellNavigation';
 import type { OfficerAssignedCustomer } from '@/types/payments';
-import type { OfficerDrawerParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
 import { radius, shadow, spacing } from '@/theme/spacing';
-import { selectCollectionAssignmentPreview } from '@/utils/officerCollectionFilters';
+import { selectCollectionDashboardPreview } from '@/utils/officerCollectionFilters';
 import { queryErrorMessage } from '@/utils/queryError';
 
 type Props = {
@@ -18,21 +19,22 @@ type Props = {
 };
 
 export function CollectionAssignmentPreviewList({ limit = 3 }: Props) {
-  const navigation = useNavigation<DrawerNavigationProp<OfficerDrawerParamList>>();
-  const { data, isLoading, isError, error } = useOfficerCollections();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const { data, isLoading, isError, error, refetch } = useOfficerCollections();
+  const { claim, isLoading: claiming } = useClaimCollection();
 
   const preview = useMemo(
-    () => selectCollectionAssignmentPreview(data?.myWork ?? [], limit),
-    [data?.myWork, limit],
+    () => selectCollectionDashboardPreview(data?.myWork ?? [], data?.openPool ?? [], limit),
+    [data?.myWork, data?.openPool, limit],
   );
 
   const openCollections = useCallback(() => {
-    navigation.navigate('CollectionsStack', { screen: 'CollectionsList' });
+    navigateToOfficerPayments(navigation, { screen: 'CollectionsList' });
   }, [navigation]);
 
   const onCollect = useCallback(
     (customer: OfficerAssignedCustomer) => {
-      navigation.navigate('CollectionsStack', {
+      navigateToOfficerPayments(navigation, {
         screen: 'CashCollection',
         params: {
           customerId: customer.id,
@@ -44,6 +46,30 @@ export function CollectionAssignmentPreviewList({ limit = 3 }: Props) {
       });
     },
     [navigation],
+  );
+
+  const onClaim = useCallback(
+    async (customer: OfficerAssignedCustomer) => {
+      try {
+        await claim(customer.id).unwrap();
+        Alert.alert('Assigned', `${customer.name} is now under Assigned to me.`);
+        await refetch();
+      } catch (e) {
+        Alert.alert('Cannot claim', e instanceof Error ? e.message : 'Try again.');
+      }
+    },
+    [claim, refetch],
+  );
+
+  const onItemAction = useCallback(
+    (customer: OfficerAssignedCustomer) => {
+      if (customer.assignmentType === 'open_pool') {
+        void onClaim(customer);
+        return;
+      }
+      onCollect(customer);
+    },
+    [onClaim, onCollect],
   );
 
   return (
@@ -66,28 +92,35 @@ export function CollectionAssignmentPreviewList({ limit = 3 }: Props) {
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>No collection assignments</Text>
           <Text style={styles.emptySubtitle}>
-            Customers assigned to you for payment collection will appear here
+            Direct assignments and open-pool customers will appear here
           </Text>
         </View>
       ) : (
-        preview.map((item) => (
-          <View key={item.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.customerId} numberOfLines={1}>
-                {item.name} · {item.customer_id}
-              </Text>
-              <CollectionStatusBadge status={item.collectionStatus ?? item.assignmentType} />
+        preview.map((item) => {
+          const isPool = item.assignmentType === 'open_pool';
+          return (
+            <View key={item.id} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.customerId} numberOfLines={1}>
+                  {item.name} · {item.customer_id}
+                </Text>
+                <CollectionStatusBadge status={item.collectionStatus ?? item.assignmentType} />
+              </View>
+              {item.phone ? <Text style={styles.meta}>{item.phone}</Text> : null}
+              <AmountDisplay amount={item.outstanding_amount} />
+              {item.next_due_date ? (
+                <Text style={styles.due}>Due: {item.next_due_date}</Text>
+              ) : null}
+              <Pressable
+                style={styles.collectBtn}
+                onPress={() => onItemAction(item)}
+                disabled={claiming}
+              >
+                <Text style={styles.collectText}>{isPool ? 'Pick up →' : 'Collect →'}</Text>
+              </Pressable>
             </View>
-            {item.phone ? <Text style={styles.meta}>{item.phone}</Text> : null}
-            <AmountDisplay amount={item.outstanding_amount} />
-            {item.next_due_date ? (
-              <Text style={styles.due}>Due: {item.next_due_date}</Text>
-            ) : null}
-            <Pressable style={styles.collectBtn} onPress={() => onCollect(item)}>
-              <Text style={styles.collectText}>Collect →</Text>
-            </Pressable>
-          </View>
-        ))
+          );
+        })
       )}
     </View>
   );

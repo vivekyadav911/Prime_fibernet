@@ -89,7 +89,8 @@ export type SendInvoiceInput = {
 };
 
 export type BulkSendInvoicesInput = {
-  invoiceType: 'non_gst' | 'gst';
+  /** Required when sending all pending of a type; ignored when invoiceIds is set. */
+  invoiceType?: 'non_gst' | 'gst';
   channel: 'email' | 'whatsapp';
   invoiceIds?: string[];
 };

@@ -1,8 +1,9 @@
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-
+import { useOfficerPullToRefresh } from '@/hooks/officer/useOfficerPullToRefresh';
 import { AmountDisplay, PaymentStatusBadge } from '@/components/payments';
-import { EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import {EmptyState, ErrorState, SkeletonLoader} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
 import { useGetOfficerCustomerPaymentHistoryQuery } from '@/services/api/paymentCollectionApi';
 import type { OfficerCollectionsStackParamList } from '@/types/navigation';
 import { colors } from '@/theme/colors';
@@ -15,28 +16,30 @@ export function CustomerPaymentHistoryScreen({ route }: Props) {
   const { customerId, customerName } = route.params;
   const { data, isLoading, isError, error, refetch } =
     useGetOfficerCustomerPaymentHistoryQuery(customerId);
+  const { refreshControl } = useOfficerPullToRefresh(refetch);
 
   if (isLoading) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <SkeletonLoader rows={5} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   if (isError) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   return (
-    <ScreenWrapper scrollable={false}>
+    <OfficerScreenWrapper scrollable={false}>
       <Text style={styles.title}>{customerName}</Text>
       <Text style={styles.subtitle}>Your cash collections for this assigned customer</Text>
       <FlatList
+        refreshControl={refreshControl} 
         data={data ?? []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
@@ -52,7 +55,7 @@ export function CustomerPaymentHistoryScreen({ route }: Props) {
           </View>
         )}
       />
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 

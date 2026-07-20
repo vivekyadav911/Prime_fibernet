@@ -1,19 +1,21 @@
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { DrawerActions, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import type { NavigationProp, ParamListBase } from '@react-navigation/native';
 
+import { navigateToOfficerSettingsNotifications } from '@/navigation/officerShellNavigation';
 import { useGetPortalUnreadCountQuery } from '@/services/api/portalNotificationsApi';
 import { colors } from '@/theme/colors';
 import { officerHeaderTheme } from '@/theme/officerHeader';
 import { radius } from '@/theme/spacing';
 
 export function OfficerNotificationBell() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<ParamListBase>>();
   const { data: unread = 0 } = useGetPortalUnreadCountQuery();
 
   const openNotifications = useCallback(() => {
-    navigation.dispatch(DrawerActions.jumpTo('NotificationsStack'));
+    navigateToOfficerSettingsNotifications(navigation);
   }, [navigation]);
 
   return (

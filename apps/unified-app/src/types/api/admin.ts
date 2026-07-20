@@ -167,6 +167,40 @@ export type CollectionAssignmentsResponse = {
   limit: number;
 };
 
+export type CollectionAssignmentHistoryRow = {
+  id: string;
+  customerId: string;
+  customerName: string;
+  customerAccountId: string;
+  customerPhone: string | null;
+  assignedOfficerId: string | null;
+  assignedOfficerName: string | null;
+  claimedByOfficerId: string | null;
+  claimedByOfficerName: string | null;
+  status: string;
+  actorRole: string | null;
+  notes: string | null;
+  createdAt: string;
+};
+
+export type CollectionHistorySortKey = 'newest' | 'oldest';
+
+export type CollectionHistoryParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  officerFilter?: 'all' | 'unassigned' | 'open_pool' | string;
+  statusFilter?: 'all' | 'inactive' | 'open' | 'assigned' | 'claimed' | 'collected' | 'failed';
+  sortKey?: CollectionHistorySortKey;
+};
+
+export type CollectionAssignmentHistoryResponse = {
+  items: CollectionAssignmentHistoryRow[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
 export type CreateAdminUserInput = {
   firstName: string;
   middleName?: string;

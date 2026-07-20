@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   AdminScreenLayout,
@@ -19,6 +19,7 @@ import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
 import { radius, spacing } from '@/theme/spacing';
+import { confirmDialog, notifyDialog, promptDialog } from '@/utils/confirmDialog';
 import { formatCustomerAccountId } from '@/utils/customerAccount';
 import { queryErrorMessage } from '@/utils/queryError';
 
@@ -129,63 +130,38 @@ export function PlanChangeRequestsScreen(_props: Props) {
   const pendingCount = useMemo(() => rows.filter((r) => r.status === 'pending').length, [rows]);
 
   const handleApprove = useCallback(
-    (id: string) => {
-      Alert.alert('Approve plan change', 'Apply this plan to the customer subscription?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Approve',
-          onPress: () => {
-            void review({ id, action: 'approve' })
-              .unwrap()
-              .catch((e: unknown) => {
-                Alert.alert('Could not approve', queryErrorMessage(e));
-              });
-          },
-        },
-      ]);
+    async (id: string) => {
+      const ok = await confirmDialog({
+        title: 'Approve plan request',
+        message: 'Approve this request? The customer will then be able to pay to activate the plan.',
+        confirmLabel: 'Approve',
+      });
+      if (!ok) return;
+      try {
+        await review({ id, action: 'approve' }).unwrap();
+        notifyDialog('Approved', 'The customer can now pay to activate the plan.');
+      } catch (e) {
+        notifyDialog('Could not approve', queryErrorMessage(e));
+      }
     },
     [review],
   );
 
   const handleReject = useCallback(
-    (id: string) => {
-      if (Alert.prompt) {
-        Alert.prompt(
-          'Reject plan change',
-          'Optional note for the customer',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Reject',
-              style: 'destructive',
-              onPress: (notes?: string) => {
-                void review({ id, action: 'reject', adminNotes: notes })
-                  .unwrap()
-                  .catch((e: unknown) => {
-                    Alert.alert('Could not reject', queryErrorMessage(e));
-                  });
-              },
-            },
-          ],
-          'plain-text',
-        );
-        return;
+    async (id: string) => {
+      const { confirmed, value } = await promptDialog({
+        title: 'Reject plan request',
+        message: 'Optional note for the customer',
+        confirmLabel: 'Reject',
+        destructive: true,
+      });
+      if (!confirmed) return;
+      try {
+        await review({ id, action: 'reject', adminNotes: value ?? undefined }).unwrap();
+        notifyDialog('Rejected', 'The request was declined.');
+      } catch (e) {
+        notifyDialog('Could not reject', queryErrorMessage(e));
       }
-
-      Alert.alert('Reject plan change', 'Decline this request?', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: () => {
-            void review({ id, action: 'reject' })
-              .unwrap()
-              .catch((e: unknown) => {
-                Alert.alert('Could not reject', queryErrorMessage(e));
-              });
-          },
-        },
-      ]);
     },
     [review],
   );

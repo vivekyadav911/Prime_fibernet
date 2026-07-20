@@ -1,9 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
-import { AdminScreenLayout, RoleGuard, StatusBadge } from '@/components/admin';
+import { AdminScreenLayout, RoleGuard, StatusBadge, useAdminPermission, AvatarIcon } from '@/components/admin';
+import { AdminShiftEditModal } from '@/components/admin/attendance/AdminShiftEditModal';
 import { DismissKeyboardScrollView } from '@/components/common/DismissKeyboardScrollView';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import { LiveOfficerMap } from '@/components/map/LiveOfficerMap.web';
@@ -17,11 +28,15 @@ import type { AdminAttendanceStackParamList } from '@/types/navigation';
 import { adminColors } from '@/theme/admin';
 import { adminScreenStyles } from '@/theme/adminScreenStyles';
 import { colors } from '@/theme/colors';
+import { pageLayout } from '@/theme/pageLayout';
 import { radius, spacing } from '@/theme/spacing';
 import { formatSyncLabel } from '@/utils/dateUtils';
 import { queryErrorMessage } from '@/utils/queryError';
 
-const TOOLBAR_INSET = 72;
+/** Below this height the collapsed map is crushed under the summary + toolbar. */
+const SHORT_VIEWPORT_H = 700;
+
+const TOOLBAR_BASE = 72;
 
 type Props = NativeStackScreenProps<AdminAttendanceStackParamList, 'LiveAttendance'>;
 
@@ -81,12 +96,16 @@ function LiveOperationsSummary({
   exceptions,
   activeGeofences,
   lastSync,
+  refreshing,
+  onRefresh,
 }: {
   checkedIn: number;
   inGeofence: number;
   exceptions: number;
   activeGeofences: number;
   lastSync?: string;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }) {
   const sync = formatSyncLabel(lastSync);
 
@@ -102,6 +121,27 @@ function LiveOperationsSummary({
             {sync.label}
           </Text>
           {sync.isStale ? <Text style={styles.staleHint}>Data may be stale</Text> : null}
+          {onRefresh ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Refresh live attendance"
+              hitSlop={8}
+              disabled={refreshing}
+              style={({ pressed }) => [
+                styles.refreshBtn,
+                pressed && styles.refreshBtnPressed,
+                refreshing && styles.refreshBtnDisabled,
+              ]}
+              onPress={onRefresh}
+            >
+              <Ionicons
+                name="refresh"
+                size={16}
+                color={adminColors.primary}
+              />
+              <Text style={styles.refreshBtnText}>{refreshing ? 'Refreshing…' : 'Refresh'}</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
@@ -179,21 +219,39 @@ function AttendanceKpiStrip({
   );
 }
 
-function AttendanceRecordCard({ item }: { item: AttendanceRecord }) {
+function AttendanceRecordCard({
+  item,
+  canEdit,
+  onEdit,
+  onSelect,
+  selected,
+}: {
+  item: AttendanceRecord;
+  canEdit: boolean;
+  onEdit: (record: AttendanceRecord) => void;
+  onSelect: (officerId: string) => void;
+  selected: boolean;
+}) {
   const isCompleted = Boolean(item.checkOutTime);
   const isOutsideZone = item.checkInMethod === 'approved_outside';
   const needsApproval = Boolean(item.approvalRequestId);
 
   return (
-    <View style={styles.recordCard}>
+    <Pressable
+      style={[styles.recordCard, selected && styles.recordCardSelected]}
+      onPress={() => onSelect(item.officerId)}
+    >
       <View style={styles.recordHeader}>
-        <Text style={styles.recordName}>{item.officerName || 'Unknown officer'}</Text>
-        <View style={styles.recordChipRow}>
-          <StatusBadge status={item.status} />
-          {item.isLate ? <OperationalChip label="Late" tone="warning" /> : null}
-          {isCompleted ? <OperationalChip label="Completed" tone="success" /> : null}
-          {needsApproval ? <OperationalChip label="Pending approval" tone="warning" /> : null}
-          {isOutsideZone ? <OperationalChip label="Outside geofence" tone="error" /> : null}
+        <AvatarIcon name={item.officerName || 'Officer'} uri={item.officerAvatar} size={40} />
+        <View style={styles.recordHeaderText}>
+          <Text style={styles.recordName}>{item.officerName || 'Unknown officer'}</Text>
+          <View style={styles.recordChipRow}>
+            <StatusBadge status={item.status} />
+            {item.isLate ? <OperationalChip label="Late" tone="warning" /> : null}
+            {isCompleted ? <OperationalChip label="Completed" tone="success" /> : null}
+            {needsApproval ? <OperationalChip label="Pending approval" tone="warning" /> : null}
+            {isOutsideZone ? <OperationalChip label="Outside geofence" tone="error" /> : null}
+          </View>
         </View>
       </View>
 
@@ -227,7 +285,19 @@ function AttendanceRecordCard({ item }: { item: AttendanceRecord }) {
       {item.lateByMinutes != null && item.lateByMinutes > 0 ? (
         <Text style={styles.recordLateNote}>Late by {item.lateByMinutes} min</Text>
       ) : null}
-    </View>
+
+      {canEdit ? (
+        <Pressable
+          style={styles.editBtn}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            onEdit(item);
+          }}
+        >
+          <Text style={styles.editBtnText}>Edit shift</Text>
+        </Pressable>
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -248,6 +318,23 @@ function RecordsEmptyState({ onAddGeofence }: { onAddGeofence: () => void }) {
 
 /** Web: Leaflet map + list-based live attendance (react-native-maps is native-only). */
 export function LiveAttendanceScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const { height: windowH, width: windowW } = useWindowDimensions();
+  const shortViewport = windowH < SHORT_VIEWPORT_H;
+  // Screen already applies insets.bottom; toolbar needs its own content pad (was missing on web).
+  const toolbarPadBottom = spacing.md;
+  const toolbarInset = TOOLBAR_BASE + toolbarPadBottom;
+  const canEditShifts = useAdminPermission('attendance.edit');
+  const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
+  const [focusOfficerId, setFocusOfficerId] = useState<string | null>(null);
+  const [mapExpanded, setMapExpanded] = useState(shortViewport);
+  const [userToggledMap, setUserToggledMap] = useState(false);
+
+  // Keep map usable on short mobile viewports unless the user explicitly minimized.
+  useEffect(() => {
+    if (userToggledMap) return;
+    setMapExpanded(shortViewport);
+  }, [shortViewport, userToggledMap]);
   const {
     data: locations,
     isLoading: locationsLoading,
@@ -262,7 +349,7 @@ export function LiveAttendanceScreen({ navigation }: Props) {
     error: attendanceQueryError,
     refetch: refetchAttendance,
   } = useAllAttendanceToday();
-  const { data: geofences } = useGeofences();
+  const { data: geofences, refetch: refetchGeofences } = useGeofences();
 
   const [userRefreshing, setUserRefreshing] = useState(false);
   const [lastFetchAt, setLastFetchAt] = useState<string | undefined>();
@@ -323,11 +410,30 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 
   const handleRefresh = useCallback(() => {
     setUserRefreshing(true);
-    void Promise.all([refetchAttendance(), refetchLocations()]).finally(() => {
+    void Promise.all([
+      refetchAttendance(),
+      refetchLocations(),
+      refetchGeofences(),
+    ]).finally(() => {
       setLastFetchAt(new Date().toISOString());
       setUserRefreshing(false);
     });
-  }, [refetchAttendance, refetchLocations]);
+  }, [refetchAttendance, refetchGeofences, refetchLocations]);
+
+  const handleOfficerFocus = useCallback((officerId: string) => {
+    setFocusOfficerId(officerId);
+  }, []);
+
+  const handleOfficerCardSelect = useCallback((officerId: string) => {
+    setFocusOfficerId(officerId);
+    setUserToggledMap(true);
+    setMapExpanded(true);
+  }, []);
+
+  const handleToggleMapExpanded = useCallback(() => {
+    setUserToggledMap(true);
+    setMapExpanded((prev) => !prev);
+  }, []);
 
   if (isLoading) {
     return (
@@ -346,66 +452,109 @@ export function LiveAttendanceScreen({ navigation }: Props) {
   }
 
   const attendanceRows = attendance ?? [];
+  const liveLocations = locations ?? [];
+
+  const mapProps = {
+    locations: liveLocations,
+    geofences: geofences ?? [],
+    siteLabel: opsSummary.siteLabel,
+    lastSync: opsSummary.lastSync,
+    inGeofenceCount: opsSummary.inGeofence,
+    geofenceActive: opsSummary.geofenceActive,
+    focusOfficerId,
+    onOfficerFocus: handleOfficerFocus,
+    onToggleExpanded: handleToggleMapExpanded,
+  };
 
   return (
     <RoleGuard requiredPermission="attendance.view">
       <AdminScreenLayout padded={false}>
         <View style={styles.pageWrap}>
-          <DismissKeyboardScrollView
-            style={styles.flex}
-            contentContainerStyle={[
-              adminScreenStyles.listContent,
-              styles.scrollContent,
-              { paddingBottom: TOOLBAR_INSET },
-            ]}
-            refreshControl={
-              <RefreshControl refreshing={userRefreshing} onRefresh={handleRefresh} />
-            }
-          >
-            <LiveOperationsSummary
-              checkedIn={opsSummary.checkedIn}
-              inGeofence={opsSummary.inGeofence}
-              exceptions={opsSummary.exceptions}
-              activeGeofences={opsSummary.activeGeofences}
-              lastSync={opsSummary.lastSync}
-            />
-
-            <LiveOfficerMap
-              locations={locations ?? []}
-              geofences={geofences ?? []}
-              siteLabel={opsSummary.siteLabel}
-              lastSync={opsSummary.lastSync}
-              inGeofenceCount={opsSummary.inGeofence}
-              geofenceActive={opsSummary.geofenceActive}
-            />
-
-            <AttendanceKpiStrip
-              present={counts.present}
-              absent={counts.absent}
-              late={counts.late}
-            />
-
-            <View style={styles.recordsSectionHeader}>
-              <Text style={styles.recordsSectionTitle}>Live records</Text>
-              <Text style={styles.recordsSectionCount}>
-                {attendanceRows.length} officer{attendanceRows.length === 1 ? '' : 's'}
-              </Text>
-            </View>
-
-            {attendanceRows.length === 0 ? (
-              <RecordsEmptyState
-                onAddGeofence={() => navigation.navigate('CreateGeofence', {})}
-              />
-            ) : (
-              <View style={styles.recordsList}>
-                {attendanceRows.map((item) => (
-                  <AttendanceRecordCard key={item.id} item={item} />
-                ))}
+          {mapExpanded ? (
+            <View style={styles.expandedMapShell}>
+              <View style={styles.expandedMapToolbar}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Refresh live attendance"
+                  hitSlop={8}
+                  disabled={userRefreshing}
+                  style={({ pressed }) => [
+                    styles.refreshBtn,
+                    pressed && styles.refreshBtnPressed,
+                    userRefreshing && styles.refreshBtnDisabled,
+                  ]}
+                  onPress={handleRefresh}
+                >
+                  <Ionicons name="refresh" size={16} color={adminColors.primary} />
+                  <Text style={styles.refreshBtnText}>
+                    {userRefreshing ? 'Refreshing…' : 'Refresh'}
+                  </Text>
+                </Pressable>
               </View>
-            )}
-          </DismissKeyboardScrollView>
+              <LiveOfficerMap {...mapProps} expanded />
+            </View>
+          ) : (
+            <DismissKeyboardScrollView
+              style={styles.flex}
+              contentContainerStyle={[
+                adminScreenStyles.listContent,
+                styles.scrollContent,
+                { paddingBottom: toolbarInset },
+              ]}
+              // RefreshControl is a no-op on react-native-web — Refresh button below is the web path.
+              refreshControl={
+                Platform.OS !== 'web' ? (
+                  <RefreshControl refreshing={userRefreshing} onRefresh={handleRefresh} />
+                ) : undefined
+              }
+            >
+              <LiveOperationsSummary
+                checkedIn={opsSummary.checkedIn}
+                inGeofence={opsSummary.inGeofence}
+                exceptions={opsSummary.exceptions}
+                activeGeofences={opsSummary.activeGeofences}
+                lastSync={opsSummary.lastSync}
+                refreshing={userRefreshing}
+                onRefresh={handleRefresh}
+              />
 
-          <View style={styles.toolbar}>
+              <LiveOfficerMap {...mapProps} expanded={false} />
+
+              <AttendanceKpiStrip
+                present={counts.present}
+                absent={counts.absent}
+                late={counts.late}
+              />
+
+              <View style={styles.recordsSectionHeader}>
+                <Text style={styles.recordsSectionTitle}>Live records</Text>
+                <Text style={styles.recordsSectionCount}>
+                  {attendanceRows.length} officer{attendanceRows.length === 1 ? '' : 's'}
+                </Text>
+              </View>
+
+              {attendanceRows.length === 0 ? (
+                <RecordsEmptyState
+                  onAddGeofence={() => navigation.navigate('CreateGeofence', {})}
+                />
+              ) : (
+                <View style={styles.recordsList}>
+                  {attendanceRows.map((item) => (
+                    <AttendanceRecordCard
+                      key={item.id}
+                      item={item}
+                      canEdit={canEditShifts}
+                      onEdit={setEditingRecord}
+                      onSelect={handleOfficerCardSelect}
+                      selected={item.officerId === focusOfficerId}
+                    />
+                  ))}
+                </View>
+              )}
+            </DismissKeyboardScrollView>
+          )}
+
+          <View style={[styles.toolbar, { paddingBottom: toolbarPadBottom }]}>
             <Pressable
               style={({ pressed }) => [styles.toolbarBtn, pressed && styles.toolbarBtnPressed]}
               onPress={() => navigation.navigate('GeofenceManagement')}
@@ -426,6 +575,13 @@ export function LiveAttendanceScreen({ navigation }: Props) {
             </Pressable>
           </View>
         </View>
+
+        <AdminShiftEditModal
+          visible={editingRecord != null}
+          record={editingRecord}
+          onClose={() => setEditingRecord(null)}
+          onSaved={() => void refetchAttendance()}
+        />
       </AdminScreenLayout>
     </RoleGuard>
   );
@@ -434,6 +590,20 @@ export function LiveAttendanceScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   pageWrap: { flex: 1 },
   flex: { flex: 1 },
+  expandedMapShell: {
+    flex: 1,
+    minHeight: 0,
+  },
+  expandedMapToolbar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: adminColors.cardBg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderDefault,
+    zIndex: 1200,
+  },
   scrollContent: {
     flexGrow: 1,
     gap: spacing.md,
@@ -484,6 +654,30 @@ const styles = StyleSheet.create({
     color: adminColors.badgePending,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+  },
+  refreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: adminColors.primary,
+    backgroundColor: colors.surfaceWhite,
+    minHeight: 32,
+  },
+  refreshBtnPressed: {
+    backgroundColor: adminColors.primaryTint,
+  },
+  refreshBtnDisabled: {
+    opacity: 0.6,
+  },
+  refreshBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: adminColors.primary,
   },
   summaryHelper: {
     fontSize: 13,
@@ -635,7 +829,21 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: spacing.sm,
   },
-  recordHeader: { gap: spacing.xs },
+  recordCardSelected: {
+    borderColor: adminColors.primary,
+    borderWidth: 1.5,
+    backgroundColor: adminColors.primaryTint,
+  },
+  recordHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  recordHeaderText: {
+    flex: 1,
+    gap: spacing.xs,
+    minWidth: 0,
+  },
   recordName: {
     fontSize: 17,
     fontWeight: '700',
@@ -698,6 +906,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: adminColors.badgePending,
   },
+  editBtn: {
+    alignSelf: 'flex-start',
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
+  },
+  editBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: adminColors.primary,
+  },
   recordsEmpty: {
     backgroundColor: adminColors.cardBg,
     borderRadius: CARD_RADIUS,
@@ -736,10 +955,12 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: 'row',
     alignItems: 'stretch',
+    paddingHorizontal: pageLayout.pagePadding,
     paddingTop: spacing.sm,
     gap: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderDefault,
+    backgroundColor: adminColors.cardBg,
   },
   toolbarBtn: {
     flex: 1,

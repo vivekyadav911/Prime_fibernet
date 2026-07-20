@@ -91,5 +91,7 @@ export type {
   CustomerTabParamList,
   OfficerDrawerParamList,
   OfficerStackParamList,
+  OfficerTabParamList,
+  OfficerShellScreenProps,
   RootStackParamList,
 } from './navigation';

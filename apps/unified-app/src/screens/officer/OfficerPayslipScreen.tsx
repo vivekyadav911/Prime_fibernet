@@ -2,9 +2,10 @@ import { useCallback } from 'react';
 import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button } from '@prime/ui';
-
+import { useOfficerPullToRefresh } from '@/hooks/officer/useOfficerPullToRefresh';
 import { PayslipTimesheetCalendar } from '@/components/payroll/PayslipTimesheetCalendar';
-import { ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import {ErrorState, SkeletonLoader} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
 import { useGetPayslipQuery } from '@/services/api/payrollApi';
 import { useMyPayslips } from '@/hooks/useMyPayslips';
 import { colors } from '@/theme/colors';
@@ -57,6 +58,7 @@ function PayslipCard({
 
 export function OfficerPayslipScreen({ navigation }: ListProps) {
   const { payslips, isLoading, isError, error, refetch, sharePayslip } = useMyPayslips();
+  const { refreshControl } = useOfficerPullToRefresh(refetch);
 
   const openPdf = useCallback(
     (item: Payslip) => {
@@ -82,36 +84,37 @@ export function OfficerPayslipScreen({ navigation }: ListProps) {
 
   if (isLoading) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <SkeletonLoader rows={6} showAvatar />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   if (isError) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   if (!payslips.length) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>No payslips yet</Text>
           <Text style={styles.emptySub}>
             Approved payslips will appear here once payroll is finalized.
           </Text>
         </View>
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   return (
-    <ScreenWrapper scrollable={false} padded={false}>
+    <OfficerScreenWrapper scrollable={false} padded={false}>
       <FlatList
+        refreshControl={refreshControl} 
         data={payslips}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
@@ -124,7 +127,7 @@ export function OfficerPayslipScreen({ navigation }: ListProps) {
           />
         )}
       />
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 
@@ -154,17 +157,17 @@ export function OfficerPayslipDetailScreen({ route, navigation }: DetailProps) {
 
   if (isLoading) {
     return (
-      <ScreenWrapper>
+      <OfficerScreenWrapper onRefresh={refetch}>
         <SkeletonLoader rows={10} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   if (isError || !payslip) {
     return (
-      <ScreenWrapper>
+      <OfficerScreenWrapper onRefresh={refetch}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
@@ -172,7 +175,7 @@ export function OfficerPayslipDetailScreen({ route, navigation }: DetailProps) {
   const periodYear = Number(payslip.payPeriodStart.slice(0, 4));
 
   return (
-    <ScreenWrapper>
+    <OfficerScreenWrapper onRefresh={refetch}>
       <View style={styles.detailHeader}>
         <Text style={styles.detailTitle}>{payslip.payPeriodLabel}</Text>
         <Text style={styles.detailNet}>{formatCurrencyInrPrecise(payslip.netPay)}</Text>
@@ -205,7 +208,7 @@ export function OfficerPayslipDetailScreen({ route, navigation }: DetailProps) {
       ) : (
         <Text style={styles.noPdfDetail}>PDF will be available after admin generates it.</Text>
       )}
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 

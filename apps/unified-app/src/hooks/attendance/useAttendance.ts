@@ -23,6 +23,7 @@ import type { ApprovalType, AttendanceRecord, Coordinates } from '@/types/attend
 import { getMonthIsoRange } from '@/utils/attendanceCalendarGrid';
 import {
   countAttendanceStatuses,
+  mapRecordsToProvisionalStatusRows,
   type AttendanceStatusDayRow,
 } from '@/utils/attendanceStatus';
 
@@ -53,25 +54,44 @@ export function useOfficerMonthAttendance(month: number, year: number) {
   const statusRows = statusQuery.data ?? [];
   const records = recordsQuery.data ?? [];
 
+  const mergedStatusRows = useMemo(() => {
+    const byDate = new Map<string, AttendanceStatusDayRow>();
+    for (const row of statusRows) {
+      byDate.set(row.shiftDate, row);
+    }
+    for (const record of records) {
+      if (!byDate.has(record.date)) {
+        const [provisional] = mapRecordsToProvisionalStatusRows([record]);
+        if (provisional) byDate.set(record.date, provisional);
+      }
+    }
+    return [...byDate.values()].sort((a, b) => a.shiftDate.localeCompare(b.shiftDate));
+  }, [records, statusRows]);
+
   const recordsByDate = useMemo(() => {
     const map = new Map<string, AttendanceRecord>();
     records.forEach((record) => map.set(record.date, record));
     return map;
   }, [records]);
 
-  const counts = useMemo(() => countAttendanceStatuses(statusRows), [statusRows]);
+  const counts = useMemo(() => countAttendanceStatuses(mergedStatusRows), [mergedStatusRows]);
 
   const recentStatusRows = useMemo(
     () =>
-      [...statusRows]
-        .filter((row) => row.status !== 'not_yet_recorded' || row.checkInTime)
+      [...mergedStatusRows]
+        .filter(
+          (row) =>
+            row.status !== 'not_yet_recorded' ||
+            row.checkInTime ||
+            !row.isScheduledWorkingDay,
+        )
         .sort((a, b) => b.shiftDate.localeCompare(a.shiftDate)),
-    [statusRows],
+    [mergedStatusRows],
   );
 
   return {
     officerId,
-    statusRows,
+    statusRows: mergedStatusRows,
     records,
     recordsByDate,
     counts,
@@ -122,7 +142,7 @@ export function useRequestApproval() {
       reason: string;
       coords: Coordinates;
       photoProof?: string;
-      date: string;
+      date?: string;
       geofenceId?: string;
     }) => attendanceService.requestOutOfZoneApproval(payload),
     [],

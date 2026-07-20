@@ -27,6 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { route: 'Appearance', label: 'Appearance', icon: '🎨' },
   { route: 'System', label: 'System', icon: '⚙️' },
   { route: 'BackupExport', label: 'Backup & Export', icon: '💾' },
+  { route: 'DataImport', label: 'Data Import', icon: '📥' },
   { route: 'AuditLogs', label: 'Audit Logs', icon: '📜' },
 ];
 

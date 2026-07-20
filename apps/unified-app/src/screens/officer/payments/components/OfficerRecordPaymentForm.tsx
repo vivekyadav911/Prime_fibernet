@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { SelectCustomerModal } from '@/components/TicketPortal/SelectCustomerModal';
 import { Button } from '@prime/ui';
 import { DismissKeyboardScrollView } from '@/components/common';
+import { useOfficerPullToRefresh } from '@/hooks/officer';
 import {
   useGetBankAccountsQuery,
   useRecordManualPaymentMutation,
@@ -198,9 +199,11 @@ export function OfficerRecordPaymentForm({ onSuccess, onCancel }: Props) {
     [customer, onSuccess, recordPayment],
   );
 
+  const { refreshControl } = useOfficerPullToRefresh();
+
   return (
     <>
-      <DismissKeyboardScrollView contentContainerStyle={styles.content}>
+      <DismissKeyboardScrollView contentContainerStyle={styles.content} refreshControl={refreshControl}>
         <Text style={styles.sectionTitle}>Customer</Text>
         <Button
           label={

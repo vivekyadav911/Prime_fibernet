@@ -45,6 +45,13 @@ function ensureChannel(dispatch: ReturnType<typeof useAppDispatch>): RealtimeCha
     )
     .on(
       'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'collection_assignment_events' },
+      () => {
+        dispatch(collectionAssignmentsApi.util.invalidateTags(['CollectionAssignments']));
+      },
+    )
+    .on(
+      'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'payments' },
       () => {
         dispatch(paymentCollectionApi.util.invalidateTags(['Payments', 'Analytics']));

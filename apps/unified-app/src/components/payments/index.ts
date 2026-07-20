@@ -16,4 +16,5 @@ export { PaymentStatusBadge } from './StatusBadge';
 export {
   CollectionAssignmentsFilterSheet,
   countActiveCollectionFilters,
+  countActiveHistoryFilters,
 } from './CollectionAssignmentsFilterSheet';

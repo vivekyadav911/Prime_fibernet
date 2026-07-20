@@ -7,7 +7,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 
 type BulkBody = {
-  invoiceType: 'non_gst' | 'gst';
+  invoiceType?: 'non_gst' | 'gst';
   channel: 'email' | 'whatsapp';
   invoiceIds?: string[];
 };
@@ -17,21 +17,29 @@ serve(async (req) => {
 
   try {
     const body = (await req.json()) as BulkBody;
+    if (!body.channel) throw new Error('channel required');
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const hasIds = Boolean(body.invoiceIds?.length);
 
     let query = supabase
       .from('invoices')
-      .select('id, invoice_number, customer_email, recipient_email, customer_phone, recipient_phone, delivery_status, invoice_type')
-      .eq('delivery_status', 'pending');
+      .select(
+        'id, invoice_number, customer_email, recipient_email, customer_phone, recipient_phone, delivery_status, invoice_type',
+      );
 
-    if (body.invoiceType === 'non_gst') {
-      query = query.eq('invoice_type', 'non_gst');
+    if (hasIds) {
+      // Explicit selection: allow draft + pending (already-sent are skipped).
+      query = query
+        .in('id', body.invoiceIds!)
+        .in('delivery_status', ['pending', 'draft']);
     } else {
-      query = query.in('invoice_type', ['gst', 'custom_gst']);
-    }
-
-    if (body.invoiceIds?.length) {
-      query = query.in('id', body.invoiceIds);
+      query = query.eq('delivery_status', 'pending');
+      if (body.invoiceType === 'non_gst') {
+        query = query.eq('invoice_type', 'non_gst');
+      } else {
+        query = query.in('invoice_type', ['gst', 'custom_gst']);
+      }
     }
 
     const { data: invoices, error } = await query.limit(100);

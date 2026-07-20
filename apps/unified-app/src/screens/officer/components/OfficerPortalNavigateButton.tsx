@@ -17,6 +17,7 @@ type OfficerPortalNavigateButtonProps = {
   variant?: 'primary' | 'ghost';
   showFixPinLink?: boolean;
   onLocationUpdated?: (location: { latitude: number; longitude: number; address: string }) => void;
+  onSheetVisibilityChange?: (visible: boolean) => void;
 };
 
 export function OfficerPortalNavigateButton({
@@ -27,6 +28,7 @@ export function OfficerPortalNavigateButton({
   variant,
   showFixPinLink = false,
   onLocationUpdated,
+  onSheetVisibilityChange,
 }: OfficerPortalNavigateButtonProps) {
   const [sheetVisible, setSheetVisible] = useState(false);
 
@@ -38,7 +40,13 @@ export function OfficerPortalNavigateButton({
 
   const openCorrectionSheet = useCallback(() => {
     setSheetVisible(true);
-  }, []);
+    onSheetVisibilityChange?.(true);
+  }, [onSheetVisibilityChange]);
+
+  const closeCorrectionSheet = useCallback(() => {
+    setSheetVisible(false);
+    onSheetVisibilityChange?.(false);
+  }, [onSheetVisibilityChange]);
 
   const handleNavigate = useCallback(async () => {
     const result = await navigateToAddress(
@@ -52,18 +60,11 @@ export function OfficerPortalNavigateButton({
   }, [item.customerAddress, openCorrectionSheet, usableCoords]);
 
   const handleSaved = useCallback(
-    async (location: { latitude: number; longitude: number; address: string }) => {
+    (location: { latitude: number; longitude: number; address: string }) => {
+      // ponytail: Fix pin is a location edit, not a navigate action
       onLocationUpdated?.(location);
-      const result = await navigateToAddress(
-        location.address,
-        location.latitude,
-        location.longitude,
-      );
-      if (!result.ok) {
-        openCorrectionSheet();
-      }
     },
-    [onLocationUpdated, openCorrectionSheet],
+    [onLocationUpdated],
   );
 
   return (
@@ -86,13 +87,13 @@ export function OfficerPortalNavigateButton({
       </View>
       <OfficerLocationSheet
         visible={sheetVisible}
-        onClose={() => setSheetVisible(false)}
+        onClose={closeCorrectionSheet}
         itemId={item.id}
         kind={item.kind}
         initialAddress={item.customerAddress}
         initialLatitude={usableCoords?.latitude ?? latitude}
         initialLongitude={usableCoords?.longitude ?? longitude}
-        onSaved={(location) => void handleSaved(location)}
+        onSaved={handleSaved}
       />
     </>
   );

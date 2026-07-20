@@ -2351,6 +2351,109 @@ export type Database = {
           },
         ]
       }
+      import_history: {
+        Row: {
+          batch_id: string
+          created_at: string
+          entity_type: string
+          field_level_diff: Json | null
+          file_name: string | null
+          id: string
+          performed_by: string | null
+          rows_errored: number
+          rows_inserted: number
+          rows_unchanged: number
+          rows_updated: number
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          entity_type: string
+          field_level_diff?: Json | null
+          file_name?: string | null
+          id?: string
+          performed_by?: string | null
+          rows_errored?: number
+          rows_inserted?: number
+          rows_unchanged?: number
+          rows_updated?: number
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          entity_type?: string
+          field_level_diff?: Json | null
+          file_name?: string | null
+          id?: string
+          performed_by?: string | null
+          rows_errored?: number
+          rows_inserted?: number
+          rows_unchanged?: number
+          rows_updated?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_history_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_staging: {
+        Row: {
+          action: string | null
+          created_at: string
+          diff: Json | null
+          entity_type: string
+          error_message: string | null
+          file_name: string | null
+          id: string
+          import_batch_id: string
+          match_key: string | null
+          performed_by: string | null
+          raw_row: Json
+          row_number: number
+        }
+        Insert: {
+          action?: string | null
+          created_at?: string
+          diff?: Json | null
+          entity_type: string
+          error_message?: string | null
+          file_name?: string | null
+          id?: string
+          import_batch_id: string
+          match_key?: string | null
+          performed_by?: string | null
+          raw_row: Json
+          row_number: number
+        }
+        Update: {
+          action?: string | null
+          created_at?: string
+          diff?: Json | null
+          entity_type?: string
+          error_message?: string | null
+          file_name?: string | null
+          id?: string
+          import_batch_id?: string
+          match_key?: string | null
+          performed_by?: string | null
+          raw_row?: Json
+          row_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_staging_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_assignment_requests: {
         Row: {
           created_at: string | null
@@ -7976,9 +8079,16 @@ export type Database = {
         Args: { p_customer_id: string }
         Returns: Json
       }
+      claim_officer_ticket: {
+        Args: { p_ticket_id: string }
+        Returns: Json
+      }
+      commit_import_batch: { Args: { p_batch_id: string }; Returns: Json }
       count_collection_open_pool: { Args: never; Returns: number }
       current_customer_user_id: { Args: never; Returns: string }
       current_officer_id: { Args: never; Returns: string }
+      get_my_role: { Args: never; Returns: string }
+      get_admin_session_hours: { Args: never; Returns: number }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {

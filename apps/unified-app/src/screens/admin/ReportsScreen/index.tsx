@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AdminScreenLayout, AdminKPICard, DateRangePicker, ExportButton, RoleGuard, SectionCard } from '@/components/admin';
 import { ErrorState, SkeletonLoader } from '@/components/common';
 import {
-  useExportReportMutation,
+  useExportSettingsXlsxMutation,
   useGetOfficerPerformanceReportQuery,
   useGetPlanDistributionQuery,
   useGetReportKpisQuery,
@@ -16,6 +16,9 @@ import { adminDesign } from '@/theme/adminDesign';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import { queryErrorMessage } from '@/utils/queryError';
+import { shareBlob } from '@/utils/shareFile';
+import { useAppDispatch } from '@/store/hooks';
+import { enqueueToast } from '@/store/slices/uiSlice';
 
 export function ReportsScreen() {
   const [from, setFrom] = useState('');
@@ -25,7 +28,23 @@ export function ReportsScreen() {
   const { data: plans } = useGetPlanDistributionQuery();
   const { data: officers } = useGetOfficerPerformanceReportQuery({ from, to });
   const { data: requests } = useGetRequestBreakdownQuery({ from, to });
-  const [exportReport] = useExportReportMutation();
+  const [exportXlsx] = useExportSettingsXlsxMutation();
+  const dispatch = useAppDispatch();
+
+  const runExport = async () => {
+    try {
+      const result = await exportXlsx({ action: 'export_reports' }).unwrap();
+      await shareBlob(result.blob, result.filename);
+    } catch (e) {
+      dispatch(
+        enqueueToast({
+          id: Date.now().toString(),
+          type: 'error',
+          message: queryErrorMessage(e),
+        }),
+      );
+    }
+  };
 
   if (isLoading) {
     return (
@@ -90,19 +109,7 @@ export function ReportsScreen() {
         </SectionCard>
 
         <View style={styles.exportRow}>
-          <ExportButton
-            format="pdf"
-            onExport={async () => {
-              await exportReport({ type: 'pdf', from, to }).unwrap();
-            }}
-          />
-          <ExportButton
-            format="csv"
-            label="Export Excel"
-            onExport={async () => {
-              await exportReport({ type: 'excel', from, to }).unwrap();
-            }}
-          />
+          <ExportButton format="csv" label="Export Excel" onExport={runExport} />
         </View>
       </AdminScreenLayout>
     </RoleGuard>

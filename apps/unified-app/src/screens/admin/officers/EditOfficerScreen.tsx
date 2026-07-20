@@ -17,6 +17,7 @@ import {
   useGetOfficerProfileQuery,
   useGetOfficerRolesQuery,
   useUpdateOfficerContactMutation,
+  useUpdateOfficerLoginEmailMutation,
   useUpdateOfficerPersonalMutation,
   useUpdateOfficerRoleMutation,
 } from '@/store/api/endpoints';
@@ -48,6 +49,17 @@ function parseExpectedSalary(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+// Alert.alert renders nothing on react-native-web, so route messages through
+// the platform-native dialog everywhere.
+function notify(title: string, message: string) {
+  if (Platform.OS === 'web') {
+    // eslint-disable-next-line no-alert
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+}
+
 export function EditOfficerScreen({ route, navigation }: Props) {
   const { officerId, section = 'personal' } = route.params;
   const keyboardInset = useKeyboardBottomInset(spacing.lg);
@@ -61,6 +73,7 @@ export function EditOfficerScreen({ route, navigation }: Props) {
 
   const [updatePersonal, { isLoading: savingPersonal }] = useUpdateOfficerPersonalMutation();
   const [updateContact, { isLoading: savingContact }] = useUpdateOfficerContactMutation();
+  const [updateLoginEmail, { isLoading: savingEmail }] = useUpdateOfficerLoginEmailMutation();
   const [updateRole, { isLoading: savingRole }] = useUpdateOfficerRoleMutation();
 
   const [fullName, setFullName] = useState('');
@@ -154,6 +167,15 @@ export function EditOfficerScreen({ route, navigation }: Props) {
     const unsub = navigation.addListener('beforeRemove', (e) => {
       if (!dirty) return;
       e.preventDefault();
+      // Alert.alert buttons don't render on web, which would trap the user on
+      // this screen forever, so use the native confirm dialog there.
+      if (Platform.OS === 'web') {
+        // eslint-disable-next-line no-alert
+        if (window.confirm(officerStrings.form.unsavedMessage)) {
+          navigation.dispatch(e.data.action);
+        }
+        return;
+      }
       Alert.alert(officerStrings.form.unsavedTitle, officerStrings.form.unsavedMessage, [
         { text: officerStrings.form.stay, style: 'cancel' },
         { text: officerStrings.form.discard, style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
@@ -195,10 +217,23 @@ export function EditOfficerScreen({ route, navigation }: Props) {
   };
 
   const saveContact = async () => {
+    // The login email is the officer's Supabase Auth identity, so a change must
+    // go through the edge function (updates auth + mirror columns) rather than a
+    // plain officers.email write, which would leave them logging in with the old
+    // address. Do it first so nothing else is saved if the auth update fails.
+    const trimmedEmail = email.trim().toLowerCase();
+    const emailChanged = trimmedEmail !== (profile?.email ?? '').trim().toLowerCase();
+    let emailResult: { provisioned: boolean; generatedPassword: string | null } | null = null;
     try {
+      if (emailChanged) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+          notify('Invalid email', 'Enter a valid email address.');
+          return;
+        }
+        emailResult = await updateLoginEmail({ officerId, newEmail: trimmedEmail }).unwrap();
+      }
       await updateContact({
         id: officerId,
-        email,
         phone,
         alternatePhone,
         city,
@@ -215,9 +250,21 @@ export function EditOfficerScreen({ route, navigation }: Props) {
         emergencyContacts: [emergencyContact1, emergencyContact2],
       }).unwrap();
       setDirty(false);
-      Alert.alert('Saved', 'Contact and bank details updated.');
+      if (emailChanged && emailResult?.provisioned && emailResult.generatedPassword) {
+        notify(
+          'Login created',
+          `This officer had no login yet, so one was created.\n\nEmail: ${trimmedEmail}\nTemporary password: ${emailResult.generatedPassword}\n\nShare these with the officer. They can change the password after signing in.`,
+        );
+      } else {
+        notify(
+          'Saved',
+          emailChanged
+            ? 'Login email, contact and bank details updated. The officer signs in with the new email from now on.'
+            : 'Contact and bank details updated.',
+        );
+      }
     } catch (e) {
-      Alert.alert('Error', queryErrorMessage(e));
+      notify('Error', queryErrorMessage(e));
     }
   };
 
@@ -396,10 +443,11 @@ export function EditOfficerScreen({ route, navigation }: Props) {
                 <>
                   <SectionLabel title={officerStrings.detail.sections.contactInfo} />
                   <FormField
-                    label={officerStrings.detail.labels.email}
+                    label={`${officerStrings.detail.labels.email} (login)`}
                     value={email}
                     onChangeText={(v) => { setEmail(v); markDirty(); }}
                     autoCapitalize="none"
+                    keyboardType="email-address"
                   />
                   <FormField
                     label={officerStrings.detail.labels.phone}
@@ -471,7 +519,7 @@ export function EditOfficerScreen({ route, navigation }: Props) {
                   {renderEmergencyContact(2, emergencyContact2, setEmergencyContact2)}
 
                   <AdminButton
-                    label={savingContact ? 'Saving…' : officerStrings.form.save}
+                    label={savingContact || savingEmail ? 'Saving…' : officerStrings.form.save}
                     onPress={() => void saveContact()}
                   />
                 </>

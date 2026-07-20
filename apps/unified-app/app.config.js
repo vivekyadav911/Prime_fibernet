@@ -59,6 +59,7 @@ export default ({ config }) => ({
   ],
   android: {
     ...(config.android ?? {}),
+    softwareKeyboardLayoutMode: 'resize',
     intentFilters: [
       {
         action: 'VIEW',

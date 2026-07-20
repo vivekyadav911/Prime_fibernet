@@ -40,6 +40,16 @@ const GEOFENCE_SELECT = '*, geofence_officer_assignments(officer_id)';
 const OFFICER_EMBED = 'full_name, profile_photo_url';
 const ATTENDANCE_SELECT = `*, officers(${OFFICER_EMBED}), geofences(name)`;
 
+async function getAttendanceToday(client: {
+  rpc: (
+    fn: string,
+  ) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+}): Promise<string> {
+  const { data, error } = await client.rpc('company_local_today');
+  if (error || data == null) return getLocalDateString();
+  return String(data).slice(0, 10);
+}
+
 export const attendanceApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     // ─── Geofences (Admin) ───────────────────────────────────────────────────
@@ -149,7 +159,7 @@ export const attendanceApi = baseApi.injectEndpoints({
     toggleGeofence: builder.mutation<void, { id: string; isActive: boolean }>({
       query: ({ id, isActive }) => ({
         handler: async (client) => {
-          const { error } = await client
+          const { error, count } = await client
             .from('geofences')
             .update({ is_active: isActive, updated_at: new Date().toISOString() })
             .eq('id', id);
@@ -665,7 +675,7 @@ export const attendanceApi = baseApi.injectEndpoints({
       query: () => ({
         handler: async (client) => {
           const officerId = await getCurrentOfficerId(client);
-          const today = getLocalDateString();
+          const today = await getAttendanceToday(client);
           const { data, error } = await client
             .from('shifts')
             .select(ATTENDANCE_SELECT)
@@ -717,8 +727,24 @@ export const attendanceApi = baseApi.injectEndpoints({
       query: (body) => ({
         handler: async (client) => {
           const officerId = await getCurrentOfficerId(client);
-          const today = getLocalDateString();
+          const today = await getAttendanceToday(client);
           const now = new Date().toISOString();
+
+          const { data: existing, error: existingError } = await client
+            .from('shifts')
+            .select('id, check_in_time, check_out_time, status')
+            .eq('officer_id', officerId)
+            .eq('shift_date', today)
+            .maybeSingle();
+          if (existingError) throw existingError;
+          if (existing?.check_in_time && !existing.check_out_time) {
+            throw new Error('Already checked in for today');
+          }
+          if (existing?.check_out_time) {
+            throw new Error(
+              'SHIFT_ALREADY_COMPLETED:Maximum one attendance is allowed per day. Contact your admin or officers if there is an issue.',
+            );
+          }
 
           const { data, error } = await client
             .from('shifts')
@@ -751,7 +777,7 @@ export const attendanceApi = baseApi.injectEndpoints({
       query: (body) => ({
         handler: async (client) => {
           const officerId = await getCurrentOfficerId(client);
-          const today = getLocalDateString();
+          const today = await getAttendanceToday(client);
           const now = new Date().toISOString();
 
           const { data: active, error: findError } = await client
@@ -804,23 +830,89 @@ export const attendanceApi = baseApi.injectEndpoints({
       query: (body) => ({
         handler: async (client) => {
           const officerId = await getCurrentOfficerId(client);
+          const attendanceDate = body.date || (await getAttendanceToday(client));
+
+          // One attendance per day — block new check-in approvals after shift completed.
+          if (
+            body.type === 'out_of_zone_checkin' ||
+            body.type === 'late_checkin' ||
+            body.type === 'second_shift_checkin'
+          ) {
+            const { data: todayShift } = await client
+              .from('shifts')
+              .select('id, check_in_time, check_out_time, status')
+              .eq('officer_id', officerId)
+              .eq('shift_date', attendanceDate)
+              .maybeSingle();
+            if (todayShift?.check_out_time || todayShift?.status === 'completed') {
+              throw new Error(
+                'SHIFT_ALREADY_COMPLETED:Maximum one attendance is allowed per day. Contact your admin or officers if there is an issue.',
+              );
+            }
+          }
+
+          const { data: existingPending } = await client
+            .from('attendance_approval_requests')
+            .select('id')
+            .eq('officer_id', officerId)
+            .eq('type', body.type)
+            .eq('attendance_date', attendanceDate)
+            .eq('status', 'pending')
+            .maybeSingle();
+          if (existingPending?.id) {
+            return fetchApprovalRequestById(client, existingPending.id as string);
+          }
+
           const { data, error } = await client
             .from('attendance_approval_requests')
             .insert({
               officer_id: officerId,
-              geofence_id: body.geofenceId,
+              geofence_id: body.geofenceId ?? null,
               type: body.type,
+              status: 'pending',
               requested_latitude: body.coords.latitude,
               requested_longitude: body.coords.longitude,
-              distance_from_fence: body.distanceFromFence,
+              distance_from_fence: Number.isFinite(body.distanceFromFence)
+                ? body.distanceFromFence
+                : 0,
               reason: body.reason,
-              photo_proof_url: body.photoProof,
-              attendance_date: body.date,
+              photo_proof_url: body.photoProof ?? null,
+              attendance_date: attendanceDate,
             })
             .select('*')
             .single();
-          if (error) throw error;
+          if (error) {
+            // Unique pending index race — return the existing row.
+            if (error.code === '23505') {
+              const { data: raced } = await client
+                .from('attendance_approval_requests')
+                .select('id')
+                .eq('officer_id', officerId)
+                .eq('type', body.type)
+                .eq('attendance_date', attendanceDate)
+                .eq('status', 'pending')
+                .maybeSingle();
+              if (raced?.id) return fetchApprovalRequestById(client, raced.id as string);
+            }
+            throw error;
+          }
           return fetchApprovalRequestById(client, data.id);
+        },
+      }),
+      invalidatesTags: ['Approvals'],
+    }),
+
+    cancelMyPendingApproval: builder.mutation<void, { id: string }>({
+      query: ({ id }) => ({
+        handler: async (client) => {
+          const officerId = await getCurrentOfficerId(client);
+          const { error } = await client
+            .from('attendance_approval_requests')
+            .update({ status: 'cancelled' })
+            .eq('id', id)
+            .eq('officer_id', officerId)
+            .eq('status', 'pending');
+          if (error) throw error;
         },
       }),
       invalidatesTags: ['Approvals'],
@@ -1045,6 +1137,7 @@ export const {
   useCheckInMutation,
   useCheckOutMutation,
   useRequestApprovalMutation,
+  useCancelMyPendingApprovalMutation,
   useGetMyApprovalRequestsQuery,
   useGetMyGeofencesQuery,
   useUpdateOfficerLocationMutation,

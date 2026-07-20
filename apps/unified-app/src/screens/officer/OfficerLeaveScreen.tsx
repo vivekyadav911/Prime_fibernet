@@ -4,8 +4,9 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { LeaveRequestRecord } from '@/types/attendance';
 import { Button } from '@prime/ui';
-
-import { EmptyState, ErrorState, ScreenWrapper, SkeletonLoader } from '@/components/common';
+import { useOfficerPullToRefresh } from '@/hooks/officer/useOfficerPullToRefresh';
+import {EmptyState, ErrorState, SkeletonLoader} from '@/components/common';
+import { OfficerScreenWrapper } from '@/components/officer';
 import {
   useCancelLeave,
   useLeaveBalances,
@@ -61,6 +62,7 @@ function LeaveHistoryRow({
 export function OfficerLeaveScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<OfficerLeaveStackParamList>>();
   const { data, isLoading, isError, error, refetch } = useMyLeaveRequests();
+  const { refreshControl } = useOfficerPullToRefresh(refetch);
   const { data: balances } = useLeaveBalances();
   const [cancelLeave] = useCancelLeave();
 
@@ -81,22 +83,22 @@ export function OfficerLeaveScreen() {
 
   if (isLoading) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <SkeletonLoader rows={6} showAvatar />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   if (isError) {
     return (
-      <ScreenWrapper scrollable={false}>
+      <OfficerScreenWrapper scrollable={false}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </ScreenWrapper>
+      </OfficerScreenWrapper>
     );
   }
 
   return (
-    <ScreenWrapper scrollable={false} padded={false}>
+    <OfficerScreenWrapper scrollable={false} padded={false}>
       <View style={styles.header}>
         <Text style={styles.title}>Leave Balance (This Year)</Text>
         <View style={styles.balanceRow}>
@@ -118,6 +120,7 @@ export function OfficerLeaveScreen() {
         </Pressable>
       </View>
       <FlatList
+        refreshControl={refreshControl} 
         data={data ?? []}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
@@ -127,7 +130,7 @@ export function OfficerLeaveScreen() {
         }
         renderItem={renderItem}
       />
-    </ScreenWrapper>
+    </OfficerScreenWrapper>
   );
 }
 

@@ -45,11 +45,13 @@ type DbOfficerLocationRow = {
     | {
         id: string;
         full_name?: string | null;
+        profile_photo_url?: string | null;
         users?: { name?: string; email?: string } | { name?: string; email?: string }[] | null;
       }
     | Array<{
         id: string;
         full_name?: string | null;
+        profile_photo_url?: string | null;
         users?: { name?: string; email?: string } | null;
       }>
     | null;
@@ -58,6 +60,7 @@ type DbOfficerLocationRow = {
 function normalizeOfficerEmbed(embed: DbOfficerLocationRow['officers']): {
   id: string;
   full_name?: string | null;
+  profile_photo_url?: string | null;
   users?: { name?: string; email?: string } | { name?: string; email?: string }[] | null;
 } | null {
   if (!embed) return null;
@@ -88,6 +91,7 @@ function mapOfficerLocationRow(row: DbOfficerLocationRow, index: number): Office
       id: officer?.id ?? row.officer_id,
       name,
       email: users?.email ?? '',
+      avatar_url: officer?.profile_photo_url ?? null,
       avatar_color: getOfficerColor(name, index),
       initials: getOfficerInitials(name),
     },
@@ -154,7 +158,7 @@ export const officerTrackingApi = baseApi.injectEndpoints({
               id, officer_id, latitude, longitude, accuracy, altitude,
               heading, speed, battery_level, is_online, is_moving,
               last_seen_at, updated_at,
-              officers(id, full_name)
+              officers(id, full_name, profile_photo_url)
             `,
             )
             .order('updated_at', { ascending: false });
@@ -168,7 +172,7 @@ export const officerTrackingApi = baseApi.injectEndpoints({
           // Fallback when officer_locations table is missing or empty — use officers live cols
           const { data: officers, error: officersError } = await client
             .from('officers')
-            .select('id, full_name, current_latitude, current_longitude, last_location_update, availability_status')
+            .select('id, full_name, profile_photo_url, current_latitude, current_longitude, last_location_update, availability_status')
             .not('current_latitude', 'is', null)
             .not('current_longitude', 'is', null);
 
@@ -189,7 +193,7 @@ export const officerTrackingApi = baseApi.injectEndpoints({
               heading: null,
               speed: null,
               battery_level: null,
-              is_online: row.availability_status !== 'offline',
+              is_online: true,
               is_moving: false,
               last_seen_at: lastSeen,
               updated_at: lastSeen,
@@ -197,10 +201,11 @@ export const officerTrackingApi = baseApi.injectEndpoints({
                 id: officerId,
                 name,
                 email: '',
+                avatar_url: (row.profile_photo_url as string | null) ?? null,
                 avatar_color: getOfficerColor(name, i),
                 initials: getOfficerInitials(name),
               },
-            } satisfies OfficerLocation;
+            };
           });
         },
       }),

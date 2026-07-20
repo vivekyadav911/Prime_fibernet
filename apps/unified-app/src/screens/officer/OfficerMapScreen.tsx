@@ -1,12 +1,12 @@
 import { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet } from 'react-native';
-import { Marker } from 'react-native-maps';
-import { Screen } from '@prime/ui';
 import { colors } from '@/theme/colors';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
-import { FreeMapView } from '@/components/map';
+import { OfficerScreen } from '@/components/officer';
+import { LeafletMapView } from '@/components/map/LeafletMapView';
 import { useOfficerAssignedTickets } from '@/hooks/officer';
+import { useOfficerPullToRefresh } from '@/hooks/officer/useOfficerPullToRefresh';
 import { useAppSelector } from '@/store/hooks';
 import type { PortalTicketItem } from '@/types/portalTicket';
 import { getPortalItemCoordinates } from '@/utils/officerPortalCoordinates';
@@ -23,8 +23,7 @@ const PRIORITY_PIN_COLORS: Record<string, string> = {
   P0: colors.errorRed,
   P1: colors.warningAmber,
   P2: colors.accentTeal,
-  P3: colors.textSecondary,
-};
+  P3: colors.textSecondary};
 
 type MappedTicketItem = PortalTicketItem & {
   latitude: number;
@@ -35,6 +34,7 @@ type MappedTicketItem = PortalTicketItem & {
 export function OfficerMapScreen() {
   const user = useAppSelector((s) => s.auth.user);
   const { items, isLoading, isError, error, refetch } = useOfficerAssignedTickets(user?.id);
+  const { refreshControl } = useOfficerPullToRefresh(refetch);
 
   const withCoords = useMemo<MappedTicketItem[]>(() => {
     return items
@@ -47,15 +47,18 @@ export function OfficerMapScreen() {
       .sort((a, b) => officerTicketPriorityRank(a) - officerTicketPriorityRank(b));
   }, [items]);
 
-  const initialRegion = useMemo(() => {
-    const first = withCoords[0];
-    return {
-      latitude: first?.latitude ?? 20.5937,
-      longitude: first?.longitude ?? 78.9629,
-      latitudeDelta: 0.15,
-      longitudeDelta: 0.15,
-    };
-  }, [withCoords]);
+  const pins = useMemo(
+    () =>
+      withCoords.map((item) => ({
+        id: `${item.kind}-${item.id}`,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        color: PRIORITY_PIN_COLORS[item.priority ?? 'Medium'] ?? colors.primaryNavy,
+        title: item.displayNumber,
+        subtitle: item.categoryLabel,
+      })),
+    [withCoords],
+  );
 
   const handleNavigate = useCallback((address: string) => {
     openMapsNavigation(address);
@@ -78,23 +81,23 @@ export function OfficerMapScreen() {
 
   if (isLoading) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <SkeletonLoader rows={3} tall />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   if (isError) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   if (withCoords.length === 0) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <EmptyState
           title="No mapped tickets"
           subtitle={
@@ -103,34 +106,26 @@ export function OfficerMapScreen() {
               : 'Assigned tickets with GPS coordinates will appear here.'
           }
         />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   return (
-    <Screen padded={false}>
-      <FreeMapView style={styles.map} initialRegion={initialRegion}>
-        {withCoords.map((item) => (
-          <Marker
-            key={`${item.kind}-${item.id}`}
-            coordinate={{ latitude: item.latitude, longitude: item.longitude }}
-            title={item.displayNumber}
-            description={item.categoryLabel}
-            pinColor={PRIORITY_PIN_COLORS[item.priority ?? 'Medium'] ?? colors.primaryNavy}
-          />
-        ))}
-      </FreeMapView>
+    <OfficerScreen scrollable={false} padded={false} style={styles.screen}>
+      <LeafletMapView style={styles.map} pins={pins} fitToContent />
       <FlatList
+        refreshControl={refreshControl}
         data={withCoords}
         keyExtractor={keyExtractor}
         style={styles.list}
         renderItem={renderItem}
       />
-    </Screen>
+    </OfficerScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   map: { height: 280 },
   list: { flex: 1 },
 });

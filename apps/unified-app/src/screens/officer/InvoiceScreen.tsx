@@ -4,13 +4,13 @@ import type { DrawerScreenProps } from '@react-navigation/drawer';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Button, Screen } from '@prime/ui';
+import { Button} from '@prime/ui';
 
 import { EmptyState, ErrorState, SkeletonLoader } from '@/components/common';
+import { OfficerScreen } from '@/components/officer';
 import {
   useGetInvoiceQuery,
-  useLazyGetInvoiceUrlQuery,
-} from '@/store/api/endpoints';
+  useLazyGetInvoiceUrlQuery} from '@/store/api/endpoints';
 import type { CustomerStackParamList, OfficerDrawerParamList } from '@/types/navigation';
 import { queryErrorMessage } from '@/utils/queryError';
 import { colors } from '@/theme/colors';
@@ -38,8 +38,7 @@ export function InvoiceContent({ invoiceId }: { invoiceId: string }) {
         await Sharing.shareAsync(result.uri, {
           mimeType: 'application/pdf',
           UTI: 'com.adobe.pdf',
-          dialogTitle: 'Invoice',
-        });
+          dialogTitle: 'Invoice'});
       } else {
         await Share.share({ url, message: 'Prime Fibernet invoice' });
       }
@@ -63,30 +62,30 @@ export function InvoiceContent({ invoiceId }: { invoiceId: string }) {
 
   if (isLoading) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <SkeletonLoader rows={6} rowHeight={40} shape="card" />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   if (isError) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <ErrorState message={queryErrorMessage(error)} onRetry={refetch} />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   if (!data) {
     return (
-      <Screen>
+      <OfficerScreen onRefresh={refetch}>
         <EmptyState title="Invoice not found" subtitle="This payment may have been removed" icon="🧾" />
-      </Screen>
+      </OfficerScreen>
     );
   }
 
   return (
-    <Screen style={styles.screen}>
+    <OfficerScreen onRefresh={refetch} style={styles.screen}>
       <View style={styles.card}>
         <Text style={styles.title}>Invoice</Text>
         <Text style={styles.number}>{data.invoiceNumber ?? data.id.slice(0, 8).toUpperCase()}</Text>
@@ -125,7 +124,7 @@ export function InvoiceContent({ invoiceId }: { invoiceId: string }) {
 
       <Button label="Download PDF" onPress={() => void onDownload()} style={styles.button} />
       <Button label="Share" variant="secondary" onPress={() => void onShare()} />
-    </Screen>
+    </OfficerScreen>
   );
 }
 
@@ -133,13 +132,13 @@ export function InvoiceScreen(props: InvoiceScreenProps) {
   const invoiceId = props.route.params?.invoiceId;
   if (!invoiceId) {
     return (
-      <Screen>
+      <OfficerScreen>
         <EmptyState
           title="No invoice selected"
           subtitle="Open an invoice from a payment or collection record"
           icon="🧾"
         />
-      </Screen>
+      </OfficerScreen>
     );
   }
   return <InvoiceContent invoiceId={invoiceId} />;
@@ -153,13 +152,11 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    gap: spacing.sm,
-  },
+    gap: spacing.sm},
   title: { fontSize: 14, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 1 },
   number: { fontSize: 24, fontWeight: '700', color: colors.primaryNavy, marginBottom: spacing.sm },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   label: { color: colors.textSecondary, fontSize: 14 },
   value: { color: colors.textPrimary, fontWeight: '600', fontSize: 14 },
   total: { fontSize: 18, color: colors.accentTeal },
-  button: { marginTop: spacing.md },
-});
+  button: { marginTop: spacing.md }});

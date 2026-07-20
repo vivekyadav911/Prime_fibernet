@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Image, StyleSheet, Text, View } from 'react-native';
 import { Marker } from 'react-native-maps';
 
 import { getOfficerColor, getOfficerInitials } from '@/constants/mapTheme';
 import { colors } from '@/theme/colors';
 import type { OfficerLiveLocation } from '@/types/attendance';
+import { resolveOfficerPhotoUrl } from '@/utils/resolveOfficerPhotoUrl';
 
 type Props = {
   location: OfficerLiveLocation;
@@ -15,7 +16,13 @@ export function LiveOfficerMarker({ location, colorIndex }: Props) {
   const pulse = useRef(new Animated.Value(1)).current;
   const color = getOfficerColor(location.officerName, colorIndex);
   const initials = getOfficerInitials(location.officerName);
+  const photoUrl = resolveOfficerPhotoUrl(location.officerAvatar);
+  const [photoFailed, setPhotoFailed] = useState(false);
   const isLive = location.attendanceStatus === 'checked_in';
+
+  useEffect(() => {
+    setPhotoFailed(false);
+  }, [photoUrl]);
 
   useEffect(() => {
     if (!isLive) return undefined;
@@ -47,9 +54,17 @@ export function LiveOfficerMarker({ location, colorIndex }: Props) {
             ]}
           />
         ) : null}
-        <View style={[styles.circle, { backgroundColor: markerColor }]}>
-          <Text style={styles.initials}>{initials}</Text>
-        </View>
+        {photoUrl && !photoFailed ? (
+          <Image
+            source={{ uri: photoUrl }}
+            style={[styles.photo, { borderColor: colors.white }]}
+            onError={() => setPhotoFailed(true)}
+          />
+        ) : (
+          <View style={[styles.circle, { backgroundColor: markerColor }]}>
+            <Text style={styles.initials}>{initials}</Text>
+          </View>
+        )}
       </View>
     </Marker>
   );
@@ -78,6 +93,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3,
     elevation: 4,
+  },
+  photo: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    backgroundColor: colors.surfaceWhite,
   },
   initials: { color: colors.white, fontWeight: '700', fontSize: 13 },
 });

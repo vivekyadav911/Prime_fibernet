@@ -131,13 +131,29 @@ export function circleToPolygon(
   radiusMeters: number,
   points = 64,
 ): Coordinates[] {
+  if (
+    !center ||
+    !Number.isFinite(center.latitude) ||
+    !Number.isFinite(center.longitude) ||
+    !Number.isFinite(radiusMeters) ||
+    radiusMeters <= 0
+  ) {
+    return [];
+  }
+
   const result: Coordinates[] = [];
+  const cosLat = Math.cos(toRadians(center.latitude));
+  // Near poles cos(lat) → 0; skip invalid longitude expansion.
+  if (!Number.isFinite(cosLat) || Math.abs(cosLat) < 1e-6) {
+    return [];
+  }
+
   for (let i = 0; i < points; i += 1) {
     const angle = (2 * Math.PI * i) / points;
     const dx = radiusMeters * Math.cos(angle);
     const dy = radiusMeters * Math.sin(angle);
     const deltaLat = dy / EARTH_RADIUS_M;
-    const deltaLon = dx / (EARTH_RADIUS_M * Math.cos(toRadians(center.latitude)));
+    const deltaLon = dx / (EARTH_RADIUS_M * cosLat);
     result.push({
       latitude: center.latitude + (deltaLat * 180) / Math.PI,
       longitude: center.longitude + (deltaLon * 180) / Math.PI,

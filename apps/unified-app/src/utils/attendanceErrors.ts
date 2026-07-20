@@ -27,18 +27,24 @@ export function mapSupabaseError(error: PostgrestError | Error | unknown, fallba
     if (pg.code === 'PGRST116') {
       return new AttendanceActionError('Record not found — refresh and try again.', 'not_found', pg);
     }
+    if (pg.code === '23505') {
+      return mapShiftAlreadyCompletedError();
+    }
     return new AttendanceActionError(pg.message || fallback, pg.code ?? 'server_error', pg);
   }
 
-  if (error instanceof Error) {
-    if (error.message.toLowerCase().includes('network')) {
-      return new AttendanceActionError('No internet connection — queued for sync when online.', 'offline', error);
+    if (error instanceof Error) {
+      if (error.message.toLowerCase().includes('network')) {
+        return new AttendanceActionError('No internet connection — queued for sync when online.', 'offline', error);
+      }
+      if (error.message.toLowerCase().includes('location')) {
+        return new AttendanceActionError(error.message, 'location_error', error);
+      }
+      if (error.message.includes('SHIFT_ALREADY_COMPLETED')) {
+        return mapShiftAlreadyCompletedError();
+      }
+      return new AttendanceActionError(error.message || fallback, 'unknown', error);
     }
-    if (error.message.toLowerCase().includes('location')) {
-      return new AttendanceActionError(error.message, 'location_error', error);
-    }
-    return new AttendanceActionError(error.message || fallback, 'unknown', error);
-  }
 
   return new AttendanceActionError(fallback, 'unknown', error);
 }
@@ -61,10 +67,20 @@ export function mapNoZoneError(): AttendanceActionError {
   );
 }
 
+export function mapShiftAlreadyCompletedError(): AttendanceActionError {
+  return new AttendanceActionError(
+    'Maximum one attendance is allowed per day. Your shift is already completed. If there is an issue, contact your admin or officers.',
+    'shift_already_completed',
+  );
+}
+
 export function mapOutsideZoneError(distanceM: number, radiusM: number, zoneName?: string): AttendanceActionError {
   const zone = zoneName ?? 'your assigned zone';
+  const distLabel =
+    Number.isFinite(distanceM) && distanceM >= 0 ? `${Math.round(distanceM)}m` : 'some distance';
+  const limitLabel = Number.isFinite(radiusM) && radiusM > 0 ? `${Math.round(radiusM)}m` : 'zone limit';
   return new AttendanceActionError(
-    `You are ${Math.round(distanceM)}m from ${zone} (limit: ${Math.round(radiusM)}m). Request approval or move closer.`,
+    `You are ${distLabel} from ${zone} (limit: ${limitLabel}). Request approval or move closer.`,
     'outside_zone',
   );
 }
