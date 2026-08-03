@@ -18,22 +18,22 @@ flowchart LR
 
 ## S0 — Restructure (complete when unified app runs)
 
-| Deliverable | Status |
-|-------------|--------|
-| `apps/unified-app` with Redux + React Navigation | In progress |
+| Deliverable                                                          | Status      |
+| -------------------------------------------------------------------- | ----------- |
+| `apps/unified-app` with Redux + React Navigation                     | In progress |
 | Role shells: Customer tabs, Officer location gate/tabs, Admin drawer | In progress |
-| Archive `apps/customer`, `apps/officer` | In progress |
-| Theme tokens from frontend spec §1.1 | In progress |
-| Root `pnpm dev` script | In progress |
+| Archive `apps/customer`, `apps/officer`                              | In progress |
+| Theme tokens from frontend spec §1.1                                 | In progress |
+| Root `pnpm dev` script                                               | In progress |
 
 ---
 
 ## Sprint 1 — INFRA (INFRA-004, INFRA-005, INFRA-006)
 
-| Ticket | Deliverable |
-|--------|-------------|
-| INFRA-004 | RLS policies on all core tables |
-| INFRA-005 | `supabase/migrations/`, seed data |
+| Ticket    | Deliverable                                    |
+| --------- | ---------------------------------------------- |
+| INFRA-004 | RLS policies on all core tables                |
+| INFRA-005 | `supabase/migrations/`, seed data              |
 | INFRA-006 | `user_fcm_tokens`, expo-notifications handlers |
 
 **Definition of done:** Migrations apply cleanly; RLS test matrix documented; FCM token stored on login.
@@ -42,15 +42,15 @@ flowchart LR
 
 ## Sprint 2 — AUTH (AUTH-001 → AUTH-007)
 
-| Ticket | Deliverable |
-|--------|-------------|
-| AUTH-001 | Sign-up + email verification |
-| AUTH-002 | Login + SecureStore + authSlice |
+| Ticket   | Deliverable                        |
+| -------- | ---------------------------------- |
+| AUTH-001 | Sign-up + email verification       |
+| AUTH-002 | Login + SecureStore + authSlice    |
 | AUTH-003 | Admin TOTP via Supabase native MFA |
-| AUTH-004 | RTK Query refresh mutex |
-| AUTH-005 | Forgot password |
-| AUTH-006 | Biometric (P2 backlog) |
-| AUTH-007 | Role-based AppNavigator |
+| AUTH-004 | RTK Query refresh mutex            |
+| AUTH-005 | Forgot password                    |
+| AUTH-006 | Biometric (P2 backlog)             |
+| AUTH-007 | Role-based AppNavigator            |
 
 ---
 
@@ -94,6 +94,6 @@ docs/source/          Official PDF/DOCX/MD originals
 
 ## First vertical slice (after S0)
 
-1. Run unified app → login screen  
-2. Supabase sign-in → role-based home  
-3. Customer dashboard placeholder with RTK Query hook  
+1. Run unified app → login screen
+2. Supabase sign-in → role-based home
+3. Customer dashboard placeholder with RTK Query hook

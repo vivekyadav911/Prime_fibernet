@@ -247,14 +247,14 @@ prime-fibernet-rn/
 
 ### 2.3 Navigation Architecture
 
-| Navigator | Responsibility |
-|-----------|---------------|
-| `AppNavigator` | Root — waits for Supabase session + authoritative `get_my_role` result before rendering a role navigator |
-| `AuthNavigator` | Landing, login, OTP claim, first-password setup, forgot-password, and admin MFA challenge/enrollment |
-| `CustomerNavigator` | Mobile customer tabs and nested customer stacks |
-| `OfficerNavigator` | Mobile-only officer shell: `LocationGate` → `OfficerTabNavigator`, plus root profile/request-detail pushes |
-| `OfficerTabNavigator` | Bottom tabs: Dashboard, Tickets, Attendance, Payments, Settings; each tab owns a native stack |
-| `AdminNavigator` | Drawer: Dashboard, Users, Officers, Plans, Analytics, Settings |
+| Navigator             | Responsibility                                                                                             |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `AppNavigator`        | Root — waits for Supabase session + authoritative `get_my_role` result before rendering a role navigator   |
+| `AuthNavigator`       | Landing, login, OTP claim, first-password setup, forgot-password, and admin MFA challenge/enrollment       |
+| `CustomerNavigator`   | Mobile customer tabs and nested customer stacks                                                            |
+| `OfficerNavigator`    | Mobile-only officer shell: `LocationGate` → `OfficerTabNavigator`, plus root profile/request-detail pushes |
+| `OfficerTabNavigator` | Bottom tabs: Dashboard, Tickets, Attendance, Payments, Settings; each tab owns a native stack              |
+| `AdminNavigator`      | Drawer: Dashboard, Users, Officers, Plans, Analytics, Settings                                             |
 
 Role routing is intentionally blocked while `authSlice.roleStatus` is `resolving`.
 The provisional JWT metadata role is not trusted for navigation; `hooks/useAuth.ts`
@@ -264,15 +264,15 @@ remains web-enabled.
 
 ### 2.4 Redux Store Structure
 
-| Slice | Key State | Notes |
-|-------|-----------|-------|
-| `authSlice` | user object, isAuthenticated, isLoading | Persisted to secure storage |
-| `userSlice` | profile data, subscription, preferences | Refreshed on app foreground |
-| `plansSlice` | plan list, selected plan, filter state | RTK Query cached (30 min TTL) |
-| `requestsSlice` | request list, active detail, upload queue | Real-time via Supabase |
-| `paymentsSlice` | payment history, pending payment state | RTK Query cached (5 min TTL) |
-| `officeSlice` | officer requests, shift, inventory, location | Real-time + GPS updates |
-| `uiSlice` | toast queue, modal state, theme, network | Not persisted |
+| Slice           | Key State                                    | Notes                         |
+| --------------- | -------------------------------------------- | ----------------------------- |
+| `authSlice`     | user object, isAuthenticated, isLoading      | Persisted to secure storage   |
+| `userSlice`     | profile data, subscription, preferences      | Refreshed on app foreground   |
+| `plansSlice`    | plan list, selected plan, filter state       | RTK Query cached (30 min TTL) |
+| `requestsSlice` | request list, active detail, upload queue    | Real-time via Supabase        |
+| `paymentsSlice` | payment history, pending payment state       | RTK Query cached (5 min TTL)  |
+| `officeSlice`   | officer requests, shift, inventory, location | Real-time + GPS updates       |
+| `uiSlice`       | toast queue, modal state, theme, network     | Not persisted                 |
 
 ---
 
@@ -280,36 +280,36 @@ remains web-enabled.
 
 ### 3.1 Supabase Core Services
 
-| Service | Function |
-|---------|----------|
-| PostgreSQL (Primary DB) | Relational data for all entities |
-| Supabase Auth | JWT-based authentication with refresh token rotation |
-| Row Level Security | Database-enforced per-role access policies |
-| Realtime Subscriptions | WebSocket-based live updates |
-| Storage (S3-compat) | Profile photos, invoice PDFs, attachments |
-| Edge Functions (Deno) | Serverless compute for webhooks, AI, email/SMS |
+| Service                 | Function                                             |
+| ----------------------- | ---------------------------------------------------- |
+| PostgreSQL (Primary DB) | Relational data for all entities                     |
+| Supabase Auth           | JWT-based authentication with refresh token rotation |
+| Row Level Security      | Database-enforced per-role access policies           |
+| Realtime Subscriptions  | WebSocket-based live updates                         |
+| Storage (S3-compat)     | Profile photos, invoice PDFs, attachments            |
+| Edge Functions (Deno)   | Serverless compute for webhooks, AI, email/SMS       |
 
 ### 3.2 Edge Functions
 
-| Function | Responsibility |
-|----------|---------------|
-| `payment-webhook` | Verify Razorpay HMAC signature, update subscription, trigger invoice |
-| `invoice-generator` | Generate PDF invoices, store to Supabase Storage |
-| `email-service` | Transactional emails via Resend (welcome, invoice, reset) |
-| `sms-service` | SMS and WhatsApp delivery via Twilio |
-| `chatbot-service` | Orchestrate Google Gemini AI for customer support |
-| `scheduled-jobs` | Daily expiry checks, shift reminders, analytics aggregation |
+| Function            | Responsibility                                                       |
+| ------------------- | -------------------------------------------------------------------- |
+| `payment-webhook`   | Verify Razorpay HMAC signature, update subscription, trigger invoice |
+| `invoice-generator` | Generate PDF invoices, store to Supabase Storage                     |
+| `email-service`     | Transactional emails via Resend (welcome, invoice, reset)            |
+| `sms-service`       | SMS and WhatsApp delivery via Twilio                                 |
+| `chatbot-service`   | Orchestrate Google Gemini AI for customer support                    |
+| `scheduled-jobs`    | Daily expiry checks, shift reminders, analytics aggregation          |
 
 ### 3.3 External Service Integrations
 
-| Service | Category | Usage |
-|---------|----------|-------|
-| Google Gemini API | AI | Customer support chatbot |
-| Razorpay / Easebuzz | Payments | Plan subscriptions & renewals |
-| Resend | Email delivery | Transactional & marketing emails |
-| Twilio | SMS / WhatsApp | Alerts, OTPs, notifications |
-| OpenStreetMap / Leaflet | Mapping | Officer maps, geofencing, admin tracking, trail replay |
-| Firebase FCM | Push notifications | Real-time alerts to mobile |
+| Service                 | Category           | Usage                                                  |
+| ----------------------- | ------------------ | ------------------------------------------------------ |
+| Google Gemini API       | AI                 | Customer support chatbot                               |
+| Razorpay / Easebuzz     | Payments           | Plan subscriptions & renewals                          |
+| Resend                  | Email delivery     | Transactional & marketing emails                       |
+| Twilio                  | SMS / WhatsApp     | Alerts, OTPs, notifications                            |
+| OpenStreetMap / Leaflet | Mapping            | Officer maps, geofencing, admin tracking, trail replay |
+| Firebase FCM            | Push notifications | Real-time alerts to mobile                             |
 
 Map components use `LeafletMapView` for the current admin/officer map paths.
 Native renders Leaflet + OpenStreetMap tiles in `react-native-webview`; web
@@ -551,11 +551,11 @@ const channel = supabase
       event: 'UPDATE',
       schema: 'public',
       table: 'service_requests',
-      filter: `user_id=eq.${userId}`
+      filter: `user_id=eq.${userId}`,
     },
     (payload) => {
       dispatch(updateRequest(payload.new));
-    }
+    },
   )
   .subscribe();
 ```
@@ -573,13 +573,13 @@ const channel = supabase
 
 ### 6.2 API & Cache Strategy
 
-| Strategy | Implementation |
-|----------|---------------|
-| RTK Query | Auto deduplication, configurable TTL cache |
-| Supabase Realtime | WebSocket subscriptions for live data |
-| Offline Queue | SyncManager queues mutations, replays on reconnect |
+| Strategy           | Implementation                                           |
+| ------------------ | -------------------------------------------------------- |
+| RTK Query          | Auto deduplication, configurable TTL cache               |
+| Supabase Realtime  | WebSocket subscriptions for live data                    |
+| Offline Queue      | SyncManager queues mutations, replays on reconnect       |
 | Image Optimization | WebP format (web), JPEG compressed (mobile), lazy-loaded |
-| CDN Delivery | Static assets via Supabase Storage CDN edge nodes |
+| CDN Delivery       | Static assets via Supabase Storage CDN edge nodes        |
 
 ### 6.3 Rendering Optimization
 
@@ -607,14 +607,14 @@ const RequestItem = React.memo(({ request }: { request: Request }) => {
 
 ### 6.4 Performance Targets
 
-| Metric | Target |
-|--------|--------|
-| App cold start | < 3 seconds |
-| Screen transition | < 300ms |
-| API response (cache hit) | < 50ms |
-| API response (network) P95 | < 2 seconds |
-| List render (100 items) | < 16ms per frame |
-| Image load | < 1 second |
+| Metric                     | Target           |
+| -------------------------- | ---------------- |
+| App cold start             | < 3 seconds      |
+| Screen transition          | < 300ms          |
+| API response (cache hit)   | < 50ms           |
+| API response (network) P95 | < 2 seconds      |
+| List render (100 items)    | < 16ms per frame |
+| Image load                 | < 1 second       |
 
 ---
 
@@ -622,14 +622,14 @@ const RequestItem = React.memo(({ request }: { request: Request }) => {
 
 ### 7.1 Build & Release Pipeline
 
-| Environment | Platform | Notes |
-|-------------|----------|-------|
-| Development | Expo Go | Hot reload, local Supabase optional |
-| Staging | EAS Build + TestFlight / Play Internal | QA and stakeholder preview |
-| Production iOS | EAS Submit → App Store | Apple review process |
-| Production Android | EAS Submit → Play Store | Google review process |
-| Web | Vercel / Netlify | Admin-optimized PWA |
-| OTA Updates | EAS Update | JS-only changes, no store review |
+| Environment        | Platform                               | Notes                               |
+| ------------------ | -------------------------------------- | ----------------------------------- |
+| Development        | Expo Go                                | Hot reload, local Supabase optional |
+| Staging            | EAS Build + TestFlight / Play Internal | QA and stakeholder preview          |
+| Production iOS     | EAS Submit → App Store                 | Apple review process                |
+| Production Android | EAS Submit → Play Store                | Google review process               |
+| Web                | Vercel / Netlify                       | Admin-optimized PWA                 |
+| OTA Updates        | EAS Update                             | JS-only changes, no store review    |
 
 ### 7.2 EAS Configuration
 
@@ -690,18 +690,18 @@ Sentry.init({
       event.request.headers.authorization = '[REDACTED]';
     }
     return event;
-  }
+  },
 });
 ```
 
 ### 8.2 Monitoring Stack
 
-| Tool | Purpose |
-|------|---------|
-| Sentry | Crash reporting, performance monitoring (RN + Edge Functions) |
-| Supabase Dashboard | Query performance, connection pool, storage metrics |
-| Firebase Analytics | User behavior, funnel conversion, feature adoption |
-| Audit log table | All critical admin and financial actions |
+| Tool               | Purpose                                                       |
+| ------------------ | ------------------------------------------------------------- |
+| Sentry             | Crash reporting, performance monitoring (RN + Edge Functions) |
+| Supabase Dashboard | Query performance, connection pool, storage metrics           |
+| Firebase Analytics | User behavior, funnel conversion, feature adoption            |
+| Audit log table    | All critical admin and financial actions                      |
 
 ### 8.3 Key Metrics to Track
 

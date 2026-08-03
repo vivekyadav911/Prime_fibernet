@@ -23,24 +23,24 @@
 
 ### 1.1 Sign-Up Process
 
-| Step | Detail |
-|------|--------|
-| Email Validation | Format check, MX record verification, disposable email rejection |
-| Password Strength | Min 12 chars; must include upper, lower, digit, special character |
-| Terms Acceptance | Explicit checkbox required — pre-ticked boxes are prohibited |
-| Email Verification | 24-hour expiry link; account locked until confirmed |
-| Welcome Sequence | User created → default role assigned → welcome email dispatched |
+| Step               | Detail                                                            |
+| ------------------ | ----------------------------------------------------------------- |
+| Email Validation   | Format check, MX record verification, disposable email rejection  |
+| Password Strength  | Min 12 chars; must include upper, lower, digit, special character |
+| Terms Acceptance   | Explicit checkbox required — pre-ticked boxes are prohibited      |
+| Email Verification | 24-hour expiry link; account locked until confirmed               |
+| Welcome Sequence   | User created → default role assigned → welcome email dispatched   |
 
 ### 1.2 Login Flow
 
-| Step | Detail |
-|------|--------|
-| 1. Client Validation | Format check; 5 failed attempts locks account for 15 minutes |
-| 2. Server Verification | bcrypt hash comparison (cost factor 12); blocked/suspended check |
-| 3. 2FA Check (Admin) | 6-digit OTP sent via email; 5-minute expiry; 5 attempt limit |
-| 4. JWT Generation | Payload: `sub`, `email`, `role`, `iat`, `exp` (30 min); signed HS256 |
-| 5. Secure Storage | JWT → iOS Keychain / Android Keystore; refresh token encrypted |
-| 6. Session Init | Redux auth state updated; navigate to role-appropriate MainNavigator |
+| Step                   | Detail                                                               |
+| ---------------------- | -------------------------------------------------------------------- |
+| 1. Client Validation   | Format check; 5 failed attempts locks account for 15 minutes         |
+| 2. Server Verification | bcrypt hash comparison (cost factor 12); blocked/suspended check     |
+| 3. 2FA Check (Admin)   | 6-digit OTP sent via email; 5-minute expiry; 5 attempt limit         |
+| 4. JWT Generation      | Payload: `sub`, `email`, `role`, `iat`, `exp` (30 min); signed HS256 |
+| 5. Secure Storage      | JWT → iOS Keychain / Android Keystore; refresh token encrypted       |
+| 6. Session Init        | Redux auth state updated; navigate to role-appropriate MainNavigator |
 
 ### 1.3 JWT Token Management
 
@@ -59,6 +59,7 @@ Refresh Token
 ```
 
 **Token refresh flow:**
+
 ```
 JWT expires
      │
@@ -79,12 +80,14 @@ Replay queued in-flight requests with new JWT
 **Implementation:** Supabase native TOTP MFA (`auth.mfa`) in the auth flow.
 
 Codepaths:
+
 - `screens/auth/LoginScreen.tsx` signs in with password, resolves the real DB role via `get_my_role`, and sends admins to `AdminMfaScreen` before committing the session.
 - `screens/auth/AdminMfaScreen.tsx` lists verified TOTP factors; if none exist, it removes stale unverified factors, enrolls a new TOTP factor, shows the QR/manual secret, then challenges and verifies the 6-digit code.
 - `components/auth/MfaEnrollModal.tsx` supports voluntary in-app enrollment and unenrolls an unverified factor when the user cancels.
 - `hooks/useMfaGate.ts` reads Supabase assurance levels (`currentLevel`/`nextLevel`) for staged enrollment UI and future `aal2` checks.
 
 Constraints:
+
 - Admins cannot reach `AdminNavigator` from the interactive password-login path until Supabase MFA verification succeeds and `commitAuthenticatedSession` runs.
 - A successful admin full login stamps `last_full_login_at`; `useAdminSessionTimeout` signs the admin out when the configured admin-session window expires.
 - Cold-start restore follows the same session windows in `hooks/useAuth.ts`: admins must be inside `get_admin_session_hours` (default 24 hours); customer/officer sessions restore only when `password_set` is true and `last_full_login_at` is within 30 days.
@@ -98,39 +101,42 @@ Constraints:
 ### 2.1 Role Hierarchy & Permissions
 
 #### CUSTOMER
-| Permission | Scope |
-|------------|-------|
-| Browse and subscribe to plans | Own records only |
+
+| Permission                        | Scope             |
+| --------------------------------- | ----------------- |
+| Browse and subscribe to plans     | Own records only  |
 | Create and track service requests | Own requests only |
-| Make payments and view invoices | Own payments only |
-| Update profile and preferences | Own profile only |
-| Use AI chatbot support | — |
+| Make payments and view invoices   | Own payments only |
+| Update profile and preferences    | Own profile only  |
+| Use AI chatbot support            | —                 |
 
 #### OFFICER
-| Permission | Scope |
-|------------|-------|
-| View and update service requests | Assigned requests only |
-| Add activity notes and attachments | Assigned requests only |
-| Clock in/out for shifts | Own shifts only |
-| View assigned inventory | Own assignments only |
-| View payslip and performance metrics | Own data only |
-| Submit leave requests | Own requests only |
+
+| Permission                           | Scope                  |
+| ------------------------------------ | ---------------------- |
+| View and update service requests     | Assigned requests only |
+| Add activity notes and attachments   | Assigned requests only |
+| Clock in/out for shifts              | Own shifts only        |
+| View assigned inventory              | Own assignments only   |
+| View payslip and performance metrics | Own data only          |
+| Submit leave requests                | Own requests only      |
 
 #### ADMIN
-| Permission | Scope |
-|------------|-------|
-| View and manage all users | All records |
-| Block/unblock users with reason | All users |
-| Create, invite, manage officers | All officers |
-| Full CRUD on plans | All plans |
-| View all service requests | All requests |
-| Manual request assignment | All requests |
-| Send bulk push notifications | All / filtered users |
-| View analytics and export reports | All data |
-| Manage payments and refunds | All payments |
-| View audit logs | All logs (read-only) |
-| Configure app settings | System-wide |
-| Manage other admins | Super admin tier |
+
+| Permission                        | Scope                |
+| --------------------------------- | -------------------- |
+| View and manage all users         | All records          |
+| Block/unblock users with reason   | All users            |
+| Create, invite, manage officers   | All officers         |
+| Full CRUD on plans                | All plans            |
+| View all service requests         | All requests         |
+| Manual request assignment         | All requests         |
+| Send bulk push notifications      | All / filtered users |
+| View analytics and export reports | All data             |
+| Manage payments and refunds       | All payments         |
+| View audit logs                   | All logs (read-only) |
+| Configure app settings            | System-wide          |
+| Manage other admins               | Super admin tier     |
 
 ### 2.2 Row Level Security Implementation
 
@@ -196,18 +202,19 @@ role shell.
 
 ### 3.1 Encryption at Rest
 
-| Field | Algorithm | Key Management |
-|-------|-----------|---------------|
-| Password hash | bcrypt (cost factor 12) | Auto-salted per user |
-| SSN / ID documents | AES-256 | Master key via AWS KMS |
-| Bank account details | AES-256 | Master key via AWS KMS |
-| Payment tokens | AES-256 | Master key via AWS KMS |
-| JWT refresh tokens | AES-256 | Master key via AWS KMS |
-| API keys / secrets | AES-256 | Master key via AWS KMS |
-| Email address | Plain text | Indexed for lookup |
-| Phone number | Plain text | Required for Twilio delivery |
+| Field                | Algorithm               | Key Management               |
+| -------------------- | ----------------------- | ---------------------------- |
+| Password hash        | bcrypt (cost factor 12) | Auto-salted per user         |
+| SSN / ID documents   | AES-256                 | Master key via AWS KMS       |
+| Bank account details | AES-256                 | Master key via AWS KMS       |
+| Payment tokens       | AES-256                 | Master key via AWS KMS       |
+| JWT refresh tokens   | AES-256                 | Master key via AWS KMS       |
+| API keys / secrets   | AES-256                 | Master key via AWS KMS       |
+| Email address        | Plain text              | Indexed for lookup           |
+| Phone number         | Plain text              | Required for Twilio delivery |
 
 **Master Key Management:**
+
 - Stored in: AWS KMS / HashiCorp Vault
 - Access: Application service account only
 - Rotation: Every 90 days
@@ -216,13 +223,13 @@ role shell.
 
 ### 3.2 Encryption in Transit
 
-| Control | Implementation |
-|---------|---------------|
-| Protocol | TLS 1.3 minimum; TLS 1.2 connections rejected |
-| Cipher Suites | AEAD only (AES-GCM, ChaCha20-Poly1305) |
-| Certificate | Let's Encrypt auto-renewing (90-day cycle) |
-| HSTS | `max-age=31536000; includeSubDomains; preload` |
-| Certificate Pinning | Enabled for `/auth` and `/payments` endpoints |
+| Control             | Implementation                                 |
+| ------------------- | ---------------------------------------------- |
+| Protocol            | TLS 1.3 minimum; TLS 1.2 connections rejected  |
+| Cipher Suites       | AEAD only (AES-GCM, ChaCha20-Poly1305)         |
+| Certificate         | Let's Encrypt auto-renewing (90-day cycle)     |
+| HSTS                | `max-age=31536000; includeSubDomains; preload` |
+| Certificate Pinning | Enabled for `/auth` and `/payments` endpoints  |
 
 ### 3.3 Password Security Policy
 
@@ -253,13 +260,13 @@ Reset Process:
 
 ### 4.1 Rate Limiting
 
-| Endpoint | Limit | Action on Breach |
-|----------|-------|-----------------|
-| Login | 5 attempts / 15 min | Account locked; admin alerted |
-| API endpoints | 1,000 requests / min | Per authenticated user |
-| Payment creation | 10 requests / min | Per user; replay attack protection |
-| OTP verification | 5 attempts / 5 min | Account locked |
-| File upload | 20 requests / hour | Per user |
+| Endpoint         | Limit                | Action on Breach                   |
+| ---------------- | -------------------- | ---------------------------------- |
+| Login            | 5 attempts / 15 min  | Account locked; admin alerted      |
+| API endpoints    | 1,000 requests / min | Per authenticated user             |
+| Payment creation | 10 requests / min    | Per user; replay attack protection |
+| OTP verification | 5 attempts / 5 min   | Account locked                     |
+| File upload      | 20 requests / hour   | Per user                           |
 
 ### 4.2 Input Validation
 
@@ -282,7 +289,7 @@ const CreateRequestSchema = z.object({
 const sanitizeInput = (input: string): string => {
   return DOMPurify.sanitize(input, {
     ALLOWED_TAGS: [],
-    ALLOWED_ATTR: []
+    ALLOWED_ATTR: [],
   });
 };
 
@@ -303,12 +310,12 @@ const cspHeaders = {
     "connect-src 'self' https://supabase.io https://api.google.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
-    "form-action 'self'"
+    "form-action 'self'",
   ].join('; '),
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'no-referrer',
-  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload'
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
 };
 ```
 
@@ -324,7 +331,7 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  maxAge: 86400
+  maxAge: 86400,
 };
 ```
 
@@ -332,18 +339,12 @@ const corsOptions = {
 
 ```typescript
 const signRequest = (payload: object, secret: string): string => {
-  return crypto
-    .createHmac('sha256', secret)
-    .update(JSON.stringify(payload))
-    .digest('hex');
+  return crypto.createHmac('sha256', secret).update(JSON.stringify(payload)).digest('hex');
 };
 
 const verifySignature = (payload: object, signature: string, secret: string): boolean => {
   const expected = signRequest(payload, secret);
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expected)
-  );
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 };
 ```
 
@@ -353,28 +354,28 @@ const verifySignature = (payload: object, signature: string, secret: string): bo
 
 ### 5.1 Audit Log Schema
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| `timestamp` | TIMESTAMPTZ | UTC timestamp of the action |
-| `actor_id` | UUID | User who performed the action |
-| `actor_role` | VARCHAR | Role at time of action |
-| `action` | VARCHAR | Enum: LOGIN, BLOCK_USER, CREATE_PLAN, PAYMENT, etc. |
-| `target_entity` | VARCHAR | Table and ID of affected record |
-| `old_values` | JSONB | State before change |
-| `new_values` | JSONB | State after change |
-| `ip_address` | INET | Client IP (last octet anonymized for GDPR) |
-| `status` | VARCHAR | SUCCESS or FAILURE |
+| Column          | Type        | Purpose                                             |
+| --------------- | ----------- | --------------------------------------------------- |
+| `timestamp`     | TIMESTAMPTZ | UTC timestamp of the action                         |
+| `actor_id`      | UUID        | User who performed the action                       |
+| `actor_role`    | VARCHAR     | Role at time of action                              |
+| `action`        | VARCHAR     | Enum: LOGIN, BLOCK_USER, CREATE_PLAN, PAYMENT, etc. |
+| `target_entity` | VARCHAR     | Table and ID of affected record                     |
+| `old_values`    | JSONB       | State before change                                 |
+| `new_values`    | JSONB       | State after change                                  |
+| `ip_address`    | INET        | Client IP (last octet anonymized for GDPR)          |
+| `status`        | VARCHAR     | SUCCESS or FAILURE                                  |
 
 ### 5.2 Logged Event Categories
 
-| Category | Events |
-|----------|--------|
-| Authentication | Login success/failure, logout, password reset, 2FA changes |
-| User Management | Block/unblock, profile edits, role changes, deletion |
-| Financial | Payment processed, refund issued, invoice generated, dispute |
-| Officer Management | Invitation, onboarding, shift assignment, payroll updates |
-| Admin Actions | Plan CRUD, settings changes, bulk notifications, report exports |
-| System | API errors, rate limit breaches, suspicious access patterns |
+| Category           | Events                                                          |
+| ------------------ | --------------------------------------------------------------- |
+| Authentication     | Login success/failure, logout, password reset, 2FA changes      |
+| User Management    | Block/unblock, profile edits, role changes, deletion            |
+| Financial          | Payment processed, refund issued, invoice generated, dispute    |
+| Officer Management | Invitation, onboarding, shift assignment, payroll updates       |
+| Admin Actions      | Plan CRUD, settings changes, bulk notifications, report exports |
+| System             | API errors, rate limit breaches, suspicious access patterns     |
 
 ### 5.3 Real-Time Alert Rules
 
@@ -383,28 +384,28 @@ const alertRules = [
   {
     name: 'Unusual Login Activity',
     trigger: 'failed_login_attempts > 5 in 15 minutes',
-    action: 'Lock account + alert admin immediately'
+    action: 'Lock account + alert admin immediately',
   },
   {
     name: 'Large Data Export',
     trigger: 'exported_records > 10,000',
-    action: 'Require manual approval + log'
+    action: 'Require manual approval + log',
   },
   {
     name: 'API Rate Limit Breach',
     trigger: 'requests_per_minute > threshold',
-    action: 'Temporary IP ban + security alert'
+    action: 'Temporary IP ban + security alert',
   },
   {
     name: 'Suspicious Payment',
     trigger: 'amount > ₹1,00,000 OR same card 3× in one day',
-    action: 'Flag for manual review'
+    action: 'Flag for manual review',
   },
   {
     name: 'Mass Account Block',
     trigger: 'blocked_users > 10 in 1 hour',
-    action: 'Alert security team immediately'
-  }
+    action: 'Alert security team immediately',
+  },
 ];
 ```
 
@@ -414,24 +415,24 @@ const alertRules = [
 
 ### 6.1 GDPR Compliance
 
-| Right | Mechanism | Implementation |
-|-------|-----------|---------------|
-| Right to Access | Data export | Users download all personal data as JSON |
-| Right to Erasure | Account deletion | Hard delete + 90-day backup retention |
-| Right to Rectification | Profile edit | All fields editable at any time |
-| Right to Portability | Structured export | JSON / CSV standard format |
-| Right to Object | Opt-out | Marketing and SMS opt-out in profile settings |
+| Right                  | Mechanism         | Implementation                                |
+| ---------------------- | ----------------- | --------------------------------------------- |
+| Right to Access        | Data export       | Users download all personal data as JSON      |
+| Right to Erasure       | Account deletion  | Hard delete + 90-day backup retention         |
+| Right to Rectification | Profile edit      | All fields editable at any time               |
+| Right to Portability   | Structured export | JSON / CSV standard format                    |
+| Right to Object        | Opt-out           | Marketing and SMS opt-out in profile settings |
 
 ### 6.2 Data Retention Schedule
 
-| Data Category | Retention Period |
-|---------------|-----------------|
-| Active user data | Until account deletion request |
-| Deleted user data | 90 days (recovery window) |
-| Application logs | 12 months rolling |
-| Payment records | 7 years (statutory requirement) |
-| Audit logs | 2 years |
-| Backup snapshots | 30 days daily, 12 months monthly |
+| Data Category     | Retention Period                 |
+| ----------------- | -------------------------------- |
+| Active user data  | Until account deletion request   |
+| Deleted user data | 90 days (recovery window)        |
+| Application logs  | 12 months rolling                |
+| Payment records   | 7 years (statutory requirement)  |
+| Audit logs        | 2 years                          |
+| Backup snapshots  | 30 days daily, 12 months monthly |
 
 ### 6.3 ISO 27001 Controls
 
@@ -457,12 +458,12 @@ Vulnerability Mgmt: Quarterly external pentest · Daily automated scanning
 
 ### 7.1 Severity Classification
 
-| Severity | Trigger Conditions | Response SLA |
-|----------|--------------------|-------------|
-| P1 — Critical | Data breach, unauthorized admin access, payment fraud | < 1 hour |
-| P2 — High | Multiple failed logins, API abuse, suspicious exports | < 4 hours |
-| P3 — Medium | Single account compromise, rate limit breach | < 24 hours |
-| P4 — Low | Policy violations, audit anomalies | < 72 hours |
+| Severity      | Trigger Conditions                                    | Response SLA |
+| ------------- | ----------------------------------------------------- | ------------ |
+| P1 — Critical | Data breach, unauthorized admin access, payment fraud | < 1 hour     |
+| P2 — High     | Multiple failed logins, API abuse, suspicious exports | < 4 hours    |
+| P3 — Medium   | Single account compromise, rate limit breach          | < 24 hours   |
+| P4 — Low      | Policy violations, audit anomalies                    | < 72 hours   |
 
 ### 7.2 Response Process
 
@@ -497,14 +498,14 @@ POST-MORTEM: Root cause analysis · Process improvements
 
 ## 8. Security Testing Schedule
 
-| Frequency | Activity | Tool |
-|-----------|----------|------|
-| Daily | Automated vulnerability scanning | Snyk (dependency checks) |
-| Weekly | Automated penetration testing | OWASP ZAP |
-| Monthly | Manual security audit of new features | Internal team |
-| Quarterly | External penetration test | Burp Suite Professional |
-| Annually | Full security audit + compliance certification | External auditor |
-| Ad-hoc | Triggered on suspicious activity or major releases | — |
+| Frequency | Activity                                           | Tool                     |
+| --------- | -------------------------------------------------- | ------------------------ |
+| Daily     | Automated vulnerability scanning                   | Snyk (dependency checks) |
+| Weekly    | Automated penetration testing                      | OWASP ZAP                |
+| Monthly   | Manual security audit of new features              | Internal team            |
+| Quarterly | External penetration test                          | Burp Suite Professional  |
+| Annually  | Full security audit + compliance certification     | External auditor         |
+| Ad-hoc    | Triggered on suspicious activity or major releases | —                        |
 
 ---
 
@@ -513,6 +514,7 @@ POST-MORTEM: Root cause analysis · Process improvements
 > All items required before production deployment.
 
 ### Authentication & Authorization
+
 - [x] HTTPS enforced on all endpoints — no HTTP fallback
 - [x] JWT access token expiry set to 30 minutes
 - [x] Password minimum 12 characters with complexity requirements enforced
@@ -523,12 +525,14 @@ POST-MORTEM: Root cause analysis · Process improvements
 - [x] RLS policies active on all Supabase tables
 
 ### Data & Encryption
+
 - [x] AES-256 encryption for all sensitive fields at rest
 - [x] TLS 1.3 enforced for all data in transit
 - [x] Master encryption keys stored in AWS KMS — not in codebase
 - [x] Certificate pinning on `/auth` and `/payments` endpoints
 
 ### API Security
+
 - [x] Rate limiting active on login (5/15 min) and API (1,000/min) endpoints
 - [x] Zod input validation on all API inputs — client and server
 - [x] Supabase parameterized queries — no raw SQL string interpolation
@@ -537,6 +541,7 @@ POST-MORTEM: Root cause analysis · Process improvements
 - [x] CORS allowlist configured — no wildcard origins
 
 ### Monitoring & Compliance
+
 - [x] Audit logging active for all critical financial and admin actions
 - [x] Sensitive data (JWT, card data) redacted from application logs
 - [x] Sentry error tracking with PII redaction configured
