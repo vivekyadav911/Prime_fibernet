@@ -30,26 +30,29 @@ The system replaces fragmented legacy tools with a single codebase that delivers
 
 ## Goals & Success Metrics
 
-| Goal | Metric | Target |
-|------|--------|--------|
-| Customer self-service | % payments made via app | > 80% |
-| Reduce support load | Tickets resolved via chatbot | > 40% |
-| Officer efficiency | Average request resolution time | < 4 hours |
-| Subscription growth | Month-over-month active subscriber growth | +10% MoM |
-| Uptime | Platform availability | 99.9% |
-| App performance | App cold start time | < 3 seconds |
+| Goal                  | Metric                                    | Target      |
+| --------------------- | ----------------------------------------- | ----------- |
+| Customer self-service | % payments made via app                   | > 80%       |
+| Reduce support load   | Tickets resolved via chatbot              | > 40%       |
+| Officer efficiency    | Average request resolution time           | < 4 hours   |
+| Subscription growth   | Month-over-month active subscriber growth | +10% MoM    |
+| Uptime                | Platform availability                     | 99.9%       |
+| App performance       | App cold start time                       | < 3 seconds |
 
 ---
 
 ## User Roles & Personas
 
 ### Customer (End User)
+
 A residential or business internet subscriber. Primary device: smartphone (Android or iOS). Key needs: check plan status, renew subscription, raise service complaints, pay bills without calling support.
 
 ### Officer (Field Technician)
+
 An on-ground technician assigned to installation, repair, or upgrade jobs. Primary device: Android smartphone. Key needs: see today's jobs, navigate to customer location, update job status, log attendance, track assigned equipment.
 
 ### Admin (Management)
+
 Internal operations staff managing the business. Primary device: desktop/laptop web browser. Key needs: manage users and officers, monitor revenue, configure plans, view analytics, handle escalations.
 
 ---
@@ -58,21 +61,22 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 
 ### Authentication
 
-| ID | Feature | Priority | Notes |
-|----|---------|----------|-------|
-| A-01 | Email/password sign-up with verification | P0 | 24-hour verification link |
-| A-02 | Login with JWT + refresh token rotation | P0 | 30-min JWT, 7-day refresh |
-| A-03 | Admin TOTP two-factor authentication | P0 | speakeasy library |
-| A-04 | Forgot password with email reset | P1 | 1-hour token expiry |
-| A-05 | Biometric login (Face ID / Fingerprint) | P2 | After first password login |
-| A-06 | Role-based navigation guard | P0 | Customer / Officer / Admin routes |
-| A-07 | Account lockout after 5 failed attempts | P0 | 15-minute lockout window |
+| ID   | Feature                                  | Priority | Notes                             |
+| ---- | ---------------------------------------- | -------- | --------------------------------- |
+| A-01 | Email/password sign-up with verification | P0       | 24-hour verification link         |
+| A-02 | Login with JWT + refresh token rotation  | P0       | 30-min JWT, 7-day refresh         |
+| A-03 | Admin TOTP two-factor authentication     | P0       | Supabase native MFA (`auth.mfa`)  |
+| A-04 | Forgot password with email reset         | P1       | 1-hour token expiry               |
+| A-05 | Biometric login (Face ID / Fingerprint)  | P2       | After first password login        |
+| A-06 | Role-based navigation guard              | P0       | Customer / Officer / Admin routes |
+| A-07 | Account lockout after 5 failed attempts  | P0       | 15-minute lockout window          |
 
 ---
 
 ### Customer Features
 
 #### Dashboard
+
 - Active plan card with speed, expiry date, and status badge
 - Payment due banner shown 7 days before expiry with one-tap renewal
 - Last 3 service requests with real-time status chips
@@ -80,6 +84,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - New user empty state with plan browsing CTA
 
 #### Plan Management
+
 - Browsable plan catalog with speed, price, validity, and features
 - Filter by speed tier (Basic / Standard / Premium / Business)
 - Sort by price or speed
@@ -87,6 +92,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Subscribe CTA that triggers payment flow
 
 #### Payments
+
 - Razorpay / Easebuzz payment gateway integration
 - Payment history with date, amount, plan name, and status
 - PDF invoice download per successful transaction
@@ -94,6 +100,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Failed payment retry option
 
 #### Service Requests
+
 - Raise requests: Installation, Repair, Upgrade, Complaint
 - Address auto-fill from profile (overridable)
 - Description field (500-character limit)
@@ -102,6 +109,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Cancel option for Pending status requests
 
 #### Profile & Settings
+
 - Edit name, phone, and address
 - Email read-only after verification
 - Profile photo upload with crop
@@ -109,6 +117,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Delete account with 90-day data retention notice
 
 #### AI Chatbot Support
+
 - Answers plan queries, request status, outage FAQs
 - Escalates to human agent on low confidence
 - 30-minute session inactivity timeout
@@ -119,6 +128,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 ### Officer Features
 
 #### Dashboard
+
 - Today's shift card with clock-in button and hours logged
 - Assigned request counts by status (New / In Progress / Done)
 - Next 3 pending requests with priority and distance
@@ -126,20 +136,22 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Leave balance chips
 
 #### Request Management
+
 - Request queue sorted by priority (P0 first) then creation date
 - Status update flow: Accept → In Transit → On Site → Working → Resolved
 - Activity note required before resolving
 - Optional photo attachment at each step
-- One-tap navigation to customer address (Google Maps / Apple Maps)
+- One-tap navigation to customer address (native maps app deep link)
 
 #### Map View
-- Google Maps with live officer location
+
+- Leaflet/OpenStreetMap map with assigned-ticket locations
 - Request pins colored by priority (red / amber / green)
-- Request card on pin tap with navigation CTA
-- Offline map tile caching for last-known service areas
-- List/map toggle
+- Ticket list below the map with navigation CTA
+- Empty state when assigned tickets have no GPS coordinates
 
 #### Shifts & Attendance
+
 - Clock-in / clock-out with GPS coordinates
 - Overtime alert if not clocked out 30 min after scheduled end
 - Monthly attendance calendar
@@ -147,6 +159,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Leave balance display
 
 #### Inventory & Payslip
+
 - View assigned equipment (routers, cables, tools)
 - Mark items returned or damaged with notes
 - Monthly payslip with base, bonuses, deductions
@@ -158,6 +171,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 ### Admin Features
 
 #### Dashboard
+
 - KPI cards: Active Subscribers, MRR, Open Requests, Officers Online
 - Revenue trend chart (last 30 days)
 - Request pipeline funnel
@@ -166,6 +180,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Officer online status map
 
 #### User Management
+
 - Searchable, sortable user table
 - Filter by role, subscription status, registration date, blocked status
 - User detail drawer: profile, subscription, payment, request history
@@ -173,6 +188,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Bulk CSV export
 
 #### Officer Management
+
 - Officer list with region, availability, and shift status
 - Email invitation with auto-generated temp password
 - Region assignment dropdown
@@ -182,12 +198,14 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Soft-delete (historical data preserved)
 
 #### Plan Management
+
 - Create, edit, and deactivate plans
 - Fields: name, speed, price, validity, features array, active status
 - Deactivating a plan does not cancel existing subscriptions
 - Plan preview before publish
 
 #### Request Oversight
+
 - View all requests across all users
 - Manual officer assignment
 - Priority override
@@ -195,6 +213,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Escalation flag for critical requests
 
 #### Analytics & Reports
+
 - Revenue by period with CSV / PDF export
 - Subscription growth (new vs churned)
 - Request TAT by type and officer
@@ -202,12 +221,14 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Date range picker with presets
 
 #### Bulk Notifications
+
 - Send push to: All Users, Active Subscribers, Specific Region
 - Message preview before send
 - Delivery report (sent / delivered / opened)
 - Rate limited: 10 bulk sends/day
 
 #### Audit & Settings
+
 - Audit log viewer (read-only, filterable, exportable)
 - Company settings: name, logo, support contact, notification templates
 - Feature flags: chatbot, new registrations
@@ -217,16 +238,16 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 
 ## Non-Functional Requirements
 
-| Category | Requirement |
-|----------|-------------|
-| Performance | App cold start < 3s; API P95 response < 2s |
-| Availability | 99.9% uptime SLA |
-| Security | TLS 1.3, AES-256 at rest, bcrypt (cost 12), JWT 30-min expiry |
-| Compliance | GDPR, ISO 27001, SOC 2, PCI DSS Level 1 |
-| Offline | Core read access and mutation queue for Customer and Officer |
-| Accessibility | WCAG 2.1 AA; VoiceOver and TalkBack tested per release |
-| Bundle size | < 50MB uncompressed |
-| Scalability | Supabase auto-scales; Edge Functions stateless and horizontally scalable |
+| Category      | Requirement                                                              |
+| ------------- | ------------------------------------------------------------------------ |
+| Performance   | App cold start < 3s; API P95 response < 2s                               |
+| Availability  | 99.9% uptime SLA                                                         |
+| Security      | TLS 1.3, AES-256 at rest, bcrypt (cost 12), JWT 30-min expiry            |
+| Compliance    | GDPR, ISO 27001, SOC 2, PCI DSS Level 1                                  |
+| Offline       | Core read access and mutation queue for Customer and Officer             |
+| Accessibility | WCAG 2.1 AA; VoiceOver and TalkBack tested per release                   |
+| Bundle size   | < 50MB uncompressed                                                      |
+| Scalability   | Supabase auto-scales; Edge Functions stateless and horizontally scalable |
 
 ---
 
