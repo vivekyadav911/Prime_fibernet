@@ -76,36 +76,20 @@ Replay queued in-flight requests with new JWT
 
 ### 1.4 Two-Factor Authentication (Admin Only)
 
-**Implementation:** TOTP (Time-based One-Time Password) via `speakeasy` library
+**Implementation:** Supabase native TOTP MFA (`auth.mfa`) in the auth flow.
 
-```typescript
-// Enable 2FA — generate secret and QR code
-const enable2FA = async (userId: string) => {
-  const secret = speakeasy.generateSecret({
-    name: 'Prime Fibernet',
-    issuer: 'Prime Fibernet',
-    length: 32
-  });
-  const qrCode = await QRCode.toDataURL(secret.otpauth_url);
-  // Store secret AES-256 encrypted in DB
-  // User scans QR code with authenticator app (Google Authenticator, Authy)
-  // User enters 6-digit code to confirm enrollment
-  return { qrCode, backupCodes };
-};
+Codepaths:
+- `screens/auth/LoginScreen.tsx` signs in with password, resolves the real DB role via `get_my_role`, and sends admins to `AdminMfaScreen` before committing the session.
+- `screens/auth/AdminMfaScreen.tsx` lists verified TOTP factors; if none exist, it removes stale unverified factors, enrolls a new TOTP factor, shows the QR/manual secret, then challenges and verifies the 6-digit code.
+- `components/auth/MfaEnrollModal.tsx` supports voluntary in-app enrollment and unenrolls an unverified factor when the user cancels.
+- `hooks/useMfaGate.ts` reads Supabase assurance levels (`currentLevel`/`nextLevel`) for staged enrollment UI and future `aal2` checks.
 
-// Verify TOTP during login
-const verify2FA = (secret: string, token: string): boolean => {
-  return speakeasy.totp.verify({
-    secret,
-    encoding: 'base32',
-    token,
-    window: 2  // ±2 period tolerance for clock skew
-  });
-};
-```
-
-- Backup codes generated at enrollment (single-use, AES-256 encrypted in DB)
-- 2FA disable triggers full session invalidation and security notification email
+Constraints:
+- Admins cannot reach `AdminNavigator` from the interactive password-login path until Supabase MFA verification succeeds and `commitAuthenticatedSession` runs.
+- A successful admin full login stamps `last_full_login_at`; `useAdminSessionTimeout` signs the admin out when the configured admin-session window expires.
+- Cold-start restore follows the same session windows in `hooks/useAuth.ts`: admins must be inside `get_admin_session_hours` (default 24 hours); customer/officer sessions restore only when `password_set` is true and `last_full_login_at` is within 30 days.
+- Do not add a parallel TOTP-secret table or `speakeasy` verifier. Supabase owns factor secrets, QR URIs, challenge IDs, and verification.
+- Backup codes are not implemented in the current source.
 
 ---
 
@@ -185,18 +169,26 @@ CREATE POLICY customers_own_payments ON user_payments
 ```typescript
 // AppNavigator.tsx — role-based navigator selection
 const AppNavigator = () => {
-  const { isAuthenticated, user } = useAppSelector(state => state.auth);
+  const { isAuthenticated, isLoading, user, requires2FA, roleStatus } =
+    useAppSelector(state => state.auth);
 
-  if (!isAuthenticated) return <AuthNavigator />;
+  const resolvingRole = isAuthenticated && !!user && roleStatus !== 'ready';
+  if (isLoading || resolvingRole) return <Loading />;
+  if (!isAuthenticated || !user) return <AuthNavigator />;
 
-  switch (user.role) {
-    case 'customer': return <CustomerNavigator />;
-    case 'officer':  return <OfficerNavigator />;
-    case 'admin':    return <AdminNavigator />;
-    default:         return <AuthNavigator />;
-  }
+  if (requires2FA) return <AuthNavigator />;
+  if (Platform.OS === 'web' && user.role !== 'admin') return <WebUnsupportedScreen />;
+  if (user.role === 'customer') return <CustomerNavigator />;
+  if (user.role === 'officer') return <OfficerNavigator />;
+  if (user.role === 'admin') return <AdminNavigator />;
+  return <AuthNavigator />;
 };
 ```
+
+`authSlice` treats the JWT metadata role as provisional. `hooks/useAuth.ts`
+must call `get_my_role` and dispatch `setResolvedRole` before route selection is
+unblocked, preventing stale or spoofed metadata from briefly rendering the wrong
+role shell.
 
 ---
 

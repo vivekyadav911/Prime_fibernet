@@ -29,14 +29,14 @@
 **Prime Fibernet** is an enterprise ISP management platform:
 
 - **One codebase** → iOS, Android, and web (Admin-optimized)
-- **Three roles** resolved at login from `profiles.role`:
+- **Three roles** resolved at login from the `get_my_role` RPC:
   - **Customer** — subscribe, pay bills, raise service requests, AI support
   - **Officer** — field jobs, GPS attendance, collections, inventory, payslips
   - **Admin** — users, officers, plans, payments, invoices, HR, support, analytics
 
 **Backend:** Supabase (Postgres + Auth + Realtime + Storage + Edge Functions)
 
-**Frontend:** Expo SDK 54 · React Native 0.73+ · TypeScript 5 · Redux Toolkit + RTK Query · React Navigation 6 · React Hook Form + Zod
+**Frontend:** Expo SDK 54 · React Native 0.81 · TypeScript 5.8 · Redux Toolkit + RTK Query · React Navigation 7 · React Hook Form + Zod
 
 ---
 
@@ -63,7 +63,7 @@
 | **Google Gemini** | AI chatbot (`gemini-rag-chatbot`) | Edge Function secret |
 | **Firebase Cloud Messaging** | Push notifications | FCM config in Expo + `user_fcm_tokens` table |
 | **Sentry** | Error monitoring (optional dev) | `EXPO_PUBLIC_SENTRY_DSN` |
-| **Google Maps** | Officer map, geofencing | Platform API keys in Expo config |
+| **OpenStreetMap / Leaflet** | Officer maps, geofencing, admin tracking | No API key for the current Leaflet paths |
 
 Copy env template:
 
@@ -138,7 +138,7 @@ pnpm typecheck   # TypeScript across packages
 pnpm lint        # ESLint via turbo
 ```
 
-**Login flow:** App → Auth screen → sign in → `AppNavigator` routes by `profiles.role` to Customer tabs, Officer drawer, or Admin drawer.
+**Login flow:** App → Auth screen → sign in → `get_my_role` resolves the authoritative DB role → `AppNavigator` routes to Customer tabs, Officer location gate/tabs, or Admin. Admin password login first completes Supabase TOTP MFA in `AdminMfaScreen`.
 
 ---
 
@@ -151,7 +151,7 @@ Prime_fibernet/
 │   │   ├── screens/
 │   │   │   ├── admin/         Admin modules (finance, HR, support…)
 │   │   │   ├── customer/      Customer tabs + stacks
-│   │   │   ├── officer/       Officer drawer + field ops
+│   │   │   ├── officer/       Officer tab shell + field ops
 │   │   │   └── common/        Shared screens (auth, PDF viewer)
 │   │   ├── components/
 │   │   │   ├── admin/         FormField, SectionCard, KPI cards…
@@ -208,10 +208,10 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 |---------|------------|---------|
 | Email/password login | `screens/common/auth/` | Supabase Auth |
 | Sign-up + verification | Auth screens | `supabase.auth.signUp` + Resend |
-| Admin TOTP 2FA | Auth flow | `functions/verify-admin-totp` |
+| Admin TOTP 2FA | `screens/auth/AdminMfaScreen.tsx`, `components/auth/MfaEnrollModal.tsx` | Supabase native MFA (`auth.mfa`) |
 | Forgot password | Auth screens | Supabase Auth reset |
 | Biometric login (dev) | Auth hooks | `expo-local-authentication` + SecureStore |
-| Role-based routing | `navigation/AppNavigator.tsx` | `profiles.role` |
+| Role-based routing | `navigation/AppNavigator.tsx`, `hooks/useAuth.ts` | `get_my_role` RPC, then `authSlice.roleStatus = ready` |
 | JWT in SecureStore | `store/slices/authSlice` | `expo-secure-store` |
 | Dev quick sign-in | Auth screen (dev only) | Seed users script |
 
@@ -232,14 +232,14 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 
 ### 5.3 Officer features
 
-**Navigation:** `OfficerNavigator.tsx` — LocationGate → drawer
+**Navigation:** `OfficerNavigator.tsx` — `LocationGate` → `OfficerTabNavigator`
 
 | Module | Screens | Notes |
 |--------|---------|-------|
 | Location gate | `LocationGateScreen` | GPS required before access |
 | Dashboard | `OfficerDashboardScreen` | Shift, today's jobs |
 | Requests | `OfficerRequestsStackNav` | Accept → resolve workflow |
-| Map | `OfficerMapScreen` | Live location, job pins |
+| Map | `OfficerMapScreen`, `components/map/LeafletMapView.*` | Leaflet + OSM tiles, job pins |
 | Attendance | `OfficerAttendanceDashboard`, `AttendanceHistoryScreen` | Geofenced clock-in/out |
 | Collections | `OfficerCollectionsStackNav`, `CollectPaymentScreen` | Assigned customers, cash collection |
 | Inventory | `OfficerInventoryScreen` | Assigned equipment |
@@ -410,7 +410,7 @@ flowchart TD
 **First vertical slice after S0:**
 
 1. Login screen → Supabase sign-in  
-2. Read `profiles.role` → navigate to role home  
+2. Resolve `get_my_role` → navigate to role home  
 3. One RTK Query hook on Customer dashboard (proves API layer)
 
 Current status (see root [README.md](../README.md)): S0–S6 marked **Done**; ongoing work adds modules (invoices, payroll, notification automation, etc.).

@@ -62,7 +62,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 |----|---------|----------|-------|
 | A-01 | Email/password sign-up with verification | P0 | 24-hour verification link |
 | A-02 | Login with JWT + refresh token rotation | P0 | 30-min JWT, 7-day refresh |
-| A-03 | Admin TOTP two-factor authentication | P0 | speakeasy library |
+| A-03 | Admin TOTP two-factor authentication | P0 | Supabase native MFA (`auth.mfa`) |
 | A-04 | Forgot password with email reset | P1 | 1-hour token expiry |
 | A-05 | Biometric login (Face ID / Fingerprint) | P2 | After first password login |
 | A-06 | Role-based navigation guard | P0 | Customer / Officer / Admin routes |
@@ -130,14 +130,13 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Status update flow: Accept → In Transit → On Site → Working → Resolved
 - Activity note required before resolving
 - Optional photo attachment at each step
-- One-tap navigation to customer address (Google Maps / Apple Maps)
+- One-tap navigation to customer address (native maps app deep link)
 
 #### Map View
-- Google Maps with live officer location
+- Leaflet/OpenStreetMap map with assigned-ticket locations
 - Request pins colored by priority (red / amber / green)
-- Request card on pin tap with navigation CTA
-- Offline map tile caching for last-known service areas
-- List/map toggle
+- Ticket list below the map with navigation CTA
+- Empty state when assigned tickets have no GPS coordinates
 
 #### Shifts & Attendance
 - Clock-in / clock-out with GPS coordinates

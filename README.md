@@ -85,7 +85,7 @@ pnpm typecheck
 |--------|-------|--------|
 | S0 | Unified app scaffold | Done |
 | 1 | INFRA-004/005/006 migrations, RLS, FCM | Done |
-| 2 | AUTH-001–007 | Done (dev quick sign-in + biometrics) |
+| 2 | AUTH-001–007 | Done (role landing, Supabase MFA, dev quick sign-in + biometrics) |
 | 3 | Customer + Payments | Done |
 | 4 | Officer + EAS/Sentry | Done |
 | 5 | Admin ADM-001–005 | Done |

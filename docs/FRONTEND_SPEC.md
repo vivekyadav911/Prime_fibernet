@@ -1,7 +1,7 @@
 # Prime Fibernet — Frontend Specification Document
 
 > **Version:** 2.0 | **Date:** June 2026 | **Next Review:** September 2026  
-> **Framework:** React Native 0.73+ · Expo SDK 50+ · TypeScript 5.0+  
+> **Framework:** React Native 0.81 · Expo SDK 54 · TypeScript 5.8  
 > **Platform:** iOS · Android · Web (Unified App)
 
 ---
@@ -199,25 +199,31 @@ export const typography = {
 
 ## 3. Screen Specifications — Officer
 
+**Implemented shell:** `OfficerNavigator` starts at `LocationGateScreen` and
+replaces into `OfficerTabNavigator` after foreground location permission is
+granted. Tabs are Dashboard, Tickets, Attendance, Payments, and Settings. Map,
+Inventory, Leave, Payslip, Notifications, Support, and Profile are nested stacks
+or settings/profile pushes, not top-level drawer items.
+
 ### 3.1 Officer Dashboard
 
-**Route:** `OfficerNavigator → Dashboard`  
-**Data sources:** `officersApi`, Supabase Realtime on `service_requests WHERE officer_id = current`
+**Route:** `OfficerNavigator → OfficerTabs → Dashboard → DashboardHome`  
+**Data sources:** officer profile hooks, dashboard stats hooks, attendance/collection preview hooks
 
 **Components:**
-- **Shift Card** — current shift status; Clock In / Clock Out button; hours logged today
-- **Request Summary Row** — 3 count chips: New (red), In Progress (amber), Completed (green)
-- **Next Requests List** — 3 highest-priority pending requests; customer name, address, priority badge, distance
-- **Weekly Performance Bar** — requests completed / weekly target (e.g., "12 / 15")
-- **Leave Balance Row** — 3 chips: Casual Leave, Sick Leave, Earned Leave with day counts
-- **Inventory Warning** — shown if any assigned item has `status = damaged` or low stock
+- **ShiftClockWidget** — current shift status and clock action
+- **StatsRow** — key officer stats
+- **AssignmentPreviewList** — assigned tickets preview
+- **CollectionAssignmentPreviewList** — payment collection preview
+- **AttendanceWidget** — current-month attendance summary
+- **Contract signature prompt** — modal/card when a pending employment contract requires signature
 
 ---
 
 ### 3.2 Request Queue & Management
 
-**Route:** `OfficerNavigator → Requests`  
-**Data sources:** `requestsApi` (officer-scoped via RLS)
+**Route:** `OfficerNavigator → OfficerTabs → Tickets → RequestsList`  
+**Data sources:** officer portal ticket hooks (officer-scoped via RLS)
 
 **Components:**
 - **Priority-sorted List** — P0 (red border) → P1 → P2 → P3; then by `created_at`
@@ -239,25 +245,24 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.3 Map View
 
-**Route:** `OfficerNavigator → Map`  
-**Data sources:** `expo-location` (live GPS) + `requestsApi`
+**Route:** `OfficerNavigator → OfficerTabs → Settings → Map`  
+**Data sources:** `useOfficerAssignedTickets`, ticket coordinate mappers
 
 **Components:**
-- **Google Maps** — officer's live location (blue dot with accuracy ring)
-- **Request Pins** — colored markers: P0 red, P1 orange, P2 amber, P3 green
-- **Pin Tap Card** — bottom sheet: customer name, request type, address, "Navigate" CTA
-- **List / Map Toggle** — header right button switches view mode
-- **My Location Button** — centers map on officer's current position
+- **Leaflet map** — `LeafletMapView` with OpenStreetMap tiles
+- **Request Pins** — assigned tickets with GPS coordinates, priority-colored
+- **Ticket list** — same mapped tickets under the map with "Navigate" CTA
+- **States** — skeleton loading, retryable error, and empty state for missing coordinates/no assigned tickets
 
-**Permissions:** `expo-location` foreground permission required; background location active while shift is clocked in
+**Permissions:** `LocationGateScreen` requires foreground location permission before the officer shell opens.
 
-**Offline:** Map tiles cached for last-visited areas via react-native-maps tile caching
+**Constraint:** Do not require a Google Maps API key for this screen. Native uses Leaflet inside `react-native-webview`; web uses `react-leaflet` with the same prop shape.
 
 ---
 
 ### 3.4 Shifts & Attendance
 
-**Route:** `OfficerNavigator → Shifts`
+**Route:** `OfficerNavigator → OfficerTabs → Attendance`
 
 **Components:**
 - **Monthly Calendar** — days colored: Present (green), Absent (gray), Leave (amber), Holiday (blue)
@@ -275,7 +280,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.5 Inventory View
 
-**Route:** `OfficerNavigator → Inventory`  
+**Route:** `OfficerNavigator → OfficerTabs → Settings → Inventory`  
 **Data sources:** `inventory_assignments WHERE assigned_to_id = officer.id`
 
 **Components:**
@@ -288,7 +293,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.6 Payslip & Earnings
 
-**Route:** `OfficerNavigator → Profile → Payslip`
+**Route:** `OfficerNavigator → OfficerTabs → Settings → Payslip`
 
 **Components:**
 - **Month Selector** — horizontal scroll of last 12 months
@@ -311,7 +316,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 - **Request Pipeline Funnel** — horizontal bar: New → Assigned → In Progress → Resolved with counts
 - **Expiring Subscriptions Table** — next 7 days; customer name, plan, expiry date, "Send Reminder" action
 - **Recent Activity Feed** — last 20 audit log events; actor, action, target, time ago
-- **Officer Status Map** — Google Maps with live dots for clocked-in officers
+- **Officer Status Map** — Leaflet/OpenStreetMap view with live dots for clocked-in officers
 
 ---
 

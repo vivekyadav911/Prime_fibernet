@@ -100,7 +100,7 @@
 - [ ] 2FA disable triggers full session invalidation and security notification email
 
 **Technical Notes:**
-> `speakeasy` library for TOTP generation/verification. `qrcode` library for enrollment QR. 2FA secret stored encrypted via `pgcrypto` extension in Supabase. Backup codes hashed before storage.
+> Use Supabase native MFA (`auth.mfa`) for TOTP enrollment/challenge/verification. QR and manual secret are returned by Supabase during enrollment; do not add a parallel TOTP-secret table or custom `speakeasy` verifier.
 
 ---
 
@@ -315,7 +315,7 @@
 - [ ] Status update flow: Accept → In Transit → On Site → Working → Resolved
 - [ ] Activity note with optional photo required before "Resolve" action
 - [ ] Officer cannot view or act on requests not assigned to them (RLS enforced)
-- [ ] One-tap navigation to customer address via Google Maps or Apple Maps
+- [ ] One-tap navigation to customer address via the native maps app
 
 **Technical Notes:**
 > `requestsApi.updateStatus` with RLS policy `officers_view_requests`. Activity notes stored in `request_activities` table. Photos uploaded to `activities/` Supabase Storage bucket. `Linking.openURL` with maps deeplink for navigation.
@@ -326,14 +326,13 @@
 **Priority:** 🟠 P1 | **Status:** 🟦 Todo | **Estimate:** 8 SP
 
 **Acceptance Criteria:**
-- [ ] Google Maps showing officer's real-time location (blue dot with accuracy ring)
+- [ ] Leaflet/OpenStreetMap view showing officer's assigned-ticket locations
 - [ ] Request pins colored by priority: P0 red, P1 orange, P2 amber, P3 green
-- [ ] Tap on pin opens bottom sheet with customer name, request type, "Navigate" CTA
-- [ ] List / Map toggle in navigation header
-- [ ] Offline map tiles cached for last-known service areas
+- [ ] Ticket list shown below the map with customer/address details and "Navigate" CTA
+- [ ] Empty state explains when assigned tickets are missing GPS coordinates
 
 **Technical Notes:**
-> `react-native-maps` with `PROVIDER_GOOGLE`. `expo-location` `watchPositionAsync` for live tracking. Map pins rendered as `MapMarker` with custom colored SVG. Tile caching via react-native-maps `cacheEnabled` prop.
+> `OfficerMapScreen` renders `LeafletMapView` with OpenStreetMap tiles and pins derived from `useOfficerAssignedTickets` plus ticket coordinate mappers. Native uses `react-native-webview`; web uses `react-leaflet`.
 
 ---
 
@@ -409,7 +408,7 @@
 - [ ] Request pipeline funnel: New → Assigned → In Progress → Resolved with counts
 - [ ] Expiring subscriptions table for next 7 days with "Send Reminder" action
 - [ ] Recent admin activity feed (last 20 audit log events)
-- [ ] Google Maps with live dots for clocked-in officers
+- [ ] Leaflet/OpenStreetMap view with live dots for clocked-in officers
 
 **Technical Notes:**
 > `analyticsApi` RTK Query (60-min cache). Recharts on web, Victory Native on mobile. KPI counts from Supabase DB views (pre-aggregated). Real-time officer count via Supabase Realtime on `shifts WHERE status = 'active'`.
