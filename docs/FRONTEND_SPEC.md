@@ -145,7 +145,7 @@ export const typography = {
 ### 2.3 Payments Screen
 
 **Route:** `CustomerNavigator → Payments`  
-**Data sources:** `paymentsApi` (5-min RTK Query cache)
+**Data sources:** `paymentCollectionApi` (5-min RTK Query cache)
 
 **Components:**
 - **Pay Now Button** — primary CTA at top; opens plan selection if no active sub, else direct to gateway
@@ -155,10 +155,11 @@ export const typography = {
 - **Invoice Download** — generates signed Supabase Storage URL on tap; opens PDF viewer
 
 **Payment gateway flow:**
-1. Client calls `paymentsApi.createOrder` → Edge Function → Razorpay order
-2. `WebView` renders Razorpay checkout URL
-3. On success/failure, `WebView` fires callback with payment result
-4. Client updates local state; waits for Realtime confirmation from webhook
+1. Client calls `createPaymentOrderV2` → `create-payment-order` Edge Function
+2. Edge Function resolves the amount and creates/reuses an order through the active gateway adapter
+3. `WebView` renders the gateway checkout URL or checkout params
+4. On success/failure, `WebView` fires callback with payment result
+5. Client refreshes local state and can poll `verify-payment` while waiting for gateway confirmation
 
 ---
 
@@ -286,7 +287,37 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ---
 
-### 3.6 Payslip & Earnings
+### 3.6 Field Collections
+
+**Route:** `OfficerCollectionsStackNav → CollectionsList / CashCollection / RecordPayment`
+
+**Data sources:** `paymentCollectionApi`, `get_officer_collectible_customers`, `payments`, `bank_accounts`
+
+**Collection list components:**
+- **Summary Bar** - collected today total, confirmed count, Record Payment CTA, Collection History CTA
+- **Tabs** - Assigned to me and Open pool; open-pool rows can be claimed before collection
+- **Search** - filters by customer name, customer account id, or phone
+- **Customer Row** - name, account number, phone, resolved outstanding amount, due date, collection status badge
+- **Actions**:
+  - Assigned row: Collect, History
+  - Open-pool row: Assign to me, History
+
+**Cash / digital collection form:**
+- Method selector supports cash, UPI, and netbanking collection paths.
+- Cash supports denomination capture and optional evidence photo.
+- UPI QR mode requires an active bank account with UPI VPA and a UTR/reference before submit.
+- GPS capture starts on screen mount; if it times out, collection can continue without location and any captured coordinates are still persisted.
+- Successful submissions return to the collection stack with the payment pending admin verification unless the RPC confirms it immediately.
+- Permission errors such as "assigned to another officer" are shown to the officer and are not queued offline; other failures are saved through `SyncManager` for later retry.
+
+**States:**
+- Loading: skeleton rows
+- Empty: explains whether the assigned list or open pool has no customers
+- Error: retry action using the RTK Query refetch
+
+---
+
+### 3.7 Payslip & Earnings
 
 **Route:** `OfficerNavigator → Profile → Payslip`
 
@@ -381,7 +412,41 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ---
 
-### 4.6 Analytics & Reports
+### 4.6 Payments, Reviews & Collection Assignments
+
+**Route:** `AdminNavigator → Payments`
+
+**Data sources:** `paymentCollectionApi`, `collectionAssignmentsApi`, `payment_analytics`, `payments`, collection RPCs
+
+**Payment list / analytics components:**
+- Filterable payments list by status, method, channel, gateway, officer, date, and search term.
+- KPI aggregates include confirmed revenue, pending review amount/count, failed payments, open-pool count, and active officers.
+- Export action invokes `export-payments` with the current filters.
+- Gateway configuration uses `save-gateway-credentials`; active default gateway drives `create-payment-order`.
+
+**Payment Review screen:**
+- Shows customer, account number, amount, payment method, current payment status, and gateway/order references when present.
+- Officer-submitted collections show reference/UTR, field notes, GPS coordinates, and evidence photo link when available.
+- Cash reviews include denomination recount and optional physical receipt number.
+- Confirm requires or derives a next due date and updates the payment to `confirmed`; officer/office collection channels then call `finalize_officer_collection`.
+- Decline requires review notes and marks the payment `cancelled` with failure/review notes.
+
+**Collection Assignments screen:**
+- Board view splits available/upcoming customers from assigned/due-for-collection customers.
+- History view lists assignment, release, claim, and payment events from `collection_assignment_events`.
+- Filters include payment status, collection status, officer/open-pool selection, claimed/unclaimed, outstanding-only, and sort direction.
+- Bulk mode can assign many customers to one officer or release them to the open pool; single-row assignment uses the same RPC path.
+- Optional collection target amount overrides stale outstanding balances; lists display the server-resolved effective amount.
+- Releasing an account to open pool clears the officer assignment so officers can self-assign it from their Open pool tab.
+
+**States:**
+- Loading: skeleton table/list rows
+- Empty: explains no matching payments/assignments and offers filter reset where applicable
+- Error: retry action using the RTK Query refetch
+
+---
+
+### 4.7 Analytics & Reports
 
 **Route:** `AdminNavigator → Analytics`
 
@@ -395,7 +460,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ---
 
-### 4.7 Bulk Notifications
+### 4.8 Bulk Notifications
 
 **Route:** `AdminNavigator → Notifications`
 
@@ -408,7 +473,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ---
 
-### 4.8 Audit Log Viewer
+### 4.9 Audit Log Viewer
 
 **Route:** `AdminNavigator → Settings → Audit Logs`
 
@@ -429,7 +494,8 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 | `usersApi` | getUser, updateProfile, blockUser, getAllUsers | 10 min |
 | `plansApi` | getPlans, getPlanById, createPlan, updatePlan, toggleActive | 30 min |
 | `subscriptionsApi` | getMySubscription, subscribe, getAll (admin) | 5 min |
-| `paymentsApi` | createOrder, getHistory, getInvoice, refund (admin) | 5 min |
+| `paymentCollectionApi` | online order, customer bill/history, payment review, receipts, refunds, officer collections | 5 min |
+| `collectionAssignmentsApi` | admin assignment board, collection history, release claim, bulk assignment | 2 min |
 | `requestsApi` | createRequest, updateStatus, addNote, getAll, getAssigned | 2 min |
 | `officersApi` | getOfficers, assignRegion, getShifts, clockIn, clockOut | 5 min |
 | `analyticsApi` | getRevenue, getRequestMetrics, getOfficerPerformance | 60 min |

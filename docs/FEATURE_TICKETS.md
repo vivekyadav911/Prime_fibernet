@@ -239,7 +239,7 @@
 - [ ] Total spent summary card at top of screen
 
 **Technical Notes:**
-> `paymentsApi` RTK Query (5-min cache). Invoice PDFs stored in Supabase Storage. Signed URL generated on-demand via Edge Function (valid 7 days). `expo-sharing` for native share sheet on mobile.
+> `paymentCollectionApi` RTK Query (5-min cache). Receipts are generated through `generate-payment-receipt`; invoice PDFs remain in Supabase Storage with signed URLs for download/share.
 
 ---
 

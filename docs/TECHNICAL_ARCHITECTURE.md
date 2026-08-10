@@ -284,7 +284,13 @@ prime-fibernet-rn/
 
 | Function | Responsibility |
 |----------|---------------|
-| `payment-webhook` | Verify Razorpay HMAC signature, update subscription, trigger invoice |
+| `create-payment-order` | Resolve authoritative amount, create/reuse a gateway order, persist `initiated` payment rows |
+| `verify-payment` | Confirm gateway payments, activate subscriptions, sync invoices, notify customers |
+| `process-payment` | Finalize reviewed officer/office collections through `finalize_officer_collection` |
+| `process-refund` | Start refund lifecycle for confirmed payments |
+| `save-gateway-credentials` | Validate, encrypt, and store payment gateway credentials |
+| `generate-payment-receipt` | Generate payment receipts for confirmed or reviewed collections |
+| `resolve-stale-payments` | Expire stale checkout attempts that remain `initiated` |
 | `invoice-generator` | Generate PDF invoices, store to Supabase Storage |
 | `email-service` | Transactional emails via Resend (welcome, invoice, reset) |
 | `sms-service` | SMS and WhatsApp delivery via Twilio |
@@ -296,7 +302,7 @@ prime-fibernet-rn/
 | Service | Category | Usage |
 |---------|----------|-------|
 | Google Gemini API | AI | Customer support chatbot |
-| Razorpay / Easebuzz | Payments | Plan subscriptions & renewals |
+| Razorpay / Easebuzz / PayU / Cashfree / Paytm | Payments | Plan subscriptions, renewals, and gateway fallback options |
 | Resend | Email delivery | Transactional & marketing emails |
 | Twilio | SMS / WhatsApp | Alerts, OTPs, notifications |
 | Google Maps API | Mapping | Officer location, service area |
@@ -495,34 +501,94 @@ Client: Store JWT → Keychain (iOS) / Keystore (Android)
 Dispatch to authSlice → Navigate to MainNavigator
 ```
 
-### 5.2 Payment Processing Flow
+### 5.2 Payment processing and collection flows
+
+#### Customer online checkout
 
 ```
-Customer taps Pay
+Customer taps Pay / Pay in Advance / Plan checkout
         │
         ▼
-Client calls Edge Function → POST /payments/create
-Edge Function creates Razorpay order → returns order_id
+Client calls `create-payment-order`
         │
         ▼
-Client opens Razorpay WebView with order_id
+Edge Function resolves amount:
+  plan purchase -> selected plan price
+  bill/retry    -> outstanding or recent open payment
+  advance       -> next billing cycle
+  custom        -> client amount within configured bounds
+        │
+        ▼
+Insert/reuse `payments.status = initiated`
+        │
+        ▼
+Active gateway adapter creates order
+(razorpay/easebuzz/payu/cashfree/paytm)
+        │
+        ▼
+Client opens gateway checkout/WebView
 Customer completes payment
         │
         ▼
-Razorpay fires webhook → Edge Function
-Verify HMAC signature
-Idempotency check (transaction_id unique constraint)
+Gateway callback or client poll calls `verify-payment`
+Verify gateway response and update payment row
         │
         ▼
-Update subscription record
-Generate invoice PDF → Supabase Storage
-Send confirmation email via Resend
-Fire Supabase Realtime event
+Set `payments.status = confirmed`
+Expire duplicate initiated rows for the same billing period
+Activate/update subscription when a plan id is present
+Sync invoice and send portal/WhatsApp notification
         │
         ▼
-Client receives Realtime update
-Show success modal + invoice download button
+Client refreshes RTK Query cache / receipt view
 ```
+
+#### Officer and admin collection
+
+```
+Admin collection board
+        │
+        ├─ `bulk_assign_collection_officer(customer_ids, officer_id)`
+        │    officer_id set  -> `users.collection_status = assigned`
+        │    officer_id NULL -> `users.collection_status = open`
+        │
+        ▼
+Officer collection list
+        │
+        ├─ assigned tab: accounts assigned to current officer
+        └─ open-pool tab: eligible unassigned accounts
+              │
+              └─ `claim_collection_customer(customer_id)`
+                    self-assigns the account to the officer
+        │
+        ▼
+Officer records cash / UPI / netbanking collection
+        │
+        ├─ `recordCashCollection` inserts `payments.status = pending_review`
+        └─ `record_manual_payment` inserts `pending_review`, `cash_collected`,
+           or `confirmed` depending on method and confirmation flags
+        │
+        ▼
+Optional evidence metadata is attached
+`collection_latitude`, `collection_longitude`, `evidence_photo_url`
+        │
+        ▼
+Admin Payment Review confirms or declines
+        │
+        ├─ confirm -> `payments.status = confirmed`
+        │            `finalize_officer_collection(payment_id)`
+        │            reduces outstanding and may mark collection `collected`
+        └─ decline -> `payments.status = cancelled`, review/failure notes saved
+```
+
+Payment and collection status are separate:
+
+| Field | Values used by current code | Notes |
+|-------|-----------------------------|-------|
+| `payments.status` | `initiated`, `pending_review`, `cash_collected`, `confirmed`, `failed`, `refunded`, `cancelled` | Financial lifecycle for one payment row |
+| `users.collection_status` | `inactive`, `open`, `assigned`, `claimed`, `collected`, `failed` | Work-queue lifecycle for collecting from a customer |
+
+Use `resolve_customer_collection_amount(customer_id)` or `get_customer_collection_amounts(customer_ids)` when displaying collection dues. They intentionally prefer `collection_target_amount`, then `outstanding_amount`, then the active plan price so stale or zero outstanding values do not hide collectible customers.
 
 ### 5.3 Realtime Subscription Pattern
 
