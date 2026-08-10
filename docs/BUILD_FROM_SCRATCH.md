@@ -223,7 +223,7 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 |--------|---------|-------|
 | Dashboard | `customer/dashboard/DashboardScreen` | Plan card, quick actions, requests |
 | Plans | `customer/plans/PlansScreen`, `PlanDetails`, `PlanChangeRequest` | Catalog, subscribe flow |
-| Payments | `CustomerBillScreen`, `Checkout`, `GatewayWebView`, `PaymentSuccess`, `PaymentHistory`, `Receipt`, `MyBills` | Razorpay/Easebuzz webview |
+| Payments | `CustomerBillScreen`, `Checkout`, `GatewayWebView`, `PaymentSuccess`, `PaymentHistory`, `Receipt`, `MyBills` | Active gateway checkout via adapter |
 | Service requests | `CustomerTicketList`, `CreateCustomerTicket`, `CustomerTicketDetail` | Realtime status |
 | Support | `CustomerSupportHub`, `CustomerLiveChat`, FAQs, `ChatbotScreen` (Prima AI) | Gemini edge function |
 | Profile | `ProfileScreen` | Edit profile, change password, delete account |
@@ -241,7 +241,7 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 | Requests | `OfficerRequestsStackNav` | Accept → resolve workflow |
 | Map | `OfficerMapScreen` | Live location, job pins |
 | Attendance | `OfficerAttendanceDashboard`, `AttendanceHistoryScreen` | Geofenced clock-in/out |
-| Collections | `OfficerCollectionsStackNav`, `CollectPaymentScreen` | Assigned customers, cash collection |
+| Collections | `OfficerCollectionsStackNav`, `OfficerCollectionScreen`, `CashCollectionScreen` | Assigned/open-pool customers, cash/UPI/netbanking collection, admin review |
 | Inventory | `OfficerInventoryScreen` | Assigned equipment |
 | Payslips | `OfficerPayslipStackNav` | View/download PDF |
 | Leave | `OfficerLeaveStackNav` | Leave requests |
@@ -267,13 +267,49 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 | **Ticket portal** | Internal tickets, link to requests | `tickets` |
 | **Plans** | CRUD, duplicate, deactivate | `plans` |
 | **Notifications** | Broadcast, schedule, automation rules | `functions/send-broadcast-notification`, cron |
-| **Payments** | List, review, gateways, analytics, refunds, collection assignments | Razorpay webhooks, `payments` |
+| **Payments** | List, review, gateways, analytics, refunds, collection assignments | Gateway adapters, `payments`, collection RPCs |
 | **Invoices** | List, create, GST manual, settings, bulk send, PDF | `functions/invoice-generator`, `send-invoice` |
 | **Inventory** | Categories, stock, bulk ops, history | `inventory_*` tables |
 | **Reports** | Revenue, exports | Analytics API |
 | **Customer support** | Tickets, live chat, FAQs, SLA, canned responses, Customer 360 | Support tables + AI chat |
 | **Settings** | General, security, integrations, backup, audit logs | `settings`, audit |
 | **Map** | Officer trail replay, live tracking | PostGIS, tracking |
+
+---
+
+### 5.5 Payment collection workflow
+
+The payment module now covers two paths:
+
+1. **Customer online checkout** - Customer bill screens call `create-payment-order`; the edge function resolves the authoritative amount, reuses a recent `initiated` order when possible, and delegates order creation to the active gateway adapter (`razorpay`, `easebuzz`, `payu`, `cashfree`, or `paytm`).
+2. **Officer/admin field collection** - Admins assign customers for collection, officers claim work from the open pool or work assigned accounts, and collected amounts remain review-gated until admin confirmation.
+
+Status intent:
+
+| Status | Meaning | Typical writer |
+|--------|---------|----------------|
+| `initiated` | Online order exists but is not confirmed | `create-payment-order` |
+| `pending_review` | Non-cash or officer-submitted payment needs admin verification | Officer/Admin payment mutations |
+| `cash_collected` | Manual cash payment pending review in the RPC path | `record_manual_payment` |
+| `confirmed` | Payment is accepted and customer/account state can advance | Webhook/verify function or admin review |
+| `failed`, `cancelled`, `refunded` | Terminal exception states | Gateway verification, admin review, refund flow |
+
+Collection assignment state lives on `users` (`assigned_officer_id`, `claimed_by_officer_id`, `collection_status`, `collection_target_amount`) and is exposed through RPCs:
+
+| RPC | Used by | Purpose |
+|-----|---------|---------|
+| `bulk_assign_collection_officer` | Admin collection board | Assign one/many customers to an officer, or release them to open pool by passing `NULL` officer |
+| `claim_collection_customer` | Officer open-pool tab | Self-assign an open-pool customer to the current officer |
+| `get_officer_collectible_customers` | Officer collection list | Return assigned and open-pool customers the officer may collect from |
+| `get_customer_collection_amounts` / `resolve_customer_collection_amount` | Admin/officer lists | Prefer admin target amount, then stored outstanding, then active plan price |
+| `finalize_officer_collection` | Admin confirm / process function | Reduce outstanding balance, mark collection `collected` when fully paid, log collection history |
+
+Operational constraints:
+
+- Do not calculate collection amounts from `users.outstanding_amount` alone; use `resolve_customer_collection_amount` or the RTK Query hooks that already call it.
+- Field evidence is stored in the `payment-evidence` bucket and the signed URL is persisted on the `payments` row for admin review.
+- Officers may proceed without GPS when location capture times out, but the available coordinates are saved when present.
+- Admin confirmation is the handoff that calls `finalize_officer_collection` for `officer_cash` / `office_cash` channels.
 
 ---
 
@@ -297,6 +333,7 @@ All files in `supabase/migrations/` — run via `supabase db push`:
 | `20260631*` | Payslip module |
 | `20260632*` | Invoice module extend |
 | `20260633*` | Notification delivery fix, automation rules |
+| `20260710*` | Attendance company-local day, officer payment collection, open-pool self-assign, evidence RLS |
 
 Inventory: [SUPABASE_MIGRATION_INVENTORY.md](./SUPABASE_MIGRATION_INVENTORY.md)
 
@@ -332,12 +369,13 @@ Deploy all under `supabase/functions/`:
 | `verify-admin-totp` | Admin 2FA |
 | `admin-create-customer` / `admin-create-officer` | Provision users |
 | `provision-officer-auth` | Officer auth setup |
-| `create-payment-order` | Initiate Razorpay/Easebuzz order |
+| `create-payment-order` | Resolve amount and initiate active gateway order |
 | `verify-payment` | Confirm payment post-gateway |
 | `payment-webhook` / `razorpay-webhook` | Gateway callbacks |
 | `process-payment` / `process-refund` | Payment lifecycle |
 | `save-gateway-credentials` | Encrypt & store gateway keys |
 | `generate-payment-receipt` | PDF receipt |
+| `resolve-stale-payments` | Mark stale initiated checkout attempts failed |
 | `invoice-generator` / `send-invoice` / `bulk-send-invoices` | Invoice pipeline |
 | `send-broadcast-notification` | Admin push broadcasts |
 | `process-scheduled-notifications` | Cron: scheduled sends |
