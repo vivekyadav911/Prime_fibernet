@@ -138,7 +138,7 @@ pnpm typecheck   # TypeScript across packages
 pnpm lint        # ESLint via turbo
 ```
 
-**Login flow:** App → Auth screen → sign in → `AppNavigator` routes by `profiles.role` to Customer tabs, Officer drawer, or Admin drawer.
+**Login flow:** App → Auth screen → sign in → `AppNavigator` routes by `profiles.role` to Customer tabs, Officer tabs, or Admin drawer.
 
 ---
 
@@ -151,7 +151,7 @@ Prime_fibernet/
 │   │   ├── screens/
 │   │   │   ├── admin/         Admin modules (finance, HR, support…)
 │   │   │   ├── customer/      Customer tabs + stacks
-│   │   │   ├── officer/       Officer drawer + field ops
+│   │   │   ├── officer/       Officer tab shell + field ops
 │   │   │   └── common/        Shared screens (auth, PDF viewer)
 │   │   ├── components/
 │   │   │   ├── admin/         FormField, SectionCard, KPI cards…
@@ -232,21 +232,25 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 
 ### 5.3 Officer features
 
-**Navigation:** `OfficerNavigator.tsx` — LocationGate → drawer
+**Navigation:** `OfficerNavigator.tsx` — LocationGate → `OfficerTabs`
+
+Tabs: Dashboard, Tickets, Attendance, Payments, Settings. Map, Inventory,
+Support, Notifications, Leave, and Payslip are reached from Settings; collection
+workflows are reached from Payments.
 
 | Module | Screens | Notes |
 |--------|---------|-------|
 | Location gate | `LocationGateScreen` | GPS required before access |
 | Dashboard | `OfficerDashboardScreen` | Shift, today's jobs |
-| Requests | `OfficerRequestsStackNav` | Accept → resolve workflow |
-| Map | `OfficerMapScreen` | Live location, job pins |
+| Tickets | `OfficerRequestsStackNav` | Accept → resolve workflow |
+| Map | `OfficerSettingsStackNav` → `OfficerMapScreen` | Leaflet/OSM live location, job pins |
 | Attendance | `OfficerAttendanceDashboard`, `AttendanceHistoryScreen` | Geofenced clock-in/out |
-| Collections | `OfficerCollectionsStackNav`, `CollectPaymentScreen` | Assigned customers, cash collection |
-| Inventory | `OfficerInventoryScreen` | Assigned equipment |
-| Payslips | `OfficerPayslipStackNav` | View/download PDF |
-| Leave | `OfficerLeaveStackNav` | Leave requests |
-| Notifications | `OfficerPortalNotificationsScreen` | Portal alerts |
-| Support chat | `OfficerSupportChatScreen` | Internal support |
+| Collections | `OfficerPaymentsStackNav` → `OfficerCollectionsStackNav`, `CollectPaymentScreen` | Assigned customers, cash collection |
+| Inventory | `OfficerSettingsStackNav` → `OfficerInventoryScreen` | Assigned equipment |
+| Payslips | `OfficerSettingsStackNav` → `OfficerPayslipStackNav` | View/download PDF |
+| Leave | `OfficerSettingsStackNav` → `OfficerLeaveStackNav` | Leave requests |
+| Notifications | `OfficerSettingsStackNav` → `OfficerPortalNotificationsScreen` | Portal alerts |
+| Support chat | `OfficerSettingsStackNav` → `OfficerSupportChatScreen` | Internal support |
 | Profile | `OfficerProfileStackNav` | Officer profile |
 | Invoices | `InvoiceScreen` | Generate/view invoice on collection |
 | Employment contract | Contract signature prompt modal | E-sign flow |

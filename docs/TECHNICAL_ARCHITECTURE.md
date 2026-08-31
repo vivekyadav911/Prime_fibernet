@@ -249,11 +249,12 @@ prime-fibernet-rn/
 
 | Navigator | Responsibility |
 |-----------|---------------|
-| `AppNavigator` | Root — checks auth state, routes to Auth or Main |
-| `AuthNavigator` | Unauthenticated stack: Login → Signup → Forgot Password |
-| `MainNavigator` | Role-gated: Customer tabs / Officer drawer / Admin drawer |
+| `AppNavigator` | Root — resolves auth + authoritative DB role before routing |
+| `AuthNavigator` | Landing, Login, OTP claim, Create Password, Forgot Password, Admin MFA |
 | `CustomerNavigator` | Bottom tabs: Home, Plans, Payments, Requests, Profile |
-| `OfficerNavigator` | Drawer: Dashboard, Requests, Map, Shifts, Inventory |
+| `OfficerNavigator` | Location gate stack; then Officer tabs, Profile stack, and request detail routes |
+| `OfficerTabNavigator` | Bottom tabs: Dashboard, Tickets, Attendance, Payments, Settings |
+| `OfficerSettingsStackNav` | Settings home plus Map, Inventory, Support, Notifications, Leave, and Payslip stacks |
 | `AdminNavigator` | Drawer: Dashboard, Users, Officers, Plans, Analytics, Settings |
 
 ### 2.4 Redux Store Structure
