@@ -100,7 +100,7 @@
 - [ ] 2FA disable triggers full session invalidation and security notification email
 
 **Technical Notes:**
-> `speakeasy` library for TOTP generation/verification. `qrcode` library for enrollment QR. 2FA secret stored encrypted via `pgcrypto` extension in Supabase. Backup codes hashed before storage.
+> Current app flow uses native Supabase Auth MFA. `LoginScreen` hands admin users to `AdminMfaScreen`, which enrolls or challenges a Supabase TOTP factor via `auth.mfa.*` before `commitAuthenticatedSession` runs. `MfaEnrollModal` is shared by admin/officer settings for voluntary enrollment.
 
 ---
 

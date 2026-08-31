@@ -1,7 +1,7 @@
 # Prime Fibernet — Frontend Specification Document
 
 > **Version:** 2.0 | **Date:** June 2026 | **Next Review:** September 2026  
-> **Framework:** React Native 0.73+ · Expo SDK 50+ · TypeScript 5.0+  
+> **Framework:** React Native 0.81 · Expo SDK 54 · React 19 · TypeScript 5.8
 > **Platform:** iOS · Android · Web (Unified App)
 
 ---

@@ -7,7 +7,7 @@
 
 ## Executive summary
 
-All five v2.0 documents are **aligned and sufficient to proceed** with the unified React Native app. They specify a single codebase for Customer, Officer, and Admin roles with Supabase backend, Redux Toolkit + RTK Query, and React Navigation 6.
+All five v2.0 documents are **aligned and sufficient to proceed** with the unified React Native app. They specify a single codebase for Customer, Officer, and Admin roles with Supabase backend, Redux Toolkit + RTK Query, and React Navigation 7.
 
 ---
 
@@ -59,8 +59,8 @@ All five v2.0 documents are **aligned and sufficient to proceed** with the unifi
 |--------|---------|
 | Unified app (Customer + Officer + Admin) | **Adopt** — user confirmed |
 | Redux Toolkit + RTK Query | **Adopt** — per architecture v2.0 |
-| React Navigation 6 | **Adopt** — replace Expo Router in prior scaffold |
-| Expo SDK 53 | **Adopt** — newer than doc minimum (50+) |
+| React Navigation 7 | **Adopt** — replace Expo Router in prior scaffold |
+| Expo SDK 54 / React Native 0.81 / React 19 | **Adopt** — matches `apps/unified-app/package.json` |
 | expo-notifications for FCM | **Adopt** — over raw firebase/messaging in managed Expo |
 
 ---

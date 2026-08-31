@@ -46,7 +46,7 @@ flowchart LR
 |--------|-------------|
 | AUTH-001 | Sign-up + email verification |
 | AUTH-002 | Login + SecureStore + authSlice |
-| AUTH-003 | Admin TOTP (Edge Function) |
+| AUTH-003 | Admin TOTP via native Supabase Auth MFA |
 | AUTH-004 | RTK Query refresh mutex |
 | AUTH-005 | Forgot password |
 | AUTH-006 | Biometric (P2 backlog) |

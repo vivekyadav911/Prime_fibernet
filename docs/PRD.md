@@ -62,7 +62,7 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 |----|---------|----------|-------|
 | A-01 | Email/password sign-up with verification | P0 | 24-hour verification link |
 | A-02 | Login with JWT + refresh token rotation | P0 | 30-min JWT, 7-day refresh |
-| A-03 | Admin TOTP two-factor authentication | P0 | speakeasy library |
+| A-03 | Admin TOTP multi-factor authentication | P0 | Native Supabase Auth MFA |
 | A-04 | Forgot password with email reset | P1 | 1-hour token expiry |
 | A-05 | Biometric login (Face ID / Fingerprint) | P2 | After first password login |
 | A-06 | Role-based navigation guard | P0 | Customer / Officer / Admin routes |
