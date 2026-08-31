@@ -36,7 +36,7 @@
 
 **Backend:** Supabase (Postgres + Auth + Realtime + Storage + Edge Functions)
 
-**Frontend:** Expo SDK 54 · React Native 0.73+ · TypeScript 5 · Redux Toolkit + RTK Query · React Navigation 6 · React Hook Form + Zod
+**Frontend:** Expo SDK 54 · React Native 0.81 · React 19 · TypeScript 5.8 · Redux Toolkit + RTK Query · React Navigation 7 · React Hook Form + Zod
 
 ---
 
@@ -138,7 +138,7 @@ pnpm typecheck   # TypeScript across packages
 pnpm lint        # ESLint via turbo
 ```
 
-**Login flow:** App → Auth screen → sign in → `AppNavigator` routes by `profiles.role` to Customer tabs, Officer drawer, or Admin drawer.
+**Login flow:** App → Auth screen → sign in → `AppNavigator` routes by `profiles.role` to Customer tabs, Officer tabs, or Admin drawer.
 
 ---
 
@@ -151,7 +151,7 @@ Prime_fibernet/
 │   │   ├── screens/
 │   │   │   ├── admin/         Admin modules (finance, HR, support…)
 │   │   │   ├── customer/      Customer tabs + stacks
-│   │   │   ├── officer/       Officer drawer + field ops
+│   │   │   ├── officer/       Officer tab shell + field ops
 │   │   │   └── common/        Shared screens (auth, PDF viewer)
 │   │   ├── components/
 │   │   │   ├── admin/         FormField, SectionCard, KPI cards…
@@ -208,11 +208,11 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 |---------|------------|---------|
 | Email/password login | `screens/common/auth/` | Supabase Auth |
 | Sign-up + verification | Auth screens | `supabase.auth.signUp` + Resend |
-| Admin TOTP 2FA | Auth flow | `functions/verify-admin-totp` |
+| Admin TOTP MFA | `LoginScreen` → `AdminMfaScreen` | Native Supabase MFA (`auth.mfa.challenge` / `verify`); `verify-admin-totp` is legacy only |
 | Forgot password | Auth screens | Supabase Auth reset |
 | Biometric login (dev) | Auth hooks | `expo-local-authentication` + SecureStore |
 | Role-based routing | `navigation/AppNavigator.tsx` | `profiles.role` |
-| JWT in SecureStore | `store/slices/authSlice` | `expo-secure-store` |
+| Supabase session storage | `services/secureStorage`, `services/hybridSecureStorage` | Expo SecureStore on native; AsyncStorage fallback for large/web payloads |
 | Dev quick sign-in | Auth screen (dev only) | Seed users script |
 
 ### 5.2 Customer features
@@ -232,21 +232,25 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 
 ### 5.3 Officer features
 
-**Navigation:** `OfficerNavigator.tsx` — LocationGate → drawer
+**Navigation:** `OfficerNavigator.tsx` — LocationGate → `OfficerTabs`
+
+Tabs: Dashboard, Tickets, Attendance, Payments, Settings. Map, Inventory,
+Support, Notifications, Leave, and Payslip are reached from Settings; collection
+workflows are reached from Payments.
 
 | Module | Screens | Notes |
 |--------|---------|-------|
 | Location gate | `LocationGateScreen` | GPS required before access |
 | Dashboard | `OfficerDashboardScreen` | Shift, today's jobs |
-| Requests | `OfficerRequestsStackNav` | Accept → resolve workflow |
-| Map | `OfficerMapScreen` | Live location, job pins |
+| Tickets | `OfficerRequestsStackNav` | Accept → resolve workflow |
+| Map | `OfficerSettingsStackNav` → `OfficerMapScreen` | Leaflet/OSM live location, job pins |
 | Attendance | `OfficerAttendanceDashboard`, `AttendanceHistoryScreen` | Geofenced clock-in/out |
-| Collections | `OfficerCollectionsStackNav`, `CollectPaymentScreen` | Assigned customers, cash collection |
-| Inventory | `OfficerInventoryScreen` | Assigned equipment |
-| Payslips | `OfficerPayslipStackNav` | View/download PDF |
-| Leave | `OfficerLeaveStackNav` | Leave requests |
-| Notifications | `OfficerPortalNotificationsScreen` | Portal alerts |
-| Support chat | `OfficerSupportChatScreen` | Internal support |
+| Collections | `OfficerPaymentsStackNav` → `OfficerCollectionsStackNav`, `CollectPaymentScreen` | Assigned customers, cash collection |
+| Inventory | `OfficerSettingsStackNav` → `OfficerInventoryScreen` | Assigned equipment |
+| Payslips | `OfficerSettingsStackNav` → `OfficerPayslipStackNav` | View/download PDF |
+| Leave | `OfficerSettingsStackNav` → `OfficerLeaveStackNav` | Leave requests |
+| Notifications | `OfficerSettingsStackNav` → `OfficerPortalNotificationsScreen` | Portal alerts |
+| Support chat | `OfficerSettingsStackNav` → `OfficerSupportChatScreen` | Internal support |
 | Profile | `OfficerProfileStackNav` | Officer profile |
 | Invoices | `InvoiceScreen` | Generate/view invoice on collection |
 | Employment contract | Contract signature prompt modal | E-sign flow |
@@ -329,7 +333,7 @@ Deploy all under `supabase/functions/`:
 
 | Function | Purpose |
 |----------|---------|
-| `verify-admin-totp` | Admin 2FA |
+| `verify-admin-totp` | Legacy AUTH-003 stub; current app MFA uses native Supabase Auth MFA |
 | `admin-create-customer` / `admin-create-officer` | Provision users |
 | `provision-officer-auth` | Officer auth setup |
 | `create-payment-order` | Initiate Razorpay/Easebuzz order |
@@ -373,7 +377,7 @@ Screen
 
 | Concern | Location |
 |---------|----------|
-| API endpoints | `apps/unified-app/src/store/api/endpoints.ts` |
+| API endpoints | `apps/unified-app/src/services/api/*.ts`; `store/api/endpoints.ts` only re-exports for older imports |
 | Auth state | `store/slices/authSlice.ts` |
 | Navigation types | `types/navigation.ts` |
 | Admin stacks | `navigation/adminStackNavigators.tsx` |

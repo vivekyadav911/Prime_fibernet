@@ -1,7 +1,7 @@
 # Prime Fibernet — Technical Architecture Document
 
 > **Version:** 2.0 | **Date:** June 2026 | **Next Review:** September 2026  
-> **Platform:** iOS · Android · Web | **Runtime:** React Native 0.73+ / Expo SDK 50+
+> **Platform:** iOS · Android · Web | **Runtime:** React Native 0.81 / Expo SDK 54
 
 ---
 
@@ -30,9 +30,9 @@ Prime Fibernet is an enterprise-grade ISP management platform built as a **React
 │  Single Unified App (iOS, Android, Web)                         │
 │  • Customer UI  • Officer UI  • Admin UI (Web-optimized)        │
 ├─────────────────────────────────────────────────────────────────┤
-│  Tech: React Native 0.73+ · Expo SDK 50+ · TypeScript           │
-│        Redux Toolkit + RTK Query · React Navigation 6.x         │
-│        TailwindCSS (Nativewind)                                 │
+│  Tech: React Native 0.81 · Expo SDK 54 · TypeScript 5.8         │
+│        React 19 · Redux Toolkit + RTK Query                     │
+│        React Navigation 7.x                                     │
 └──────────────────────┬──────────────────────────────────────────┘
                        │ HTTPS / WebSocket
 ┌──────────────────────▼──────────────────────────────────────────┐
@@ -85,44 +85,47 @@ Prime Fibernet is an enterprise-grade ISP management platform built as a **React
 ```json
 {
   "core": {
-    "react-native": "0.73+",
-    "expo": "50+",
-    "typescript": "5.0+"
+    "react": "19.1",
+    "react-native": "0.81",
+    "expo": "54",
+    "typescript": "5.8"
   },
   "navigation": {
-    "@react-navigation/native": "6.x",
-    "@react-navigation/bottom-tabs": "6.x",
-    "@react-navigation/drawer": "6.x"
+    "@react-navigation/native": "7.x",
+    "@react-navigation/bottom-tabs": "7.x",
+    "@react-navigation/drawer": "7.x",
+    "@react-navigation/native-stack": "7.x"
   },
   "state-management": {
-    "@reduxjs/toolkit": "2.0+",
-    "react-redux": "8.0+",
-    "rtk-query": "2.0+"
+    "@reduxjs/toolkit": "2.8+",
+    "react-redux": "9.0+",
+    "rtk-query": "2.8+"
   },
   "ui": {
-    "nativewind": "2.0+",
-    "react-native-paper": "5.0+",
-    "react-native-reanimated": "3.5+",
-    "react-native-gesture-handler": "2.13+"
+    "react-native-paper": "5.14+",
+    "react-native-reanimated": "4.1+",
+    "react-native-gesture-handler": "2.28+",
+    "react-native-safe-area-context": "5.6+"
   },
   "forms": {
-    "react-hook-form": "7.48+",
-    "zod": "3.22+"
+    "react-hook-form": "7.56+",
+    "zod": "3.25+"
   },
   "api": {
-    "@supabase/supabase-js": "2.38+"
+    "@supabase/supabase-js": "2.49+"
   },
   "maps": {
-    "react-native-maps": "1.14+"
+    "react-native-maps": "1.20+",
+    "leaflet": "1.9+",
+    "react-leaflet": "5.0+"
   },
   "notifications": {
-    "@react-native-firebase/messaging": "18.6+",
-    "expo-notifications": "0.25+"
+    "expo-notifications": "0.32+"
   },
   "utilities": {
-    "date-fns": "2.30+",
-    "lodash-es": "4.17+",
-    "uuid": "9.0+"
+    "date-fns": "4.4+",
+    "async-mutex": "0.5+",
+    "xlsx": "0.18+"
   }
 }
 ```
@@ -246,11 +249,12 @@ prime-fibernet-rn/
 
 | Navigator | Responsibility |
 |-----------|---------------|
-| `AppNavigator` | Root — checks auth state, routes to Auth or Main |
-| `AuthNavigator` | Unauthenticated stack: Login → Signup → Forgot Password |
-| `MainNavigator` | Role-gated: Customer tabs / Officer drawer / Admin drawer |
+| `AppNavigator` | Root — resolves auth + authoritative DB role before routing |
+| `AuthNavigator` | Landing, Login, OTP claim, Create Password, Forgot Password, Admin MFA |
 | `CustomerNavigator` | Bottom tabs: Home, Plans, Payments, Requests, Profile |
-| `OfficerNavigator` | Drawer: Dashboard, Requests, Map, Shifts, Inventory |
+| `OfficerNavigator` | Location gate stack; then Officer tabs, Profile stack, and request detail routes |
+| `OfficerTabNavigator` | Bottom tabs: Dashboard, Tickets, Attendance, Payments, Settings |
+| `OfficerSettingsStackNav` | Settings home plus Map, Inventory, Support, Notifications, Leave, and Payslip stacks |
 | `AdminNavigator` | Drawer: Dashboard, Users, Officers, Plans, Analytics, Settings |
 
 ### 2.4 Redux Store Structure
@@ -472,28 +476,36 @@ CREATE POLICY officer_own_shifts ON shifts
 ### 5.1 Authentication Flow
 
 ```
-User enters credentials
+User selects Customer / Officer / Admin portal
         │
         ▼
-Client validates format (Zod)
-Rate limit check (5 attempts / 15 min)
+Client validates identifier + password (Zod)
         │
         ▼
-Supabase Auth — bcrypt verify
-Check account blocked / email confirmed
-        │
-        ▼ (Admin only)
-Generate 6-digit OTP → send via email
-Verify OTP (5 min expiry, 5 attempt limit)
+Resolve email/username → Supabase Auth password sign-in
         │
         ▼
-Issue JWT (30 min) + Refresh Token (7 days)
-payload: { sub, email, role, iat, exp }
+Resolve authoritative DB role via get_my_role RPC
+Reject if it does not match selected portal
+        │
+        ├─ Customer / Officer
+        │      touch_full_login → commit session + role
+        │
+        ▼ Admin
+Native Supabase TOTP MFA challenge
+Enroll verified factor first if needed
         │
         ▼
-Client: Store JWT → Keychain (iOS) / Keystore (Android)
-Dispatch to authSlice → Navigate to MainNavigator
+touch_full_login → commit session + authoritative admin role
+        │
+        ▼
+AppNavigator waits for roleStatus=ready
+Route to Customer / Officer / Admin navigator
 ```
+
+Session restore follows the same role-resolution rule. Admin sessions restore only while
+`last_full_login_at` is within `get_admin_session_hours` (default 24h); customer/officer
+sessions restore for the 30-day full-login window after password setup.
 
 ### 5.2 Payment Processing Flow
 

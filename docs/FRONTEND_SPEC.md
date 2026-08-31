@@ -1,7 +1,7 @@
 # Prime Fibernet — Frontend Specification Document
 
 > **Version:** 2.0 | **Date:** June 2026 | **Next Review:** September 2026  
-> **Framework:** React Native 0.73+ · Expo SDK 50+ · TypeScript 5.0+  
+> **Framework:** React Native 0.81 · Expo SDK 54 · React 19 · TypeScript 5.8
 > **Platform:** iOS · Android · Web (Unified App)
 
 ---
@@ -199,9 +199,15 @@ export const typography = {
 
 ## 3. Screen Specifications — Officer
 
+**Current shell:** `OfficerNavigator` starts at `LocationGate`, then opens `OfficerTabs`.
+The bottom tabs are Dashboard, Tickets, Attendance, Payments, and Settings. Map,
+Inventory, Support, Notifications, Leave, and Payslip live under the Settings
+stack; payment collection lives under the Payments tab. Android back behavior
+returns a non-Dashboard root tab to Dashboard before exiting.
+
 ### 3.1 Officer Dashboard
 
-**Route:** `OfficerNavigator → Dashboard`  
+**Route:** `OfficerTabs → Dashboard`
 **Data sources:** `officersApi`, Supabase Realtime on `service_requests WHERE officer_id = current`
 
 **Components:**
@@ -216,7 +222,7 @@ export const typography = {
 
 ### 3.2 Request Queue & Management
 
-**Route:** `OfficerNavigator → Requests`  
+**Route:** `OfficerTabs → Tickets`
 **Data sources:** `requestsApi` (officer-scoped via RLS)
 
 **Components:**
@@ -239,11 +245,11 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.3 Map View
 
-**Route:** `OfficerNavigator → Map`  
+**Route:** `OfficerTabs → Settings → Map`
 **Data sources:** `expo-location` (live GPS) + `requestsApi`
 
 **Components:**
-- **Google Maps** — officer's live location (blue dot with accuracy ring)
+- **Leaflet / OSM WebView map** — officer's live location (blue dot with accuracy ring)
 - **Request Pins** — colored markers: P0 red, P1 orange, P2 amber, P3 green
 - **Pin Tap Card** — bottom sheet: customer name, request type, address, "Navigate" CTA
 - **List / Map Toggle** — header right button switches view mode
@@ -251,13 +257,13 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 **Permissions:** `expo-location` foreground permission required; background location active while shift is clocked in
 
-**Offline:** Map tiles cached for last-visited areas via react-native-maps tile caching
+**Map constraint:** `OfficerMapScreen` uses `LeafletMapView` with free OSM tiles; do not require a Google Maps API key for this officer route.
 
 ---
 
 ### 3.4 Shifts & Attendance
 
-**Route:** `OfficerNavigator → Shifts`
+**Route:** `OfficerTabs → Attendance`
 
 **Components:**
 - **Monthly Calendar** — days colored: Present (green), Absent (gray), Leave (amber), Holiday (blue)
@@ -275,7 +281,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.5 Inventory View
 
-**Route:** `OfficerNavigator → Inventory`  
+**Route:** `OfficerTabs → Settings → Inventory`
 **Data sources:** `inventory_assignments WHERE assigned_to_id = officer.id`
 
 **Components:**
@@ -288,7 +294,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.6 Payslip & Earnings
 
-**Route:** `OfficerNavigator → Profile → Payslip`
+**Route:** `OfficerTabs → Settings → Payslip`
 
 **Components:**
 - **Month Selector** — horizontal scroll of last 12 months
