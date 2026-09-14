@@ -199,102 +199,184 @@ export const typography = {
 
 ## 3. Screen Specifications — Officer
 
-### 3.1 Officer Dashboard
+### 3.1 Current route topology
 
-**Route:** `OfficerNavigator → Dashboard`  
-**Data sources:** `officersApi`, Supabase Realtime on `service_requests WHERE officer_id = current`
+**Entry:** `AppNavigator → OfficerNavigator` renders only on native when the
+authenticated DB role is `officer` and `requires2FA` is false. Officer/customer
+sessions on web route to `WebUnsupportedScreen`; web is admin-only today.
 
-**Components:**
-- **Shift Card** — current shift status; Clock In / Clock Out button; hours logged today
-- **Request Summary Row** — 3 count chips: New (red), In Progress (amber), Completed (green)
-- **Next Requests List** — 3 highest-priority pending requests; customer name, address, priority badge, distance
-- **Weekly Performance Bar** — requests completed / weekly target (e.g., "12 / 15")
-- **Leave Balance Row** — 3 chips: Casual Leave, Sick Leave, Earned Leave with day counts
-- **Inventory Warning** — shown if any assigned item has `status = damaged` or low stock
+**Root stack:** `OfficerNavigator` starts at `LocationGate`. The gate requests
+foreground location permission before replacing itself with `OfficerTabs`;
+permission failure offers a retry and a direct link to device settings.
 
----
+**Tabs and nested stacks:**
 
-### 3.2 Request Queue & Management
+| Tab / stack | Screen route | Component |
+|-------------|--------------|-----------|
+| Dashboard | `Dashboard → DashboardHome` | `OfficerDashboardScreen` |
+| Tickets | `Tickets → RequestsList` | `OfficerRequestsScreen` |
+| Ticket detail | Root `RequestDetail` | `OfficerRequestDetailScreen` |
+| Attendance | `Attendance → AttendanceHome` | `OfficerAttendanceDashboard` |
+| Attendance history | `Attendance → AttendanceHistory` | `AttendanceHistoryScreen` |
+| Payments | `Payments → CollectionsStack` | `OfficerCollectionsStackNav` |
+| Collections | `CollectionsList`, `AssignedCustomers`, `CustomerPaymentHistory`, `CashCollection`, `CollectionHistory`, `RecordPayment` | Officer payment screens |
+| Settings | `SettingsHome`, `Map`, `Inventory`, `Support` | Officer settings utilities |
+| Settings nested | `NotificationsStack`, `LeaveStack`, `Payslip` | Notifications, leave, payslip flows |
+| Profile | Root `Profile → ProfileHome`, `ChangePassword`, `EmploymentContract`, `ContractPdfViewer` | Officer profile stack |
 
-**Route:** `OfficerNavigator → Requests`  
-**Data sources:** `requestsApi` (officer-scoped via RLS)
-
-**Components:**
-- **Priority-sorted List** — P0 (red border) → P1 → P2 → P3; then by `created_at`
-- **Filter Tabs** — All, New, In Progress, Completed
-- **Request Row** — customer name, address, request type icon, priority chip, time since created
-- **Request Detail Screen:**
-  - Customer info, issue description, photo attachments (gallery)
-  - Map preview of customer address with "Navigate" button
-  - Status update buttons (context-sensitive to current status)
-  - Activity feed with officer notes and timestamps
-- **Add Activity Note Sheet** — text input + optional photo; note required before Resolve
-
-**Status flow:**
-```
-New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Working → [Resolve] → Resolved
-```
+Use helpers in `navigation/officerShellNavigation.ts` when navigating across
+tab/stack boundaries (`navigateToOfficerDashboard`, `navigateToOfficerTickets`,
+`navigateToOfficerPayments`, `navigateToOfficerAttendance`, and settings/profile
+helpers). They find an existing parent navigator first and fall back to a root
+`CommonActions.navigate` dispatch, which avoids brittle `getParent()` chains in
+screens.
 
 ---
 
-### 3.3 Map View
+### 3.2 Tickets and service request workflow
 
-**Route:** `OfficerNavigator → Map`  
-**Data sources:** `expo-location` (live GPS) + `requestsApi`
+**Primary codepaths:**
+- Screen: `screens/officer/OfficerRequestsScreen.tsx`
+- Detail: `navigation/officerStackScreens.tsx` / `OfficerRequestDetailScreen`
+- API: `services/api/officerPortalApi.ts` plus legacy request updates from
+  `requestsApi`
+- Realtime: `hooks/officer/useOfficerTicketsSync.ts`
 
-**Components:**
-- **Google Maps** — officer's live location (blue dot with accuracy ring)
-- **Request Pins** — colored markers: P0 red, P1 orange, P2 amber, P3 green
-- **Pin Tap Card** — bottom sheet: customer name, request type, address, "Navigate" CTA
-- **List / Map Toggle** — header right button switches view mode
-- **My Location Button** — centers map on officer's current position
+**Data model:** The portal merges two work sources:
+1. `ticket_sla_live` rows assigned to the officer, plus unassigned open-pool
+   tickets.
+2. `service_requests` rows where `officer_id` matches the current officer.
 
-**Permissions:** `expo-location` foreground permission required; background location active while shift is clocked in
+`officerPortalApi.getOfficerAssignedPortalItems` maps both sources into
+`PortalTicketItem[]` for shared list, detail, map, and dashboard usage. Ticket
+details load `ticket_activity_events`; service request details load
+`request_activities`.
 
-**Offline:** Map tiles cached for last-visited areas via react-native-maps tile caching
+**Officer actions:**
+- Claim open-pool tickets through the `claim_officer_ticket` RPC.
+- Advance tickets with `updateOfficerTicketStatus`, which updates `tickets`,
+  stamps `resolved_at`/`closed_at` when applicable, and appends a
+  `ticket_activity_events` row.
+- Advance legacy service requests through `updateRequestStatus`; when offline,
+  the update is queued in `SyncManager` and surfaced with an informational toast.
+- Fix missing ticket/request coordinates with `updateOfficerPortalItemLocation`.
+  The cache is patched only after the Supabase write succeeds because optimistic
+  map remounts can crash Android while the fix-pin modal is open.
 
----
-
-### 3.4 Shifts & Attendance
-
-**Route:** `OfficerNavigator → Shifts`
-
-**Components:**
-- **Monthly Calendar** — days colored: Present (green), Absent (gray), Leave (amber), Holiday (blue)
-- **Clock In / Out Widget** — large button; GPS captured on tap; location-verified badge if within 500m of region
-- **Overtime Alert** — modal shown if officer has not clocked out 30 min after scheduled end
-- **Shift Detail** — start/end time, GPS location, tasks completed, hours logged
-- **Leave Request Form:**
-  - Type dropdown: Casual, Sick, Earned, Comp Off
-  - Date range picker
-  - Reason text (required)
-  - Document attachment (for sick leave)
-- **Leave History List** — request date, type, status chip (Pending / Approved / Rejected)
-
----
-
-### 3.5 Inventory View
-
-**Route:** `OfficerNavigator → Inventory`  
-**Data sources:** `inventory_assignments WHERE assigned_to_id = officer.id`
-
-**Components:**
-- **Assigned Items List** — item name, type, assigned date, status chip
-- **Item Detail** — serial number, condition notes, assignment history
-- **Mark as Returned / Damaged** — action buttons with required confirmation and notes field
-- **Low Stock Badge** — shown on dashboard if any critical item has `status = damaged`
+**States:** Ticket list and map screens must keep skeleton loading,
+retry-capable error, and empty states. Open-pool and assigned work are separate
+tabs; empty copy should tell officers whether to wait for dispatch or claim from
+the pool.
 
 ---
 
-### 3.6 Payslip & Earnings
+### 3.3 Payments and collection workflow
 
-**Route:** `OfficerNavigator → Profile → Payslip`
+**Primary codepaths:**
+- Stack: `OfficerPaymentsStackNav → OfficerCollectionsStackNav`
+- Screen: `screens/officer/payments/OfficerCollectionScreen.tsx`
+- API: `services/api/paymentCollectionApi.ts`
+- Assignment sync: `hooks/officer/useOfficerCollectionsSync.ts`
 
-**Components:**
-- **Month Selector** — horizontal scroll of last 12 months
-- **Payslip Card** — base salary, task bonuses, transport allowance, deductions, net pay
-- **Earnings Chart** — 6-month bar chart (Victory Native on mobile, Recharts on web)
-- **Download PDF Button** — generates signed Supabase Storage URL for payslip PDF
+**Queues:** `getOfficerCollections` returns:
+- `myWork` / `assigned`: customers assigned to or claimed by the current officer.
+- `openPool`: unassigned collectible customers available to claim.
+- `todayTotal` and `confirmedToday`: officer cash collection summary for the
+  current day.
+
+**Officer actions:**
+- Claim an open-pool customer through `claim_collection_customer`.
+- Navigate to `CashCollection` with `customerId`, `customerName`,
+  `accountNumber`, amount, and optional due date.
+- Record manual/officer payments with `recordManualPayment`, backed by the
+  `record_manual_payment` RPC. Optional latitude, longitude, and photo evidence
+  are attached as collection metadata after the payment row is created.
+- Generate receipts through the `generate-payment-receipt` Edge Function.
+
+**Realtime:** `useOfficerCollectionsSync` watches `users` updates involving
+`assigned_officer_id`, `claimed_by_officer_id`, or `collection_status` for the
+current officer and invalidates the `Payments` tag. Admin assignment flows also
+insert `portal_notifications` for the assigned officer.
+
+---
+
+### 3.4 Attendance, geofence, and location workflow
+
+**Primary codepaths:**
+- Screen: `screens/officer/OfficerAttendanceDashboard.tsx`
+- Hook facade: `hooks/attendance/useAttendance.ts`
+- API: `services/api/attendanceApi.ts`
+- Service layer: `services/AttendanceService.ts` and `services/LocationService.ts`
+- Realtime: `hooks/attendance/useOfficerAttendanceRealtimeSync.ts`
+
+**Officer flow:**
+1. `LocationGate` ensures foreground location permission before the officer shell
+   loads.
+2. Attendance dashboard loads today's shift, month status rows, active assigned
+   geofences, and pending approval requests.
+3. Check-in/check-out clears cached geofences, fetches current GPS, verifies
+   accuracy and zone membership, then writes `shifts`.
+4. If the officer is outside the selected zone, the dashboard prompts for an
+   approval reason and creates an `attendance_approval_requests` row.
+5. Approval updates invalidate attendance, shift, approval, and notification
+   caches; approved/rejected decisions surface as toast/local notification, with
+   rejection details shown in an alert.
+
+**Constraints:**
+- GPS accuracy worse than 100m blocks check-in/check-out.
+- At least one active geofence assignment is required.
+- The app enforces one completed attendance record per officer per company-local
+  day. The API uses the `company_local_today` RPC and falls back to the device
+  local date if that RPC fails.
+- Duplicate pending approval requests for the same type/date return the existing
+  request. If the officer switches geofence zones, the previous pending request
+  can be cancelled before creating a new one.
+- Check-in and check-out are queued through `SyncManager` when offline.
+
+**Location tracking:** `LocationService` registers background task
+`PRIME_FIBERNET_LOCATION_TASK` and geofence task `PRIME_FIBERNET_GEOFENCE_TASK`.
+Tracking is disabled when either `general_settings.location_tracking_enabled` or
+`officers.is_location_tracking_enabled` is false. The allowed/blocked decision is
+cached for five minutes; assigned geofences are cached for fifteen minutes; failed
+location sync entries are retained in an AsyncStorage queue capped at 500 entries.
+
+---
+
+### 3.5 Maps and platform constraints
+
+**Primary codepaths:**
+- Officer map: `screens/officer/OfficerMapScreen.tsx`
+- Shared map: `components/map/LeafletMapView.tsx` and `.web.tsx`
+- HTML builder: `utils/leafletWebViewHtml.ts`
+
+The current implementation uses free Leaflet/OpenStreetMap tiles, not
+`react-native-maps`. Native renders Leaflet inside a `react-native-webview` and
+pushes data updates with injected JavaScript so the WebView does not reload. Web
+uses `react-leaflet` with the same `LeafletMapView` prop contract.
+
+Officer map pins are derived only from portal items with coordinates. If an
+assigned item has no usable latitude/longitude, the map shows the "No mapped
+tickets" empty state with guidance to fix the address/GPS data. Navigation CTAs
+open the device mapping app with the resolved customer address.
+
+---
+
+### 3.6 Inventory, support, leave, and payslip
+
+These utilities live under `OfficerSettingsStackNav` rather than top-level tabs.
+Keep new secondary officer tools inside Settings unless they need persistent tab
+visibility.
+
+| Flow | Route | Notes |
+|------|-------|-------|
+| Inventory | `Settings → Inventory` | Officer inventory screen. |
+| Support | `Settings → Support` | Officer support chat. |
+| Notifications | `Settings → NotificationsStack` | Portal notifications list. |
+| Leave | `Settings → LeaveStack` | Leave list and apply flow. |
+| Payslip | `Settings → Payslip` | Payslip list/detail/PDF viewer. |
+
+The profile stack is separate from Settings so the header/profile action can open
+employment-contract and password-management screens from any officer tab.
 
 ---
 
