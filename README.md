@@ -71,6 +71,7 @@ pnpm typecheck
 | Doc | Path |
 |-----|------|
 | **Build from scratch (start here)** | [docs/BUILD_FROM_SCRATCH.md](docs/BUILD_FROM_SCRATCH.md) |
+| Officer portal runbook | [docs/OFFICER_PORTAL_RUNBOOK.md](docs/OFFICER_PORTAL_RUNBOOK.md) |
 | PRD v2.0 | [docs/PRD.md](docs/PRD.md) |
 | Architecture | [docs/TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) |
 | Security | [docs/SECURITY_AND_ACCESS.md](docs/SECURITY_AND_ACCESS.md) |
