@@ -232,7 +232,7 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 
 ### 5.3 Officer features
 
-**Navigation:** `OfficerNavigator.tsx` — LocationGate → drawer
+**Navigation:** `OfficerNavigator.tsx` — LocationGate → officer bottom tabs. Implementation runbook: [OFFICER_PORTAL_RUNBOOK.md](./OFFICER_PORTAL_RUNBOOK.md)
 
 | Module | Screens | Notes |
 |--------|---------|-------|
