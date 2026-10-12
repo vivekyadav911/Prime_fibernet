@@ -199,18 +199,48 @@ export const typography = {
 
 ## 3. Screen Specifications — Officer
 
+### 3.0 Officer Shell & Navigation
+
+**Root:** `OfficerNavigator`
+
+**Access gate:** `LocationGateScreen` requests foreground location permission before replacing into `OfficerTabs`.
+
+**Structure:**
+- `OfficerTabs` wraps the portal in `ThemeProvider` and uses the custom `OfficerTabBar`.
+- Tabs: Dashboard, Tickets, Attendance, Payments, Settings.
+- Profile is a root stack (`Profile`) so any tab can open profile and contract screens without nesting them under a tab.
+- Ticket detail is pushed at the officer root as `RequestDetail`.
+
+**Shared shell behavior:**
+- `usePortalNotificationsSync` and `useOfficerTicketsSync` run at the tab-shell level.
+- `useOfficerTabBackHandler` owns Android back behavior between tabs.
+- `officerShellNavigation.ts` contains cross-tab helpers; prefer these over hard-coded nested `navigate` calls from shared officer components.
+- `OfficerScreen` / `OfficerScreenWrapper` provide the default safe-area, keyboard-dismiss, padding, and pull-to-refresh behavior for officer screens.
+
+**Constraints:**
+- Do not bypass `LocationGateScreen` for officer entry points that record attendance, payment collection, or field request location.
+- Keep role routing in `AppNavigator`; a role should not reach another role's navigator even if a screen is hidden.
+- Use the officer navigation helpers when opening Dashboard, Tickets, Attendance, Payments, Settings, or Profile from outside the active stack.
+
 ### 3.1 Officer Dashboard
 
-**Route:** `OfficerNavigator → Dashboard`  
-**Data sources:** `officersApi`, Supabase Realtime on `service_requests WHERE officer_id = current`
+**Route:** `OfficerNavigator → OfficerTabs → Dashboard → DashboardHome`
+
+**Data sources:** `useOfficerDashboardStats`, `useOfficerProfile`, `usePendingContractSignature`, `useActiveShift`, `useTodayAttendance`
 
 **Components:**
-- **Shift Card** — current shift status; Clock In / Clock Out button; hours logged today
-- **Request Summary Row** — 3 count chips: New (red), In Progress (amber), Completed (green)
-- **Next Requests List** — 3 highest-priority pending requests; customer name, address, priority badge, distance
-- **Weekly Performance Bar** — requests completed / weekly target (e.g., "12 / 15")
-- **Leave Balance Row** — 3 chips: Casual Leave, Sick Leave, Earned Leave with day counts
-- **Inventory Warning** — shown if any assigned item has `status = damaged` or low stock
+- **Greeting Header** — officer first name, local date, and assigned zone.
+- **Contract Signature Prompt** — card + modal when `usePendingContractSignature` reports a pending contract.
+- **Shift Clock Widget** — current shift status and Clock In / Clock Out actions from `useActiveShift`.
+- **Stats Row** — dashboard metrics from `useOfficerDashboardStats`.
+- **Assignment Preview List** — prioritized ticket/assignment preview.
+- **Collection Assignment Preview List** — payment collection work queue preview.
+- **Attendance Widget** — current-month attendance summary.
+
+**States:**
+- Loading: `SkeletonLoader` rows.
+- Error: `ErrorState` with retry.
+- Refresh: pull-to-refresh refetches dashboard stats and pending contract state; focus polling refreshes stats every 20 seconds.
 
 ---
 
@@ -239,37 +269,52 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.3 Map View
 
-**Route:** `OfficerNavigator → Map`  
-**Data sources:** `expo-location` (live GPS) + `requestsApi`
+**Route:** `OfficerNavigator → OfficerTabs → Settings → Map`
+
+**Data sources:** `useOfficerAssignedTickets`, `getPortalItemCoordinates`, `LeafletMapView`
 
 **Components:**
-- **Google Maps** — officer's live location (blue dot with accuracy ring)
-- **Request Pins** — colored markers: P0 red, P1 orange, P2 amber, P3 green
-- **Pin Tap Card** — bottom sheet: customer name, request type, address, "Navigate" CTA
-- **List / Map Toggle** — header right button switches view mode
-- **My Location Button** — centers map on officer's current position
+- **Leaflet Map** — web/native wrapper renders mapped assigned tickets and fits the viewport to content.
+- **Request Pins** — marker color is priority-based (`Critical`/`P0` red, `High`/`P1` amber, `Medium`/`P2` teal, `Low`/`P3` secondary text).
+- **Mapped Ticket List** — FlatList sorted by officer ticket priority rank; stable key is `${kind}-${id}`.
+- **Navigate CTA** — opens platform maps for the ticket address from `MapRequestPin`.
 
-**Permissions:** `expo-location` foreground permission required; background location active while shift is clocked in
+**States:**
+- Loading: tall skeleton rows.
+- Error: `ErrorState` with retry.
+- Empty: explains whether assigned tickets lack GPS coordinates or no mapped tickets are assigned.
 
-**Offline:** Map tiles cached for last-visited areas via react-native-maps tile caching
+**Constraints:**
+- Tickets without coordinates are omitted from the map and explained in the empty state.
+- Do not assume live officer GPS is shown here; live tracking is handled by admin map screens and `updateOfficerLocation`.
+- Do not document offline tile caching for this screen unless the map component gains an explicit cache path.
 
 ---
 
 ### 3.4 Shifts & Attendance
 
-**Route:** `OfficerNavigator → Shifts`
+**Route:** `OfficerNavigator → OfficerTabs → Attendance → AttendanceHome / AttendanceHistory / Shifts`
+
+**Data sources:** `attendanceApi`, `AttendanceService`, `useTodayAttendance`, `useOfficerMonthAttendance`, `useLiveGeofenceStatus`
 
 **Components:**
-- **Monthly Calendar** — days colored: Present (green), Absent (gray), Leave (amber), Holiday (blue)
-- **Clock In / Out Widget** — large button; GPS captured on tap; location-verified badge if within 500m of region
-- **Overtime Alert** — modal shown if officer has not clocked out 30 min after scheduled end
-- **Shift Detail** — start/end time, GPS location, tasks completed, hours logged
+- **Monthly Calendar** — canonical day status rows from `get_attendance_status_by_day`, merged with shift records when a status row is missing.
+- **Clock In / Out Widget** — GPS captured on tap; distance and geofence ID are stored on the `shifts` row.
+- **Approval Requests** — out-of-zone, late check-in, and second-shift check-in approvals use `attendance_approval_requests`.
+- **Geofence Status** — assigned active geofences poll every 60 seconds; current location/geofence status refreshes every 15 seconds.
 - **Leave Request Form:**
   - Type dropdown: Casual, Sick, Earned, Comp Off
   - Date range picker
   - Reason text (required)
   - Document attachment (for sick leave)
 - **Leave History List** — request date, type, status chip (Pending / Approved / Rejected)
+
+**Operational constraints:**
+- GPS accuracy must be <=100m for check-in/check-out.
+- Officers must be inside an assigned active geofence unless requesting approval.
+- Only one completed attendance record is allowed per officer per company-local day (`company_local_today` RPC).
+- Offline check-in, check-out, and approval requests are queued through `SyncManager`.
+- Pending approval requests are deduplicated by officer/type/date; changing geofence cancels the previous pending request before creating another.
 
 ---
 
