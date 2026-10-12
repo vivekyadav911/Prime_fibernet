@@ -35,77 +35,69 @@
 
 | Step | Detail |
 |------|--------|
-| 1. Client Validation | Format check; 5 failed attempts locks account for 15 minutes |
-| 2. Server Verification | bcrypt hash comparison (cost factor 12); blocked/suspended check |
-| 3. 2FA Check (Admin) | 6-digit OTP sent via email; 5-minute expiry; 5 attempt limit |
-| 4. JWT Generation | Payload: `sub`, `email`, `role`, `iat`, `exp` (30 min); signed HS256 |
-| 5. Secure Storage | JWT → iOS Keychain / Android Keystore; refresh token encrypted |
-| 6. Session Init | Redux auth state updated; navigate to role-appropriate MainNavigator |
+| 1. Portal selection | User picks Customer, Officer, or Admin on the landing screen; the selected role is expected context only. |
+| 2. Identifier resolution | Customer/officer sign-in accepts email or username via `email_for_identifier`; admin sign-in accepts email only. |
+| 3. Supabase password sign-in | `supabase.auth.signInWithPassword` establishes the Supabase session. |
+| 4. Authoritative role check | `get_my_role` resolves the database role; mismatches sign the user out and show the generic login error. |
+| 5. Admin second factor | Admin password sign-in always hands off to `AdminMfaScreen` before the role is committed. |
+| 6. Session commit | `commitAuthenticatedSession` stores the Supabase session and resolved role in Redux, then role-specific navigation renders. |
 
-### 1.3 JWT Token Management
+**Source of truth:** `apps/unified-app/src/screens/auth/LoginScreen.tsx`, `apps/unified-app/src/hooks/useAuth.ts`, and `apps/unified-app/src/navigation/AppNavigator.tsx`.
 
+### 1.3 Supabase Session & Token Management
+
+Supabase Auth owns access/refresh token issuance and rotation. The app configures a single Supabase client with:
+
+- `persistSession: true` and `autoRefreshToken: true`
+- `secureStorageAdapter` backed by hybrid secure storage
+- `detectSessionInUrl: false` for the native app flow
+- RTK Query preflight refresh when the stored access token expires in <=60 seconds
+- local sign-out and credential clearing when Supabase reports an invalid refresh token
+
+**Client refresh flow:**
 ```
-JWT Access Token
-├── Duration:  30 minutes
-├── Storage:   iOS Keychain / Android Keystore
-├── Usage:     Authorization header on every API request
-└── Refresh:   Automatic — silent refresh when within 5 min of expiry
-
-Refresh Token
-├── Duration:  7 days
-├── Storage:   Encrypted secure storage
-├── Rotation:  New token issued on each use; old token blacklisted
-└── Invalidation triggers: logout, password change, 2FA disable, account block
-```
-
-**Token refresh flow:**
-```
-JWT expires
+RTK Query request starts
      │
      ▼
-Send refresh token → POST /auth/refresh
-Verify: signature + expiry + blacklist
+ensureValidSession() reads Supabase session
      │
-     ▼ Valid
-Issue new JWT + new refresh token
-Old refresh token → blacklisted in DB
+     ▼ token expires in <=60s
+supabase.auth.refreshSession()
      │
      ▼
-Replay queued in-flight requests with new JWT
+Run the API handler or clear stale local auth on invalid refresh token
 ```
 
-### 1.4 Two-Factor Authentication (Admin Only)
+**Source of truth:** `apps/unified-app/src/services/api/supabase.ts` and `apps/unified-app/src/services/secureStorage.ts`.
 
-**Implementation:** TOTP (Time-based One-Time Password) via `speakeasy` library
+### 1.4 Multi-Factor Authentication
 
-```typescript
-// Enable 2FA — generate secret and QR code
-const enable2FA = async (userId: string) => {
-  const secret = speakeasy.generateSecret({
-    name: 'Prime Fibernet',
-    issuer: 'Prime Fibernet',
-    length: 32
-  });
-  const qrCode = await QRCode.toDataURL(secret.otpauth_url);
-  // Store secret AES-256 encrypted in DB
-  // User scans QR code with authenticator app (Google Authenticator, Authy)
-  // User enters 6-digit code to confirm enrollment
-  return { qrCode, backupCodes };
-};
+MFA uses native Supabase Auth TOTP factors (`supabase.auth.mfa.*`), not an app-managed shared secret table.
 
-// Verify TOTP during login
-const verify2FA = (secret: string, token: string): boolean => {
-  return speakeasy.totp.verify({
-    secret,
-    encoding: 'base32',
-    token,
-    window: 2  // ±2 period tolerance for clock skew
-  });
-};
-```
+**Admin login requirement**
 
-- Backup codes generated at enrollment (single-use, AES-256 encrypted in DB)
-- 2FA disable triggers full session invalidation and security notification email
+1. After password sign-in, admins are routed to `AdminMfaScreen`.
+2. The screen calls `listFactors()` and uses the first verified TOTP factor when one exists.
+3. If no verified factor exists, stale unverified TOTP factors are removed, a new factor is enrolled, and the QR/secret are displayed.
+4. Verification uses `challenge()` + `verify()` with the current six-digit authenticator code.
+5. On success, `touch_full_login` records the full-login timestamp and `commitAuthenticatedSession` grants access to the Admin navigator.
+6. Cancel signs out locally and returns to the landing screen.
+
+**Voluntary enrollment surfaces**
+
+- Admin Settings and Officer Settings both use `MfaEnrollModal` for opt-in enrollment.
+- `useMfaGate` reads Supabase assurance levels:
+  - `nextLevel === 'aal2'` means a verified TOTP factor exists.
+  - `currentLevel === 'aal2'` means the current session has passed MFA.
+  - `needsChallenge` is true when the account is enrolled but the current session is still `aal1`.
+- If a user closes enrollment before verifying, the modal unenrolls the pending factor to avoid orphaned unverified factors.
+
+**Session window**
+
+- Admin cold-start restore is allowed only while `last_full_login_at` is inside `get_admin_session_hours` (default 24 hours).
+- Customer/officer cold-start restore requires `password_set = true` and a full login within the 30-day window.
+
+**Source of truth:** `apps/unified-app/src/screens/auth/AdminMfaScreen.tsx`, `apps/unified-app/src/components/auth/MfaEnrollModal.tsx`, `apps/unified-app/src/hooks/useMfaGate.ts`, and `apps/unified-app/src/hooks/useAuth.ts`.
 
 ---
 
