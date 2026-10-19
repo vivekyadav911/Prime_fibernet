@@ -199,9 +199,30 @@ export const typography = {
 
 ## 3. Screen Specifications — Officer
 
+### 3.0 Officer Shell & Navigation
+
+**Root flow:** `OfficerNavigator → LocationGate → OfficerTabs`
+
+The officer shell requires location access before the portal is reachable. After
+`LocationGateScreen` passes, `OfficerTabNavigator` renders the custom bottom
+tab bar and wraps each tab in its own native stack so headers, notification
+actions, and back behavior stay local to the active workflow.
+
+| Tab | Stack | Primary screens |
+|-----|-------|-----------------|
+| Dashboard | `OfficerDashboardStackNav` | `DashboardHome` |
+| Tickets | `OfficerRequestsStackNav` | `RequestsList`; root `RequestDetail` is pushed from `OfficerNavigator` |
+| Attendance | `OfficerAttendanceStackNav` | `AttendanceHome`, `AttendanceHistory`, `Shifts` |
+| Payments | `OfficerPaymentsStackNav` | `CollectionsStack`, `Invoice`, `CollectPayment` |
+| Settings | `OfficerSettingsStackNav` | `SettingsHome`, `Map`, `Inventory`, `Support`, notifications, leave, payslip |
+
+Global officer sync hooks run at the tab shell level:
+`usePortalNotificationsSync`, `useOfficerTicketsSync`, and
+`useOfficerTabBackHandler`.
+
 ### 3.1 Officer Dashboard
 
-**Route:** `OfficerNavigator → Dashboard`  
+**Route:** `OfficerNavigator → OfficerTabs → Dashboard → DashboardHome`
 **Data sources:** `officersApi`, Supabase Realtime on `service_requests WHERE officer_id = current`
 
 **Components:**
@@ -216,7 +237,7 @@ export const typography = {
 
 ### 3.2 Request Queue & Management
 
-**Route:** `OfficerNavigator → Requests`  
+**Route:** `OfficerNavigator → OfficerTabs → Tickets → RequestsList`
 **Data sources:** `requestsApi` (officer-scoped via RLS)
 
 **Components:**
@@ -239,25 +260,27 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.3 Map View
 
-**Route:** `OfficerNavigator → Map`  
-**Data sources:** `expo-location` (live GPS) + `requestsApi`
+**Route:** `OfficerNavigator → OfficerTabs → Settings → Map`
+**Data sources:** `useOfficerAssignedTickets`, ticket coordinates
 
 **Components:**
-- **Google Maps** — officer's live location (blue dot with accuracy ring)
-- **Request Pins** — colored markers: P0 red, P1 orange, P2 amber, P3 green
-- **Pin Tap Card** — bottom sheet: customer name, request type, address, "Navigate" CTA
-- **List / Map Toggle** — header right button switches view mode
-- **My Location Button** — centers map on officer's current position
+- **Leaflet Map** — `LeafletMapView` frames assigned tickets with coordinates
+- **Request Pins** — colored by priority (`Critical`/`P0` red, `High`/`P1` amber, `Medium`/`P2` teal, `Low`/`P3` secondary)
+- **Mapped Ticket List** — same assigned tickets below the map; each row includes a navigation CTA
+- **Empty State** — distinguishes "no assigned tickets" from tickets missing GPS coordinates
 
-**Permissions:** `expo-location` foreground permission required; background location active while shift is clocked in
+**Permissions:** `LocationGateScreen` requires foreground location access before the officer tabs render; attendance workflows handle shift-specific GPS capture.
 
-**Offline:** Map tiles cached for last-visited areas via react-native-maps tile caching
+**Provider constraints:**
+- Native Leaflet uses a WebView with OpenStreetMap tiles and updates map state with injected JavaScript to avoid reloading the WebView.
+- Web uses `react-leaflet` with the same pins/circles/polyline props.
+- `FreeMapView` remains available for `react-native-maps` surfaces: iOS uses Apple Maps; Android uses OpenStreetMap/OpenTopoMap/Esri URL tiles and must keep `liteMode={false}`.
 
 ---
 
 ### 3.4 Shifts & Attendance
 
-**Route:** `OfficerNavigator → Shifts`
+**Route:** `OfficerNavigator → OfficerTabs → Attendance → AttendanceHome` (`Shifts` is an alias screen in the same stack)
 
 **Components:**
 - **Monthly Calendar** — days colored: Present (green), Absent (gray), Leave (amber), Holiday (blue)
@@ -275,7 +298,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.5 Inventory View
 
-**Route:** `OfficerNavigator → Inventory`  
+**Route:** `OfficerNavigator → OfficerTabs → Settings → Inventory`
 **Data sources:** `inventory_assignments WHERE assigned_to_id = officer.id`
 
 **Components:**
@@ -288,7 +311,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.6 Payslip & Earnings
 
-**Route:** `OfficerNavigator → Profile → Payslip`
+**Route:** `OfficerNavigator → OfficerTabs → Settings → Payslip`
 
 **Components:**
 - **Month Selector** — horizontal scroll of last 12 months
@@ -311,7 +334,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 - **Request Pipeline Funnel** — horizontal bar: New → Assigned → In Progress → Resolved with counts
 - **Expiring Subscriptions Table** — next 7 days; customer name, plan, expiry date, "Send Reminder" action
 - **Recent Activity Feed** — last 20 audit log events; actor, action, target, time ago
-- **Officer Status Map** — Google Maps with live dots for clocked-in officers
+- **Officer Status Map** — live map dots for clocked-in officers
 
 ---
 

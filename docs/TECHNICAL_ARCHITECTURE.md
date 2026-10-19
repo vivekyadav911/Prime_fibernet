@@ -63,7 +63,7 @@ Prime Fibernet is an enterprise-grade ISP management platform built as a **React
 │  External Services                                              │
 │  ├── Google Gemini API     ├── Razorpay / Easebuzz              │
 │  ├── Resend (Email)        ├── Twilio (SMS/WhatsApp)            │
-│  ├── Google Maps API       └── Firebase Cloud Messaging         │
+│  ├── Free map tiles        └── Firebase Cloud Messaging         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -90,9 +90,10 @@ Prime Fibernet is an enterprise-grade ISP management platform built as a **React
     "typescript": "5.0+"
   },
   "navigation": {
-    "@react-navigation/native": "6.x",
-    "@react-navigation/bottom-tabs": "6.x",
-    "@react-navigation/drawer": "6.x"
+    "@react-navigation/native": "7.x",
+    "@react-navigation/bottom-tabs": "7.x",
+    "@react-navigation/drawer": "7.x",
+    "@react-navigation/native-stack": "7.x"
   },
   "state-management": {
     "@reduxjs/toolkit": "2.0+",
@@ -113,7 +114,10 @@ Prime Fibernet is an enterprise-grade ISP management platform built as a **React
     "@supabase/supabase-js": "2.38+"
   },
   "maps": {
-    "react-native-maps": "1.14+"
+    "leaflet": "1.9+",
+    "react-leaflet": "5.x",
+    "react-native-maps": "1.20+",
+    "react-native-webview": "13.x"
   },
   "notifications": {
     "@react-native-firebase/messaging": "18.6+",
@@ -248,10 +252,18 @@ prime-fibernet-rn/
 |-----------|---------------|
 | `AppNavigator` | Root — checks auth state, routes to Auth or Main |
 | `AuthNavigator` | Unauthenticated stack: Login → Signup → Forgot Password |
-| `MainNavigator` | Role-gated: Customer tabs / Officer drawer / Admin drawer |
+| `MainNavigator` | Role-gated: Customer tabs / Officer tabs / Admin drawer |
 | `CustomerNavigator` | Bottom tabs: Home, Plans, Payments, Requests, Profile |
-| `OfficerNavigator` | Drawer: Dashboard, Requests, Map, Shifts, Inventory |
+| `OfficerNavigator` | Location gate, officer tab shell, profile stack, root ticket detail |
+| `OfficerTabNavigator` | Bottom tabs: Dashboard, Tickets, Attendance, Payments, Settings |
 | `AdminNavigator` | Drawer: Dashboard, Users, Officers, Plans, Analytics, Settings |
+
+Officer tab screens are implemented as nested native stacks:
+`OfficerDashboardStackNav`, `OfficerRequestsStackNav`,
+`OfficerAttendanceStackNav`, `OfficerPaymentsStackNav`, and
+`OfficerSettingsStackNav`. Map, Inventory, Support, Notifications, Leave, and
+Payslip live under the Settings tab; `RequestDetail` stays on the officer root
+stack so it can be opened from any tab.
 
 ### 2.4 Redux Store Structure
 
@@ -299,8 +311,14 @@ prime-fibernet-rn/
 | Razorpay / Easebuzz | Payments | Plan subscriptions & renewals |
 | Resend | Email delivery | Transactional & marketing emails |
 | Twilio | SMS / WhatsApp | Alerts, OTPs, notifications |
-| Google Maps API | Mapping | Officer location, service area |
+| OpenStreetMap / OpenTopoMap / Esri tiles | Mapping | Officer map pins, geofence surfaces, service area views |
 | Firebase FCM | Push notifications | Real-time alerts to mobile |
+
+Map rendering is intentionally free-provider first. `LeafletMapView` powers
+officer ticket maps on native through a WebView and on web through
+`react-leaflet`. `FreeMapView` covers remaining `react-native-maps` surfaces:
+iOS uses Apple Maps, while Android renders OSM/OpenTopoMap/Esri URL tiles with
+`liteMode` disabled so panning, zooming, and tile overlays keep working.
 
 ---
 

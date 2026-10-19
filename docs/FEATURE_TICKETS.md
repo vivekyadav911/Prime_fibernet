@@ -315,7 +315,7 @@
 - [ ] Status update flow: Accept → In Transit → On Site → Working → Resolved
 - [ ] Activity note with optional photo required before "Resolve" action
 - [ ] Officer cannot view or act on requests not assigned to them (RLS enforced)
-- [ ] One-tap navigation to customer address via Google Maps or Apple Maps
+- [ ] One-tap navigation to customer address via the device's native map app
 
 **Technical Notes:**
 > `requestsApi.updateStatus` with RLS policy `officers_view_requests`. Activity notes stored in `request_activities` table. Photos uploaded to `activities/` Supabase Storage bucket. `Linking.openURL` with maps deeplink for navigation.
@@ -326,14 +326,14 @@
 **Priority:** 🟠 P1 | **Status:** 🟦 Todo | **Estimate:** 8 SP
 
 **Acceptance Criteria:**
-- [ ] Google Maps showing officer's real-time location (blue dot with accuracy ring)
+- [ ] Map showing officer's real-time location (blue dot with accuracy ring)
 - [ ] Request pins colored by priority: P0 red, P1 orange, P2 amber, P3 green
 - [ ] Tap on pin opens bottom sheet with customer name, request type, "Navigate" CTA
 - [ ] List / Map toggle in navigation header
-- [ ] Offline map tiles cached for last-known service areas
+- [ ] Map renders with free tile providers and handles service-area pins
 
 **Technical Notes:**
-> `react-native-maps` with `PROVIDER_GOOGLE`. `expo-location` `watchPositionAsync` for live tracking. Map pins rendered as `MapMarker` with custom colored SVG. Tile caching via react-native-maps `cacheEnabled` prop.
+> `LeafletMapView` renders OSM-backed pins across native/web. `FreeMapView` remains available for `react-native-maps` surfaces: iOS uses Apple Maps; Android uses OSM/OpenTopoMap/Esri URL tiles with `liteMode={false}`. `expo-location` `watchPositionAsync` supports live tracking.
 
 ---
 
@@ -409,7 +409,7 @@
 - [ ] Request pipeline funnel: New → Assigned → In Progress → Resolved with counts
 - [ ] Expiring subscriptions table for next 7 days with "Send Reminder" action
 - [ ] Recent admin activity feed (last 20 audit log events)
-- [ ] Google Maps with live dots for clocked-in officers
+- [ ] Live map with dots for clocked-in officers
 
 **Technical Notes:**
 > `analyticsApi` RTK Query (60-min cache). Recharts on web, Victory Native on mobile. KPI counts from Supabase DB views (pre-aggregated). Real-time officer count via Supabase Realtime on `shifts WHERE status = 'active'`.

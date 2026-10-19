@@ -130,13 +130,13 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Status update flow: Accept → In Transit → On Site → Working → Resolved
 - Activity note required before resolving
 - Optional photo attachment at each step
-- One-tap navigation to customer address (Google Maps / Apple Maps)
+- One-tap navigation to customer address via the device's native map app
 
 #### Map View
-- Google Maps with live officer location
+- In-app map with live officer location
 - Request pins colored by priority (red / amber / green)
 - Request card on pin tap with navigation CTA
-- Offline map tile caching for last-known service areas
+- Free map tile providers for service-area views
 - List/map toggle
 
 #### Shifts & Attendance

@@ -63,7 +63,7 @@
 | **Google Gemini** | AI chatbot (`gemini-rag-chatbot`) | Edge Function secret |
 | **Firebase Cloud Messaging** | Push notifications | FCM config in Expo + `user_fcm_tokens` table |
 | **Sentry** | Error monitoring (optional dev) | `EXPO_PUBLIC_SENTRY_DSN` |
-| **Google Maps** | Officer map, geofencing | Platform API keys in Expo config |
+| **Free map tiles** | Officer map, geofencing, service-area views | OpenStreetMap/OpenTopoMap/Esri tiles; no platform map key needed for the current implementation |
 
 Copy env template:
 
@@ -138,7 +138,7 @@ pnpm typecheck   # TypeScript across packages
 pnpm lint        # ESLint via turbo
 ```
 
-**Login flow:** App → Auth screen → sign in → `AppNavigator` routes by `profiles.role` to Customer tabs, Officer drawer, or Admin drawer.
+**Login flow:** App → Auth screen → sign in → `AppNavigator` routes by `profiles.role` to Customer tabs, Officer tabs, or Admin drawer.
 
 ---
 
@@ -151,7 +151,7 @@ Prime_fibernet/
 │   │   ├── screens/
 │   │   │   ├── admin/         Admin modules (finance, HR, support…)
 │   │   │   ├── customer/      Customer tabs + stacks
-│   │   │   ├── officer/       Officer drawer + field ops
+│   │   │   ├── officer/       Officer tabs + field ops
 │   │   │   └── common/        Shared screens (auth, PDF viewer)
 │   │   ├── components/
 │   │   │   ├── admin/         FormField, SectionCard, KPI cards…
@@ -232,23 +232,23 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 
 ### 5.3 Officer features
 
-**Navigation:** `OfficerNavigator.tsx` — LocationGate → drawer
+**Navigation:** `OfficerNavigator.tsx` — `LocationGate` → `OfficerTabs`
 
 | Module | Screens | Notes |
 |--------|---------|-------|
 | Location gate | `LocationGateScreen` | GPS required before access |
-| Dashboard | `OfficerDashboardScreen` | Shift, today's jobs |
-| Requests | `OfficerRequestsStackNav` | Accept → resolve workflow |
-| Map | `OfficerMapScreen` | Live location, job pins |
-| Attendance | `OfficerAttendanceDashboard`, `AttendanceHistoryScreen` | Geofenced clock-in/out |
-| Collections | `OfficerCollectionsStackNav`, `CollectPaymentScreen` | Assigned customers, cash collection |
+| Dashboard tab | `OfficerDashboardStackNav` → `OfficerDashboardScreen` | Shift, today's jobs |
+| Tickets tab | `OfficerRequestsStackNav` → `OfficerRequestsScreen`; root `RequestDetail` | Accept → resolve workflow |
+| Attendance tab | `OfficerAttendanceStackNav` → `OfficerAttendanceDashboard`, `AttendanceHistoryScreen` | Geofenced clock-in/out |
+| Payments tab | `OfficerPaymentsStackNav` → `OfficerCollectionsStackNav`, `CollectPaymentScreen`, `InvoiceScreen` | Assigned customers, cash collection, invoice view |
+| Settings tab | `OfficerSettingsStackNav` | Map, inventory, support, notifications, leave, payslip |
+| Map | `OfficerMapScreen` | Assigned ticket pins via `LeafletMapView` |
 | Inventory | `OfficerInventoryScreen` | Assigned equipment |
 | Payslips | `OfficerPayslipStackNav` | View/download PDF |
 | Leave | `OfficerLeaveStackNav` | Leave requests |
 | Notifications | `OfficerPortalNotificationsScreen` | Portal alerts |
 | Support chat | `OfficerSupportChatScreen` | Internal support |
-| Profile | `OfficerProfileStackNav` | Officer profile |
-| Invoices | `InvoiceScreen` | Generate/view invoice on collection |
+| Profile | `OfficerProfileStackNav` | Officer profile, change password, contract viewer |
 | Employment contract | Contract signature prompt modal | E-sign flow |
 
 ### 5.4 Admin features
