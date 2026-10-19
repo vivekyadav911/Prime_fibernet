@@ -21,7 +21,7 @@ flowchart LR
 | Deliverable | Status |
 |-------------|--------|
 | `apps/unified-app` with Redux + React Navigation | In progress |
-| Role shells: Customer tabs, Officer drawer, Admin drawer | In progress |
+| Role shells: Customer tabs, Officer tabs, Admin drawer | In progress |
 | Archive `apps/customer`, `apps/officer` | In progress |
 | Theme tokens from frontend spec §1.1 | In progress |
 | Root `pnpm dev` script | In progress |
