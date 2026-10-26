@@ -540,18 +540,18 @@
 
 ---
 
-### PYMT-001 · Razorpay Payment Integration
+### PYMT-001 · Gateway Payment Integration
 **Priority:** 🔴 P0 | **Status:** 🟦 Todo | **Estimate:** 8 SP
 
 **Acceptance Criteria:**
 - [ ] Customer can initiate payment for any active plan
-- [ ] Razorpay WebView opens with pre-filled order details
+- [ ] Default active gateway checkout opens with pre-filled order details
 - [ ] On success: subscription created/extended, invoice generated, confirmation email sent
 - [ ] On failure: clear error message with retry option
 - [ ] Payment status reflects in customer dashboard within 10 seconds of gateway response
 
 **Technical Notes:**
-> Edge Function creates Razorpay order (`POST /v1/orders`). Client opens `WebView` with Razorpay checkout URL. Webhook handler (→ PYMT-002) does all DB updates — client only shows UI confirmation via Realtime. No card data touches Prime Fibernet servers at any point.
+> `create-payment-order` selects the default active `payment_gateways` row, writes/reuses an `initiated` `payments` row, and returns provider checkout metadata. Razorpay can use native/web checkout with WebView fallback; other providers use generated WebView form/URL adapters. No card data touches Prime Fibernet servers.
 
 ---
 
@@ -559,14 +559,14 @@
 **Priority:** 🔴 P0 | **Status:** 🟦 Todo | **Estimate:** 5 SP
 
 **Acceptance Criteria:**
-- [ ] Webhook receives `payment.captured` and `payment.failed` events from Razorpay
+- [ ] Webhook receives success/failure events from the configured gateway
 - [ ] HMAC-SHA256 signature verified before any processing
 - [ ] Idempotency check: duplicate webhook events do not create duplicate records
 - [ ] On success: subscription created/extended, invoice generation triggered
-- [ ] On failure: `user_payments` record marked failed; customer notified via FCM
+- [ ] On failure: `payments` record marked failed; customer notified via FCM
 
 **Technical Notes:**
-> Edge Function with `crypto.subtle.verify` for HMAC. Idempotency via `transaction_id UNIQUE` constraint on `user_payments`. Invoice triggered as async job by calling `invoice-generator` Edge Function. All processing in a DB transaction for atomicity.
+> `payment-webhook?gateway=<slug>` dispatches to the matching gateway adapter for signature verification and response parsing. Confirmed online app/web payments move to `confirmed`; officer/office collections stay `pending_review` for admin approval. Already-confirmed rows are skipped for idempotency.
 
 ---
 
@@ -590,12 +590,12 @@
 **Acceptance Criteria:**
 - [ ] Admin can initiate full or partial refund for any successful payment
 - [ ] Refund reason required (min 20 chars); logged to audit trail
-- [ ] Razorpay refund API called; `user_payments` updated with refund status and amount
+- [ ] Gateway refund or refund RPC called; `payments` updated with refund status and amount
 - [ ] Customer notified via email and push notification with refund amount
 - [ ] Refunded amount shown in customer payment history with "Refunded" chip
 
 **Technical Notes:**
-> Edge Function calls Razorpay `POST /v1/payments/{id}/refund`. `user_payments` updated: `payment_status = 'refunded'`, `refund_amount`, `refund_reason`. Audit log insert required. FCM + Resend email notification to customer.
+> Admin refund flow uses `initiate_payment_refund`/`process-refund` paths against the `payments` ledger. Store refund amount, reason, and reviewer context, then notify the customer through the normal notification/email pipeline.
 
 ---
 

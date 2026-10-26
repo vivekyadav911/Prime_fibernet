@@ -155,10 +155,16 @@ export const typography = {
 - **Invoice Download** — generates signed Supabase Storage URL on tap; opens PDF viewer
 
 **Payment gateway flow:**
-1. Client calls `paymentsApi.createOrder` → Edge Function → Razorpay order
-2. `WebView` renders Razorpay checkout URL
-3. On success/failure, `WebView` fires callback with payment result
-4. Client updates local state; waits for Realtime confirmation from webhook
+1. Client calls `paymentCollectionApi.createPaymentOrderV2` or checkout alias `paymentsApi.createOrder`.
+2. `create-payment-order` selects the active default `payment_gateways` row and returns `paymentId`, `orderId`, `gatewaySlug`, `keyId`, and optional checkout URL/form params.
+3. Razorpay checkout opens through native SDK where available, web JS on web, or WebView fallback. Easebuzz/PayU-style gateways use a generated WebView form or provider URL.
+4. Razorpay success callbacks call `verify-payment`; provider webhooks also hit `payment-webhook?gateway=<slug>`.
+5. The screen navigates to `PaymentSuccess` only after a successful callback/verification path. If no active gateway is configured, `GatewayWebViewScreen` shows "Online payments not active yet" and points customers to cash/offline options.
+
+**Constraints:**
+- Customer checkout never accepts card data directly; gateway UIs collect sensitive payment details.
+- Amounts for plan checkout are resolved server-side from `plans.price`.
+- New payment collection, gateway settings, analytics, receipts, and refunds use the `payments` ledger. Legacy `user_payments` endpoints remain only for older history screens.
 
 ---
 

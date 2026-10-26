@@ -284,7 +284,10 @@ prime-fibernet-rn/
 
 | Function | Responsibility |
 |----------|---------------|
-| `payment-webhook` | Verify Razorpay HMAC signature, update subscription, trigger invoice |
+| `create-payment-order` | Resolve the default active gateway, create/reuse a `payments` row, and return checkout metadata |
+| `verify-payment` | Verify Razorpay checkout callbacks, confirm payment rows, activate plan subscriptions, and sync invoices |
+| `payment-webhook` | Gateway-agnostic callback handler (`?gateway=<slug>`) that verifies adapter signatures and updates `payments` |
+| `save-gateway-credentials` | Admin-only credential encryption, connection test, activation, and webhook URL generation |
 | `invoice-generator` | Generate PDF invoices, store to Supabase Storage |
 | `email-service` | Transactional emails via Resend (welcome, invoice, reset) |
 | `sms-service` | SMS and WhatsApp delivery via Twilio |
@@ -296,7 +299,7 @@ prime-fibernet-rn/
 | Service | Category | Usage |
 |---------|----------|-------|
 | Google Gemini API | AI | Customer support chatbot |
-| Razorpay / Easebuzz | Payments | Plan subscriptions & renewals |
+| Razorpay / Easebuzz / PayU / Cashfree / Paytm | Payments | Default-gateway checkout, plan renewals, and customer bill payments |
 | Resend | Email delivery | Transactional & marketing emails |
 | Twilio | SMS / WhatsApp | Alerts, OTPs, notifications |
 | Google Maps API | Mapping | Officer location, service area |
@@ -501,27 +504,35 @@ Dispatch to authSlice → Navigate to MainNavigator
 Customer taps Pay
         │
         ▼
-Client calls Edge Function → POST /payments/create
-Edge Function creates Razorpay order → returns order_id
+Client calls `create-payment-order`
+Edge Function selects default active `payment_gateways` row
+Creates or reuses an `initiated` row in `payments`
         │
         ▼
-Client opens Razorpay WebView with order_id
+Gateway adapter creates provider order
+Response returns paymentId, orderId, gatewaySlug, keyId / checkout params
+        │
+        ▼
+Client opens checkout
+Razorpay: native SDK / web JS / WebView fallback
+Other gateways: generated WebView form or checkout URL
 Customer completes payment
         │
         ▼
-Razorpay fires webhook → Edge Function
-Verify HMAC signature
-Idempotency check (transaction_id unique constraint)
+Provider fires webhook → `payment-webhook?gateway=<slug>`
+Adapter verifies signature and maps provider response
+Idempotency check skips already-confirmed rows
         │
         ▼
-Update subscription record
-Generate invoice PDF → Supabase Storage
-Send confirmation email via Resend
-Fire Supabase Realtime event
+Online app/web success → `payments.status = confirmed`
+Officer/office collection success → `pending_review`
+Failures store gateway response + failure reason
         │
         ▼
-Client receives Realtime update
-Show success modal + invoice download button
+Client calls `verify-payment` for Razorpay success callbacks
+Confirmed plan purchases expire old subscriptions and insert active subscription
+Invoice row is marked paid or generated when auto-invoice is enabled
+Portal notification is inserted for the customer
 ```
 
 ### 5.3 Realtime Subscription Pattern

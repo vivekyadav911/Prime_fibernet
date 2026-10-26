@@ -57,8 +57,7 @@
 | Service | Used for | Env var(s) |
 |---------|----------|------------|
 | **Supabase** | DB, Auth, Storage, Realtime, Edge Functions | `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` |
-| **Razorpay** | Payment gateway (primary) | `EXPO_PUBLIC_RAZORPAY_KEY_ID`, gateway credentials in DB |
-| **Easebuzz** | Alternate payment gateway | Stored encrypted in `payment_gateways` table |
+| **Payment gateways** | Razorpay, Easebuzz, PayU, Cashfree, Paytm | Stored encrypted in `payment_gateways`; exactly one active default gateway drives checkout |
 | **Resend** | Transactional email (verification, invoices, notifications) | Supabase Edge Function secrets |
 | **Google Gemini** | AI chatbot (`gemini-rag-chatbot`) | Edge Function secret |
 | **Firebase Cloud Messaging** | Push notifications | FCM config in Expo + `user_fcm_tokens` table |
@@ -223,7 +222,7 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 |--------|---------|-------|
 | Dashboard | `customer/dashboard/DashboardScreen` | Plan card, quick actions, requests |
 | Plans | `customer/plans/PlansScreen`, `PlanDetails`, `PlanChangeRequest` | Catalog, subscribe flow |
-| Payments | `CustomerBillScreen`, `Checkout`, `GatewayWebView`, `PaymentSuccess`, `PaymentHistory`, `Receipt`, `MyBills` | Razorpay/Easebuzz webview |
+| Payments | `CustomerBillScreen`, `Checkout`, `GatewayWebView`, `PaymentSuccess`, `PaymentHistory`, `Receipt`, `MyBills` | Default gateway checkout + receipt/history |
 | Service requests | `CustomerTicketList`, `CreateCustomerTicket`, `CustomerTicketDetail` | Realtime status |
 | Support | `CustomerSupportHub`, `CustomerLiveChat`, FAQs, `ChatbotScreen` (Prima AI) | Gemini edge function |
 | Profile | `ProfileScreen` | Edit profile, change password, delete account |
@@ -267,7 +266,7 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 | **Ticket portal** | Internal tickets, link to requests | `tickets` |
 | **Plans** | CRUD, duplicate, deactivate | `plans` |
 | **Notifications** | Broadcast, schedule, automation rules | `functions/send-broadcast-notification`, cron |
-| **Payments** | List, review, gateways, analytics, refunds, collection assignments | Razorpay webhooks, `payments` |
+| **Payments** | List, review, gateways, analytics, refunds, collection assignments | Gateway webhooks, manual review, `payments` |
 | **Invoices** | List, create, GST manual, settings, bulk send, PDF | `functions/invoice-generator`, `send-invoice` |
 | **Inventory** | Categories, stock, bulk ops, history | `inventory_*` tables |
 | **Reports** | Revenue, exports | Analytics API |
@@ -332,9 +331,10 @@ Deploy all under `supabase/functions/`:
 | `verify-admin-totp` | Admin 2FA |
 | `admin-create-customer` / `admin-create-officer` | Provision users |
 | `provision-officer-auth` | Officer auth setup |
-| `create-payment-order` | Initiate Razorpay/Easebuzz order |
-| `verify-payment` | Confirm payment post-gateway |
-| `payment-webhook` / `razorpay-webhook` | Gateway callbacks |
+| `create-payment-order` | Create/reuse checkout orders for the default active gateway |
+| `verify-payment` | Confirm Razorpay checkout responses and activate subscriptions |
+| `payment-webhook` | Gateway-agnostic webhook endpoint: `/functions/v1/payment-webhook?gateway=<slug>` |
+| `razorpay-webhook` | Legacy Razorpay callback handler |
 | `process-payment` / `process-refund` | Payment lifecycle |
 | `save-gateway-credentials` | Encrypt & store gateway keys |
 | `generate-payment-receipt` | PDF receipt |
@@ -351,6 +351,25 @@ Deploy all under `supabase/functions/`:
 | `export-payments` / `admin-backup-export` | Data export |
 
 **Deploy rule:** Always apply migrations and functions via Supabase MCP or CLI — see `.cursor/rules/supabase-deploy.mdc`.
+
+### 6.3.1 Payment gateway operations
+
+Payment checkout is configured from **Admin → Payments → Gateways** (`GatewayConfigScreen`):
+
+1. Select a provider row from `payment_gateways`.
+2. Enter the provider-specific keys; secret fields are encrypted by `save-gateway-credentials`.
+3. Use **Test connection** before activating.
+4. Use **Save & activate** and then **Set as default**. The DB trigger keeps only one `is_default = true` gateway.
+5. Copy the generated webhook URL to the provider console:
+   `SUPABASE_URL/functions/v1/payment-webhook?gateway=<slug>`.
+
+Runtime constraints:
+
+- `create-payment-order` refuses checkout when no active default gateway exists.
+- Online customer checkout writes an `initiated` row in `payments`, reuses a matching open order for 30 minutes, and expires stale initiated rows.
+- Online app/web webhook success is auto-confirmed; officer/office collections stay in review until an admin confirms them.
+- Officers can record assigned or open-pool collections only within RLS scope; non-cash manual collections require a reference.
+- Legacy `user_payments` APIs still exist for older screens, but new payment collection, gateway, analytics, receipt, and refund flows use `payments`.
 
 ### 6.4 RLS & security
 
