@@ -75,6 +75,7 @@ pnpm typecheck
 | Architecture | [docs/TECHNICAL_ARCHITECTURE.md](docs/TECHNICAL_ARCHITECTURE.md) |
 | Security | [docs/SECURITY_AND_ACCESS.md](docs/SECURITY_AND_ACCESS.md) |
 | Frontend spec | [docs/FRONTEND_SPEC.md](docs/FRONTEND_SPEC.md) |
+| Payments and collections runbook | [docs/PAYMENTS_AND_COLLECTIONS_RUNBOOK.md](docs/PAYMENTS_AND_COLLECTIONS_RUNBOOK.md) |
 | Feature tickets (42) | [docs/FEATURE_TICKETS.md](docs/FEATURE_TICKETS.md) |
 | Roadmap | [docs/IMPLEMENTATION_ROADMAP.md](docs/IMPLEMENTATION_ROADMAP.md) |
 | Original sources | [docs/source/](docs/source/) |
