@@ -74,18 +74,18 @@
 
 ---
 
-### AUTH-002 · Login with JWT Token Issuance
+### AUTH-002 · Login with Supabase Session Commit
 **Priority:** 🔴 P0 | **Status:** 🟦 Todo | **Estimate:** 5 SP
 
 **Acceptance Criteria:**
 - [ ] User can log in with verified email and password
 - [ ] Failed login shows generic error message (no enumeration of which field is wrong)
-- [ ] Account locked after 5 failed attempts for 15 minutes
-- [ ] JWT stored in iOS Keychain / Android Keystore via `expo-secure-store`
-- [ ] Redux `authSlice` updated; navigate to role-appropriate `MainNavigator`
+- [ ] Selected portal role is checked against `get_my_role` before the session is committed
+- [ ] Supabase session is stored through `secureStorageAdapter`
+- [ ] Redux `authSlice` is updated only with the resolved database role
 
 **Technical Notes:**
-> `supabase.auth.signInWithPassword`. RTK Query `baseQuery` wrapper reads JWT from secure storage and injects `Authorization` header. Dispatch `authSlice.setCredentials` on success.
+> `LoginScreen` uses `supabase.auth.signInWithPassword`, `fetchMyRole`, and `commitAuthenticatedSession`. Add failed-attempt throttling as a separate hardening task if the linked Supabase project is not configured for it.
 
 ---
 
@@ -95,26 +95,27 @@
 **Acceptance Criteria:**
 - [ ] Admin users must complete TOTP 2FA after password login
 - [ ] QR code displayed for authenticator app enrollment (Google Authenticator, Authy)
-- [ ] 6-digit code entry with 5-minute expiry and 5-attempt limit
-- [ ] Backup codes generated at enrollment (single-use, AES-256 encrypted in DB)
-- [ ] 2FA disable triggers full session invalidation and security notification email
+- [ ] 6-digit code entry verified through Supabase Auth MFA challenge/verify
+- [ ] Unverified pending factors are cleaned up when enrollment is cancelled
+- [ ] Admin session is committed only after AAL2 verification
 
 **Technical Notes:**
-> `speakeasy` library for TOTP generation/verification. `qrcode` library for enrollment QR. 2FA secret stored encrypted via `pgcrypto` extension in Supabase. Backup codes hashed before storage.
+> Use native Supabase Auth MFA (`supabase.auth.mfa.enroll`, `challenge`, `verify`) through `AdminMfaScreen` and `MfaEnrollModal`. Do not add an app-managed TOTP secret table or `verify-admin-totp` edge function.
 
 ---
 
-### AUTH-004 · JWT Refresh Token Rotation
+### AUTH-004 · Supabase Session Refresh Guard
 **Priority:** 🟠 P1 | **Status:** 🟦 Todo | **Estimate:** 5 SP
 
 **Acceptance Criteria:**
-- [ ] Silent JWT refresh fires when access token is within 5 minutes of expiry
-- [ ] New refresh token issued on each rotation; old token blacklisted in DB
-- [ ] On refresh failure (expired/revoked), user is logged out with informative toast
-- [ ] All in-flight API requests are queued and replayed after successful refresh
+- [ ] Supabase client persists sessions through `secureStorageAdapter`
+- [ ] `autoRefreshToken` remains enabled on the singleton Supabase client
+- [ ] RTK Query base query refreshes sessions expiring in 60 seconds or less
+- [ ] Concurrent refresh attempts are serialized with `async-mutex`
+- [ ] Invalid refresh tokens clear the stale local Supabase session
 
 **Technical Notes:**
-> RTK Query `baseQuery` wrapper with `mutex` (e.g., `async-mutex` library) to prevent concurrent refresh races. Blacklist table in Supabase with daily cleanup via scheduled Edge Function.
+> `services/api/supabase.ts` owns the refresh guard. Do not add a custom refresh-token table or scheduled blacklist cleanup; token rotation is Supabase Auth behavior.
 
 ---
 
@@ -315,7 +316,7 @@
 - [ ] Status update flow: Accept → In Transit → On Site → Working → Resolved
 - [ ] Activity note with optional photo required before "Resolve" action
 - [ ] Officer cannot view or act on requests not assigned to them (RLS enforced)
-- [ ] One-tap navigation to customer address via Google Maps or Apple Maps
+- [ ] One-tap navigation to customer address via the platform maps app
 
 **Technical Notes:**
 > `requestsApi.updateStatus` with RLS policy `officers_view_requests`. Activity notes stored in `request_activities` table. Photos uploaded to `activities/` Supabase Storage bucket. `Linking.openURL` with maps deeplink for navigation.
@@ -326,14 +327,13 @@
 **Priority:** 🟠 P1 | **Status:** 🟦 Todo | **Estimate:** 8 SP
 
 **Acceptance Criteria:**
-- [ ] Google Maps showing officer's real-time location (blue dot with accuracy ring)
-- [ ] Request pins colored by priority: P0 red, P1 orange, P2 amber, P3 green
-- [ ] Tap on pin opens bottom sheet with customer name, request type, "Navigate" CTA
-- [ ] List / Map toggle in navigation header
-- [ ] Offline map tiles cached for last-known service areas
+- [ ] Leaflet/OpenStreetMap map showing assigned request pins
+- [ ] Request pins colored by priority: P0 red, P1 orange, P2 teal, P3 secondary
+- [ ] Ticket list mirrors the mapped pins and exposes a "Navigate" CTA
+- [ ] Empty state explains when assigned tickets have no GPS coordinates
 
 **Technical Notes:**
-> `react-native-maps` with `PROVIDER_GOOGLE`. `expo-location` `watchPositionAsync` for live tracking. Map pins rendered as `MapMarker` with custom colored SVG. Tile caching via react-native-maps `cacheEnabled` prop.
+> `OfficerMapScreen` uses `LeafletMapView`: `react-leaflet` on web and Leaflet HTML inside `react-native-webview` on native. Request coordinates come from portal ticket data/geocoded customer addresses.
 
 ---
 
@@ -409,7 +409,7 @@
 - [ ] Request pipeline funnel: New → Assigned → In Progress → Resolved with counts
 - [ ] Expiring subscriptions table for next 7 days with "Send Reminder" action
 - [ ] Recent admin activity feed (last 20 audit log events)
-- [ ] Google Maps with live dots for clocked-in officers
+- [ ] Leaflet/OpenStreetMap with live dots for clocked-in officers
 
 **Technical Notes:**
 > `analyticsApi` RTK Query (60-min cache). Recharts on web, Victory Native on mobile. KPI counts from Supabase DB views (pre-aggregated). Real-time officer count via Supabase Realtime on `shifts WHERE status = 'active'`.

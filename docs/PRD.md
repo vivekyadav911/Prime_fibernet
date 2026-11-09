@@ -61,12 +61,12 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 | ID | Feature | Priority | Notes |
 |----|---------|----------|-------|
 | A-01 | Email/password sign-up with verification | P0 | 24-hour verification link |
-| A-02 | Login with JWT + refresh token rotation | P0 | 30-min JWT, 7-day refresh |
-| A-03 | Admin TOTP two-factor authentication | P0 | speakeasy library |
+| A-02 | Login with Supabase session + role resolution | P0 | Supabase Auth session persisted securely |
+| A-03 | Admin TOTP two-factor authentication | P0 | Supabase Auth MFA / AAL2 |
 | A-04 | Forgot password with email reset | P1 | 1-hour token expiry |
 | A-05 | Biometric login (Face ID / Fingerprint) | P2 | After first password login |
 | A-06 | Role-based navigation guard | P0 | Customer / Officer / Admin routes |
-| A-07 | Account lockout after 5 failed attempts | P0 | 15-minute lockout window |
+| A-07 | Failed-attempt throttling / lockout | P1 | Configure in Supabase or add app hardening |
 
 ---
 
@@ -130,14 +130,13 @@ Internal operations staff managing the business. Primary device: desktop/laptop 
 - Status update flow: Accept → In Transit → On Site → Working → Resolved
 - Activity note required before resolving
 - Optional photo attachment at each step
-- One-tap navigation to customer address (Google Maps / Apple Maps)
+- One-tap navigation to customer address in the platform maps app
 
 #### Map View
-- Google Maps with live officer location
-- Request pins colored by priority (red / amber / green)
-- Request card on pin tap with navigation CTA
-- Offline map tile caching for last-known service areas
-- List/map toggle
+- Leaflet/OpenStreetMap map with assigned request pins
+- Request pins colored by priority (red / amber / teal / secondary)
+- Ticket list and navigation CTA for mapped requests
+- Empty state when assigned tickets are missing GPS coordinates
 
 #### Shifts & Attendance
 - Clock-in / clock-out with GPS coordinates
