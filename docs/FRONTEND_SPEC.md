@@ -201,7 +201,7 @@ export const typography = {
 
 ### 3.1 Officer Dashboard
 
-**Route:** `OfficerNavigator → Dashboard`  
+**Route:** `OfficerNavigator → OfficerTabs → Dashboard`
 **Data sources:** `officersApi`, Supabase Realtime on `service_requests WHERE officer_id = current`
 
 **Components:**
@@ -216,7 +216,7 @@ export const typography = {
 
 ### 3.2 Request Queue & Management
 
-**Route:** `OfficerNavigator → Requests`  
+**Route:** `OfficerNavigator → OfficerTabs → Tickets`
 **Data sources:** `requestsApi` (officer-scoped via RLS)
 
 **Components:**
@@ -239,25 +239,24 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.3 Map View
 
-**Route:** `OfficerNavigator → Map`  
-**Data sources:** `expo-location` (live GPS) + `requestsApi`
+**Route:** `OfficerNavigator → OfficerTabs → Settings → Map`
+**Data sources:** `useOfficerAssignedTickets`, ticket coordinates from portal data
 
 **Components:**
-- **Google Maps** — officer's live location (blue dot with accuracy ring)
-- **Request Pins** — colored markers: P0 red, P1 orange, P2 amber, P3 green
-- **Pin Tap Card** — bottom sheet: customer name, request type, address, "Navigate" CTA
-- **List / Map Toggle** — header right button switches view mode
-- **My Location Button** — centers map on officer's current position
+- **Leaflet Map** — `LeafletMapView` renders OpenStreetMap tiles via `react-leaflet` on web and a WebView-backed Leaflet map on native.
+- **Request Pins** — assigned ticket pins colored by priority: Critical/P0 red, High/P1 amber, Medium/P2 teal, Low/P3 secondary.
+- **Ticket List** — `FlatList` below the map mirrors the visible pins and keeps pull-to-refresh available.
+- **Navigate CTA** — opens the platform maps app for the ticket address; the in-app map does not require a Google Maps API key.
 
-**Permissions:** `expo-location` foreground permission required; background location active while shift is clocked in
+**Permissions:** `LocationGateScreen` requires GPS before entering the officer shell; attendance/shift tracking captures live location separately.
 
-**Offline:** Map tiles cached for last-visited areas via react-native-maps tile caching
+**Offline:** Do not assume offline tile availability. OpenStreetMap tiles are loaded over the network; keep usage within the tile provider policy.
 
 ---
 
 ### 3.4 Shifts & Attendance
 
-**Route:** `OfficerNavigator → Shifts`
+**Route:** `OfficerNavigator → OfficerTabs → Attendance`
 
 **Components:**
 - **Monthly Calendar** — days colored: Present (green), Absent (gray), Leave (amber), Holiday (blue)
@@ -275,7 +274,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.5 Inventory View
 
-**Route:** `OfficerNavigator → Inventory`  
+**Route:** `OfficerNavigator → OfficerTabs → Settings → Inventory`
 **Data sources:** `inventory_assignments WHERE assigned_to_id = officer.id`
 
 **Components:**
@@ -288,7 +287,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 
 ### 3.6 Payslip & Earnings
 
-**Route:** `OfficerNavigator → Profile → Payslip`
+**Route:** `OfficerNavigator → OfficerTabs → Settings → Payslip`
 
 **Components:**
 - **Month Selector** — horizontal scroll of last 12 months
@@ -311,7 +310,7 @@ New → [Accept] → In Transit → [Arrived] → On Site → [Start] → Workin
 - **Request Pipeline Funnel** — horizontal bar: New → Assigned → In Progress → Resolved with counts
 - **Expiring Subscriptions Table** — next 7 days; customer name, plan, expiry date, "Send Reminder" action
 - **Recent Activity Feed** — last 20 audit log events; actor, action, target, time ago
-- **Officer Status Map** — Google Maps with live dots for clocked-in officers
+- **Officer Status Map** — Leaflet/OpenStreetMap live dots for clocked-in officers and assigned request pins
 
 ---
 

@@ -1,7 +1,7 @@
 # Prime Fibernet — Technical Architecture Document
 
 > **Version:** 2.0 | **Date:** June 2026 | **Next Review:** September 2026  
-> **Platform:** iOS · Android · Web | **Runtime:** React Native 0.73+ / Expo SDK 50+
+> **Platform:** iOS · Android · Web | **Runtime:** React Native 0.81+ / Expo SDK 54
 
 ---
 
@@ -63,7 +63,7 @@ Prime Fibernet is an enterprise-grade ISP management platform built as a **React
 │  External Services                                              │
 │  ├── Google Gemini API     ├── Razorpay / Easebuzz              │
 │  ├── Resend (Email)        ├── Twilio (SMS/WhatsApp)            │
-│  ├── Google Maps API       └── Firebase Cloud Messaging         │
+│  ├── OpenStreetMap tiles   └── Firebase Cloud Messaging         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -85,14 +85,15 @@ Prime Fibernet is an enterprise-grade ISP management platform built as a **React
 ```json
 {
   "core": {
-    "react-native": "0.73+",
-    "expo": "50+",
-    "typescript": "5.0+"
+    "react-native": "0.81+",
+    "expo": "54+",
+    "typescript": "5.8+"
   },
   "navigation": {
-    "@react-navigation/native": "6.x",
-    "@react-navigation/bottom-tabs": "6.x",
-    "@react-navigation/drawer": "6.x"
+    "@react-navigation/native": "7.x",
+    "@react-navigation/bottom-tabs": "7.x",
+    "@react-navigation/drawer": "7.x",
+    "@react-navigation/native-stack": "7.x"
   },
   "state-management": {
     "@reduxjs/toolkit": "2.0+",
@@ -110,10 +111,12 @@ Prime Fibernet is an enterprise-grade ISP management platform built as a **React
     "zod": "3.22+"
   },
   "api": {
-    "@supabase/supabase-js": "2.38+"
+    "@supabase/supabase-js": "2.49+"
   },
   "maps": {
-    "react-native-maps": "1.14+"
+    "leaflet": "1.9+",
+    "react-leaflet": "5.x",
+    "react-native-webview": "13.x"
   },
   "notifications": {
     "@react-native-firebase/messaging": "18.6+",
@@ -247,10 +250,11 @@ prime-fibernet-rn/
 | Navigator | Responsibility |
 |-----------|---------------|
 | `AppNavigator` | Root — checks auth state, routes to Auth or Main |
-| `AuthNavigator` | Unauthenticated stack: Login → Signup → Forgot Password |
-| `MainNavigator` | Role-gated: Customer tabs / Officer drawer / Admin drawer |
+| `AuthNavigator` | Unauthenticated stack: Landing, Login, OTP, password reset, Admin MFA |
+| `MainNavigator` | Role-gated: Customer tabs / Officer GPS gate + tabs / Admin drawer |
 | `CustomerNavigator` | Bottom tabs: Home, Plans, Payments, Requests, Profile |
-| `OfficerNavigator` | Drawer: Dashboard, Requests, Map, Shifts, Inventory |
+| `OfficerNavigator` | Native stack: `LocationGate` → `OfficerTabs`, plus profile and ticket detail overlays |
+| `OfficerTabNavigator` | Custom bottom tabs: Dashboard, Tickets, Attendance, Payments, Settings |
 | `AdminNavigator` | Drawer: Dashboard, Users, Officers, Plans, Analytics, Settings |
 
 ### 2.4 Redux Store Structure
@@ -299,7 +303,7 @@ prime-fibernet-rn/
 | Razorpay / Easebuzz | Payments | Plan subscriptions & renewals |
 | Resend | Email delivery | Transactional & marketing emails |
 | Twilio | SMS / WhatsApp | Alerts, OTPs, notifications |
-| Google Maps API | Mapping | Officer location, service area |
+| OpenStreetMap tiles + Leaflet | Mapping | Officer ticket pins, live attendance, geofences, admin tracking |
 | Firebase FCM | Push notifications | Real-time alerts to mobile |
 
 ---
@@ -476,23 +480,23 @@ User enters credentials
         │
         ▼
 Client validates format (Zod)
-Rate limit check (5 attempts / 15 min)
+Resolve email/username without account enumeration
         │
         ▼
-Supabase Auth — bcrypt verify
-Check account blocked / email confirmed
+Supabase Auth password sign-in
+fetchMyRole() confirms selected portal role
         │
         ▼ (Admin only)
-Generate 6-digit OTP → send via email
-Verify OTP (5 min expiry, 5 attempt limit)
+AdminMfaScreen: enroll or challenge Supabase TOTP factor
+Verify factor to upgrade session assurance (AAL2)
         │
         ▼
-Issue JWT (30 min) + Refresh Token (7 days)
-payload: { sub, email, role, iat, exp }
+touch_full_login stamps the session window
+Supabase client persists and auto-refreshes the session
         │
         ▼
-Client: Store JWT → Keychain (iOS) / Keystore (Android)
-Dispatch to authSlice → Navigate to MainNavigator
+commitAuthenticatedSession stores resolved DB role
+AppNavigator routes to the role navigator
 ```
 
 ### 5.2 Payment Processing Flow

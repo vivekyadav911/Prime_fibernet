@@ -63,7 +63,7 @@
 | **Google Gemini** | AI chatbot (`gemini-rag-chatbot`) | Edge Function secret |
 | **Firebase Cloud Messaging** | Push notifications | FCM config in Expo + `user_fcm_tokens` table |
 | **Sentry** | Error monitoring (optional dev) | `EXPO_PUBLIC_SENTRY_DSN` |
-| **Google Maps** | Officer map, geofencing | Platform API keys in Expo config |
+| **OpenStreetMap tiles + Leaflet** | Officer/admin maps, geofencing | No app API key; keep tile usage within OSM policy |
 
 Copy env template:
 
@@ -138,7 +138,7 @@ pnpm typecheck   # TypeScript across packages
 pnpm lint        # ESLint via turbo
 ```
 
-**Login flow:** App → Auth screen → sign in → `AppNavigator` routes by `profiles.role` to Customer tabs, Officer drawer, or Admin drawer.
+**Login flow:** App → Auth screen → sign in → `AppNavigator` resolves the database role and routes to Customer tabs, the Officer GPS gate + tab shell, or the Admin drawer. Admin password sign-in always completes through `AdminMfaScreen` before the session is committed.
 
 ---
 
@@ -151,7 +151,7 @@ Prime_fibernet/
 │   │   ├── screens/
 │   │   │   ├── admin/         Admin modules (finance, HR, support…)
 │   │   │   ├── customer/      Customer tabs + stacks
-│   │   │   ├── officer/       Officer drawer + field ops
+│   │   │   ├── officer/       Officer tab shell + field ops
 │   │   │   └── common/        Shared screens (auth, PDF viewer)
 │   │   ├── components/
 │   │   │   ├── admin/         FormField, SectionCard, KPI cards…
@@ -206,9 +206,9 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 
 | Feature | Code entry | Backend |
 |---------|------------|---------|
-| Email/password login | `screens/common/auth/` | Supabase Auth |
+| Email/password login | `screens/auth/` | Supabase Auth |
 | Sign-up + verification | Auth screens | `supabase.auth.signUp` + Resend |
-| Admin TOTP 2FA | Auth flow | `functions/verify-admin-totp` |
+| Admin TOTP MFA | `LoginScreen` → `AdminMfaScreen`; settings use `MfaEnrollModal` | Supabase Auth MFA (`auth.mfa`, AAL2) |
 | Forgot password | Auth screens | Supabase Auth reset |
 | Biometric login (dev) | Auth hooks | `expo-local-authentication` + SecureStore |
 | Role-based routing | `navigation/AppNavigator.tsx` | `profiles.role` |
@@ -232,22 +232,22 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 
 ### 5.3 Officer features
 
-**Navigation:** `OfficerNavigator.tsx` — LocationGate → drawer
+**Navigation:** `OfficerNavigator.tsx` — `LocationGateScreen` → `OfficerTabNavigator` (`Dashboard`, `Tickets`, `Attendance`, `Payments`, `Settings`)
 
 | Module | Screens | Notes |
 |--------|---------|-------|
 | Location gate | `LocationGateScreen` | GPS required before access |
 | Dashboard | `OfficerDashboardScreen` | Shift, today's jobs |
 | Requests | `OfficerRequestsStackNav` | Accept → resolve workflow |
-| Map | `OfficerMapScreen` | Live location, job pins |
+| Map | `OfficerMapScreen` from the Settings stack | Leaflet/OSM ticket pins; opens native maps for navigation |
 | Attendance | `OfficerAttendanceDashboard`, `AttendanceHistoryScreen` | Geofenced clock-in/out |
-| Collections | `OfficerCollectionsStackNav`, `CollectPaymentScreen` | Assigned customers, cash collection |
-| Inventory | `OfficerInventoryScreen` | Assigned equipment |
-| Payslips | `OfficerPayslipStackNav` | View/download PDF |
-| Leave | `OfficerLeaveStackNav` | Leave requests |
-| Notifications | `OfficerPortalNotificationsScreen` | Portal alerts |
-| Support chat | `OfficerSupportChatScreen` | Internal support |
-| Profile | `OfficerProfileStackNav` | Officer profile |
+| Payments | `OfficerPaymentsStackNav`, `OfficerCollectionsStackNav`, `CollectPaymentScreen` | Assigned customers, cash collection |
+| Inventory | `OfficerInventoryScreen` from the Settings stack | Assigned equipment |
+| Payslips | `OfficerPayslipStackNav` from the Settings stack | View/download PDF |
+| Leave | `OfficerLeaveStackNav` from the Settings stack | Leave requests |
+| Notifications | `OfficerPortalNotificationsScreen` from header/settings | Portal alerts |
+| Support chat | `OfficerSupportChatScreen` from the Settings stack | Internal support |
+| Profile | `OfficerProfileStackNav` from header/profile button | Officer profile |
 | Invoices | `InvoiceScreen` | Generate/view invoice on collection |
 | Employment contract | Contract signature prompt modal | E-sign flow |
 
@@ -329,7 +329,6 @@ Deploy all under `supabase/functions/`:
 
 | Function | Purpose |
 |----------|---------|
-| `verify-admin-totp` | Admin 2FA |
 | `admin-create-customer` / `admin-create-officer` | Provision users |
 | `provision-officer-auth` | Officer auth setup |
 | `create-payment-order` | Initiate Razorpay/Easebuzz order |
