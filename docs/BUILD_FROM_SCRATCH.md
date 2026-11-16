@@ -297,6 +297,10 @@ All files in `supabase/migrations/` — run via `supabase db push`:
 | `20260631*` | Payslip module |
 | `20260632*` | Invoice module extend |
 | `20260633*` | Notification delivery fix, automation rules |
+| `20260636–39*` | Payroll audit, compensation, attendance triage |
+| `20260701*` | Attendance geofence enterprise hardening |
+| `20260704*` | Canonical attendance status RPC |
+| `20260710–13*` | Company-local attendance day, approval dedupe, second check-in guard |
 
 Inventory: [SUPABASE_MIGRATION_INVENTORY.md](./SUPABASE_MIGRATION_INVENTORY.md)
 
@@ -313,7 +317,11 @@ tickets           — support tickets
 notifications     — broadcast + scheduled
 payment_gateways  — encrypted gateway credentials
 inventory_*       — asset tracking
-attendance_*      — shifts, geofences, check-ins
+shifts            — attendance check-ins/check-outs and canonical daily status
+geofences         — circle/polygon attendance zones
+attendance_*      — approval/manual-edit audit logs and approval requests
+leave_*           — leave requests and balances
+officer_locations — latest officer position for live maps
 employment_contracts — HR contracts + signatures
 invoices          — GST invoices + line items
 payslips          — officer payroll
@@ -357,6 +365,64 @@ Deploy all under `supabase/functions/`:
 - Every table has Row Level Security policies.
 - Customers see only their rows; officers see assigned scope; admins use `is_admin()` helper.
 - Full matrix: [SECURITY_AND_ACCESS.md](./SECURITY_AND_ACCESS.md)
+
+### 6.5 Attendance + payroll operating model
+
+Attendance is the source of truth for field presence and payroll readiness. The
+implemented flow is larger than the original OFF-004 ticket:
+
+1. **Officer starts from assigned zones** — `AttendanceService.checkIn` loads active
+   geofences via `locationService.loadAssignedGeofences`, gets the current GPS fix,
+   rejects accuracy worse than 100m, and checks the point against the assigned
+   circle/polygon zones.
+2. **In-zone check-in writes `shifts`** — `attendanceApi.checkIn` inserts a
+   same-day `shifts` row with `attendance_status = 'present'`, the geofence id,
+   distance, method, notes, and mocked-location flag. One completed attendance is
+   allowed per officer per company-local day.
+3. **Out-of-zone or exception cases go to approvals** —
+   `attendance_approval_requests` records requests such as `out_of_zone_checkin`,
+   `out_of_zone_checkout`, `late_checkin`, `missed_checkout`, and
+   `second_shift_checkin`. `review_attendance_approval` applies approved requests
+   to `shifts` and writes `attendance_approval_audit_log`.
+4. **Admin manual corrections use one RPC** — `admin_manual_attendance_entry`
+   validates manual status edits, upserts the `shifts` row, and writes
+   `attendance_manual_audit_log`. Use this path instead of direct row updates so
+   payroll auditability stays intact.
+5. **Calendars and exports use canonical daily status** —
+   `get_attendance_status_by_day` returns `present`, `absent`, `late`,
+   `half_day`, `on_leave`, `holiday`, or `not_yet_recorded`. Calendar summaries,
+   CSV/PDF exports, and payroll diagnostics should prefer this RPC over inferring
+   status from raw `shifts` rows.
+6. **Realtime keeps screens current** — admin attendance screens subscribe to
+   `shifts`, `attendance_approval_requests`, and geofence assignments; officer
+   screens refresh on `shifts` changes and surface approval decisions through
+   toasts/local notifications.
+7. **Payroll triage depends on attendance quality** — payroll screens flag missing
+   officer fields, missing compensation, invalid snapshots, no assigned shift,
+   missing check-ins, and missing check-outs before payslip generation.
+
+Primary codepaths:
+
+| Area | Files |
+|------|-------|
+| Officer service orchestration | `apps/unified-app/src/services/AttendanceService.ts` |
+| RTK Query endpoints | `apps/unified-app/src/services/api/attendanceApi.ts`, `payrollApi.ts` |
+| Domain types/status helpers | `apps/unified-app/src/types/attendance.ts`, `utils/attendanceStatus.ts` |
+| Admin realtime invalidation | `hooks/attendance/useAttendanceRealtimeSync.ts` |
+| Officer realtime notifications | `hooks/attendance/useOfficerAttendanceRealtimeSync.ts` |
+| Payroll readiness diagnostics | `services/payroll/attendancePeriodDiagnostics.ts` |
+| Database/RPCs | `supabase/migrations/20260631120000_attendance_hardening.sql`, `20260704120000_attendance_status_canonical.sql`, `20260710100000_attendance_company_local_today.sql`, `20260710230000_second_shift_checkin_approval.sql`, `20260713010000_attendance_approval_dedupe_notify.sql`, `20260713020000_block_second_checkin_after_completed.sql` |
+
+Operational constraints:
+
+- Dates crossing the client/API boundary stay as `YYYY-MM-DD`; times use ISO
+  timestamps for persisted check-in/out values.
+- Company-local "today" comes from the `company_local_today` RPC, with client
+  local date only as a fallback.
+- Officers cannot directly change `attendance_status`; admin corrections must use
+  the manual-entry RPC or payroll triage helpers.
+- Offline check-in/out attempts are queued through `SyncManager`, but approvals
+  still require a successful write before admins can review them.
 
 ---
 
@@ -468,6 +534,9 @@ supabase functions deploy <name>  # Deploy one function
 | Expo starts wrong app | Use `pnpm dev` from repo root, not `npx expo start` at root |
 | Auth works but empty data | Check RLS policies; verify user role in `profiles` |
 | Payments fail | Gateway credentials in Admin → Settings → Payment gateways |
+| Attendance calendar disagrees with records | Query `get_attendance_status_by_day`; it is the canonical daily status source |
+| Officer cannot check in | Verify assigned active geofence, GPS permission, accuracy ≤100m, and no completed shift for the company-local day |
+| Payroll generation blocked | Open payroll triage; resolve missing profile fields, compensation, check-ins, or check-outs before generating payslips |
 | Push notifications don't send | FCM token stored? Edge function deployed? Check `user_fcm_tokens` RLS |
 | Modal header under status bar | Use `FullScreenModalShell` / `ModalSheetHeader` — see `safe-area-keyboard.mdc` |
 | Type errors after migration | Regenerate `database.ts` from Supabase types |
