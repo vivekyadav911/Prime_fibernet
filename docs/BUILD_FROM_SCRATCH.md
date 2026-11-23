@@ -272,7 +272,7 @@ Features below reflect **what is implemented in the codebase** (navigation + scr
 | **Inventory** | Categories, stock, bulk ops, history | `inventory_*` tables |
 | **Reports** | Revenue, exports | Analytics API |
 | **Customer support** | Tickets, live chat, FAQs, SLA, canned responses, Customer 360 | Support tables + AI chat |
-| **Settings** | General, security, integrations, backup, audit logs | `settings`, audit |
+| **Settings** | General, security, integrations, backup, data import, audit logs | `settings`, audit, `import_staging`, `import_history` |
 | **Map** | Officer trail replay, live tracking | PostGIS, tracking |
 
 ---
@@ -319,6 +319,8 @@ invoices          — GST invoices + line items
 payslips          — officer payroll
 audit_logs        — admin actions
 user_fcm_tokens   — push notification tokens
+import_staging    — staged Excel import rows pending admin confirmation
+import_history    — committed import audit trail with field-level diffs
 ```
 
 Generated types: `apps/unified-app/src/types/database.ts` (regenerate after schema changes).
@@ -349,6 +351,7 @@ Deploy all under `supabase/functions/`:
 | `generate-payslip` | Payroll PDF |
 | `compute-daily-activity` | Officer activity cron |
 | `export-payments` / `admin-backup-export` | Data export |
+| `import-excel` | Admin Excel import staging + commit |
 
 **Deploy rule:** Always apply migrations and functions via Supabase MCP or CLI — see `.cursor/rules/supabase-deploy.mdc`.
 
@@ -357,6 +360,55 @@ Deploy all under `supabase/functions/`:
 - Every table has Row Level Security policies.
 - Customers see only their rows; officers see assigned scope; admins use `is_admin()` helper.
 - Full matrix: [SECURITY_AND_ACCESS.md](./SECURITY_AND_ACCESS.md)
+
+### 6.5 Admin Excel import runbook
+
+**Intent:** Admins can bulk review Excel changes before mutating production data. The flow is diff-based: upload → stage → preview inserts/updates/errors → confirm commit.
+
+| Layer | Codepath |
+|-------|----------|
+| UI | `apps/unified-app/src/screens/admin/settings/DataImportScreen.tsx` |
+| Templates | `apps/unified-app/src/utils/importTemplates.ts` |
+| RTK Query | `apps/unified-app/src/services/api/adminImportApi.ts` |
+| Edge Function | `supabase/functions/import-excel/index.ts` |
+| Schema/RPC | `supabase/migrations/20260718010000_excel_import_staging.sql`, `20260718020000_fix_commit_import_found_check.sql`, `20260718040000_revoke_commit_import_public.sql` |
+
+**Admin workflow**
+
+1. Open **Admin → Settings → Data Import** (`settings/import` on web).
+2. Pick an entity: `users`, `plans`, `officers`, or `transactions`.
+3. Download the generated `.xlsx` template and keep the required match-key column.
+4. Upload the workbook. The first sheet is parsed; example rows beginning with `EXAMPLE` are skipped.
+5. Review counts and row-level diffs. Nothing is written while rows are staged.
+6. Confirm import to call `commit_import_batch`; staging rows are deleted after commit and a history row is retained.
+
+**Entity rules**
+
+| Entity | Match key | Insert? | Editable fields / constraints |
+|--------|-----------|---------|-------------------------------|
+| `users` | `email` (normalized lowercase) | Yes | Profile/contact fields; `email` + `name` required for inserts |
+| `plans` | `name` | Yes | Plan metadata, price, speed, validity, `is_active`; `name` + `price` required for inserts |
+| `officers` | `employee_id` | No | Existing officer profile/contact/status fields only |
+| `transactions` | `payment_number` | No | Notes fields; `amount`, `total_amount`, and `status` only when payment is not `confirmed` or `refunded` |
+
+**Important constraints**
+
+- Blank incoming cells are treated as "leave unchanged"; the importer does not clear values.
+- Duplicate match keys inside one workbook are rejected as row errors.
+- Numeric and boolean fields are type-checked during staging, not at commit time.
+- `transactions.status` must be one of `initiated`, `pending_review`, `cash_collected`, `confirmed`, `failed`, `refunded`, or `cancelled`.
+- The Edge Function requires an authenticated admin JWT via `is_admin_user()`. Staging/history tables are admin-readable through RLS, while writes and `commit_import_batch` run only through the service-role Edge Function path.
+- Import history shows the most recent 50 committed batches in the UI.
+
+**Troubleshooting**
+
+| Symptom | Check |
+|---------|-------|
+| `Missing required match-key column` | Re-download the template; headers like `email (required)` are accepted, but the normalized match key must be present. |
+| Workbook parses but shows no rows | Remove placeholder/example-only rows; rows starting with `EXAMPLE` in the first cell are intentionally skipped. |
+| Officer or transaction row says inserts are not allowed | Create the officer/payment through its normal workflow first; imports only patch existing rows for these entities. |
+| Payment financial edit is rejected | Confirmed/refunded payments allow notes/metadata updates only. |
+| `Batch not found or already committed` | The batch was already committed or its staging rows are gone; stage the workbook again. |
 
 ---
 
@@ -469,6 +521,7 @@ supabase functions deploy <name>  # Deploy one function
 | Auth works but empty data | Check RLS policies; verify user role in `profiles` |
 | Payments fail | Gateway credentials in Admin → Settings → Payment gateways |
 | Push notifications don't send | FCM token stored? Edge function deployed? Check `user_fcm_tokens` RLS |
+| Data import fails before preview | Use **Download template** for that entity and verify the first sheet contains the required match key |
 | Modal header under status bar | Use `FullScreenModalShell` / `ModalSheetHeader` — see `safe-area-keyboard.mdc` |
 | Type errors after migration | Regenerate `database.ts` from Supabase types |
 
